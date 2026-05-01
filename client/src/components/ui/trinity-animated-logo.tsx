@@ -109,7 +109,7 @@ export function TrinityAnimatedLogo({
           <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
         <filter id={`arc-glow-${uid}`} x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur stdDeviation="1.5" result="blur" />
+          <feGaussianBlur stdDeviation="2.5" result="blur" />
           <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
       </defs>
@@ -140,7 +140,7 @@ export function TrinityAnimatedLogo({
       {/* Arc 1 — tapered luminous arm at 0° */}
       <g filter={`url(#arc-glow-${uid})`}>
         <path
-          d="M50 50 L52 10 Q50 7 48 10 Z"
+          d="M50 34 C46 28, 45 18, 50 8 C55 18, 54 28, 50 34 Z"
           fill={`url(#a1-${uid})`}
           opacity="0.95"
         />
@@ -150,7 +150,7 @@ export function TrinityAnimatedLogo({
       {/* Arc 2 — 120° */}
       <g filter={`url(#arc-glow-${uid})`} transform="rotate(120 50 50)">
         <path
-          d="M50 50 L52 10 Q50 7 48 10 Z"
+          d="M50 34 C46 28, 45 18, 50 8 C55 18, 54 28, 50 34 Z"
           fill={`url(#a2-${uid})`}
           opacity="0.95"
         />
@@ -159,7 +159,7 @@ export function TrinityAnimatedLogo({
       {/* Arc 3 — 240° */}
       <g filter={`url(#arc-glow-${uid})`} transform="rotate(240 50 50)">
         <path
-          d="M50 50 L52 10 Q50 7 48 10 Z"
+          d="M50 34 C46 28, 45 18, 50 8 C55 18, 54 28, 50 34 Z"
           fill={`url(#a3-${uid})`}
           opacity="0.95"
         />
