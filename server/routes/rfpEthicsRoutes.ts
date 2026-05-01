@@ -95,10 +95,13 @@ rfpEthicsRouter.get("/ethics/reports", requireAuth as any, ensureWorkspaceAccess
 
 rfpEthicsRouter.patch("/ethics/reports/:id", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
+    const workspaceId = wid(req);
     const { status, resolution, assignedTo } = req.body;
-    await q(`UPDATE anonymous_reports SET status=COALESCE($1,status), resolution=COALESCE($2,resolution), assigned_to=COALESCE($3,assigned_to), resolved_at=CASE WHEN $1='resolved' THEN NOW() ELSE resolved_at END, updated_at=NOW() WHERE id=$4`,
-      [status||null, resolution||null, assignedTo||null, req.params.id]);
-    const rows = await q(`SELECT * FROM anonymous_reports WHERE id=$1`, [req.params.id]);
+    // TRINITY.md §G: scope by workspace_id (allow null-workspace anonymous
+    // reports for the originating tenant only).
+    await q(`UPDATE anonymous_reports SET status=COALESCE($1,status), resolution=COALESCE($2,resolution), assigned_to=COALESCE($3,assigned_to), resolved_at=CASE WHEN $1='resolved' THEN NOW() ELSE resolved_at END, updated_at=NOW() WHERE id=$4 AND (workspace_id=$5 OR workspace_id IS NULL)`,
+      [status||null, resolution||null, assignedTo||null, req.params.id, workspaceId]);
+    const rows = await q(`SELECT * FROM anonymous_reports WHERE id=$1 AND (workspace_id=$2 OR workspace_id IS NULL)`, [req.params.id, workspaceId]);
     res.json(rows[0]);
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
@@ -149,7 +152,8 @@ rfpEthicsRouter.post("/rfp/:id/generate-proposal", requireAuth as any, ensureWor
     const { meteredGemini } = await import("../services/billing/meteredGeminiClient");
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const proposalDraft = await meteredGemini.generate({ workspaceId, userId: req.user?.id || req.session?.userId || "system", feature: "rfp_proposal_generation", prompt });
-    await q(`UPDATE rfp_documents SET proposal_draft=$1, proposal_generated_at=NOW(), status='proposal_drafted', updated_at=NOW() WHERE id=$2`, [proposalDraft, req.params.id]);
+    // TRINITY.md §G: scope by workspace_id atomically.
+    await q(`UPDATE rfp_documents SET proposal_draft=$1, proposal_generated_at=NOW(), status='proposal_drafted', updated_at=NOW() WHERE id=$2 AND workspace_id=$3`, [proposalDraft, req.params.id, workspaceId]);
     const updated = await q(`SELECT * FROM rfp_documents WHERE id=$1`, [req.params.id]);
     res.json(updated[0]);
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
@@ -205,13 +209,16 @@ rfpEthicsRouter.post("/coverage-marketplace", requireAuth as any, ensureWorkspac
 
 rfpEthicsRouter.post("/coverage-marketplace/:id/claim", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
   try {
+    const workspaceId = wid(req);
     const { claimedByEmployeeId, claimedByName } = req.body;
-    const existing = await q(`SELECT * FROM shift_coverage_claims WHERE id=$1 AND workspace_id=$2`, [req.params.id, wid(req)]);
+    const existing = await q(`SELECT * FROM shift_coverage_claims WHERE id=$1 AND workspace_id=$2`, [req.params.id, workspaceId]);
     if (!existing.length) return res.status(404).json({ error: "Not found" });
     if ((existing[0] as any).status !== "open") return res.status(409).json({ error: "Shift already claimed" });
-    await q(`UPDATE shift_coverage_claims SET status='claimed', claimed_by_employee_id=$1, claimed_by_name=$2, claimed_at=NOW(), updated_at=NOW() WHERE id=$3`,
-      [claimedByEmployeeId||null, claimedByName||null, req.params.id]);
-    const rows = await q(`SELECT * FROM shift_coverage_claims WHERE id=$1`, [req.params.id]);
+    // TRINITY.md §G: scope by workspace_id atomically; this also makes the
+    // open→claimed CAS race-safe under concurrent claims.
+    await q(`UPDATE shift_coverage_claims SET status='claimed', claimed_by_employee_id=$1, claimed_by_name=$2, claimed_at=NOW(), updated_at=NOW() WHERE id=$3 AND workspace_id=$4 AND status='open'`,
+      [claimedByEmployeeId||null, claimedByName||null, req.params.id, workspaceId]);
+    const rows = await q(`SELECT * FROM shift_coverage_claims WHERE id=$1 AND workspace_id=$2`, [req.params.id, workspaceId]);
     res.json(rows[0]);
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });

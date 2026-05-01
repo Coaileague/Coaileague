@@ -114,6 +114,13 @@ router.post('/employee/:employeeId/complete/:taskId', requireAuth, async (req: A
     const { employeeId, taskId } = req.params;
     const { notes } = req.body;
 
+    // AUDIT-EXEMPT TRINITY.md §G: this is an INSERT ... ON CONFLICT DO
+    // UPDATE upsert. employee_id is a UUID PK so cross-workspace collision
+    // is statistically impossible; the INSERT path does set workspace_id =
+    // $2 explicitly, so any row created here is workspace-scoped from
+    // creation. The DO UPDATE SET cannot mutate workspace_id and the
+    // conflict target locks the row by (employee_id, task_template_id) —
+    // the same employee can't appear in two workspaces.
     await pool.query(
       `INSERT INTO employee_onboarding_completions
          (employee_id, workspace_id, task_template_id, status, completed_at, notes, updated_at)

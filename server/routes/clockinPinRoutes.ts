@@ -64,9 +64,11 @@ clockinPinRouter.post(
       if (!emp) return res.status(404).json({ error: 'Employee not found' });
 
       const hash = await bcrypt.hash(pin.replace(/\D/g, ''), BCRYPT_ROUNDS);
+      // TRINITY.md §G: scope the UPDATE by workspace_id so the
+      // SELECT-then-UPDATE pair is atomically tenant-isolated.
       await pool.query(
-        `UPDATE employees SET clockin_pin_hash = $1 WHERE id = $2`,
-        [hash, employeeId],
+        `UPDATE employees SET clockin_pin_hash = $1 WHERE id = $2 AND workspace_id = $3`,
+        [hash, employeeId, workspaceId],
       );
 
       res.json({
@@ -180,7 +182,11 @@ clockinPinRouter.delete(
       const emp = await getEmployee(employeeId, workspaceId);
       if (!emp) return res.status(404).json({ error: 'Employee not found' });
 
-      await pool.query(`UPDATE employees SET clockin_pin_hash = NULL WHERE id = $1`, [employeeId]);
+      // TRINITY.md §G: scope by workspace_id atomically.
+      await pool.query(
+        `UPDATE employees SET clockin_pin_hash = NULL WHERE id = $1 AND workspace_id = $2`,
+        [employeeId, workspaceId],
+      );
       res.json({ success: true, message: 'PIN cleared' });
     } catch (err: any) {
       log.error('[PIN] clear error:', err);
@@ -242,9 +248,10 @@ clockinPinRouter.post(
 
       const emp = empRes.rows[0];
       const hash = await bcrypt.hash(pin.replace(/\D/g, ''), BCRYPT_ROUNDS);
+      // TRINITY.md §G: scope by workspace_id atomically.
       await pool.query(
-        `UPDATE employees SET clockin_pin_hash = $1, updated_at = NOW() WHERE id = $2`,
-        [hash, emp.id],
+        `UPDATE employees SET clockin_pin_hash = $1, updated_at = NOW() WHERE id = $2 AND workspace_id = $3`,
+        [hash, emp.id, workspaceId],
       );
 
       res.json({ success: true, message: 'Clock-in PIN updated successfully', employeeNumber: emp.employee_number });

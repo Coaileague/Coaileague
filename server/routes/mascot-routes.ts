@@ -2376,12 +2376,13 @@ ${chatContext ? `Recent chat context: ${chatContext}` : ''}`;
     });
     
     // CATEGORY C — Raw SQL retained: Column self-referencing arithmetic increments (col = col + N) with conditional expressions | Tables: mascot_sessions | Verified: 2026-03-23
+    // TRINITY.md §G: scope by workspace_id atomically.
     await typedExec(sql`
       UPDATE mascot_sessions SET
         total_interactions = total_interactions + 1,
         total_advice = total_advice + ${aiResponse ? 1 : 0},
         updated_at = NOW()
-      WHERE id = ${sessionId}
+      WHERE id = ${sessionId} AND workspace_id = ${workspaceId}
     `);
     
     res.json({ 
@@ -2468,11 +2469,12 @@ ${context ? `Context: ${context}` : ''}`;
     }
     
     // CATEGORY C — Raw SQL retained: Column self-referencing arithmetic increment (col = col + N) | Tables: mascot_sessions | Verified: 2026-03-23
+    // TRINITY.md §G: scope by workspace_id atomically.
     await typedExec(sql`
       UPDATE mascot_sessions SET
         total_tasks_generated = total_tasks_generated + ${insertedTasks.length},
         updated_at = NOW()
-      WHERE id = ${sessionId}
+      WHERE id = ${sessionId} AND workspace_id = ${workspaceId}
     `);
     
     res.json({ 

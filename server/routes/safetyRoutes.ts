@@ -317,7 +317,8 @@ safetyRouter.post("/sla-breaches", requireAuth as any, ensureWorkspaceAccess as 
     const id = randomUUID();
     await q(`INSERT INTO sla_breach_log (id,workspace_id,sla_contract_id,client_name,breach_type,description,severity,detected_at,client_notified,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,NOW(),false,NOW())`,
       [id, workspaceId, slaContractId||null, clientName||null, breachType, description||null, severity]);
-    if (slaContractId) await q(`UPDATE sla_contracts SET breach_count=breach_count+1, last_breach_at=NOW() WHERE id=$1`, [slaContractId]);
+    // TRINITY.md §G: scope by workspace_id atomically.
+    if (slaContractId) await q(`UPDATE sla_contracts SET breach_count=breach_count+1, last_breach_at=NOW() WHERE id=$1 AND workspace_id=$2`, [slaContractId, workspaceId]);
     const rows = await q(`SELECT * FROM sla_breach_log WHERE id=$1`, [id]);
     res.status(201).json(rows[0]);
   } catch (e: unknown) { res.status(400).json({ error: sanitizeError(e) }); }

@@ -146,9 +146,10 @@ rmsRouter.post("/dars/:id/verify", requireAuth as any, ensureWorkspaceAccess as 
         const { generateDarPdf } = await import("../services/darPdfService");
         const pdfUrl = await generateDarPdf(req.params.id, workspaceId);
         if (pdfUrl) {
+          // TRINITY.md §G: scope by workspace_id atomically.
           await q(
-            `UPDATE daily_activity_reports SET pdf_url=$1, pdf_generated_at=NOW(), updated_at=NOW() WHERE id=$2`,
-            [pdfUrl, req.params.id]
+            `UPDATE daily_activity_reports SET pdf_url=$1, pdf_generated_at=NOW(), updated_at=NOW() WHERE id=$2 AND workspace_id=$3`,
+            [pdfUrl, req.params.id, workspaceId]
           );
           dar.pdf_url = pdfUrl;
         }
@@ -214,7 +215,8 @@ rmsRouter.post("/dars/:id/generate-pdf", requireAuth as any, ensureWorkspaceAcce
     const { generateDarPdf } = await import("../services/darPdfService");
     const pdfUrl = await generateDarPdf(req.params.id, workspaceId);
     if (pdfUrl) {
-      await q(`UPDATE daily_activity_reports SET pdf_url=$1, pdf_generated_at=NOW(), updated_at=NOW() WHERE id=$2`, [pdfUrl, req.params.id]);
+      // TRINITY.md §G: scope by workspace_id atomically.
+      await q(`UPDATE daily_activity_reports SET pdf_url=$1, pdf_generated_at=NOW(), updated_at=NOW() WHERE id=$2 AND workspace_id=$3`, [pdfUrl, req.params.id, workspaceId]);
     }
     res.json({ pdfUrl });
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
@@ -228,7 +230,8 @@ rmsRouter.post("/shift-reports/:id/generate-pdf", requireAuth as any, ensureWork
     const { generateShiftTransparencyPdf } = await import("../services/darPdfService");
     const pdfUrl = await generateShiftTransparencyPdf(req.params.id, workspaceId);
     if (pdfUrl) {
-      await q(`UPDATE dar_reports SET pdf_url=$1, pdf_generated_at=NOW(), updated_at=NOW() WHERE id=$2`, [pdfUrl, req.params.id]);
+      // TRINITY.md §G: scope by workspace_id atomically.
+      await q(`UPDATE dar_reports SET pdf_url=$1, pdf_generated_at=NOW(), updated_at=NOW() WHERE id=$2 AND workspace_id=$3`, [pdfUrl, req.params.id, workspaceId]);
     }
     res.json({ pdfUrl });
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
@@ -307,9 +310,10 @@ rmsRouter.post("/shift-reports/:id/submit", requireAuth as any, ensureWorkspaceA
             temperature: 0.3,
           });
           if (claudeResult.content && claudeResult.content.trim().length > 0) {
+            // TRINITY.md §G: scope by workspace_id atomically.
             await q(
-              `UPDATE dar_reports SET summary=$1, trinity_articulated=true, updated_at=NOW() WHERE id=$2`,
-              [claudeResult.content.trim(), req.params.id]
+              `UPDATE dar_reports SET summary=$1, trinity_articulated=true, updated_at=NOW() WHERE id=$2 AND workspace_id=$3`,
+              [claudeResult.content.trim(), req.params.id, workspaceId]
             );
             report.summary = claudeResult.content.trim();
             log.info(`[ShiftReport] Trinity articulation applied to DAR ${req.params.id}`);
@@ -325,7 +329,8 @@ rmsRouter.post("/shift-reports/:id/submit", requireAuth as any, ensureWorkspaceA
         const { generateShiftTransparencyPdf } = await import("../services/darPdfService");
         const pdfUrl = await generateShiftTransparencyPdf(req.params.id, workspaceId);
         if (pdfUrl) {
-          await q(`UPDATE dar_reports SET pdf_url=$1, pdf_generated_at=NOW() WHERE id=$2`, [pdfUrl, req.params.id]);
+          // TRINITY.md §G: scope by workspace_id atomically.
+          await q(`UPDATE dar_reports SET pdf_url=$1, pdf_generated_at=NOW() WHERE id=$2 AND workspace_id=$3`, [pdfUrl, req.params.id, workspaceId]);
           report.pdf_url = pdfUrl;
         }
       } catch (pdfErr: unknown) {

@@ -165,13 +165,16 @@ export async function resolveSupportCase(params: {
   const existing = await findCaseByNumber(params.caseNumber, params.workspaceId);
   if (!existing) return null;
 
+  // TRINITY.md §G: scope by workspace_id atomically. We use the workspace_id
+  // from the row we already fetched so the UPDATE is locked to that tenant
+  // even when the caller did not pass workspaceId explicitly.
   const res = await pool.query(
     `UPDATE voice_support_cases
      SET status = 'resolved', resolved_at = NOW(), resolved_by = $1,
          resolution_notes = $2, updated_at = NOW()
-     WHERE case_number = $3
+     WHERE case_number = $3 AND workspace_id = $4
      RETURNING *`,
-    [params.resolvedBy, params.resolutionNotes || null, params.caseNumber.trim().toUpperCase()]
+    [params.resolvedBy, params.resolutionNotes || null, params.caseNumber.trim().toUpperCase(), (existing as any).workspace_id]
   );
 
   log.info(`[SupportCase] Case ${params.caseNumber} resolved by ${params.resolvedBy}`);

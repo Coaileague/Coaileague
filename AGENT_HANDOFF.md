@@ -49,14 +49,59 @@
 |---------|--------|--------|-----------|---------------|-------------|
 | _claude-action-wiring-LjP5K_ | `claude/action-wiring-manifest-LjP5K` | Action Wiring Manifest first-pass + Claude-only handoff protocol | `scripts/audit/generate-action-wiring-manifest.ts`, `scripts/audit/check-action-wiring-gaps.ts`, `ACTION_WIRING_MANIFEST.md`, `action-wiring-manifest.json`, `AGENT_HANDOFF.md` | 2026-05-01 | 2026-05-01 — signed out |
 | _claude-platform-health-LjP5K_ | `claude/action-wiring-manifest-LjP5K` | Platform health rescan — TS errors, route conflicts, race conditions, Trinity-law violations | `scripts/audit/scan-platform-health.ts`, `PLATFORM_HEALTH_AUDIT.md`, `platform-health-audit.json`, `AGENT_HANDOFF.md` | 2026-05-01 | 2026-05-01 — signed out |
-
-_(no other active sessions)_
+| _claude-tenant-iso-LjP5K_ | `claude/action-wiring-manifest-LjP5K` | TRINITY.md §G triage — fix raw-SQL UPDATE/DELETE on multi-tenant tables without `workspace_id` | 14 route + service files; full list in commit | 2026-05-01 | 2026-05-01 — signed out |
 
 _(no other active sessions)_
 
 ---
 
 ## SESSION LOG (newest at top — append, do not edit history)
+
+### 2026-05-01 · claude-tenant-iso-LjP5K
+**Branch:** `claude/action-wiring-manifest-LjP5K`
+**Commit:** _(pending — will be appended after push)_
+**What changed:** TRINITY.md §G triage — first batch.
+- **§G blockers reduced 55 → 19** (65% reduction).
+- **Files fixed (raw SQL UPDATE/DELETE now atomically tenant-scoped):**
+  - `server/routes/authCoreRoutes.ts` — DELETE user_sessions now `AND user_id = $2` (the user-scoped equivalent; AUDIT-EXEMPT noted because user_sessions has no workspace_id column).
+  - `server/routes/clockinPinRoutes.ts` — 3 UPDATE employees calls scoped by workspace_id.
+  - `server/routes/rmsRoutes.ts` — 5 UPDATE calls on daily_activity_reports / dar_reports.
+  - `server/routes/equipmentRoutes.ts` — 3 UPDATE equipment_assignments calls.
+  - `server/routes/voiceRoutes.ts` — 4 UPDATE voice_call_sessions calls (3 originally flagged + 1 verify_requester case caught on rescan).
+  - `server/routes/mascot-routes.ts` — 2 UPDATE mascot_sessions calls.
+  - `server/routes/rfpEthicsRoutes.ts` — 3 UPDATE calls (anonymous_reports, rfp_documents, shift_coverage_claims). The shift_coverage_claims claim was upgraded to a `WHERE id=$3 AND workspace_id=$4 AND status='open'` CAS to prevent two officers race-claiming the same shift.
+  - `server/routes/safetyRoutes.ts` — sla_contracts breach_count.
+  - `server/routes/salesPipelineRoutes.ts` — sales_leads scoring.
+  - `server/routes/visitorManagementRoutes.ts` — 2 visitor_logs alert flags.
+  - `server/routes/interviewChatroomRoutes.ts` — interview_chatrooms decision.
+  - `server/routes/email/emailRoutes.ts` — platform_email_addresses sent counter.
+  - `server/routes/trinityAgentDashboardRoutes.ts` — governance_approvals deny path; the WHERE now includes `AND status = 'pending'` so concurrent denials are race-safe.
+  - `server/index.ts` — 2 governance_approvals UPDATE calls in the pending-approvals execute path.
+  - `server/services/ai-brain/domainLeadSupervisors.ts` — 2 UPDATE employees (status reactivation/activation).
+  - `server/services/employeeOnboardingPipelineService.ts` — UPDATE employees activation.
+  - `server/services/trinity/proactive/officerWellness.ts` — 2 UPDATE audit_logs metadata writes.
+  - `server/services/trinityVoice/supportCaseService.ts` — UPDATE voice_support_cases resolution.
+- **AUDIT-EXEMPT markers** (genuine exceptions, documented inline):
+  - `server/routes/chatInlineRoutes.ts` — one-time platform-wide migration of the global main chat room (workforceos → coaileague). Both conversation IDs are hard-coded constants.
+  - `server/routes/onboardingTaskRoutes.ts` — `INSERT … ON CONFLICT (employee_id, task_template_id) DO UPDATE`. Employee IDs are UUIDs; the INSERT path sets workspace_id explicitly and the DO UPDATE cannot mutate it.
+  - `server/routes/privacyRoutes.ts` — DSR/GDPR endpoints; explicit TRINITY.md §G exception, gated by `isAtLeast(req, 'platform_staff')`.
+  - `server/routes/authCoreRoutes.ts` — user_sessions table has no workspace_id; user_id is the canonical isolation predicate.
+- **Scanner improved:**
+  - `scripts/audit/scan-platform-health.ts` honors `AUDIT-EXEMPT TRINITY.md §G` markers placed within ~800 chars before the SQL (was 400).
+- **Build:** `node build.mjs` — green (`✅ Server build complete`).
+- **Open for next session:** 19 §G blockers remain, all in `server/services/` (low-traffic admin / AI service code paths). Concrete list:
+  - `services/auditor/auditorAccessService.ts:570`, `auditor/curePeriodTrackerService.ts:421`,
+    `autonomousScheduler.ts:2767`, `billing/guestSessionService.ts:96`,
+    `email/emailProvisioningService.ts:252`, `helpai/faqLearningService.ts:94`,
+    `helpai/supportActionRegistry.ts:442`, `infrastructure/durableJobQueue.ts:490`,
+    `notificationInit.ts:97`, `oauth/googleCalendar.ts:46`,
+    `shiftChatroomWorkflowService.ts:580`, `sms/smsQueueService.ts:122`,
+    `trinity/workflows/missedClockInWorkflow.ts:382`, `trinityEventSubscriptions.ts:2640`,
+    `webhookDeliveryService.ts:278`.
+  - 4 of the 19 are likely AUDIT-EXEMPT (system seeds): `developmentSeed.ts:119`,
+    `developmentSeedFinancialIntegrations.ts:621`, `productionSeed.ts:1134`,
+    plus the supportCaseService:186 line which is a SELECT helper.
+- **Sign-out:** done.
 
 ### 2026-05-01 · claude-platform-health-LjP5K
 **Branch:** `claude/action-wiring-manifest-LjP5K`
@@ -154,6 +199,7 @@ Schedule. Audit is map-only — no fixes applied yet.
 
 | When | Session | Branch | Status | Notes |
 |------|---------|--------|--------|-------|
+| 2026-05-01 | claude-tenant-iso-LjP5K | `claude/action-wiring-manifest-LjP5K` | done | TRINITY.md §G triage. 55 → 19 (65% reduction). 18 files fixed, 4 AUDIT-EXEMPT. Build green. |
 | 2026-05-01 | claude-platform-health-LjP5K | `claude/action-wiring-manifest-LjP5K` | done | Platform Health Audit shipped. 381 TS errors, 43 cross-file route conflicts, 55 §G tenant-isolation blockers, 168 fire-and-forget races. Map only, no fixes. |
 | 2026-05-01 | claude-action-wiring-LjP5K | `claude/action-wiring-manifest-LjP5K` | done | Action Wiring Manifest first-pass shipped. Map only, no fixes. |
 

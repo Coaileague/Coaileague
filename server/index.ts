@@ -2120,11 +2120,12 @@ self.addEventListener('activate', async () => {
               metadata: { source: 'approval_queue', approvalId: id },
             });
 
+            // TRINITY.md §G: scope by workspace_id atomically.
             await pool.query(
               `UPDATE governance_approvals
                   SET status = $1, updated_at = NOW()
-                WHERE id = $2`,
-              [result.success ? 'completed' : 'failed', id],
+                WHERE id = $2 AND workspace_id = $3`,
+              [result.success ? 'completed' : 'failed', id, wid],
             ).catch(() => {});
 
             try {
@@ -2137,8 +2138,9 @@ self.addEventListener('activate', async () => {
               });
             } catch { /* non-fatal */ }
           } catch (execErr: any) {
+            // TRINITY.md §G: scope by workspace_id atomically.
             await pool.query(
-              `UPDATE governance_approvals SET status = 'failed', updated_at = NOW() WHERE id = $1`, [id],
+              `UPDATE governance_approvals SET status = 'failed', updated_at = NOW() WHERE id = $1 AND workspace_id = $2`, [id, wid],
             ).catch(() => {});
             log.error('[ApprovalExecute] Failed:', execErr?.message);
           }

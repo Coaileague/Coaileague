@@ -345,6 +345,10 @@ export function registerPrivacyRoutes(app: Express, requireAuth: any) {
       if (data_types_retained) { params.push(JSON.stringify(data_types_retained)); updates.push(`data_types_retained=$${params.length}`); }
       if (retention_reasons) { params.push(JSON.stringify(retention_reasons)); updates.push(`retention_reasons=$${params.length}`); }
 
+      // AUDIT-EXEMPT TRINITY.md §G: privacy/DSR endpoints are intentionally
+      // cross-workspace (platform-staff-level GDPR handling). The route is
+      // gated by isAtLeast(authReq, 'platform_staff') above. This is the
+      // documented exception in TRINITY.md Section G.
       const { rows } = await pool.query(
         `UPDATE data_subject_requests SET ${updates.join(',')} WHERE id=$1 RETURNING *`,
         params

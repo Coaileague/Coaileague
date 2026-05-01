@@ -1,6 +1,6 @@
 # CoAIleague — Platform Health Audit (rescan)
 
-> **Generated:** 2026-05-01T16:54:37.653Z
+> **Generated:** 2026-05-01T17:12:55.060Z
 > **Generator:** `scripts/audit/scan-platform-health.ts`
 > **Inputs:** `action-wiring-manifest.json` + filesystem rescan
 
@@ -23,9 +23,9 @@ prove a property the row is omitted, never silently green-lit.
 | race_fire_and_forget | 168 |
 | route_conflict | 114 |
 | race_read_then_write_no_lock | 112 |
-| trinity_law_raw_sql_no_workspace | 55 |
 | mount_overlap | 42 |
 | race_set_immediate | 30 |
+| trinity_law_raw_sql_no_workspace | 19 |
 | trinity_law_module_load_assert | 4 |
 | trinity_law_hardcoded_workspace | 3 |
 
@@ -35,41 +35,11 @@ prove a property the row is omitted, never silently green-lit.
 | --- | --- |
 | medium | 505 |
 | high | 359 |
-| blocker | 55 |
+| blocker | 19 |
 
 ## TypeScript snapshot
 
-- `tsc --noEmit` errors: **381**
-
-Top 25 files by error count:
-
-| file | errors |
-| --- | --- |
-| server/services/ai-brain/trinityDocumentActions.ts | 28 |
-| server/services/ai-brain/trinityChatService.ts | 21 |
-| client/src/components/email/EmailHubCanvas.tsx | 13 |
-| client/src/pages/settings/HiringSettings.tsx | 13 |
-| server/routes/authCoreRoutes.ts | 13 |
-| server/routes/engagementRoutes.ts | 13 |
-| server/routes/chat-rooms.ts | 12 |
-| server/services/ai-brain/subagents/onboardingOrchestrator.ts | 11 |
-| server/services/documents/businessArtifactDiagnosticService.ts | 10 |
-| server/storage.ts | 9 |
-| server/services/ai-brain/actionRegistry.ts | 8 |
-| server/routes/salesRoutes.ts | 7 |
-| server/services/paystubService.ts | 7 |
-| client/src/components/trinity-chat-modal.tsx | 6 |
-| server/routes/calendarRoutes.ts | 6 |
-| server/routes/mascot-routes.ts | 6 |
-| server/routes/platformRoutes.ts | 6 |
-| server/routes/reviewRoutes.ts | 6 |
-| server/routes/trinitySchedulingRoutes.ts | 6 |
-| server/routes/twilioWebhooks.ts | 6 |
-| server/services/trinity/trinityInboundEmailProcessor.ts | 6 |
-| client/src/components/universal-chat-layout.tsx | 5 |
-| server/routes/chat-management.ts | 5 |
-| server/routes/complianceReportsRoutes.ts | 5 |
-| server/routes/incidentPipelineRoutes.ts | 5 |
+- `tsc --noEmit` errors: **0**
 
 ## Route conflicts (same METHOD+path declared twice)
 
@@ -208,8 +178,8 @@ _+ 64 more — see `platform-health-audit.json`._
 | high | server/routes/privateMessageRoutes.ts:131 | race_fire_and_forget | Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B |
 | high | server/routes/resendWebhooks.ts:679 | race_fire_and_forget | Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B |
 | high | server/routes/resendWebhooks.ts:751 | race_fire_and_forget | Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B |
-| high | server/routes/rmsRoutes.ts:813 | race_fire_and_forget | Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B |
-| high | server/routes/rmsRoutes.ts:951 | race_fire_and_forget | Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B |
+| high | server/routes/rmsRoutes.ts:818 | race_fire_and_forget | Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B |
+| high | server/routes/rmsRoutes.ts:956 | race_fire_and_forget | Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B |
 | high | server/routes/statusRoutes.ts:170 | race_fire_and_forget | Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B |
 | high | server/routes/time-entry-routes.ts:635 | race_fire_and_forget | Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B |
 | high | server/routes/time-entry-routes.ts:1187 | race_fire_and_forget | Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B |
@@ -219,8 +189,8 @@ _+ 64 more — see `platform-health-audit.json`._
 | high | server/routes/trinityIntakeRoutes.ts:140 | race_fire_and_forget | Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B |
 | high | server/routes/trinityStaffingRoutes.ts:352 | race_fire_and_forget | Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B |
 | high | server/routes/twilioWebhooks.ts:621 | race_fire_and_forget | Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B |
-| high | server/routes/visitorManagementRoutes.ts:622 | race_fire_and_forget | Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B |
-| high | server/routes/voiceRoutes.ts:4128 | race_fire_and_forget | Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B |
+| high | server/routes/visitorManagementRoutes.ts:624 | race_fire_and_forget | Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B |
+| high | server/routes/voiceRoutes.ts:4133 | race_fire_and_forget | Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B |
 | high | server/routes/whatsNewRoutes.ts:27 | race_set_immediate | setTimeout(async ...) — TRINITY.md §B forbids this fire-and-forget pattern |
 | high | server/routes/workspace.ts:612 | race_fire_and_forget | Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B |
 | high | server/services/ai-brain/agentToAgentProtocol.ts:158 | race_fire_and_forget | Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B |
@@ -252,7 +222,7 @@ _(none)_
 | medium | server/routes/chat-management.ts:95 | race_missing_transaction | 31 db.{insert\|update\|delete} calls in this file with no db.transaction wrap |
 | medium | server/routes/chat-uploads.ts:245 | race_missing_transaction | 3 db.{insert\|update\|delete} calls in this file with no db.transaction wrap |
 | medium | server/routes/chat.ts:714 | race_missing_transaction | 4 db.{insert\|update\|delete} calls in this file with no db.transaction wrap |
-| medium | server/routes/chatInlineRoutes.ts:834 | race_missing_transaction | 4 db.{insert\|update\|delete} calls in this file with no db.transaction wrap |
+| medium | server/routes/chatInlineRoutes.ts:840 | race_missing_transaction | 4 db.{insert\|update\|delete} calls in this file with no db.transaction wrap |
 | medium | server/routes/commOsRoutes.ts:340 | race_missing_transaction | 3 db.{insert\|update\|delete} calls in this file with no db.transaction wrap |
 | medium | server/routes/command-documentation.ts:410 | race_missing_transaction | 2 db.{insert\|update\|delete} calls in this file with no db.transaction wrap |
 | medium | server/routes/compliance/packets.ts:139 | race_missing_transaction | 3 db.{insert\|update\|delete} calls in this file with no db.transaction wrap |
@@ -300,7 +270,7 @@ _+ 341 more — see `platform-health-audit.json`._
 | medium | server/routes/advancedSchedulingRoutes.ts:405 | race_read_then_write_no_lock | read-then-write on `shifts` without db.transaction or .forUpdate() — race window |
 | medium | server/routes/approvalRoutes.ts:299 | race_read_then_write_no_lock | read-then-write on `timesheetEditRequests` without db.transaction or .forUpdate() — race window |
 | medium | server/routes/chat.ts:755 | race_read_then_write_no_lock | read-then-write on `chatMacros` without db.transaction or .forUpdate() — race window |
-| medium | server/routes/chatInlineRoutes.ts:872 | race_read_then_write_no_lock | read-then-write on `chatMacros` without db.transaction or .forUpdate() — race window |
+| medium | server/routes/chatInlineRoutes.ts:878 | race_read_then_write_no_lock | read-then-write on `chatMacros` without db.transaction or .forUpdate() — race window |
 | medium | server/routes/compliance/regulatoryPortal.ts:360 | race_read_then_write_no_lock | read-then-write on `auditorVerificationRequests` without db.transaction or .forUpdate() — race window |
 | medium | server/routes/contentInlineRoutes.ts:451 | race_read_then_write_no_lock | read-then-write on `customRules` without db.transaction or .forUpdate() — race window |
 | medium | server/routes/emailUnsubscribe.ts:348 | race_read_then_write_no_lock | read-then-write on `emailUnsubscribes` without db.transaction or .forUpdate() — race window |
@@ -367,37 +337,6 @@ _(none)_
 
 | severity | file:line | category | detail |
 | --- | --- | --- | --- |
-| blocker | server/routes/authCoreRoutes.ts:979 | trinity_law_raw_sql_no_workspace | Raw SQL DELETE FROM `user_sessions` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/chatInlineRoutes.ts:284 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `chat_messages` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/clockinPinRoutes.ts:68 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `employees` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/clockinPinRoutes.ts:183 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `employees` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/clockinPinRoutes.ts:246 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `employees` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/email/emailRoutes.ts:281 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `platform_email_addresses` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/equipmentRoutes.ts:489 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `equipment_assignments` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/equipmentRoutes.ts:568 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `equipment_assignments` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/equipmentRoutes.ts:845 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `equipment_assignments` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/interviewChatroomRoutes.ts:136 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `interview_chatrooms` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/mascot-routes.ts:2380 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `mascot_sessions` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/mascot-routes.ts:2472 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `mascot_sessions` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/onboardingTaskRoutes.ts:122 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `SET` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/privacyRoutes.ts:349 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `data_subject_requests` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/rfpEthicsRoutes.ts:99 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `anonymous_reports` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/rfpEthicsRoutes.ts:152 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `rfp_documents` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/rfpEthicsRoutes.ts:212 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `shift_coverage_claims` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/rmsRoutes.ts:150 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `daily_activity_reports` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/rmsRoutes.ts:217 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `daily_activity_reports` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/rmsRoutes.ts:231 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `dar_reports` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/rmsRoutes.ts:311 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `dar_reports` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/rmsRoutes.ts:328 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `dar_reports` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/safetyRoutes.ts:320 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `sla_contracts` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/salesPipelineRoutes.ts:320 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `sales_leads` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/trinityAgentDashboardRoutes.ts:350 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `governance_approvals` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/visitorManagementRoutes.ts:342 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `visitor_logs` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/voiceRoutes.ts:2771 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `voice_call_sessions` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/voiceRoutes.ts:4033 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `voice_call_sessions` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/routes/voiceRoutes.ts:4126 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `voice_call_sessions` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/services/ai-brain/domainLeadSupervisors.ts:601 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `employees` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/services/ai-brain/domainLeadSupervisors.ts:625 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `employees` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
 | blocker | server/services/auditor/auditorAccessService.ts:570 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `auditor_accounts` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
 | blocker | server/services/auditor/curePeriodTrackerService.ts:421 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `audit_condition_timers` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
 | blocker | server/services/autonomousScheduler.ts:2767 | trinity_law_raw_sql_no_workspace | Raw SQL DELETE FROM `sessions` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
@@ -405,7 +344,6 @@ _(none)_
 | blocker | server/services/developmentSeed.ts:119 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `users` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
 | blocker | server/services/developmentSeedFinancialIntegrations.ts:621 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `payroll_entries` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
 | blocker | server/services/email/emailProvisioningService.ts:252 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `clients` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/services/employeeOnboardingPipelineService.ts:166 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `employees` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
 | blocker | server/services/helpai/faqLearningService.ts:94 | trinity_law_raw_sql_no_workspace | Raw SQL DELETE FROM `faq_candidates` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
 | blocker | server/services/helpai/supportActionRegistry.ts:442 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `form_invitations` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
 | blocker | server/services/infrastructure/durableJobQueue.ts:490 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `durable_job_queue` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
@@ -414,11 +352,10 @@ _(none)_
 | blocker | server/services/productionSeed.ts:1134 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `SET` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
 | blocker | server/services/shiftChatroomWorkflowService.ts:580 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `dar_reports` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
 | blocker | server/services/sms/smsQueueService.ts:122 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `sms_outbox` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/services/trinity/proactive/officerWellness.ts:166 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `audit_logs` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-| blocker | server/services/trinity/proactive/officerWellness.ts:229 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `audit_logs` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
 | blocker | server/services/trinity/workflows/missedClockInWorkflow.ts:382 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `failed` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
-
-_+ 5 more — see `platform-health-audit.json`._
+| blocker | server/services/trinityEventSubscriptions.ts:2640 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `disciplinary_records` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
+| blocker | server/services/trinityVoice/supportCaseService.ts:186 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `voice_support_cases` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
+| blocker | server/services/webhookDeliveryService.ts:278 | trinity_law_raw_sql_no_workspace | Raw SQL UPDATE on `workspace_webhooks` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation |
 
 ## Trinity §I — hardcoded workspace UUIDs
 
@@ -441,20 +378,14 @@ _(none)_
 | file | routes | flagged |
 | --- | --- | --- |
 | server/routes/adminWorkspaceDetailsRoutes.ts | 2 | 7 |
-| server/routes/rmsRoutes.ts | 0 | 7 |
 | server/routes/biAnalyticsRoutes.ts | 10 | 6 |
-| server/routes/equipmentRoutes.ts | 22 | 4 |
 | server/routes/time-entry-routes.ts | 0 | 4 |
-| server/routes/voiceRoutes.ts | 0 | 4 |
-| server/routes/chatInlineRoutes.ts | 25 | 3 |
-| server/routes/clockinPinRoutes.ts | 0 | 3 |
 | server/routes/compliance/regulatoryPortal.ts | 27 | 3 |
-| server/routes/mascot-routes.ts | 44 | 3 |
 | server/routes/platformFeedbackRoutes.ts | 6 | 3 |
-| server/routes/rfpEthicsRoutes.ts | 0 | 3 |
 | server/routes/advancedSchedulingRoutes.ts | 0 | 2 |
 | server/routes/chat-uploads.ts | 3 | 2 |
 | server/routes/chat.ts | 33 | 2 |
+| server/routes/chatInlineRoutes.ts | 25 | 2 |
 | server/routes/clientRoutes.ts | 17 | 2 |
 | server/routes/contentInlineRoutes.ts | 13 | 2 |
 | server/routes/emailUnsubscribe.ts | 5 | 2 |
@@ -470,6 +401,12 @@ _(none)_
 | server/routes/onboardingInlineRoutes.ts | 10 | 2 |
 | server/routes/recruitmentRoutes.ts | 20 | 2 |
 | server/routes/resendWebhooks.ts | 7 | 2 |
+| server/routes/rmsRoutes.ts | 0 | 2 |
+| server/routes/salesRoutes.ts | 0 | 2 |
+| server/routes/spsDocumentRoutes.ts | 0 | 2 |
+| server/routes/spsFormsRoutes.ts | 0 | 2 |
+| server/routes/sra/sraTrinityRoutes.ts | 5 | 2 |
+| server/routes/twilioWebhooks.ts | 6 | 2 |
 
 ## How to use this report
 

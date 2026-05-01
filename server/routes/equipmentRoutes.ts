@@ -485,9 +485,10 @@ router.post("/report-lost/:assignmentId", async (req, res) => {
           [payrollEntryId, assignment.employee_id, workspaceId, `Lost equipment: ${item.name || 'Unknown item'}`, deductionAmount]
         );
 
+        // TRINITY.md §G: scope by workspace_id atomically.
         await client.query(
-          `UPDATE equipment_assignments SET deduction_amount = $1 WHERE id = $2`,
-          [deductionAmount, assignmentId]
+          `UPDATE equipment_assignments SET deduction_amount = $1 WHERE id = $2 AND workspace_id = $3`,
+          [deductionAmount, assignmentId, workspaceId]
         );
       }
 
@@ -564,9 +565,10 @@ router.post("/report-damage/:assignmentId", async (req, res) => {
           [payrollEntryId, assignment.employee_id, workspaceId, `Damaged equipment: ${item?.name || 'Unknown item'} - ${damageNotes}`, effectiveDeduction]
         );
 
+        // TRINITY.md §G: scope by workspace_id atomically.
         await client.query(
-          `UPDATE equipment_assignments SET deduction_amount = $1 WHERE id = $2`,
-          [effectiveDeduction, assignmentId]
+          `UPDATE equipment_assignments SET deduction_amount = $1 WHERE id = $2 AND workspace_id = $3`,
+          [effectiveDeduction, assignmentId, workspaceId]
         );
       }
 
@@ -841,9 +843,10 @@ router.post("/:itemId/report-lost", async (req, res) => {
          VALUES (gen_random_uuid(), $1, $2, $3, 'equipment_lost', $4, $5, false, NOW(), NOW())`,
         [payrollEntryId, assignmentLookup.rows[0].employee_id, workspaceId, `Lost equipment: ${item.name || 'Unknown item'}`, deductionAmount]
       );
+      // TRINITY.md §G: scope by workspace_id atomically.
       await client.query(
-        `UPDATE equipment_assignments SET deduction_amount = $1 WHERE id = $2`,
-        [deductionAmount, assignmentId]
+        `UPDATE equipment_assignments SET deduction_amount = $1 WHERE id = $2 AND workspace_id = $3`,
+        [deductionAmount, assignmentId, workspaceId]
       );
     }
 

@@ -162,9 +162,10 @@ export class EmployeeOnboardingPipelineService {
   async activateEmployee(employeeId: string, workspaceId: string): Promise<void> {
     log.info(`Activating employee ${employeeId}`);
 
+    // TRINITY.md §G: scope by workspace_id atomically.
     await pool.query(
-      `UPDATE employees SET status = 'active', activated_at = NOW() WHERE id = $1`,
-      [employeeId]
+      `UPDATE employees SET status = 'active', activated_at = NOW() WHERE id = $1 AND workspace_id = $2`,
+      [employeeId, workspaceId]
     ).catch((err) => log.warn('[employeeOnboardingPipelineService] Fire-and-forget failed:', err));
 
     await pool.query(

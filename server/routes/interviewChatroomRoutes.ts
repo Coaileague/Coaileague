@@ -132,9 +132,10 @@ router.patch('/chatrooms/:id/decision', requireAuth, async (req: Request, res: R
       return res.status(404).json({ error: 'Chatroom not found' });
     }
 
+    // TRINITY.md §G: scope by workspace_id atomically.
     await pool.query(
-      `UPDATE interview_chatrooms SET human_decision = $1, human_notes = $2 WHERE id = $3`,
-      [decision, notes || null, req.params.id]
+      `UPDATE interview_chatrooms SET human_decision = $1, human_notes = $2 WHERE id = $3 AND workspace_id = $4`,
+      [decision, notes || null, req.params.id, user.workspaceId]
     );
     res.json({ success: true });
   } catch (err: any) {

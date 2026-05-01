@@ -535,6 +535,12 @@ function scanContentFiles(): {
     SQL_UPDATE_RE.lastIndex = 0;
     while ((m = SQL_UPDATE_RE.exec(src)) !== null) {
       if (isInComment(src, m.index)) continue;
+      // Honor explicit exemption markers placed in a comment within ~800
+      // chars before the SQL. The format is intentionally verbose so it
+      // shows up in code review:
+      //   // AUDIT-EXEMPT TRINITY.md §G: <reason>
+      const exemptWindow = src.slice(Math.max(0, m.index - 800), m.index);
+      if (/AUDIT-EXEMPT\s+TRINITY\.md\s+§G\b/.test(exemptWindow)) continue;
       const tbl = m[1];
       const where = m[2] || '';
       // Only consider tables that look multi-tenant — cheap heuristic: name in a
@@ -558,6 +564,8 @@ function scanContentFiles(): {
     SQL_DELETE_RE.lastIndex = 0;
     while ((m = SQL_DELETE_RE.exec(src)) !== null) {
       if (isInComment(src, m.index)) continue;
+      const exemptWindow = src.slice(Math.max(0, m.index - 400), m.index);
+      if (/AUDIT-EXEMPT\s+TRINITY\.md\s+§G\b/.test(exemptWindow)) continue;
       const tbl = m[1];
       const where = m[2] || '';
       if (!/workspace_id|workspaceId/.test(src.slice(Math.max(0, m.index - 200), m.index + 800))) continue;

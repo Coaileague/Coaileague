@@ -162,11 +162,12 @@ export async function handleWellnessReply(params: {
 
   if (params.reply === 'ok') {
     try {
+      // TRINITY.md §G: scope by workspace_id atomically.
       await pool.query(
         `UPDATE audit_logs
             SET metadata = $1::jsonb,
                 success = true
-          WHERE id = $2`,
+          WHERE id = $2 AND workspace_id = $3`,
         [
           JSON.stringify({
             ...meta,
@@ -176,6 +177,7 @@ export async function handleWellnessReply(params: {
             outcome: 'ok',
           }),
           audit.id,
+          params.workspaceId,
         ],
       );
     } catch (err: any) {
@@ -225,11 +227,12 @@ export async function handleWellnessReply(params: {
   }
 
   try {
+    // TRINITY.md §G: scope by workspace_id atomically.
     await pool.query(
       `UPDATE audit_logs
           SET metadata = $1::jsonb,
               success = true
-        WHERE id = $2`,
+        WHERE id = $2 AND workspace_id = $3`,
       [
         JSON.stringify({
           ...meta,
@@ -240,6 +243,7 @@ export async function handleWellnessReply(params: {
           supportCaseId: caseId ?? null,
         }),
         audit.id,
+        params.workspaceId,
       ],
     );
   } catch (err: any) {

@@ -280,6 +280,12 @@ async function resolveOrMigrateMainRoom() {
 
   const legacyRoom = await storage.getChatConversation(LEGACY_MAIN_ROOM_ID);
   if (legacyRoom) {
+    // AUDIT-EXEMPT TRINITY.md §G: one-time platform-wide rename of the
+    // global main chat room (workforceos → coaileague). Both conversation
+    // IDs are hard-coded constants, never user-controlled — there is no
+    // tenant boundary to enforce because the main room is shared across
+    // every workspace. Equivalent to the privacy/DSR exception: platform-
+    // staff-level data move, not a per-tenant write.
     await pool.query(
       `UPDATE chat_messages SET conversation_id = $1 WHERE conversation_id = $2`,
       [MAIN_ROOM_ID, LEGACY_MAIN_ROOM_ID]

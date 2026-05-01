@@ -317,7 +317,8 @@ export function registerSalesPipelineActions(): void {
       if (l.contact_email) score += 10;
       if ((l.operating_states || []).length > 0) score += 10;
       score = Math.min(100, score);
-      await pool.query(`UPDATE sales_leads SET lead_score=$1, updated_at=NOW() WHERE id=$2`, [score, leadId]);
+      // TRINITY.md §G: scope by workspace_id atomically.
+      await pool.query(`UPDATE sales_leads SET lead_score=$1, updated_at=NOW() WHERE id=$2 AND workspace_id=$3`, [score, leadId, workspaceId]);
       return { success: true, actionId: request.actionId, message: `Lead scored: ${score}/100`, data: { score } };
     },
   });

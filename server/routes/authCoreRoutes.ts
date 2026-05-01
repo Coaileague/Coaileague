@@ -976,7 +976,15 @@ router.delete("/api/auth/sessions/:id", requireAuth, async (req: any, res) => {
     );
     if (!rows[0]) return res.status(404).json({ error: 'Session not found' });
     await removeSession(rows[0].session_id);
-    await pool.query(`DELETE FROM user_sessions WHERE id = $1`, [req.params.id]);
+    // AUDIT-EXEMPT TRINITY.md §G: user_sessions is user-scoped (no
+    // workspace_id column); the canonical isolation predicate here is
+    // user_id, which we include in the DELETE WHERE so the SELECT/DELETE
+    // pair is atomically locked to req.user even under a race-window
+    // where another request could re-target req.params.id.
+    await pool.query(
+      `DELETE FROM user_sessions WHERE id = $1 AND user_id = $2`,
+      [req.params.id, req.user.id]
+    );
     return res.json({ success: true });
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to revoke session' });

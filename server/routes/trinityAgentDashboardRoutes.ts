@@ -345,15 +345,17 @@ router.post('/override', requireAuth, async (req: AuthenticatedRequest, res: Res
 
     const actorId = req.user?.id || 'unknown';
 
-    // Mark as denied
+    // TRINITY.md §G: scope by the approval's workspace_id atomically (also
+    // guards against a concurrent denial racing the status='pending' check
+    // above — the WHERE will only match if the row is still pending).
     await pool.query(
       `UPDATE governance_approvals
        SET status = 'denied',
            denied_by = $1,
            denied_at = NOW(),
            denial_reason = $2
-       WHERE id = $3`,
-      [actorId, reason.trim(), actionId],
+       WHERE id = $3 AND workspace_id = $4 AND status = 'pending'`,
+      [actorId, reason.trim(), actionId, approval.workspace_id],
     );
 
     // Audit log

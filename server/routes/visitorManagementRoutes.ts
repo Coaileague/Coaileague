@@ -339,7 +339,8 @@ visitorManagementRouter.get('/overstay', requireAuth, async (req: AuthenticatedR
           metadata: { logId: o.id, visitorName: o.visitor_name, siteName: o.site_name, elapsedMinutes: o.elapsedMinutes },
         }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
-        await pool.query(`UPDATE visitor_logs SET alert_sent=true WHERE id=$1`, [o.id]).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        // TRINITY.md §G: scope by workspace_id atomically.
+        await pool.query(`UPDATE visitor_logs SET alert_sent=true WHERE id=$1 AND workspace_id=$2`, [o.id, workspaceId]).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
       }
     }
 
@@ -603,7 +604,8 @@ async function runOverstayScanner(workspaceIds?: string[]): Promise<void> {
           metadata: { logId: o.id, visitorName: o.visitor_name, siteName: o.site_name, elapsedMinutes: elapsed },
         }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
-        await pool.query(`UPDATE visitor_logs SET alert_sent=true WHERE id=$1`, [o.id]).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        // TRINITY.md §G: scope by workspace_id atomically.
+        await pool.query(`UPDATE visitor_logs SET alert_sent=true WHERE id=$1 AND workspace_id=$2`, [o.id, workspaceId]).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
       }
     }
   } catch (err: any) {

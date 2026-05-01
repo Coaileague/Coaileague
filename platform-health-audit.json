@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-05-01T16:54:37.653Z",
+  "generatedAt": "2026-05-01T17:12:55.060Z",
   "counts": {
     "route_conflict": 114,
     "mount_overlap": 42,
     "race_missing_transaction": 391,
     "race_fire_and_forget": 168,
     "race_read_then_write_no_lock": 112,
-    "trinity_law_raw_sql_no_workspace": 55,
     "race_set_immediate": 30,
     "trinity_law_module_load_assert": 4,
+    "trinity_law_raw_sql_no_workspace": 19,
     "trinity_law_hardcoded_workspace": 3
   },
   "findings": [
@@ -1388,15 +1388,6 @@
       "evidence": "db.update, db.update"
     },
     {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/authCoreRoutes.ts",
-      "line": 979,
-      "detail": "Raw SQL DELETE FROM `user_sessions` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "DELETE FROM user_sessions WHERE id = $1`, [req.params.id]);",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
       "category": "race_fire_and_forget",
       "severity": "high",
       "file": "server/routes/biAnalyticsRoutes.ts",
@@ -1519,7 +1510,7 @@
       "category": "race_missing_transaction",
       "severity": "medium",
       "file": "server/routes/chatInlineRoutes.ts",
-      "line": 834,
+      "line": 840,
       "detail": "4 db.{insert|update|delete} calls in this file with no db.transaction wrap",
       "evidence": "db.insert, db.delete, db.insert"
     },
@@ -1527,18 +1518,9 @@
       "category": "race_read_then_write_no_lock",
       "severity": "medium",
       "file": "server/routes/chatInlineRoutes.ts",
-      "line": 872,
+      "line": 878,
       "detail": "read-then-write on `chatMacros` without db.transaction or .forUpdate() — race window",
       "evidence": "select(chatMacros)  →  write(chatMacros)  in same scope"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/chatInlineRoutes.ts",
-      "line": 284,
-      "detail": "Raw SQL UPDATE on `chat_messages` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE chat_messages SET conversation_id = $1 WHERE conversation_id = $2`,",
-      "ruleRef": "TRINITY.md §G"
     },
     {
       "category": "race_fire_and_forget",
@@ -1557,33 +1539,6 @@
       "detail": "Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B",
       "evidence": "",
       "ruleRef": "TRINITY.md §B"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/clockinPinRoutes.ts",
-      "line": 68,
-      "detail": "Raw SQL UPDATE on `employees` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE employees SET clockin_pin_hash = $1 WHERE id = $2`,",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/clockinPinRoutes.ts",
-      "line": 183,
-      "detail": "Raw SQL UPDATE on `employees` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE employees SET clockin_pin_hash = NULL WHERE id = $1`, [employeeId]);",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/clockinPinRoutes.ts",
-      "line": 246,
-      "detail": "Raw SQL UPDATE on `employees` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE employees SET clockin_pin_hash = $1, updated_at = NOW() WHERE id = $2`,",
-      "ruleRef": "TRINITY.md §G"
     },
     {
       "category": "race_missing_transaction",
@@ -1723,15 +1678,6 @@
       "evidence": "db.insert, db.update, db.update"
     },
     {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/email/emailRoutes.ts",
-      "line": 281,
-      "detail": "Raw SQL UPDATE on `platform_email_addresses` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE platform_email_addresses",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
       "category": "race_missing_transaction",
       "severity": "medium",
       "file": "server/routes/emailUnsubscribe.ts",
@@ -1787,33 +1733,6 @@
       "line": 103,
       "detail": "7 db.{insert|update|delete} calls in this file with no db.transaction wrap",
       "evidence": "db.insert, db.insert, db.update"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/equipmentRoutes.ts",
-      "line": 489,
-      "detail": "Raw SQL UPDATE on `equipment_assignments` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE equipment_assignments SET deduction_amount = $1 WHERE id = $2`,",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/equipmentRoutes.ts",
-      "line": 568,
-      "detail": "Raw SQL UPDATE on `equipment_assignments` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE equipment_assignments SET deduction_amount = $1 WHERE id = $2`,",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/equipmentRoutes.ts",
-      "line": 845,
-      "detail": "Raw SQL UPDATE on `equipment_assignments` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE equipment_assignments SET deduction_amount = $1 WHERE id = $2`,",
-      "ruleRef": "TRINITY.md §G"
     },
     {
       "category": "race_missing_transaction",
@@ -2004,15 +1923,6 @@
       "evidence": "db.update, db.insert"
     },
     {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/interviewChatroomRoutes.ts",
-      "line": 136,
-      "detail": "Raw SQL UPDATE on `interview_chatrooms` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE interview_chatrooms SET human_decision = $1, human_notes = $2 WHERE id = $3`,",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
       "category": "race_missing_transaction",
       "severity": "medium",
       "file": "server/routes/leaderRoutes.ts",
@@ -2027,24 +1937,6 @@
       "line": 1261,
       "detail": "10 db.{insert|update|delete} calls in this file with no db.transaction wrap",
       "evidence": "db.insert, db.insert, db.insert"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/mascot-routes.ts",
-      "line": 2380,
-      "detail": "Raw SQL UPDATE on `mascot_sessions` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE mascot_sessions SET",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/mascot-routes.ts",
-      "line": 2472,
-      "detail": "Raw SQL UPDATE on `mascot_sessions` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE mascot_sessions SET",
-      "ruleRef": "TRINITY.md §G"
     },
     {
       "category": "race_missing_transaction",
@@ -2127,15 +2019,6 @@
       "line": 387,
       "detail": "2 db.{insert|update|delete} calls in this file with no db.transaction wrap",
       "evidence": "db.update, db.update"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/onboardingTaskRoutes.ts",
-      "line": 122,
-      "detail": "Raw SQL UPDATE on `SET` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE SET status = 'completed', completed_at = now(), notes = $4, updated_at = now()`,",
-      "ruleRef": "TRINITY.md §G"
     },
     {
       "category": "race_fire_and_forget",
@@ -2221,15 +2104,6 @@
       "ruleRef": "TRINITY.md §B"
     },
     {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/privacyRoutes.ts",
-      "line": 349,
-      "detail": "Raw SQL UPDATE on `data_subject_requests` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE data_subject_requests SET ${updates.join(',')} WHERE id=$1 RETURNING *`,",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
       "category": "race_fire_and_forget",
       "severity": "high",
       "file": "server/routes/privateMessageRoutes.ts",
@@ -2313,33 +2187,6 @@
       "ruleRef": "TRINITY.md §B"
     },
     {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/rfpEthicsRoutes.ts",
-      "line": 99,
-      "detail": "Raw SQL UPDATE on `anonymous_reports` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE anonymous_reports SET status=COALESCE($1,status), resolution=COALESCE($2,resolution), assigned_to=COALESCE($3,assigned_to), resolved_at=CASE WHEN $1='resolved' THEN NOW() ELSE resolved_at END,",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/rfpEthicsRoutes.ts",
-      "line": 152,
-      "detail": "Raw SQL UPDATE on `rfp_documents` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE rfp_documents SET proposal_draft=$1, proposal_generated_at=NOW(), status='proposal_drafted', updated_at=NOW() WHERE id=$2`, [proposalDraft, req.params.id]);",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/rfpEthicsRoutes.ts",
-      "line": 212,
-      "detail": "Raw SQL UPDATE on `shift_coverage_claims` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE shift_coverage_claims SET status='claimed', claimed_by_employee_id=$1, claimed_by_name=$2, claimed_at=NOW(), updated_at=NOW() WHERE id=$3`,",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
       "category": "race_missing_transaction",
       "severity": "medium",
       "file": "server/routes/rfpPipelineRoutes.ts",
@@ -2351,7 +2198,7 @@
       "category": "race_fire_and_forget",
       "severity": "high",
       "file": "server/routes/rmsRoutes.ts",
-      "line": 813,
+      "line": 818,
       "detail": "Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B",
       "evidence": "",
       "ruleRef": "TRINITY.md §B"
@@ -2360,55 +2207,10 @@
       "category": "race_fire_and_forget",
       "severity": "high",
       "file": "server/routes/rmsRoutes.ts",
-      "line": 951,
+      "line": 956,
       "detail": "Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B",
       "evidence": "",
       "ruleRef": "TRINITY.md §B"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/rmsRoutes.ts",
-      "line": 150,
-      "detail": "Raw SQL UPDATE on `daily_activity_reports` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE daily_activity_reports SET pdf_url=$1, pdf_generated_at=NOW(), updated_at=NOW() WHERE id=$2`,",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/rmsRoutes.ts",
-      "line": 217,
-      "detail": "Raw SQL UPDATE on `daily_activity_reports` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE daily_activity_reports SET pdf_url=$1, pdf_generated_at=NOW(), updated_at=NOW() WHERE id=$2`, [pdfUrl, req.params.id]);",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/rmsRoutes.ts",
-      "line": 231,
-      "detail": "Raw SQL UPDATE on `dar_reports` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE dar_reports SET pdf_url=$1, pdf_generated_at=NOW(), updated_at=NOW() WHERE id=$2`, [pdfUrl, req.params.id]);",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/rmsRoutes.ts",
-      "line": 311,
-      "detail": "Raw SQL UPDATE on `dar_reports` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE dar_reports SET summary=$1, trinity_articulated=true, updated_at=NOW() WHERE id=$2`,",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/rmsRoutes.ts",
-      "line": 328,
-      "detail": "Raw SQL UPDATE on `dar_reports` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE dar_reports SET pdf_url=$1, pdf_generated_at=NOW() WHERE id=$2`, [pdfUrl, req.params.id]);",
-      "ruleRef": "TRINITY.md §G"
     },
     {
       "category": "race_missing_transaction",
@@ -2417,24 +2219,6 @@
       "line": 101,
       "detail": "2 db.{insert|update|delete} calls in this file with no db.transaction wrap",
       "evidence": "db.insert, db.delete"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/safetyRoutes.ts",
-      "line": 320,
-      "detail": "Raw SQL UPDATE on `sla_contracts` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE sla_contracts SET breach_count=breach_count+1, last_breach_at=NOW() WHERE id=$1`, [slaContractId]);",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/salesPipelineRoutes.ts",
-      "line": 320,
-      "detail": "Raw SQL UPDATE on `sales_leads` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE sales_leads SET lead_score=$1, updated_at=NOW() WHERE id=$2`, [score, leadId]);",
-      "ruleRef": "TRINITY.md §G"
     },
     {
       "category": "race_missing_transaction",
@@ -2627,15 +2411,6 @@
       "ruleRef": "TRINITY.md §B"
     },
     {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/trinityAgentDashboardRoutes.ts",
-      "line": 350,
-      "detail": "Raw SQL UPDATE on `governance_approvals` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE governance_approvals",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
       "category": "race_fire_and_forget",
       "severity": "high",
       "file": "server/routes/trinityIntakeRoutes.ts",
@@ -2706,55 +2481,19 @@
       "category": "race_fire_and_forget",
       "severity": "high",
       "file": "server/routes/visitorManagementRoutes.ts",
-      "line": 622,
+      "line": 624,
       "detail": "Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B",
       "evidence": "",
       "ruleRef": "TRINITY.md §B"
     },
     {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/visitorManagementRoutes.ts",
-      "line": 342,
-      "detail": "Raw SQL UPDATE on `visitor_logs` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE visitor_logs SET alert_sent=true WHERE id=$1`, [o.id]).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
       "category": "race_fire_and_forget",
       "severity": "high",
       "file": "server/routes/voiceRoutes.ts",
-      "line": 4128,
+      "line": 4133,
       "detail": "Promise.catch attached without await/return — fire-and-forget violates TRINITY.md §B",
       "evidence": "jsonb_build_object('verify_requester', $1::text, 'guest_type', 'employment_verification')",
       "ruleRef": "TRINITY.md §B"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/voiceRoutes.ts",
-      "line": 2771,
-      "detail": "Raw SQL UPDATE on `voice_call_sessions` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE voice_call_sessions",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/voiceRoutes.ts",
-      "line": 4033,
-      "detail": "Raw SQL UPDATE on `voice_call_sessions` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE voice_call_sessions",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/routes/voiceRoutes.ts",
-      "line": 4126,
-      "detail": "Raw SQL UPDATE on `voice_call_sessions` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE voice_call_sessions",
-      "ruleRef": "TRINITY.md §G"
     },
     {
       "category": "race_set_immediate",
@@ -3073,24 +2812,6 @@
       "line": 586,
       "detail": "2 db.{insert|update|delete} calls in this file with no db.transaction wrap",
       "evidence": "db.insert, db.insert"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/services/ai-brain/domainLeadSupervisors.ts",
-      "line": 601,
-      "detail": "Raw SQL UPDATE on `employees` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE employees SET status = 'pending', updated_at = NOW() WHERE id = $1",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/services/ai-brain/domainLeadSupervisors.ts",
-      "line": 625,
-      "detail": "Raw SQL UPDATE on `employees` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE employees SET status = 'active', updated_at = NOW() WHERE id = $1",
-      "ruleRef": "TRINITY.md §G"
     },
     {
       "category": "race_missing_transaction",
@@ -5218,15 +4939,6 @@
       "evidence": "select(employeeBehaviorScores)  →  write(employeeBehaviorScores)  in same scope"
     },
     {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/services/employeeOnboardingPipelineService.ts",
-      "line": 166,
-      "detail": "Raw SQL UPDATE on `employees` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE employees SET status = 'active', activated_at = NOW() WHERE id = $1`,",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
       "category": "race_missing_transaction",
       "severity": "medium",
       "file": "server/services/employeeRoleSyncService.ts",
@@ -6735,24 +6447,6 @@
       "ruleRef": "TRINITY.md §B"
     },
     {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/services/trinity/proactive/officerWellness.ts",
-      "line": 166,
-      "detail": "Raw SQL UPDATE on `audit_logs` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE audit_logs",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/services/trinity/proactive/officerWellness.ts",
-      "line": 229,
-      "detail": "Raw SQL UPDATE on `audit_logs` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE audit_logs",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
       "category": "race_missing_transaction",
       "severity": "medium",
       "file": "server/services/trinity/trinityAuditService.ts",
@@ -6946,9 +6640,9 @@
       "category": "trinity_law_raw_sql_no_workspace",
       "severity": "blocker",
       "file": "server/services/trinityVoice/supportCaseService.ts",
-      "line": 169,
+      "line": 186,
       "detail": "Raw SQL UPDATE on `voice_support_cases` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE voice_support_cases",
+      "evidence": "UPDATE voice_support_cases SET transcript = $1, updated_at = NOW() WHERE case_number = $2`,",
       "ruleRef": "TRINITY.md §G"
     },
     {
@@ -7203,7 +6897,7 @@
       "category": "race_set_immediate",
       "severity": "high",
       "file": "server/index.ts",
-      "line": 2509,
+      "line": 2511,
       "detail": "setImmediate(async ...) — TRINITY.md §B forbids this fire-and-forget pattern",
       "evidence": "setImmediate(async () => {",
       "ruleRef": "TRINITY.md §B"
@@ -7212,28 +6906,10 @@
       "category": "race_set_immediate",
       "severity": "high",
       "file": "server/index.ts",
-      "line": 2980,
+      "line": 2982,
       "detail": "setTimeout(async ...) — TRINITY.md §B forbids this fire-and-forget pattern",
       "evidence": "setTimeout(async () => {",
       "ruleRef": "TRINITY.md §B"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/index.ts",
-      "line": 2124,
-      "detail": "Raw SQL UPDATE on `governance_approvals` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE governance_approvals",
-      "ruleRef": "TRINITY.md §G"
-    },
-    {
-      "category": "trinity_law_raw_sql_no_workspace",
-      "severity": "blocker",
-      "file": "server/index.ts",
-      "line": 2141,
-      "detail": "Raw SQL UPDATE on `governance_approvals` without workspace_id in WHERE — TRINITY.md §G tenant-isolation violation",
-      "evidence": "UPDATE governance_approvals SET status = 'failed', updated_at = NOW() WHERE id = $1`, [id],",
-      "ruleRef": "TRINITY.md §G"
     },
     {
       "category": "race_missing_transaction",
@@ -8903,7 +8579,7 @@
     {
       "file": "server/routes/authCoreRoutes.ts",
       "routes": 30,
-      "flagged": 1
+      "flagged": 0
     },
     {
       "file": "server/routes/authRoutes.ts",
@@ -9033,7 +8709,7 @@
     {
       "file": "server/routes/chatInlineRoutes.ts",
       "routes": 25,
-      "flagged": 3
+      "flagged": 2
     },
     {
       "file": "server/routes/chatPollRoutes.ts",
@@ -9073,7 +8749,7 @@
     {
       "file": "server/routes/clockinPinRoutes.ts",
       "routes": 0,
-      "flagged": 3
+      "flagged": 0
     },
     {
       "file": "server/routes/code-editor.ts",
@@ -9398,7 +9074,7 @@
     {
       "file": "server/routes/email/emailRoutes.ts",
       "routes": 0,
-      "flagged": 1
+      "flagged": 0
     },
     {
       "file": "server/routes/email-attachments.ts",
@@ -9468,7 +9144,7 @@
     {
       "file": "server/routes/equipmentRoutes.ts",
       "routes": 22,
-      "flagged": 4
+      "flagged": 1
     },
     {
       "file": "server/routes/executionTrackerRoutes.ts",
@@ -9718,7 +9394,7 @@
     {
       "file": "server/routes/interviewChatroomRoutes.ts",
       "routes": 8,
-      "flagged": 1
+      "flagged": 0
     },
     {
       "file": "server/routes/inviteRoutes.ts",
@@ -9768,7 +9444,7 @@
     {
       "file": "server/routes/mascot-routes.ts",
       "routes": 44,
-      "flagged": 3
+      "flagged": 1
     },
     {
       "file": "server/routes/messageBridgeRoutes.ts",
@@ -9868,7 +9544,7 @@
     {
       "file": "server/routes/onboardingTaskRoutes.ts",
       "routes": 7,
-      "flagged": 1
+      "flagged": 0
     },
     {
       "file": "server/routes/orchestratedScheduleRoutes.ts",
@@ -9958,7 +9634,7 @@
     {
       "file": "server/routes/privacyRoutes.ts",
       "routes": 13,
-      "flagged": 1
+      "flagged": 0
     },
     {
       "file": "server/routes/privateMessageRoutes.ts",
@@ -10048,7 +9724,7 @@
     {
       "file": "server/routes/rfpEthicsRoutes.ts",
       "routes": 0,
-      "flagged": 3
+      "flagged": 0
     },
     {
       "file": "server/routes/rfpPipelineRoutes.ts",
@@ -10058,7 +9734,7 @@
     {
       "file": "server/routes/rmsRoutes.ts",
       "routes": 0,
-      "flagged": 7
+      "flagged": 2
     },
     {
       "file": "server/routes/roleLabelRoutes.ts",
@@ -10068,7 +9744,7 @@
     {
       "file": "server/routes/safetyRoutes.ts",
       "routes": 0,
-      "flagged": 1
+      "flagged": 0
     },
     {
       "file": "server/routes/salesInlineRoutes.ts",
@@ -10078,7 +9754,7 @@
     {
       "file": "server/routes/salesPipelineRoutes.ts",
       "routes": 10,
-      "flagged": 1
+      "flagged": 0
     },
     {
       "file": "server/routes/salesRoutes.ts",
@@ -10363,7 +10039,7 @@
     {
       "file": "server/routes/trinityAgentDashboardRoutes.ts",
       "routes": 7,
-      "flagged": 1
+      "flagged": 0
     },
     {
       "file": "server/routes/trinityAuditRoutes.ts",
@@ -10508,12 +10184,12 @@
     {
       "file": "server/routes/visitorManagementRoutes.ts",
       "routes": 0,
-      "flagged": 2
+      "flagged": 1
     },
     {
       "file": "server/routes/voiceRoutes.ts",
       "routes": 0,
-      "flagged": 4
+      "flagged": 1
     },
     {
       "file": "server/routes/vqaRoutes.ts",
@@ -10572,456 +10248,7 @@
     }
   ],
   "tscSummary": {
-    "errors": 381,
-    "topFiles": [
-      {
-        "file": "server/services/ai-brain/trinityDocumentActions.ts",
-        "count": 28
-      },
-      {
-        "file": "server/services/ai-brain/trinityChatService.ts",
-        "count": 21
-      },
-      {
-        "file": "client/src/components/email/EmailHubCanvas.tsx",
-        "count": 13
-      },
-      {
-        "file": "client/src/pages/settings/HiringSettings.tsx",
-        "count": 13
-      },
-      {
-        "file": "server/routes/authCoreRoutes.ts",
-        "count": 13
-      },
-      {
-        "file": "server/routes/engagementRoutes.ts",
-        "count": 13
-      },
-      {
-        "file": "server/routes/chat-rooms.ts",
-        "count": 12
-      },
-      {
-        "file": "server/services/ai-brain/subagents/onboardingOrchestrator.ts",
-        "count": 11
-      },
-      {
-        "file": "server/services/documents/businessArtifactDiagnosticService.ts",
-        "count": 10
-      },
-      {
-        "file": "server/storage.ts",
-        "count": 9
-      },
-      {
-        "file": "server/services/ai-brain/actionRegistry.ts",
-        "count": 8
-      },
-      {
-        "file": "server/routes/salesRoutes.ts",
-        "count": 7
-      },
-      {
-        "file": "server/services/paystubService.ts",
-        "count": 7
-      },
-      {
-        "file": "client/src/components/trinity-chat-modal.tsx",
-        "count": 6
-      },
-      {
-        "file": "server/routes/calendarRoutes.ts",
-        "count": 6
-      },
-      {
-        "file": "server/routes/mascot-routes.ts",
-        "count": 6
-      },
-      {
-        "file": "server/routes/platformRoutes.ts",
-        "count": 6
-      },
-      {
-        "file": "server/routes/reviewRoutes.ts",
-        "count": 6
-      },
-      {
-        "file": "server/routes/trinitySchedulingRoutes.ts",
-        "count": 6
-      },
-      {
-        "file": "server/routes/twilioWebhooks.ts",
-        "count": 6
-      },
-      {
-        "file": "server/services/trinity/trinityInboundEmailProcessor.ts",
-        "count": 6
-      },
-      {
-        "file": "client/src/components/universal-chat-layout.tsx",
-        "count": 5
-      },
-      {
-        "file": "server/routes/chat-management.ts",
-        "count": 5
-      },
-      {
-        "file": "server/routes/complianceReportsRoutes.ts",
-        "count": 5
-      },
-      {
-        "file": "server/routes/incidentPipelineRoutes.ts",
-        "count": 5
-      },
-      {
-        "file": "server/routes/recruitmentRoutes.ts",
-        "count": 5
-      },
-      {
-        "file": "server/routes/schedulesRoutes.ts",
-        "count": 5
-      },
-      {
-        "file": "server/routes.ts",
-        "count": 4
-      },
-      {
-        "file": "server/routes/emailEntityContextRoute.ts",
-        "count": 4
-      },
-      {
-        "file": "server/routes/uacpRoutes.ts",
-        "count": 4
-      },
-      {
-        "file": "server/services/ai-brain/trinityContextManager.ts",
-        "count": 4
-      },
-      {
-        "file": "client/src/components/chatdock/ChatDock.tsx",
-        "count": 3
-      },
-      {
-        "file": "client/src/hooks/use-trinity-state.ts",
-        "count": 3
-      },
-      {
-        "file": "client/src/pages/review-disputes.tsx",
-        "count": 3
-      },
-      {
-        "file": "server/routes/clientPortalInviteRoutes.ts",
-        "count": 3
-      },
-      {
-        "file": "server/services/ChatServerHub.ts",
-        "count": 3
-      },
-      {
-        "file": "server/services/ai-brain/trinity-orchestration/claudeService.ts",
-        "count": 3
-      },
-      {
-        "file": "server/services/universalNotificationEngine.ts",
-        "count": 3
-      },
-      {
-        "file": "server/tests/complianceEnforcementStressTest.ts",
-        "count": 3
-      },
-      {
-        "file": "client/src/components/chatdock/TrinityThoughtBar.tsx",
-        "count": 2
-      },
-      {
-        "file": "client/src/components/schedule/CalendarSyncDialog.tsx",
-        "count": 2
-      },
-      {
-        "file": "client/src/config/trinity.ts",
-        "count": 2
-      },
-      {
-        "file": "client/src/hooks/useTrinityTasks.ts",
-        "count": 2
-      },
-      {
-        "file": "client/src/lib/queryClient.ts",
-        "count": 2
-      },
-      {
-        "file": "client/src/pages/settings.tsx",
-        "count": 2
-      },
-      {
-        "file": "client/src/pages/universal-schedule.tsx",
-        "count": 2
-      },
-      {
-        "file": "server/platformAdmin.ts",
-        "count": 2
-      },
-      {
-        "file": "server/routes/auditorRoutes.ts",
-        "count": 2
-      },
-      {
-        "file": "server/routes/documentLibraryRoutes.ts",
-        "count": 2
-      },
-      {
-        "file": "server/routes/hrInlineRoutes.ts",
-        "count": 2
-      },
-      {
-        "file": "server/routes/mileageRoutes.ts",
-        "count": 2
-      },
-      {
-        "file": "server/routes/payrollRoutes.ts",
-        "count": 2
-      },
-      {
-        "file": "server/routes/privateMessageRoutes.ts",
-        "count": 2
-      },
-      {
-        "file": "server/routes/shiftRoutes.ts",
-        "count": 2
-      },
-      {
-        "file": "server/routes/siteBriefingRoutes.ts",
-        "count": 2
-      },
-      {
-        "file": "server/routes/supportRoutes.ts",
-        "count": 2
-      },
-      {
-        "file": "server/routes/voiceRoutes.ts",
-        "count": 2
-      },
-      {
-        "file": "server/services/ai-brain/trinityACCService.ts",
-        "count": 2
-      },
-      {
-        "file": "server/services/ai-brain/trinityTaxComplianceActions.ts",
-        "count": 2
-      },
-      {
-        "file": "server/services/autonomousScheduler.ts",
-        "count": 2
-      },
-      {
-        "file": "server/services/employeeRoleSyncService.ts",
-        "count": 2
-      },
-      {
-        "file": "server/services/trinity/proactive/anomalyWatch.ts",
-        "count": 2
-      },
-      {
-        "file": "server/tests/acme30DaySimulation.ts",
-        "count": 2
-      },
-      {
-        "file": "shared/config/rbac.ts",
-        "count": 2
-      },
-      {
-        "file": "client/src/App.tsx",
-        "count": 1
-      },
-      {
-        "file": "client/src/components/ConsentModal.tsx",
-        "count": 1
-      },
-      {
-        "file": "client/src/components/SimpleModeToggle.tsx",
-        "count": 1
-      },
-      {
-        "file": "client/src/components/calendar-heatmap.tsx",
-        "count": 1
-      },
-      {
-        "file": "client/src/components/navigation/ProgressiveHeader.tsx",
-        "count": 1
-      },
-      {
-        "file": "client/src/components/notifications-popover.tsx",
-        "count": 1
-      },
-      {
-        "file": "client/src/components/schedule/IsolatedScheduleToolbar.tsx",
-        "count": 1
-      },
-      {
-        "file": "client/src/components/schedule/ScheduleGrid.tsx",
-        "count": 1
-      },
-      {
-        "file": "client/src/pages/ai-brain-dashboard.tsx",
-        "count": 1
-      },
-      {
-        "file": "client/src/pages/co-auditor-dashboard.tsx",
-        "count": 1
-      },
-      {
-        "file": "client/src/pages/disputes.tsx",
-        "count": 1
-      },
-      {
-        "file": "client/src/pages/help.tsx",
-        "count": 1
-      },
-      {
-        "file": "client/src/pages/schedule-mobile-first.tsx",
-        "count": 1
-      },
-      {
-        "file": "client/src/pages/trinity-chat.tsx",
-        "count": 1
-      },
-      {
-        "file": "server/auth.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/adminWorkspaceDetailsRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/aiBrainControlRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/approvalRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/authRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/availabilityRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/chatPollRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/chatSearchRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/coverageRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/documentTemplateRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/documentVaultRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/domains/clients.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/expenseRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/hr/documentRequestRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/invoiceRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/permissionMatrixRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/postOrderVersionRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/qbReportsRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/terminationRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/timeEntryRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/trinityOrgStateRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/trinityThoughtStatusRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/routes/workboardRoutes.ts",
-        "count": 1
-      },
-      {
-        "file": "server/scripts/seed-stripe-products.ts",
-        "count": 1
-      },
-      {
-        "file": "server/scripts/setup-new-pricing-products.ts",
-        "count": 1
-      },
-      {
-        "file": "server/scripts/verify-stripe-products.ts",
-        "count": 1
-      },
-      {
-        "file": "server/services/ai-brain/trinityContentGuardrails.ts",
-        "count": 1
-      },
-      {
-        "file": "server/services/chat/chatDurabilityAdapter.ts",
-        "count": 1
-      },
-      {
-        "file": "server/services/documents/timesheetSupportPackageGenerator.ts",
-        "count": 1
-      },
-      {
-        "file": "server/services/employeeBehaviorScoring.ts",
-        "count": 1
-      },
-      {
-        "file": "server/services/helpai/helpAIBotService.ts",
-        "count": 1
-      },
-      {
-        "file": "server/services/incidentRoutingService.ts",
-        "count": 1
-      },
-      {
-        "file": "server/services/onboarding/onboardingHandshakeService.ts",
-        "count": 1
-      },
-      {
-        "file": "server/services/ops/panicAlertService.ts",
-        "count": 1
-      }
-    ]
+    "errors": 0,
+    "topFiles": []
   }
 }

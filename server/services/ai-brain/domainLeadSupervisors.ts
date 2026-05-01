@@ -597,9 +597,10 @@ class DomainLeadSupervisorService {
         `, employeeId ? [workspaceId, employeeId] : [workspaceId]);
 
         for (const emp of staleEmployees.rows) {
+          // TRINITY.md §G: scope by workspace_id atomically.
           await pool.query(`
-            UPDATE employees SET status = 'pending', updated_at = NOW() WHERE id = $1
-          `, [emp.id]);
+            UPDATE employees SET status = 'pending', updated_at = NOW() WHERE id = $1 AND workspace_id = $2
+          `, [emp.id, workspaceId]);
           actionsPerformed.push(`Reactivated onboarding for ${emp.first_name} (${emp.email})`);
         }
 
@@ -621,9 +622,10 @@ class DomainLeadSupervisorService {
         `, employeeId ? [workspaceId, employeeId] : [workspaceId]);
 
         for (const row of completedEmployees.rows) {
+          // TRINITY.md §G: scope by workspace_id atomically.
           await pool.query(`
-            UPDATE employees SET status = 'active', updated_at = NOW() WHERE id = $1
-          `, [row.employee_id]);
+            UPDATE employees SET status = 'active', updated_at = NOW() WHERE id = $1 AND workspace_id = $2
+          `, [row.employee_id, workspaceId]);
           actionsPerformed.push(`Activated employee ${row.employee_id} (all tasks complete)`);
         }
 

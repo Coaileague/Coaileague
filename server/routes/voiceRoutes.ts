@@ -2767,12 +2767,13 @@ async function runTrinityTalkTurn(params: {
         ...priorTurns,
         { issue: issue.slice(0, 200), answer: aiResult.answer.slice(0, 200) },
       ].slice(-5);
+      // TRINITY.md §G: scope by workspace_id atomically.
       await pool.query(
         `UPDATE voice_call_sessions
             SET metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('talkHistory', $1::jsonb),
                 updated_at = NOW()
-          WHERE id = $2 OR twilio_call_sid = $2`,
-        [JSON.stringify(nextHistory), sessionId]
+          WHERE (id = $2 OR twilio_call_sid = $2) AND workspace_id = $3`,
+        [JSON.stringify(nextHistory), sessionId, workspaceId]
       );
     } catch (e: any) {
       log.warn('[VoiceRoutes] trinity-talk memory save failed (non-fatal):', e?.message);
@@ -4029,12 +4030,14 @@ voiceRouter.post('/guest-complaint-intake', twilioSignatureMiddleware, async (re
     if (step === 'officer') {
       try {
         const { pool } = await import('../db');
+        // TRINITY.md §G: scope by workspace_id so a tampered ?workspaceId query
+        // can't bind metadata to another tenant's call session.
         await pool.query(
           `UPDATE voice_call_sessions
               SET metadata = COALESCE(metadata, '{}'::jsonb) ||
                              jsonb_build_object('complaint_company', $1::text)
-            WHERE twilio_call_sid = $2`,
-          [Speech.slice(0, 200), req.body.CallSid || sessionId],
+            WHERE twilio_call_sid = $2 AND workspace_id = $3`,
+          [Speech.slice(0, 200), req.body.CallSid || sessionId, workspaceId],
         );
       } catch { /* non-fatal */ }
 
@@ -4055,12 +4058,13 @@ voiceRouter.post('/guest-complaint-intake', twilioSignatureMiddleware, async (re
       if (Speech) {
         try {
           const { pool } = await import('../db');
+          // TRINITY.md §G: scope by workspace_id atomically.
           await pool.query(
             `UPDATE voice_call_sessions
                 SET metadata = COALESCE(metadata, '{}'::jsonb) ||
                                jsonb_build_object('complaint_officer', $1::text)
-              WHERE twilio_call_sid = $2`,
-            [Speech.slice(0, 200), req.body.CallSid || sessionId],
+              WHERE twilio_call_sid = $2 AND workspace_id = $3`,
+            [Speech.slice(0, 200), req.body.CallSid || sessionId, workspaceId],
           );
         } catch { /* non-fatal */ }
       }
@@ -4122,12 +4126,13 @@ voiceRouter.post('/guest-employment-verify', twilioSignatureMiddleware, async (r
     if (step === 'employee') {
       try {
         const { pool } = await import('../db');
+        // TRINITY.md §G: scope by workspace_id atomically.
         await pool.query(
           `UPDATE voice_call_sessions
               SET metadata = COALESCE(metadata, '{}'::jsonb) ||
                              jsonb_build_object('verify_requester', $1::text, 'guest_type', 'employment_verification')
-            WHERE twilio_call_sid = $2`,
-          [Speech.slice(0, 300), req.body.CallSid || sessionId]
+            WHERE twilio_call_sid = $2 AND workspace_id = $3`,
+          [Speech.slice(0, 300), req.body.CallSid || sessionId, workspaceId]
         ).catch(() => null);
       } catch { /* non-fatal */ }
 
