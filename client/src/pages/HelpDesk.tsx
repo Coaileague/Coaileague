@@ -1,4 +1,5 @@
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { useState, useEffect, useRef, useCallback, useMemo, Suspense, lazy, type TouchEvent as ReactTouchEvent } from "react";
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { secureFetch } from "@/lib/csrf";
@@ -2035,7 +2036,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  <ChevronLeft className="w-5 h-5" />
  </Button>
  <Suspense fallback={<div className="w-10 h-10 rounded-full bg-primary-foreground/20" />}>
- <TrinityArrowMark size={40} />
+ <TrinityAnimatedLogo size={40} />
  </Suspense>
  <div>
  <div className="flex items-center gap-2 flex-wrap">
@@ -3902,7 +3903,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  /* Loading state with Trinity branding */
  <div className="text-center py-8 flex flex-col items-center gap-3">
  <Suspense fallback={<div className="w-16 h-16" />}>
- <TrinityArrowMark size={64} />
+ <TrinityAnimatedLogo size={64} />
  </Suspense>
  <p className="text-muted-foreground dark:text-gray-400 text-sm font-medium"> Loading user information...</p>
  </div>

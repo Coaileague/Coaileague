@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, createContext, useContext } from "react";
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
@@ -7,6 +8,7 @@ import { Bell, AlertTriangle, Info, Wrench, Check, Clock, X, Sparkles, Zap, Chev
 import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger,  } from "@/components/ui/popover";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { UniversalModal, UniversalModalContent } from '@/components/ui/universal-modal'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,  } from "@/components/ui/alert-dialog";
 ;
@@ -997,7 +999,7 @@ function NotificationDetailModal({
                 : isHigh 
                 ? 'bg-amber-100 dark:bg-amber-900' 
                 : 'bg-primary/10'].join(' ')}>
-              <TrinityLogo size={20} />
+              <TrinityAnimatedLogo size={20} />
             </div>
             <div className="flex-1 min-w-0">
               <h2 className={`font-bold text-sm sm:text-base leading-tight break-words ${
@@ -2584,7 +2586,7 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-2">
             <Suspense fallback={<div className="w-12 h-12" />}>
-              <TrinityArrowMark size={48} />
+              <TrinityAnimatedLogo size={48} />
             </Suspense>
             <span className="text-xs text-muted-foreground">Loading...</span>
           </div>
@@ -2719,12 +2721,32 @@ function NotificationsPopoverInner({ user }: { user: any }) {
     return (
       <>
         {/* Notification Bell Trigger */}
-        <div onClick={() => { chatDock?.closeBubble(); setOpen(true); }}>
+        <button
+          className="relative inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-accent/60 transition-colors"
+          onClick={() => { chatDock?.closeBubble(); setOpen(true); }}
+          aria-label={totalUnread > 0 ? `Notifications — ${totalUnread} unread` : 'Notifications'}
+          data-testid="button-mobile-notifications"
+        >
           <Bell className="h-5 w-5 text-foreground" />
-        </div>
-        
-        {/* No title so we control our own header; showCloseButton=false hides the built-in sheet buttons */}
-        
+          {totalUnread > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center px-0.5 leading-none pointer-events-none">
+              {totalUnread > 99 ? '99+' : totalUnread}
+            </span>
+          )}
+        </button>
+
+        {/* Mobile Notifications Bottom Sheet */}
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetContent
+            side="bottom"
+            hideBuiltInClose={false}
+            className="p-0 flex flex-col"
+            data-testid="sheet-mobile-notifications"
+          >
+            {MobileNotificationsContent}
+          </SheetContent>
+        </Sheet>
+
         {/* Notification Detail Modal - Shows structured breakdown */}
         <NotificationDetailModal
           notification={selectedNotification}

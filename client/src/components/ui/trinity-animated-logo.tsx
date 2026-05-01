@@ -222,6 +222,27 @@ export function TrinityAnimatedLogo({
 }
 
 /**
+ * useTrinityGlobalState — subscribes to Trinity's live state broadcast.
+ * TrinityThoughtBar (and future surfaces) emit 'trinity-state-change' events
+ * whenever Trinity's cognitive state changes. This hook picks it up so any
+ * TrinityOrbitalAvatar or TrinityAnimatedLogo auto-animates without prop drilling.
+ */
+export function useTrinityGlobalState(defaultState: TrinityState = "idle"): TrinityState {
+  const [state, setState] = useState<TrinityState>(defaultState);
+  
+  useEffect(() => {
+    function handleStateChange(e: Event) {
+      const evt = e as CustomEvent<{ state: TrinityState }>;
+      if (evt.detail?.state) setState(evt.detail.state);
+    }
+    window.addEventListener("trinity-state-change", handleStateChange);
+    return () => window.removeEventListener("trinity-state-change", handleStateChange);
+  }, []);
+  
+  return state;
+}
+
+/**
  * TrinityOrbitalAvatar — The purple-circle-with-icon from the thought bar.
  *
  * Replaces the static purple circle with a living Gemini-inspired orbital:
@@ -232,16 +253,19 @@ export function TrinityAnimatedLogo({
  */
 interface TrinityOrbitalAvatarProps {
   size?: number;
-  state?: TrinityState;
+  state?: TrinityState;  // Optional — auto-detects from global Trinity state if omitted
   className?: string;
 }
 
 export function TrinityOrbitalAvatar({
   size = 36,
-  state = "idle",
+  state: stateProp,
   className,
 }: TrinityOrbitalAvatarProps) {
   const uid = useId().replace(/:/g, "");
+  // Auto-detect Trinity's global state unless a specific state is forced via prop
+  const globalState = useTrinityGlobalState("idle");
+  const state = stateProp ?? globalState;
   const colors = STATE_COLORS[state];
   const speed  = SPIN_SPEEDS[state];
 

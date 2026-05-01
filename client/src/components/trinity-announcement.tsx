@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle2, AlertCircle, Info, AlertTriangle } from 'lucide-react';
@@ -92,7 +93,7 @@ function AnnouncementBubble({
     >
       <div className="flex items-start gap-3">
         <div className={`flex-shrink-0 ${style.iconColor}`}>
-          {Icon === TrinityLogo ? <TrinityLogo size={20} /> : <Icon className="h-5 w-5" />}
+          {Icon === TrinityLogo ? <TrinityAnimatedLogo size={20} /> : <Icon className="h-5 w-5" />}
         </div>
         
         <div className="flex-1 min-w-0">

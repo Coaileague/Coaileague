@@ -5,6 +5,7 @@
  */
 
 import { secureFetch } from "@/lib/csrf";
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
@@ -1280,7 +1281,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
               }}
               data-testid="tool-trinity"
             >
-              <TrinityLogo size={20} />
+              <TrinityAnimatedLogo size={20} />
               <span className="text-sm font-medium">Trinity AI</span>
             </Button>
           </div>

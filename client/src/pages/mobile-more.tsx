@@ -1,4 +1,5 @@
 import { useLocation } from "wouter";
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { hasManagerAccess } from "@/config/mobileConfig";
@@ -194,7 +195,7 @@ export default function MobileMorePage() {
             data-testid="more-menu-ask-trinity"
           >
             <div className="w-7 h-7 rounded-full border border-primary/30 bg-primary/10 flex items-center justify-center shrink-0">
-              <TrinityLogo size={14} />
+              <TrinityAnimatedLogo size={14} />
             </div>
             <span className="text-xs font-medium flex-1 uppercase tracking-wide text-primary">
               Ask Trinity AI

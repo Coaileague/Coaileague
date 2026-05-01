@@ -5,6 +5,7 @@
  */
 
 import { Button } from '@/components/ui/button';
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { cn } from '@/lib/utils';
 import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 
@@ -80,7 +81,7 @@ export function TrinityMiniButton({
         className
       )}
     >
-      <TrinityLogo size={28} className="text-cyan-400" />
+      <TrinityAnimatedLogo size={28} className="text-cyan-400" />
     </Button>
   );
 }

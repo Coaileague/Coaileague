@@ -1,4 +1,5 @@
 import { Link } from 'wouter';
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { SEO } from '@/components/seo';
 import { UniversalHeader } from '@/components/universal-header';
 import { Footer } from '@/components/footer';
@@ -156,7 +157,7 @@ function WhoIsTrinitySection() {
 
         <div className="text-center mb-16">
           <Badge className="mb-4 bg-violet-500/10 text-violet-400 border-violet-500/20">
-            <TrinityLogo size={12} className="mr-1.5" />
+            <TrinityAnimatedLogo size={12} className="mr-1.5" />
             Trinity — The Heart of CoAIleague
           </Badge>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-5 leading-tight">

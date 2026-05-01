@@ -1,4 +1,5 @@
 import { useEffect, Suspense, lazy } from "react";
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
@@ -26,7 +27,7 @@ function LoadingSpinner() {
   return (
     <div className="flex flex-col items-center justify-center h-screen gap-4">
       <Suspense fallback={<div className="w-20 h-20" />}>
-        <TrinityArrowMark size={80} />
+        <TrinityAnimatedLogo size={80} />
       </Suspense>
       <div className="text-center space-y-1">
         <p className="text-sm font-medium text-foreground">Loading your dashboard</p>

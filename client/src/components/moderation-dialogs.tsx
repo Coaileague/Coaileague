@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { UniversalModal, UniversalModalContent, UniversalModalHeader, UniversalModalTitle, UniversalModalDescription, UniversalModalFooter } from "@/components/ui/universal-modal";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -61,7 +62,7 @@ export function KickDialog({ open, userName, onConfirm, onCancel }: KickDialogPr
         <UniversalModalHeader>
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center">
-              <TrinityLogo size={24} />
+              <TrinityAnimatedLogo size={24} />
             </div>
             <div className="flex-1">
               <UniversalModalTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">
@@ -240,7 +241,7 @@ export function SilenceDialog({ open, userName, onConfirm, onCancel }: SilenceDi
         <UniversalModalHeader>
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center">
-              <TrinityLogo size={24} />
+              <TrinityAnimatedLogo size={24} />
             </div>
             <div className="flex-1">
               <UniversalModalTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">

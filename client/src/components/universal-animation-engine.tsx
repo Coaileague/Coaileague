@@ -18,6 +18,7 @@
  */
 
 import { useEffect, useRef, useCallback, useState, memo } from 'react';
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUniversalLoadingGate } from '@/contexts/universal-loading-gate';
@@ -612,7 +613,7 @@ export function UniversalAnimationEngine({
             className="flex items-center justify-center"
           >
             <Suspense fallback={<div className="w-24 h-24" />}>
-              <TrinityArrowMark size={96} />
+              <TrinityAnimatedLogo size={96} />
             </Suspense>
           </motion.div>
 

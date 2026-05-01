@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -170,7 +171,7 @@ export function TrinitySchedulingSummaryModal({
     <UniversalModal open={open} onOpenChange={onOpenChange} size="lg" className="flex flex-col" showHomeButton={false} data-testid="modal-trinity-scheduling-summary">
         <UniversalModalHeader>
           <UniversalModalTitle className="flex items-center gap-2">
-            <TrinityLogo size={20} className="text-primary" />
+            <TrinityAnimatedLogo size={20} className="text-primary" />
             Trinity Scheduling Complete
           </UniversalModalTitle>
           <UniversalModalDescription>
@@ -183,7 +184,7 @@ export function TrinitySchedulingSummaryModal({
             <Card data-testid="card-ai-summary">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <TrinityLogo size={16} />
+                  <TrinityAnimatedLogo size={16} />
                   AI Summary
                 </CardTitle>
               </CardHeader>

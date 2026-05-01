@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageCircle, CheckCircle2, Loader2, UserCheck, AlertCircle, 
@@ -195,7 +196,7 @@ function ProgressItem({ progress }: { progress: SchedulingProgressStep }) {
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="h-8 w-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-              <TrinityLogo size={16} className="text-white" />
+              <TrinityAnimatedLogo size={16} className="text-white" />
             </div>
             {progress.step !== 'complete' && progress.step !== 'no_match' && (
               <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 rounded-full border border-white dark:border-gray-800 animate-pulse" />
@@ -226,7 +227,7 @@ function ProgressItem({ progress }: { progress: SchedulingProgressStep }) {
 
             {progress.creditsCharged && (
               <div className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
-                <TrinityLogo size={12} className="text-purple-400" />
+                <TrinityAnimatedLogo size={12} className="text-purple-400" />
                 <span>{progress.creditsCharged} credits</span>
               </div>
             )}

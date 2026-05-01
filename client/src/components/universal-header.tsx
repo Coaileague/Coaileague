@@ -6,6 +6,7 @@
  */
 
 import { Button } from "@/components/ui/button";
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { UniversalModal, UniversalModalTrigger } from '@/components/ui/universal-modal';
@@ -77,7 +78,7 @@ function TrinityDesktopButton({
       
       {/* Trinity mascot icon - centered and larger */}
       <div className="relative z-10 -mt-1">
-        <TrinityLogo size={36} />
+        <TrinityAnimatedLogo size={36} />
       </div>
       
       {/* Curved "Ask Trinity" text using SVG */}

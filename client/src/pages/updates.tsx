@@ -1,4 +1,5 @@
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Zap, Shield, TrendingUp, MessageCircle, Calendar, Clock, ArrowRightLeft, Repeat, AlertCircle, Loader2, Bell } from "lucide-react";
@@ -108,7 +109,7 @@ export default function Updates() {
           <Card key={update.id} className="overflow-hidden" data-testid={`card-update-${update.id}`}>
             <div className="flex gap-3 sm:gap-4 p-4">
               <div className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center bg-gradient-to-br from-cyan-500/15 to-blue-500/15 dark:from-cyan-400/20 dark:to-blue-400/20 ring-1 ring-cyan-500/20 dark:ring-cyan-400/25 mt-0.5">
-                {getFeatureIcon(update.title) || <TrinityLogo size={22} />}
+                {getFeatureIcon(update.title) || <TrinityAnimatedLogo size={22} />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2 flex-wrap">

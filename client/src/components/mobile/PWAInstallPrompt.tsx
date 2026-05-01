@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { useMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { UniversalModal, UniversalModalTitle, UniversalModalContent } from '@/components/ui/universal-modal';
@@ -87,7 +88,7 @@ export function PWAInstallPrompt() {
         
         <div className="flex flex-col items-center text-center">
           <div className="w-16 h-16 rounded-md bg-muted flex items-center justify-center mb-4 shadow-sm border">
-            <TrinityLogo size={40} />
+            <TrinityAnimatedLogo size={40} />
           </div>
           
           <h2 className="text-xl font-bold text-foreground mb-2">

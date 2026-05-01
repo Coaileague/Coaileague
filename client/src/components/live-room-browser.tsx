@@ -1,3 +1,4 @@
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import {
   MessageSquare,
   Users,
@@ -166,7 +167,7 @@ export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = f
     return (
       <div className="flex flex-col items-center justify-center p-12 gap-3">
         <Suspense fallback={<div className="w-16 h-16" />}>
-          <TrinityArrowMark size={64} />
+          <TrinityAnimatedLogo size={64} />
         </Suspense>
         <p className="text-sm text-muted-foreground">
           {isAuthLoading ? 'Checking authentication...' : 'Loading rooms...'}

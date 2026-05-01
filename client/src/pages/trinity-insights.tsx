@@ -10,6 +10,7 @@
  */
 
 import { useState } from 'react';
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { useLocation } from 'wouter';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -108,7 +109,7 @@ export default function TrinityInsights() {
       case 'alert': return <AlertTriangle className="w-4 h-4" />;
       case 'recommendation': return <Activity className="w-4 h-4" />;
       case 'achievement': return <Trophy className="w-4 h-4" />;
-      case 'insight': return <TrinityLogo size={16} />;
+      case 'insight': return <TrinityAnimatedLogo size={16} />;
       default: return null;
     }
   };
@@ -177,7 +178,7 @@ export default function TrinityInsights() {
           </div>
           <div className="flex justify-center items-center" style={{ minHeight: '200px' }}>
             <div style={{ width: '180px', height: '180px', position: 'relative' }}>
-              <TrinityArrowMark size={180} />
+              <TrinityAnimatedLogo size={180} />
             </div>
           </div>
         </Card>

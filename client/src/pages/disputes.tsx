@@ -1,4 +1,5 @@
 import { useState, Suspense, lazy } from "react";
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -145,7 +146,7 @@ export default function DisputesPage() {
       <DsPageWrapper className="flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Suspense fallback={<div className="w-16 h-16" />}>
-            <TrinityArrowMark size={64} />
+            <TrinityAnimatedLogo size={64} />
           </Suspense>
           <p className="text-ds-text-secondary">Loading disputes...</p>
         </div>

@@ -10,7 +10,7 @@
  * Subscribes to: model heartbeat, simulated thread state (real data via activity API)
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { TrinityArrowMark } from "@/components/trinity-logo";
@@ -79,6 +79,21 @@ const MODEL_LABELS: Record<string, string> = {
 };
 
 // ─── Component ─────────────────────────────────────────────────────────────
+
+// Broadcast Trinity's cognitive state to all orbital avatars
+const COAI_TO_TRINITY: Record<string, string> = {
+  "working":   "thinking",
+  "thinking":  "thinking",
+  "processing":"loading",
+  "speaking":  "speaking",
+  "listening": "listening",
+  "idle":      "idle",
+  "error":     "error",
+  "warning":   "warning",
+  "success":   "success",
+  "active":    "focused",
+};
+
 
 export function TrinityThoughtBar({
   isProcessing = false,
@@ -327,6 +342,16 @@ export function TrinityThoughtBar({
     : schedulingLabel ?? phrase;
 
   // ─── Render ───────────────────────────────────────────────────────────────
+  // Broadcast Trinity state to orbital avatars (TrinityOrbitalAvatar listens)
+  const prevBroadcastRef = React.useRef<string>("");
+  React.useEffect(() => {
+    const mapped = COAI_TO_TRINITY[statusState] ?? "idle";
+    if (mapped !== prevBroadcastRef.current) {
+      prevBroadcastRef.current = mapped;
+      window.dispatchEvent(new CustomEvent("trinity-state-change", { detail: { state: mapped } }));
+    }
+  }, [statusState]);
+
   return (
     <div
       className={cn("trinity-thought-bar relative flex-shrink-0 overflow-hidden", className)}

@@ -1,4 +1,5 @@
 import { useLocation } from "wouter";
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -149,7 +150,7 @@ export function UniversalErrorPage({
       <Card className="w-full max-w-lg border shadow-sm">
         <CardHeader className="text-center pb-4 pt-8">
           <div className="mx-auto mb-6 flex justify-center">
-            <TrinityArrowMark size={56} />
+            <TrinityAnimatedLogo size={56} />
           </div>
 
           <div className={`${config.bubbleStyle} border rounded-lg p-3 mb-4 mx-auto max-w-sm`}>

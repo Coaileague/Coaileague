@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { DashboardLoadError } from '@/components/dashboard/DashboardLoadError';
@@ -274,7 +275,7 @@ export default function TrinityTransparencyDashboard() {
       <div className="border-b border-white/10 bg-[#0d1426]/80 backdrop-blur sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <TrinityArrowMark className="w-8 h-8 text-[#4FC3F7]" />
+            <TrinityAnimatedLogo size={24} className="w-8 h-8 text-[#4FC3F7]" />
             <div>
               <h1 className="text-xl font-bold tracking-tight font-display">Trinity Transparency</h1>
               <p className="text-xs text-white/50">All autonomous actions, decisions & costs</p>

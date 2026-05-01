@@ -1,4 +1,5 @@
 import { secureFetch } from "@/lib/csrf";
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { useState, useEffect, Suspense, lazy } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -1920,10 +1921,10 @@ export default function QuickBooksImportPage() {
               <div className="relative flex-shrink-0">
                 <Suspense fallback={<div className="w-14 h-14 sm:w-20 sm:h-20" />}>
                   <div className="block sm:hidden">
-                    <TrinityArrowMark size={56} />
+                    <TrinityAnimatedLogo size={56} />
                   </div>
                   <div className="hidden sm:block">
-                    <TrinityArrowMark size={80} />
+                    <TrinityAnimatedLogo size={80} />
                   </div>
                 </Suspense>
                 {pushProgress === 100 && (

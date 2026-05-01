@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useState, memo, useId } from 'react';
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,7 +47,7 @@ import { Suspense, lazy } from 'react';
 function AnimatedTrinityLogo({ size = 80, isAnimating = true }: { size?: number; isAnimating?: boolean }) {
   return (
     <Suspense fallback={<div style={{ width: size, height: size }} />}>
-      <TrinityArrowMark size={size} />
+      <TrinityAnimatedLogo size={24} />
     </Suspense>
   );
 }

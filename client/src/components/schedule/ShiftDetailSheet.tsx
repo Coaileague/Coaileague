@@ -5,6 +5,7 @@
  */
 
 import { format } from 'date-fns';
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import {
   Drawer,
   DrawerContent,
@@ -190,7 +191,7 @@ export function ShiftDetailSheet({
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-3">
                 <div className="flex items-center justify-center w-9 h-9 rounded-md bg-primary/10 shrink-0">
-                  <TrinityLogo size={18} />
+                  <TrinityAnimatedLogo size={18} />
                 </div>
                 <div>
                   <DrawerTitle className="text-base font-semibold">

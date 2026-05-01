@@ -39,6 +39,7 @@
  */
 
 import "@/styles/universal-spinner.css";
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { TrinityArrowMark } from "@/components/trinity-logo";
 import { cn } from "@/lib/utils";
 
@@ -87,7 +88,7 @@ export function UniversalSpinner({
         className="coai-universal-spinner"
         style={{ width: px, height: px }}
       >
-        <TrinityArrowMark size={px} />
+        <TrinityAnimatedLogo size={24} />
       </span>
 
       {showLabel && (

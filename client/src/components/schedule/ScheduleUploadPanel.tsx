@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -148,7 +149,7 @@ export function ScheduleUploadPanel() {
       <CardContent className="pt-4 pb-3 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <TrinityLogo size={16} />
+            <TrinityAnimatedLogo size={16} />
             <span className="text-sm font-medium">Teach Trinity Your Patterns</span>
           </div>
           <Button

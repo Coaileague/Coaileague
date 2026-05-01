@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { ChevronRight, ChevronDown, Check, X, Wrench, CheckCircle2, Bell, Trash2, RefreshCw, CheckCheck, Sparkles, ListChecks, Pencil, Megaphone, Home } from "lucide-react";
 import { useLocation } from "wouter";
@@ -811,7 +812,7 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
           onClick={handleAskTrinity}
           data-testid="button-ask-trinity-notifications"
         >
-          <TrinityLogo size={16} />
+          <TrinityAnimatedLogo size={16} />
           <span className="text-xs">Ask Trinity</span>
         </Button>
       </div>
