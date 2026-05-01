@@ -75,12 +75,12 @@ export function emailHeader(params: {
   const th = params.theme ?? 'blue';
   return `<table width="100%" border="0" cellspacing="0" cellpadding="0"><tr>` +
     `<td style="background:${HEADER_GRADIENTS[th] ?? HEADER_GRADIENTS.blue};border-radius:12px 12px 0 0;">` +
-    `<table width="100%" border="0" cellspacing="0" cellpadding="0"><tr><td style="padding:22px 32px 16px;">${logoMark('sm')}</td></tr></table>` +
-    `<div style="height:1px;background:rgba(255,255,255,0.1);margin:0 32px;"></div>` +
-    `<table width="100%" border="0" cellspacing="0" cellpadding="0"><tr><td style="padding:24px 32px 32px;" align="center">` +
+    `<table width="100%" border="0" cellspacing="0" cellpadding="0"><tr><td class="cl-px" style="padding:22px 32px 16px;">${logoMark('sm')}</td></tr></table>` +
+    `<div class="cl-rule" style="height:1px;background:rgba(255,255,255,0.1);margin:0 32px;"></div>` +
+    `<table width="100%" border="0" cellspacing="0" cellpadding="0"><tr><td class="cl-px-y" style="padding:24px 32px 32px;" align="center">` +
     (params.badge ? `<div style="display:inline-block;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);color:rgba(255,255,255,0.85);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;padding:5px 14px;border-radius:20px;margin-bottom:14px;">${params.badge}</div><br>` : '') +
-    `<h1 style="margin:0;color:#fff;font-size:25px;font-weight:700;line-height:1.3;letter-spacing:-0.4px;">${params.title}</h1>` +
-    (params.subtitle ? `<p style="margin:9px 0 0;color:rgba(255,255,255,0.6);font-size:14px;line-height:1.5;">${params.subtitle}</p>` : '') +
+    `<h1 class="cl-h1" style="margin:0;color:#fff;font-size:25px;font-weight:700;line-height:1.3;letter-spacing:-0.4px;">${params.title}</h1>` +
+    (params.subtitle ? `<p class="cl-sub" style="margin:9px 0 0;color:rgba(255,255,255,0.6);font-size:14px;line-height:1.5;">${params.subtitle}</p>` : '') +
     `</td></tr></table>` +
     `<div style="height:3px;background:${HEADER_ACCENT[th] ?? HEADER_ACCENT.blue};"></div>` +
     `</td></tr></table>`;
@@ -88,7 +88,7 @@ export function emailHeader(params: {
 
 export function emailBody(content: string): string {
   return `<table width="100%" border="0" cellspacing="0" cellpadding="0"><tr>` +
-    `<td style="background-color:${B.bgCard};padding:36px 32px 28px;border-left:1px solid ${B.border};border-right:1px solid ${B.border};">` +
+    `<td class="cl-body" style="background-color:${B.bgCard};padding:36px 32px 28px;border-left:1px solid ${B.border};border-right:1px solid ${B.border};">` +
     content + `</td></tr></table>`;
 }
 
@@ -96,13 +96,54 @@ export function emailFooter(params?: { workspaceName?: string; note?: string }):
   const year = new Date().getFullYear();
   const note = params?.note ?? `This is an automated message from CoAIleague${params?.workspaceName ? ' / ' + params.workspaceName : ''}.`;
   return `<table width="100%" border="0" cellspacing="0" cellpadding="0"><tr>` +
-    `<td style="background-color:${B.footerBg};border-radius:0 0 12px 12px;padding:24px 32px 20px;border-top:3px solid #1e293b;">` +
+    `<td class="cl-px-y" style="background-color:${B.footerBg};border-radius:0 0 12px 12px;padding:24px 32px 20px;border-top:3px solid #1e293b;">` +
     `<table width="100%" border="0" cellspacing="0" cellpadding="0">` +
     `<tr><td style="padding-bottom:14px;" align="center">${logoMark('sm')}</td></tr>` +
     `<tr><td style="padding-bottom:10px;text-align:center;"><p style="margin:0;font-size:12px;color:${B.footerText};line-height:1.6;">${note}</p></td></tr>` +
     `<tr><td style="text-align:center;border-top:1px solid #1e293b;padding-top:10px;"><p style="margin:0;font-size:11px;color:#334155;">&copy; ${year} CoAIleague &bull; AI-Powered Workforce Intelligence</p></td></tr>` +
     `</table></td></tr></table>`;
 }
+
+/**
+ * Mobile media-query block injected into every layout. Targets the cl-* classes
+ * on the layout primitives so phone clients (Apple Mail, Gmail iOS/Android, most
+ * webmail) collapse the 32px gutter to 16px, scale headings, stack the
+ * label/value columns of infoCard rows, and let CTA buttons fill the row.
+ *
+ * Inline styles remain in place so clients that strip <style> (some Outlook
+ * desktop builds) still render acceptably; the media query is purely additive.
+ */
+const MOBILE_STYLES = `
+  <style>
+    @media only screen and (max-width:600px) {
+      .cl-container { width:100% !important; max-width:100% !important; }
+      .cl-outer { padding:12px 0 24px !important; }
+      .cl-px { padding-left:16px !important; padding-right:16px !important; }
+      .cl-px-y { padding:16px !important; }
+      .cl-body { padding:20px 16px 18px !important; }
+      .cl-rule { margin:0 16px !important; }
+      .cl-h1 { font-size:21px !important; line-height:1.3 !important; }
+      .cl-sub { font-size:13px !important; }
+      .cl-card-label, .cl-card-value {
+        display:block !important;
+        width:100% !important;
+        white-space:normal !important;
+        padding:6px 14px !important;
+      }
+      .cl-card-label { padding-bottom:0 !important; }
+      .cl-card-value { padding-top:2px !important; font-size:14px !important; }
+      .cl-cta-wrap { width:100% !important; }
+      .cl-cta-wrap a { display:block !important; padding:14px 20px !important; }
+      .cl-alert { padding:14px 16px !important; }
+      .cl-step-num { width:30px !important; }
+      img.cl-img { max-width:100% !important; height:auto !important; }
+    }
+    /* iOS/Apple Mail dark-mode: keep contrast against the dark-blue header */
+    @media (prefers-color-scheme: dark) {
+      .cl-h1, .cl-sub { color:#fff !important; }
+    }
+  </style>
+`;
 
 export function emailLayout(params: {
   header: string;
@@ -114,11 +155,11 @@ export function emailLayout(params: {
   const pre = params.preheader
     ? `<div style="display:none;max-height:0;overflow:hidden;font-size:1px;color:${B.bg};">${params.preheader}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>`
     : '';
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="X-UA-Compatible" content="IE=edge"><title>CoAIleague</title></head>` +
-    `<body style="margin:0;padding:0;background-color:${B.bg};font-family:'Segoe UI',Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">` +
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="format-detection" content="telephone=no"><title>CoAIleague</title>${MOBILE_STYLES}</head>` +
+    `<body style="margin:0;padding:0;background-color:${B.bg};font-family:'Segoe UI',Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;width:100% !important;">` +
     pre +
-    `<table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:${B.bg};"><tr><td align="center" style="padding:24px 16px 40px;">` +
-    `<table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;"><tr><td>` +
+    `<table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:${B.bg};"><tr><td align="center" class="cl-outer" style="padding:24px 16px 40px;">` +
+    `<table width="100%" border="0" cellspacing="0" cellpadding="0" class="cl-container" style="max-width:600px;width:100%;"><tr><td>` +
     params.header + emailBody(params.body) + footer +
     `</td></tr></table></td></tr></table>` +
     `</body></html>`;
@@ -143,8 +184,8 @@ export function infoCard(params: {
   const accent = params.accentColor ?? B.primary;
   const rows = params.rows.map((r, i) =>
     `<tr style="background-color:${i % 2 === 0 ? B.bgCardSoft : B.bgCard};">` +
-    `<td style="padding:11px 16px;font-size:13px;color:${B.textMuted};font-weight:600;white-space:nowrap;width:38%;">${r.label}</td>` +
-    `<td style="padding:11px 16px;font-size:13px;color:${r.highlight ? accent : B.textBody};font-weight:${r.highlight ? '700' : '400'};">${r.value}</td>` +
+    `<td class="cl-card-label" style="padding:11px 16px;font-size:13px;color:${B.textMuted};font-weight:600;white-space:nowrap;width:38%;">${r.label}</td>` +
+    `<td class="cl-card-value" style="padding:11px 16px;font-size:13px;color:${r.highlight ? accent : B.textBody};font-weight:${r.highlight ? '700' : '400'};word-wrap:break-word;word-break:break-word;">${r.value}</td>` +
     `</tr>`
   ).join('');
   return `<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin:0 0 24px;border-radius:8px;overflow:hidden;border:1px solid ${B.border};">` +
@@ -165,9 +206,9 @@ const ALERT: Record<AlertType, { bg: string; border: string; text: string; title
 export function alertBox(params: { type: AlertType; title?: string; body: string }): string {
   const c = ALERT[params.type];
   return `<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin:0 0 24px;border-radius:8px;overflow:hidden;border:1px solid ${c.border};background-color:${c.bg};">` +
-    `<tr><td style="padding:18px 20px;">` +
+    `<tr><td class="cl-alert" style="padding:18px 20px;">` +
     (params.title ? `<p style="margin:0 0 6px;font-size:13px;font-weight:700;color:${c.title};">${params.title}</p>` : '') +
-    `<p style="margin:0;font-size:13px;color:${c.text};line-height:1.6;">${params.body}</p>` +
+    `<p style="margin:0;font-size:13px;color:${c.text};line-height:1.6;word-wrap:break-word;">${params.body}</p>` +
     `</td></tr></table>`;
 }
 
@@ -206,7 +247,7 @@ const BTN_BG: Record<ButtonStyle, string> = {
 
 export function ctaButton(params: { text: string; url: string; style?: ButtonStyle }): string {
   const bg = BTN_BG[params.style ?? 'primary'];
-  return `<table border="0" cellspacing="0" cellpadding="0" style="margin:0 auto;"><tr>` +
+  return `<table border="0" cellspacing="0" cellpadding="0" class="cl-cta-wrap" style="margin:0 auto;"><tr>` +
     `<td align="center" style="border-radius:8px;background:${bg};">` +
     `<a href="${params.url}" target="_blank" style="display:inline-block;padding:14px 38px;font-size:15px;font-weight:700;color:#fff;text-decoration:none;border-radius:8px;letter-spacing:0.2px;">${params.text}</a>` +
     `</td></tr></table>`;

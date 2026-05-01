@@ -2503,9 +2503,52 @@ function ComposeCanvas({
     replyTo ? `Re: ${replyTo.subject}` :
     forwardFrom ? `Fwd: ${forwardFrom.subject}` : ''
   );
-  const [body, setBody] = useState(
-    forwardFrom ? `\n\n---------- Forwarded message ----------\n${forwardFrom.bodyText || ''}` : ''
-  );
+  const [body, setBody] = useState(() => {
+    if (!forwardFrom) return '';
+    // External emails surface bodyHtml only (bodyText=null in the unified
+    // mapper) — falling back to bodyText alone produced empty forwards.
+    // Strip tags from bodyHtml as a last-resort plain-text fallback so the
+    // forward composer is never blank.
+    const htmlFallback = forwardFrom.bodyHtml
+      ? forwardFrom.bodyHtml
+          .replace(/<style[\s\S]*?<\/style>/gi, '')
+          .replace(/<script[\s\S]*?<\/script>/gi, '')
+          .replace(/<br\s*\/?>/gi, '\n')
+          .replace(/<\/p>/gi, '\n\n')
+          .replace(/<\/div>/gi, '\n')
+          .replace(/<\/li>/gi, '\n')
+          .replace(/<[^>]+>/g, '')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .replace(/\n{3,}/g, '\n\n')
+          .trim()
+      : '';
+    const original = (forwardFrom.bodyText && forwardFrom.bodyText.trim())
+      || htmlFallback
+      || '(Original message had no readable body — only headers or attachments.)';
+    const fromLine = forwardFrom.fromName
+      ? `${forwardFrom.fromName} <${forwardFrom.fromAddress}>`
+      : forwardFrom.fromAddress;
+    const toLine = Array.isArray(forwardFrom.toAddresses)
+      ? forwardFrom.toAddresses.join(', ')
+      : (forwardFrom.toAddresses || '');
+    const dateLine = forwardFrom.sentAt || forwardFrom.createdAt || '';
+    return [
+      '',
+      '',
+      '---------- Forwarded message ----------',
+      `From: ${fromLine}`,
+      `Date: ${dateLine}`,
+      `Subject: ${forwardFrom.subject || ''}`,
+      `To: ${toLine}`,
+      '',
+      original,
+    ].join('\n');
+  });
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [originalBody, setOriginalBody] = useState('');
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
@@ -3628,8 +3671,8 @@ export function EmailHubCanvas() {
       fromName: item.sentByUser ? `${item.sentByUser.firstName} ${item.sentByUser.lastName}` : null,
       toAddresses: item.email?.toEmail || '',
       subject: item.email?.subject,
-      bodyText: null,
-      bodyHtml: item.email?.bodyHtml,
+      bodyText: item.email?.bodyText ?? null,
+      bodyHtml: item.email?.bodyHtml ?? null,
       priority: 'normal' as const,
       sentAt: item.email?.sentAt,
       createdAt: item.email?.createdAt,

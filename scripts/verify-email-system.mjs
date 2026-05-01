@@ -223,6 +223,83 @@ section('Silent failure scan');
   record('production never returns synthetic dev-* message ids', guarded);
 }
 
+// ─── Mobile responsiveness scan ──────────────────────────────────────────────
+section('Mobile responsiveness scan');
+{
+  const src = readFile('server/services/emailTemplateBase.ts');
+  record('emailLayout includes viewport meta',
+    /<meta name="viewport" content="width=device-width,initial-scale=1"/.test(src));
+  record('emailLayout injects @media query block',
+    /@media only screen and \(max-width:\s*600px\)/.test(src));
+  record('mobile rule collapses container to 100% width',
+    /\.cl-container\s*\{[^}]*width:100% !important[^}]*max-width:100% !important/.test(src));
+  record('mobile rule shrinks 32px gutter to 16px',
+    /\.cl-px[^{]*\{[^}]*padding-left:16px !important[^}]*padding-right:16px !important/.test(src));
+  record('mobile rule scales down h1',
+    /\.cl-h1\s*\{[^}]*font-size:21px !important/.test(src));
+  record('mobile rule stacks infoCard label/value',
+    /\.cl-card-label,\s*\.cl-card-value\s*\{[^}]*display:block !important[^}]*width:100% !important/.test(src));
+  record('mobile rule turns CTA into block-level button',
+    /\.cl-cta-wrap a\s*\{[^}]*display:block !important[^}]*padding:14px 20px !important/.test(src));
+  record('emailHeader emits cl-h1 / cl-px / cl-px-y classes',
+    /class="cl-px"/.test(src) && /class="cl-px-y"/.test(src) && /class="cl-h1"/.test(src));
+  record('emailBody emits cl-body class',
+    /class="cl-body"/.test(src));
+  record('infoCard emits cl-card-label / cl-card-value classes',
+    /class="cl-card-label"/.test(src) && /class="cl-card-value"/.test(src));
+  record('infoCard value column uses word-break for long content',
+    /word-wrap:break-word;word-break:break-word/.test(src));
+  record('alertBox emits cl-alert class',
+    /class="cl-alert"/.test(src));
+  record('ctaButton emits cl-cta-wrap class',
+    /class="cl-cta-wrap"/.test(src));
+}
+
+// ─── Forward composer body content ───────────────────────────────────────────
+section('Forward composer body content');
+{
+  const src = readFile('client/src/components/email/EmailHubCanvas.tsx');
+  // External-emails mapper must surface bodyText and bodyHtml from the API row
+  // so downstream consumers (forward, reply, AI summary) get real content.
+  const mapperHydrates =
+    /bodyText:\s*item\.email\?\.bodyText\s*\?\?\s*null/.test(src) &&
+    /bodyHtml:\s*item\.email\?\.bodyHtml\s*\?\?\s*null/.test(src);
+  record('external-email mapper hydrates bodyText AND bodyHtml from API', mapperHydrates,
+    mapperHydrates ? '' : 'mapper still hardcodes bodyText: null — forward bodies will be blank for HTML-only emails',
+    'high');
+
+  // Forward composer must fall back to bodyHtml when bodyText is missing.
+  const forwardFallsBack =
+    /forwardFrom\.bodyHtml/.test(src) &&
+    /Forwarded message/.test(src) &&
+    /forwardFrom\.bodyText/.test(src);
+  record('forward composer falls back to bodyHtml when bodyText empty',
+    forwardFallsBack, '', 'high');
+
+  // Forward composer must include From/Date/Subject headers so the recipient
+  // can see what was forwarded.
+  const includesHeaders =
+    /`From: \$\{fromLine\}`/.test(src) &&
+    /`Date: \$\{dateLine\}`/.test(src) &&
+    /`Subject: \$\{forwardFrom\.subject/.test(src) &&
+    /`To: \$\{toLine\}`/.test(src);
+  record('forward composer includes From / Date / Subject / To header lines', includesHeaders);
+
+  // Forward composer must never produce a literally-empty body
+  const guardsBlankBody =
+    /\(Original message had no readable body/.test(src);
+  record('forward composer fallback prevents literally-empty body', guardsBlankBody);
+}
+
+// Inbound forwards from inboundEmailRoutes also use buildForwardHtml
+{
+  const src = readFile('server/routes/inboundEmailRoutes.ts');
+  const usesBuilder = /buildForwardHtml\(\{/.test(src);
+  const builderHandlesEmpty = /\(Original message had no text or HTML body/.test(src);
+  record('inbound forwards route through buildForwardHtml', usesBuilder);
+  record('buildForwardHtml emits explicit notice for empty bodies', builderHandlesEmpty);
+}
+
 // ─── Live Resend round-trip (REST API, no SDK required) ──────────────────────
 section('Live Resend send (REST round-trip)');
 
