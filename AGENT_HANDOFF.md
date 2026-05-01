@@ -1,6 +1,90 @@
 # COAILEAGUE — MASTER HANDOFF
 # ONE FILE. Update in place.
-# Last updated: 2026-05-01 — Claude (unify duplicate services sweep — CLOSED)
+# Last updated: 2026-05-01 — Claude (unify duplicate services sweep — CLOSED, NOT YET MERGED)
+
+---
+
+## ⚠️ MERGE STATUS — VERIFIED 2026-05-01
+
+```
+THIS BRANCH IS NOT YET MERGED INTO origin/development.
+HEAD: 92d279e on origin/claude/unify-duplicate-services-7ZzYF
+origin/development latest: 3e9f7f46 fix(push-icons): white square notification icon
+
+While this branch sat awaiting review, development advanced with several
+TypeScript-hardening passes (cc7074c9, eaf66c2e, 430a4336, 8b061ce3,
+be919fbc, c5c66efd, 5c8f43b2, ff31dd05) that touched files I deleted or
+modified. Architect must resolve conflicts before merging.
+```
+
+### CONFLICT MAP (verified via `git merge-tree` dry-run)
+
+**6 modify-delete conflicts → resolve "deleted wins" (mine):**
+The dev side only ran TS-purge passes (removed `any` types,
+`@ts-expect-error` directives) on these files. The files themselves
+were dead all along — TS-cleaning a corpse doesn't make it alive. My
+deletions stand.
+
+| File | Resolution |
+|---|---|
+| `server/services/aiSchedulingTriggerService.ts` | take DELETED |
+| `server/services/dispatch.ts` | take DELETED |
+| `server/routes/dispatch.ts` | take DELETED |
+| `server/routes/mascot-routes.ts` | take DELETED |
+| `server/routes/schedulerRoutes.ts` | take DELETED |
+| `server/routes/workflowConfigRoutes.ts` | take DELETED |
+
+```bash
+# Architect command for each:
+git checkout --theirs <file>  # if merging dev INTO mine
+# OR
+git rm <file>                 # if merging mine INTO dev
+```
+
+**4 modify-modify conflicts → 3-way merge required:**
+
+| File | What I changed | Likely dev change | Resolution hint |
+|---|---|---|---|
+| `AGENT_HANDOFF.md` | full rewrite (turn tracker, phases 1–5, architect punch list) | likely small edits from other lanes | KEEP MINE entirely (this whole file is meant to be replaced in-place per the file's own rule) |
+| `client/src/contexts/ForceRefreshProvider.tsx` | removed `handleMascotDirective` + WS subscription + dep-array entry | likely TS `any` cleanup | take MINE (mascot is dead end-to-end) |
+| `server/services/notificationService.ts` | replaced 95-line `VALID_NOTIFICATION_TYPES` Set with `new Set(notificationTypeEnum.enumValues)` + import | TS `any` cleanup on other parts of the file | merge: keep MY enum-derive change, take DEV for the unrelated TS cleanups |
+| `shared/schema/domains/DOMAIN_CONTRACT.ts` | removed 16 entries for deleted files | likely added/removed entries from other domain work | merge by union-of-removals: drop everything I removed PLUS anything dev removed; keep dev additions intact |
+
+### FILES I DELETED THAT WILL CLEAN-MERGE (no conflict)
+
+These were untouched on dev — clean delete:
+- `server/services/notificationThrottleService.ts`
+- `server/services/scheduling/trinityOrchestrationBridge.ts`
+- `server/services/expansionSeed.ts`
+- `server/services/redisPubSubAdapter.ts`
+- `server/services/sentimentAnalysis.ts`
+- `server/services/timeEntryDisputeService.ts`
+- `server/services/trainingRateService.ts`
+- `server/services/trinityServiceConnector.ts`
+- `server/services/fileStorageIsolationService.ts`
+- `server/services/communicationFallbackService.ts`
+- `server/services/automationMetrics.ts`
+- `server/services/notificationRuleEngine.ts`
+- `server/services/documentDeliveryService.ts`
+- `server/services/scheduleRollbackService.ts`
+- `server/routes/gamificationRoutes.ts`
+- `server/routes/gpsRoutes.ts`
+- `server/routes/tokenRoutes.ts`
+- `server/routes/trainingRoutes.ts`
+- `server/routes/workflowRoutes.ts`
+
+### POST-MERGE VERIFICATION (run before pushing to Railway)
+
+```bash
+# 1. No imports of deleted services/routes survived
+grep -rEn "aiSchedulingTriggerService|notificationThrottleService|trinityOrchestrationBridge|expansionSeed|redisPubSubAdapter|sentimentAnalysis|timeEntryDisputeService|trainingRateService|trinityServiceConnector|fileStorageIsolationService|communicationFallbackService|automationMetrics|server/services/dispatch|notificationRuleEngine|documentDeliveryService|scheduleRollbackService|gamificationRoutes|gpsRoutes|server/routes/dispatch|mascot-routes|schedulerRoutes|tokenRoutes|server/routes/trainingRoutes|workflowConfigRoutes|workflowRoutes" server/ client/ shared/ --include='*.ts' --include='*.tsx'
+
+# 2. Build clean
+node build.mjs 2>&1 | grep -E "✅ Server|ERROR"
+
+# 3. Boot test — no ReferenceError or missing-import crashes
+# 4. notificationTypeEnum.enumValues import resolves at runtime
+```
 
 ---
 
@@ -10,17 +94,17 @@
 LANE — CLAUDE — ✅ CLOSED, READY FOR REVIEW/MERGE
   Branch: claude/unify-duplicate-services-7ZzYF
   Base:   438cca2  feat(simulation): hard-persist ACME simulation
-  HEAD:   (see latest commit) — Phase 5: dead routes + schema-drift fix
-  Commits: 6 (Phases 1, 2, 3, handoff close, 4, 5)
+  HEAD:   92d279e  docs(handoff): precise architect punch list
+  Commits: 8 (Phases 1, 2, 3, handoff close, 4, 5, architect punch list, this merge note)
 
   Net diff vs base: ~40 files changed, ~8,130 LOC dead code removed
   Bugs fixed: 1 runtime crash (GeoCompliance import)
   Schema-drift risks eliminated: 1 (notification type set)
 
 ARCHITECT: CLAUDE
-  → Pulls all agent branches when submitted
-  → Reviews diff, verifies correctness, runs build + boot test
-  → Merges clean to development
+  → Resolve 10 conflicts (6 deleted-wins + 4 3-way merges, see map above)
+  → Run post-merge verification (4-step recipe above)
+  → Merge clean to development
   → Pushes to Railway
 ```
 
@@ -111,6 +195,88 @@ PHASE 5C — `automation-schemas.ts` audit:
 **Cumulative across 5 phases:** 25 files deleted (16 services + 9 routes),
 ~8,130 LOC of dead/stub code removed, 1 latent runtime bug fixed,
 1 schema-drift risk eliminated.
+
+---
+
+## 🚫 EXPLICITLY DEFERRED — OUT OF SCOPE FOR THIS BRANCH
+
+Recording exactly what I chose NOT to do and WHY, so the architect
+can decide whether to pick each up next or leave it.
+
+### Why deferred
+
+This branch's invariant: **only delete or rewire when static analysis
+proves zero runtime impact**. The items below could not pass that bar
+from grep + symbol search alone — they need either:
+- a running server / boot test to confirm mount paths
+- production traffic logs to confirm endpoint usage
+- a domain-expert call to know if a divergence is intentional
+- coordinated mounts in `routes.ts` / `routes/domains/*.ts` that need
+  mount-path verification under load
+
+### DEFERRED ITEM A — Route file consolidation
+- Chat 8 → 2, AI Brain 8 → 3, Schedule 4 → 1 (after Phase 5A,
+  3 remain), Automation 4 → 2, Trinity 25+ → 4.
+- Detailed file lists + verification protocol + merge method below
+  in "ITEM 1 — Route consolidation".
+- **Why I didn't do this:** consolidating live routes requires
+  mount-order preservation under middleware (requireAuth,
+  ensureWorkspaceAccess, rate limiters) and per-endpoint URL
+  preservation. A miss = production 401/404 on real traffic. Needs a
+  dedicated branch with boot-test + per-mount integration test.
+
+### DEFERRED ITEM B — `aiBrainGuardrails` config dedup
+- 3 files: `shared/config/aiBrainGuardrails.ts`,
+  `server/services/aiGuardRails.ts`,
+  `server/services/ai-brain/aiBrainAuthorizationService.ts`.
+- Detailed protocol below in "ITEM 2 — aiBrainGuardrails config dedup".
+- **Why I didn't do this:** auth thresholds may have intentionally
+  diverged for safety (auth check stricter than the general
+  guardrail). Blindly unifying could weaken security. Needs a
+  domain-expert review of which divergences are intentional.
+
+### DEFERRED ITEM C — Notification stack API contract documentation
+- `notificationService.createNotification` (per-user) vs
+  `universalNotificationEngine.send*` (RBAC role-routed) vs
+  `NotificationDeliveryService.send` (raw channel dispatch) all
+  coexist legitimately, but call sites mix them.
+- **Why I didn't do this:** writing the canonical API contract is a
+  doc/architecture task, not a code-deletion task. No file deletions
+  to make. Belongs in `docs/notification-api-contract.md` (new) or
+  jsdoc on each entry point.
+- Concrete ask: pick one canonical entry per use case, document
+  which to use when, then add ESLint rule or CI grep that flags
+  callers using the wrong one.
+
+### DEFERRED ITEM D — Trinity sub-domain rationalization
+- 25+ trinity*Routes files have heavy thematic overlap
+  (`trinityCrisisRoutes`, `trinityEscalationRoutes`,
+  `trinityLimbicRoutes`, `trinityDecisionRoutes`,
+  `trinityIntelligenceRoutes`, etc.).
+- **Why I didn't do this:** these likely each have unique mount
+  paths exposed to the client. Same risk as Item A but worse — Trinity
+  is the AI's primary surface and breaking any endpoint cascades.
+- Suggested split: `trinityCoreRoutes` (decision/thought/limbic),
+  `trinityChatRoutes`, `trinityOpsRoutes` (alerts/escalation/audit),
+  `trinityStaffingRoutes` (kept).
+
+### DEFERRED ITEM E — Email automation overlap audit
+- `emailAutomation.ts` (299 LOC) is billing-aware bulk email but
+  some senders may overlap with `emailService` flavors.
+- **Why I didn't do this:** verified 90+ live callers use
+  `emailService` and 31 use `emailCore`; the layered architecture is
+  intentional. `emailAutomation`'s overlap is small enough that
+  forcing dedup risks breaking CAN-SPAM compliance (different files
+  apply unsubscribe/bounce checks differently).
+- Concrete ask: one-time audit pass to confirm every
+  `emailAutomation` sender that bypasses `sendCanSpamCompliantEmail`
+  is intentional (marketing emails are exempt; transactional aren't).
+
+### DEFERRED ITEM F — Move `automationInlineRoutes.ts` triggers list to DB
+- The route returns a hardcoded array of 5 automation triggers.
+  Should be DB-backed.
+- **Why I didn't do this:** out of scope (this is a data-source
+  refactor, not a duplicate fix).
 
 ---
 
