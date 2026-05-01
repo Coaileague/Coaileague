@@ -60,7 +60,7 @@ _(no other active sessions)_
 
 ### 2026-05-01 · claude-platform-health-LjP5K
 **Branch:** `claude/action-wiring-manifest-LjP5K`
-**Commit:** _(pending — will be appended)_
+**Commit:** `031df2f`
 **What changed:**
 - Added `scripts/audit/scan-platform-health.ts` — re-uses
   `action-wiring-manifest.json` and adds new sweeps for route conflicts,
