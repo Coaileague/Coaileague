@@ -1009,7 +1009,6 @@ function EmailHub({
 
   const unreadCount = emails.filter(e => !e.isRead).length;
   const hasBulkSelection = (selectedIds?.size ?? 0) > 0;
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const folderCfg = FOLDER_CONFIG[selectedFolder] || FOLDER_CONFIG.unread;
   const FolderIcon = folderCfg.icon;
 

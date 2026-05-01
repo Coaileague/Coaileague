@@ -975,7 +975,6 @@ router.patch('/tickets/:id/status', async (req: AuthenticatedRequest, res) => {
 
     const updatedTicket = await storage.updateSupportTicket(id, {
       status,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       lockVersion: (ticket.lockVersion ?? 0) + 1,
       updatedAt: new Date(),
     }, user.currentWorkspaceId);

@@ -1890,7 +1890,6 @@ export class DatabaseStorage implements IStorage {
   async createShift(shiftData: InsertShift): Promise<Shift> {
     const [shift] = await db
       .insert(shifts)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .values(shiftData)
       .returning();
     return shift;
@@ -1930,7 +1929,6 @@ export class DatabaseStorage implements IStorage {
   async updateShift(id: string, workspaceId: string, data: Partial<InsertShift>): Promise<Shift | undefined> {
     const [shift] = await db
       .update(shifts)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .set({ ...data, updatedAt: new Date() })
       .where(and(
         eq(shifts.id, id),
@@ -2166,7 +2164,6 @@ export class DatabaseStorage implements IStorage {
   async createInvoiceLineItem(itemData: InsertInvoiceLineItem): Promise<InvoiceLineItem> {
     const [item] = await db
       .insert(invoiceLineItems)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .values(itemData)
       .returning();
     return item;
@@ -3465,7 +3462,6 @@ export class DatabaseStorage implements IStorage {
   async createPerformanceReview(review: InsertPerformanceReview): Promise<PerformanceReview> {
     const [newReview] = await db
       .insert(performanceReviews)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .values(review)
       .returning();
     
@@ -3509,7 +3505,6 @@ export class DatabaseStorage implements IStorage {
   ): Promise<PerformanceReview | undefined> {
     const [updated] = await db
       .update(performanceReviews)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .set({ ...data, updatedAt: new Date() })
       .where(and(eq(performanceReviews.id, id), eq(performanceReviews.workspaceId, workspaceId)))
       .returning();
@@ -6403,7 +6398,6 @@ export class DatabaseStorage implements IStorage {
   async createOnboardingWorkflowTemplate(templateData: InsertOnboardingWorkflowTemplate): Promise<OnboardingWorkflowTemplate> {
     const [template] = await db
       .insert(onboardingWorkflowTemplates)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .values(templateData)
       .returning();
     return template;
@@ -6428,7 +6422,6 @@ export class DatabaseStorage implements IStorage {
   async updateOnboardingWorkflowTemplate(id: string, data: Partial<InsertOnboardingWorkflowTemplate>): Promise<OnboardingWorkflowTemplate | undefined> {
     const [template] = await db
       .update(onboardingWorkflowTemplates)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .set(data)
       .where(eq(onboardingWorkflowTemplates.id, id))
       .returning();
@@ -6438,7 +6431,6 @@ export class DatabaseStorage implements IStorage {
   async createOnboardingChecklist(checklistData: InsertOnboardingChecklist): Promise<OnboardingChecklist> {
     const [checklist] = await db
       .insert(onboardingChecklists)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .values(checklistData)
       .returning();
     return checklist;
@@ -6467,7 +6459,6 @@ export class DatabaseStorage implements IStorage {
   async updateOnboardingChecklist(id: string, data: Partial<InsertOnboardingChecklist>): Promise<OnboardingChecklist | undefined> {
     const [checklist] = await db
       .update(onboardingChecklists)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .set(data)
       .where(eq(onboardingChecklists.id, id))
       .returning();

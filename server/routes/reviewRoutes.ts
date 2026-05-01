@@ -234,7 +234,6 @@ router.post("/api/report-submissions", requireAuth, async (req: any, res) => {
 router.patch("/api/report-submissions/:id", requireAuth, async (req: any, res) => {
   try {
     const { id } = req.params;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const subUpdateSchema = z.object({
       content: z.string().max(50000).optional(),
       status: z.string().max(50).optional(),
@@ -362,11 +361,8 @@ router.post("/api/report-submissions/:id/generate-access", requireAuth, async (r
   try {
     const { id } = req.params;
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const generateAccessBodySchema = z.object({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       clientId: z.string().min(1, 'Client ID is required'),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       expirationDays: z.number().int().positive().optional(),
     });
     const generateAccessParsed = generateAccessBodySchema.safeParse(req.body);

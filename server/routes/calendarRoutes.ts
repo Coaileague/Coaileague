@@ -31,7 +31,43 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { localVirusScan } from '../middleware/virusScan';
 import { typedQuery } from '../lib/typedSql';
+import { googleCalendar } from '../services/oauth/googleCalendar';
 import { createLogger } from '../lib/logger';
+
+// Config helpers — the route handlers below historically called
+// isGoogleCalendarConfigured / getGoogleOAuthUrl / exchangeCodeForTokens /
+// getUserCalendarInfo, but those identifiers were never imported, so the
+// route crashed with ReferenceError at runtime. Wire them to the real
+// googleCalendar service.
+function isGoogleCalendarConfigured(): boolean {
+  return !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+}
+function getGoogleOAuthUrl(state: string): string {
+  // The googleCalendar.getAuthUrl signature takes userId+workspaceId; we
+  // pre-encode them in the state param the route generated above, so feed
+  // an empty pair here and let the redirect URL carry state.
+  const url = googleCalendar.getAuthUrl('', '');
+  // Replace the auto-generated state with the route-issued one.
+  return url.replace(/state=[^&]*/, `state=${encodeURIComponent(state)}`);
+}
+async function exchangeCodeForTokens(code: string): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
+  const tokens = await googleCalendar.exchangeCode(code);
+  if (!tokens) throw new Error('Google token exchange failed');
+  return {
+    accessToken: tokens.access_token,
+    refreshToken: tokens.refresh_token,
+    expiresIn: tokens.expires_in,
+  };
+}
+async function getUserCalendarInfo(accessToken: string): Promise<{ email: string }> {
+  const resp = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!resp.ok) throw new Error('Failed to fetch Google userinfo');
+  const data: any = await resp.json();
+  return { email: data.email ?? '' };
+}
+
 const log = createLogger('CalendarRoutes');
 
 export const calendarRouter = Router();

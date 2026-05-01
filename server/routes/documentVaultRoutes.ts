@@ -259,7 +259,6 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
 
     const [doc] = await db
       .insert(documentVault)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .values({ ...parsed.data, integrityHash, createdAt: new Date() })
       .returning();
 

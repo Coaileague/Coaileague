@@ -1250,15 +1250,12 @@ router.post(
       // Add participants — batched: 2 queries total regardless of participant count
       const addedParticipants: string[] = [];
       if (participantIds.length > 0) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const [existingRows, userRows] = await Promise.all([
           db.select({ participantId: chatParticipants.participantId })
             .from(chatParticipants)
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             .where(and(eq(chatParticipants.conversationId, roomId), inArray(chatParticipants.participantId, participantIds))),
           db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName, email: users.email })
             .from(users)
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             .where(inArray(users.id, participantIds)),
         ]);
         const alreadyIn = new Set(existingRows.map((r: any) => r.participantId));

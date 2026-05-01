@@ -2889,7 +2889,6 @@ router.post('/portal/:accessToken/invoice/:invoiceId/create-payment-intent', asy
 // functional without duplicating the service logic.
 router.post(
   '/generate-from-hours',
-  // @ts-expect-error — TS migration: requireWorkspaceRole type
   requireWorkspaceRole(['org_owner', 'co_owner']),
   async (req: Request, res: Response) => {
     try {

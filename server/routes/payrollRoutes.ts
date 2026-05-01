@@ -2301,7 +2301,6 @@ router.post('/:runId/void', async (req: AuthenticatedRequest, res) => {
       complianceTag: 'soc2',
     }).catch(err => log.error('[FinancialAudit] CRITICAL: SOC2 audit log write failed for payroll void', { error: err?.message }));
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     // broadcastToWorkspace already imported at top
     broadcastToWorkspace(workspaceId, { type: 'payroll_updated', action: 'voided', runId });
     platformEventBus.publish({

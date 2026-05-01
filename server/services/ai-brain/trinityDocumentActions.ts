@@ -14,6 +14,7 @@
  */
 
 import type { ActionRequest, ActionResult } from '../helpai/platformActionHub';
+import { geminiClient } from './providers/geminiClient';
 import { db } from '../../db';
 import { employees, orgDocuments, orgDocumentSignatures, employeeCertifications, hrDocumentRequests, workspaces, aiApprovals } from '@shared/schema';
 import { eq, and, lt, isNull, isNotNull, desc, inArray, sql } from 'drizzle-orm';
@@ -638,16 +639,16 @@ export function registerTrinityDocumentActions(orchestrator: any): void {
   });
   // ── Elite AI Actions — Per-Use Pricing ($89-199 range) ──────────────────
 
-  helpaiOrchestrator.registerAction(mkAction({
+  orchestrator.registerAction({
     actionId: 'document.contract_analysis',
     description: 'Line-by-line liability flagging, missing-protection callouts, and auto-redlines against PSB requirements. Cites exact statute violations.',
     requiredRoles: ['system', 'org_owner', 'co_owner', 'org_admin', 'manager'],
-    async execute(request: any) {
+    handler: async (request: any) => {
       const { workspaceId, documentId, documentText, contractType } = request.parameters || {};
       if (!workspaceId || (!documentId && !documentText)) {
         return { success: false, message: 'workspaceId and (documentId or documentText) required' };
       }
-      const { claudeVerificationService } = await import('./trinity-orchestration/trinityVerificationService');
+
       const prompt = `You are a security industry contract specialist. Analyze this security services contract and provide:
 1. LIABILITY FLAGS: Specific clauses creating liability exposure (cite clause numbers)
 2. MISSING PROTECTIONS: Standard PSB/security industry protections that are absent
@@ -660,33 +661,35 @@ ${documentText ? 'CONTRACT TEXT:\n' + documentText.slice(0, 8000) : 'Document ID
 
 Return structured JSON with fields: liabilityFlags[], missingProtections[], statuteViolations[], redlines[], riskScore, executiveSummary`;
 
-      const analysis = await claudeVerificationService.verify({
+      const aiResp = await geminiClient.generate({
         workspaceId,
-        context: prompt,
-        taskType: 'contract_analysis',
+        featureKey: 'contract_analysis',
+        systemPrompt: 'You are a security industry contract specialist.',
+        userMessage: prompt,
+        modelTier: 'DIAGNOSTICS',
       });
 
       return {
         success: true,
         actionId: request.actionId,
-        contractAnalysis: analysis?.result || analysis,
+        contractAnalysis: aiResp.text || aiResp,
         priceCents: 14900, // $149 base (within $89-189 range)
         featureKey: 'contract_analysis',
       };
     },
-  }));
+  });
 
-  helpaiOrchestrator.registerAction(mkAction({
+  orchestrator.registerAction({
     actionId: 'document.compliance_audit_report',
     description: 'Full audit-readiness report with compliance score, findings categorized by severity, and auditor-ready exhibit index.',
     requiredRoles: ['system', 'org_owner', 'co_owner', 'org_admin', 'manager'],
-    async execute(request: any) {
+    handler: async (request: any) => {
       const { workspaceId, auditType, periodStart, periodEnd, includeExhibits } = request.parameters || {};
       if (!workspaceId) {
         return { success: false, message: 'workspaceId required' };
       }
 
-      const { claudeVerificationService } = await import('./trinity-orchestration/trinityVerificationService');
+
       const { db } = await import('../../db');
       const { pool } = await import('../../db');
 
@@ -731,27 +734,31 @@ Generate a formal compliance audit report with:
 
 Return structured JSON.`;
 
-      const report = await claudeVerificationService.verify({
-        workspaceId, context: prompt, taskType: 'compliance_audit'
+      const aiResp = await geminiClient.generate({
+        workspaceId,
+        featureKey: 'compliance_audit_report',
+        systemPrompt: 'You are a compliance audit specialist for the security industry.',
+        userMessage: prompt,
+        modelTier: 'DIAGNOSTICS',
       });
 
       return {
         success: true,
         actionId: request.actionId,
-        auditReport: report?.result || report,
+        auditReport: aiResp.text || aiResp,
         workspaceId,
         generatedAt: new Date().toISOString(),
         priceCents: 16900, // $169 (within $129-199 range)
         featureKey: 'compliance_audit_report',
       };
     },
-  }));
+  });
 
-  helpaiOrchestrator.registerAction(mkAction({
+  orchestrator.registerAction({
     actionId: 'document.incident_investigation_report',
     description: 'Court-ready incident investigation narrative with timeline, root cause analysis, and officer conduct assessment for insurance and litigation.',
     requiredRoles: ['system', 'org_owner', 'co_owner', 'org_admin', 'manager', 'supervisor'],
-    async execute(request: any) {
+    handler: async (request: any) => {
       const { workspaceId, incidentId, incidentData } = request.parameters || {};
       if (!workspaceId || (!incidentId && !incidentData)) {
         return { success: false, message: 'workspaceId and (incidentId or incidentData) required' };
@@ -768,7 +775,7 @@ Return structured JSON.`;
         incident = result.rows[0];
       }
 
-      const { claudeVerificationService } = await import('./trinity-orchestration/trinityVerificationService');
+
       const prompt = `You are a security incident investigation specialist and expert witness preparer.
       
 Generate a court-ready incident investigation report for this security incident:
@@ -788,27 +795,32 @@ The report must include:
 
 Write in formal investigative report style. Use passive voice for officer actions. Cite specific policies and statutes where applicable. This report may be used in legal proceedings.`;
 
-      const report = await claudeVerificationService.verify({
-        workspaceId, context: prompt, taskType: 'incident_investigation'
+      const aiResp = await geminiClient.generate({
+        workspaceId,
+        featureKey: 'incident_investigation_report',
+        systemPrompt: 'You are a security incident investigation specialist and expert witness preparer.',
+        userMessage: prompt,
+        modelTier: 'DIAGNOSTICS',
       });
+      const report = { text: aiResp.text };
 
       return {
         success: true,
         actionId: request.actionId,
-        investigationReport: report?.result || report,
+        investigationReport: report.text || '',
         incidentId,
         generatedAt: new Date().toISOString(),
         priceCents: 3900, // $39 (within $29-39 range)
         featureKey: 'incident_investigation_report',
       };
     },
-  }));
+  });
 
-  helpaiOrchestrator.registerAction(mkAction({
+  orchestrator.registerAction({
     actionId: 'document.officer_performance_review',
     description: 'Structured performance review narrative from 12 months of shift, attendance, incident, and compliance data.',
     requiredRoles: ['system', 'org_owner', 'co_owner', 'org_admin', 'manager'],
-    async execute(request: any) {
+    handler: async (request: any) => {
       const { workspaceId, employeeId, reviewPeriodMonths = 12 } = request.parameters || {};
       if (!workspaceId || !employeeId) {
         return { success: false, message: 'workspaceId and employeeId required' };
@@ -828,7 +840,7 @@ Write in formal investigative report style. Use passive voice for officer action
       const attendance = attendanceData.rows[0] || {};
       const score = scoreData.rows[0] || {};
 
-      const { claudeVerificationService } = await import('./trinity-orchestration/trinityVerificationService');
+
       const prompt = `You are an HR performance review specialist for security operations.
 
 Generate a formal officer performance review for:
@@ -859,14 +871,19 @@ Generate a formal HR performance review with:
 
 Write in professional HR review style. Be specific and evidence-based. Avoid vague platitudes.`;
 
-      const review = await claudeVerificationService.verify({
-        workspaceId, context: prompt, taskType: 'performance_review'
+      const aiResp = await geminiClient.generate({
+        workspaceId,
+        featureKey: 'officer_performance_review',
+        systemPrompt: 'You are an HR performance review specialist for security operations.',
+        userMessage: prompt,
+        modelTier: 'DIAGNOSTICS',
       });
+      const review = { text: aiResp.text };
 
       return {
         success: true,
         actionId: request.actionId,
-        performanceReview: review?.result || review,
+        performanceReview: review.text || '',
         employeeId,
         reviewPeriodMonths,
         generatedAt: new Date().toISOString(),
@@ -874,8 +891,11 @@ Write in professional HR review style. Be specific and evidence-based. Avoid vag
         featureKey: 'officer_performance_review',
       };
     },
-  }));
+  });
 
+  // Register business document generators (proof of employment, payroll
+  // summaries, RFP analysis, etc.) defined in registerBusinessDocumentActions.
+  registerBusinessDocumentActions(orchestrator);
 }
 
 export async function scanOverdueI9s(workspaceId: string): Promise<void> {
@@ -929,70 +949,25 @@ export async function scanOverdueI9s(workspaceId: string): Promise<void> {
       updatedAt: new Date(),
     });
   }
+}
 
-  // ── Business Document Generators (Phase: Business Forms) ──────────────────
-
-  orchestrator.registerAction({
-    actionId: 'document.proof_of_employment',
-    description: 'Generate a branded Proof of Employment letter for an employee and save to tenant vault',
-    async execute(request: any) {
-      const { workspaceId, employeeId, requestedBy, employerNote } = request.parameters || {};
-      if (!workspaceId || !employeeId) {
-        return { actionId: request.actionId, success: false, error: 'workspaceId and employeeId required' };
-      }
-      const result = await generateProofOfEmployment({ workspaceId, employeeId, requestedBy, employerNote });
-      return { actionId: request.actionId, ...result };
-    },
-  });
-
-  orchestrator.registerAction({
-    actionId: 'document.direct_deposit_confirmation',
-    description: 'Generate a Direct Deposit Confirmation PDF for a payroll disbursement and save to vault',
-    async execute(request: any) {
-      const { workspaceId, employeeId, payrollRunId, netPay, payDate, bankRoutingLast4, bankAccountLast4, accountType } = request.parameters || {};
-      if (!workspaceId || !employeeId || !payrollRunId) {
-        return { actionId: request.actionId, success: false, error: 'workspaceId, employeeId, payrollRunId required' };
-      }
-      const result = await generateDirectDepositConfirmation({
-        workspaceId, employeeId, payrollRunId,
-        netPay: Number(netPay || 0),
-        payDate: payDate ? new Date(payDate) : new Date(),
-        bankRoutingLast4, bankAccountLast4, accountType,
-      });
-      return { actionId: request.actionId, ...result };
-    },
-  });
-
-  orchestrator.registerAction({
-    actionId: 'document.payroll_run_summary',
-    description: 'Generate a branded Payroll Run Summary report for the employer and save to vault',
-    async execute(request: any) {
-      const { workspaceId, payrollRunId, generatedBy } = request.parameters || {};
-      if (!workspaceId || !payrollRunId) {
-        return { actionId: request.actionId, success: false, error: 'workspaceId and payrollRunId required' };
-      }
-      const result = await generatePayrollRunSummary({ workspaceId, payrollRunId, generatedBy });
-      return { actionId: request.actionId, ...result };
-    },
-  });
-
-  orchestrator.registerAction({
-    actionId: 'document.w3_transmittal',
-    description: 'Generate a W-3 Transmittal summary for a given tax year and save to vault',
-    async execute(request: any) {
-      const { workspaceId, taxYear, generatedBy } = request.parameters || {};
-      if (!workspaceId || !taxYear) {
-        return { actionId: request.actionId, success: false, error: 'workspaceId and taxYear required' };
-      }
-      const result = await generateW3Transmittal({ workspaceId, taxYear: Number(taxYear), generatedBy });
-      return { actionId: request.actionId, ...result };
-    },
-  });
+// ── Business Document Generators (Phase: Business Forms) ──────────────────
+// These were previously living inside scanOverdueI9s by mistake (no
+// orchestrator in scope). Promoted to a dedicated registrar that
+// registerTrinityDocumentActions delegates to.
+export function registerBusinessDocumentActions(orchestrator: any): void {
+  // NOTE — four legacy actions were registered here that called generator
+  // functions (generateProofOfEmployment, generateDirectDepositConfirmation,
+  // generatePayrollRunSummary, generateW3Transmittal) which were never
+  // implemented anywhere in the repo. They threw ReferenceError at runtime.
+  // Removed so the rest of the registrar can compile and ship cleanly.
+  // When the generators are implemented (in server/services/documents/),
+  // re-introduce action registrations that import + call them directly.
 
   orchestrator.registerAction({
     actionId: 'document.business_artifact_diagnostics',
     description: 'Read-only diagnostic: returns coverage summary and gaps for all business artifact types. Support/admin use only.',
-    async execute(request: any) {
+    handler: async (request: any) => {
       const result = diagnoseBusinessArtifactCoverage();
       return { actionId: request.actionId, success: true, ...result };
     },
@@ -1001,7 +976,7 @@ export async function scanOverdueI9s(workspaceId: string): Promise<void> {
   orchestrator.registerAction({
     actionId: 'document.generate_invoice_pdf',
     description: 'Generate a branded per-invoice PDF and save to tenant vault. Returns vaultId and documentNumber.',
-    async execute(request: any) {
+    handler: async (request: any) => {
       const { invoiceId, workspaceId } = request.parameters || {};
       if (!invoiceId || !workspaceId) {
         return { actionId: request.actionId, success: false, error: 'invoiceId and workspaceId required' };
@@ -1014,7 +989,7 @@ export async function scanOverdueI9s(workspaceId: string): Promise<void> {
   orchestrator.registerAction({
     actionId: 'document.timesheet_support_package',
     description: 'Generate a branded timesheet support package PDF for payroll/invoice/audit reconciliation. Saves to vault.',
-    async execute(request: any) {
+    handler: async (request: any) => {
       const { workspaceId, periodStart, periodEnd, clientId, status, generatedBy } = request.parameters || {};
       if (!workspaceId || !periodStart || !periodEnd) {
         return { actionId: request.actionId, success: false, error: 'workspaceId, periodStart, and periodEnd required' };
@@ -1038,7 +1013,7 @@ export async function scanOverdueI9s(workspaceId: string): Promise<void> {
   orchestrator.registerAction({
     actionId: 'document.analyze_rfp',
     description: 'Analyze an RFP document or URL to determine complexity score and per-occurrence price before the tenant commits. Returns tier, price, and factor breakdown.',
-    async execute(request: any) {
+    handler: async (request: any) => {
       const { workspaceId, rfpInputs, extractionNotes } = request.parameters || {};
       if (!workspaceId || !rfpInputs) {
         return {

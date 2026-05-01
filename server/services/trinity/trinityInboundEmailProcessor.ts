@@ -139,7 +139,7 @@ async function handleCommandEmail(
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type EmailCategory = 'calloff' | 'incident' | 'docs' | 'support' | 'careers' | 'unknown';
+export type EmailCategory = 'calloff' | 'incident' | 'docs' | 'support' | 'careers' | 'staffing' | 'unknown';
 
 export interface ParsedInboundEmail {
   messageId?: string;
@@ -178,12 +178,11 @@ export function detectCategoryFromRecipient(toEmail: string): EmailCategory {
   if (local === 'support') return 'support';
   if (local.startsWith('careers') || local === 'jobs' || local === 'apply' || local === 'recruitment') return 'careers';
   // T010 FIX: billing@ and staffing@ were falling through to 'unknown' — now correctly routed.
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  if (local === 'billing' || local === 'invoice' || local === 'invoices' || local === 'accounts') return 'billing';
-  // @ts-expect-error — TS migration: fix in refactoring sprint
+  // billing is not yet a first-class EmailCategory; bucket billing-prefixed
+  // mail into 'support' so the human-triage pipeline picks it up.
+  if (local === 'billing' || local === 'invoice' || local === 'invoices' || local === 'accounts') return 'support';
   if (local === 'staffing' || local === 'staff' || local === 'scheduling' || local === 'payroll') return 'staffing';
   // L4 Fallback: Route general operations emails to staffing for triage
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   if (local === 'ops' || local === 'operations' || local === 'schedule') return 'staffing';
 
   // L3 CRM: Route calloffs@ to CRM for lead creation if no officer found
@@ -271,8 +270,9 @@ async function extractStructuredData(
     throw new Error(`Email content blocked by AI guard rails: ${(guardResult as any).reason}`);
   }
 
-  // @ts-expect-error — TS migration: fix in refactoring sprint
-  const prompts: Record<EmailCategory, string> = {
+  // Partial — careers + staffing are handled by dedicated pipelines and never
+  // hit this generic structured-extraction path (gated above).
+  const prompts: Partial<Record<EmailCategory, string>> = {
     calloff: `You are a security operations assistant. Extract calloff information from this email.
 Return ONLY valid JSON with these fields:
 - officerName (string or null)
@@ -327,12 +327,16 @@ Body: ${bodyText.slice(0, 1500)}`,
     unknown: `Return ONLY valid JSON: {"confidence": 0, "category": "unknown"}`,
   };
 
+  const prompt = prompts[category];
+  if (!prompt) {
+    return { data: {}, confidence: 0 };
+  }
+
   try {
     const ai = await getAIClient();
-    const response = await ai.generateContent(prompts[category], { // withGemini
+    const response = await ai.generateContent(prompt, { // withGemini
       temperature: 0.1,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
-      maxOutputTokens: 500,
+      maxTokens: 500,
     });
 
     const text = (response as any).trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
@@ -1189,11 +1193,11 @@ async function processStaffing(
       };
     }
 
-    // Count open shifts for context
+    // Count open shifts for context. sql is exported from drizzle-orm,
+    // not from @shared/schema.
     const { db: _db } = await import('../../db');
-    const { shifts: _shifts, sql: _sql } = await import('@shared/schema');
-    const { count } = await import('drizzle-orm');
-    const { eq: _eq, isNull: _isNull, gte: _gte, and: _and } = await import('drizzle-orm');
+    const { shifts: _shifts } = await import('@shared/schema');
+    const { count, sql: _sql, eq: _eq, isNull: _isNull, gte: _gte, and: _and } = await import('drizzle-orm');
 
     const [openShiftCount] = await _db
       .select({ count: count() })
@@ -1235,7 +1239,7 @@ async function processStaffing(
 
     // Notify the manager who owns this workspace about the email + action taken
     try {
-      const { universalNotificationEngine } = await import('../../universalNotificationEngine');
+      const { universalNotificationEngine } = await import('../universalNotificationEngine');
       await universalNotificationEngine.sendNotification({
         workspaceId,
         type: 'trinity_autonomous_action',
@@ -1514,7 +1518,6 @@ export async function processInboundEmail(email: ParsedInboundEmail): Promise<Pr
     } else if (category === 'careers') {
       pipelineResult = await processCareersApplication(email, workspaceId!, logId);
     } else if (category === 'staffing') {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       pipelineResult = await processStaffing(email, sender, aiData, logId);
     } else {
       pipelineResult = {

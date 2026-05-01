@@ -463,9 +463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     broadcastPlatformUpdate({
       type: "platform_update",
       category: event.category as any,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       title: event.title,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       description: event.description,
       version: event.version,
       priority: event.priority,

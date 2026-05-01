@@ -72,7 +72,7 @@ import {
   resetPassword,
   validatePassword,
   verifyEmailToken,
-  requireAuth,
+  verifyPassword,
 } from "../auth";
 import { checkWorkspacePaymentStatus, hasPlatformWideAccess, getUserPlatformRole , type AuthenticatedRequest} from "../rbac";
 import { emailService } from "../services/emailService";
@@ -255,11 +255,42 @@ async function registerSession(
 }
 
 // ── Phase 53 Session & MFA Stubs (pending full implementation) ────────────────
+const PENDING_MFA_TOKEN_TTL_MS = 5 * 60 * 1000;
+
 function issuePendingMfaToken(userId: string): string {
   // Issue a short-lived token for MFA verification step
   // In full implementation this would be a signed JWT with 5min expiry
-  const crypto = require('crypto');
-  return Buffer.from(userId + ':' + Date.now()).toString('base64url');
+  return Buffer.from(`${userId}:${Date.now()}`).toString('base64url');
+}
+
+function validatePendingMfaToken(token: string | undefined): string {
+  // Decode the lightweight base64url token issued by issuePendingMfaToken.
+  // Throws when expired so callers can surface a clear "session expired" error.
+  if (!token) throw new Error('PENDING_MFA_TOKEN_REQUIRED');
+  let decoded: string;
+  try {
+    decoded = Buffer.from(token, 'base64url').toString('utf8');
+  } catch {
+    throw new Error('PENDING_MFA_TOKEN_INVALID');
+  }
+  const idx = decoded.lastIndexOf(':');
+  if (idx <= 0) throw new Error('PENDING_MFA_TOKEN_INVALID');
+  const userId = decoded.slice(0, idx);
+  const issuedAt = Number(decoded.slice(idx + 1));
+  if (!userId || !Number.isFinite(issuedAt)) throw new Error('PENDING_MFA_TOKEN_INVALID');
+  if (Date.now() - issuedAt > PENDING_MFA_TOKEN_TTL_MS) throw new Error('PENDING_MFA_TOKEN_EXPIRED');
+  return userId;
+}
+
+async function verifyMfaToken(userId: string, totpCode: string): Promise<{ success: boolean; reason?: string }> {
+  // Wraps the canonical TOTP verifier in services/auth/mfa.
+  try {
+    const { verifyMfaToken: verify } = await import('../services/auth/mfa');
+    const result = await verify(userId, totpCode);
+    return { success: !!result?.valid, reason: (result as any)?.reason };
+  } catch (err: any) {
+    return { success: false, reason: err?.message || 'MFA service unavailable' };
+  }
 }
 
 function isMfaMandatory(role: string): boolean {
@@ -268,12 +299,23 @@ function isMfaMandatory(role: string): boolean {
   return mandatoryRoles.includes(role);
 }
 
-async function generateAndSendSupportOtp(userId: string): Promise<{success: boolean; message?: string}> {
-  // TODO: Full OTP implementation via Resend/SMS
-  return { success: false, message: 'OTP service not yet configured. Contact support.' };
+async function generateAndSendSupportOtp(
+  userId: string,
+  phone?: string,
+): Promise<{ success: boolean; message?: string; notConfigured?: boolean }> {
+  // TODO: Full OTP implementation via Resend/SMS. Returns notConfigured when
+  // the underlying SMS provider isn't wired up so the route can produce a 503.
+  void userId; void phone;
+  return { success: false, notConfigured: true, message: 'OTP service not yet configured. Contact support.' };
 }
 
-async function adminResetUserMfa(targetUserId: string, adminId: string): Promise<void> {
+async function adminResetUserMfa(
+  targetUserId: string,
+  adminId: string,
+  _adminRole?: string,
+  _workspaceId?: string,
+): Promise<void> {
+  void adminId;
   // TODO: Reset MFA for user — update users table
   await pool.query('UPDATE users SET mfa_enabled = false, mfa_secret = null WHERE id = $1', [targetUserId])
     .catch(() => {});
@@ -289,8 +331,23 @@ async function removeSession(sessionId: string): Promise<void> {
   await pool.query('DELETE FROM sessions WHERE sid = $1', [sessionId]).catch(() => {});
 }
 
-async function isDeviceTrusted(userId: string, deviceToken: string): Promise<boolean> {
-  // TODO: Implement device trust via JWT or DB record
+// Platform support roles that must complete the SMS OTP gate at login.
+// Mirrored intentionally — auth flow runs before the rbac module is fully
+// available; keep this list in lock-step with rbac.ts SUPPORT_ROLE_NAMES.
+const SUPPORT_PLATFORM_ROLES = new Set<string>([
+  'root_admin', 'deputy_admin', 'co_admin', 'sysop', 'sysops',
+  'support_manager', 'support_agent', 'compliance_officer',
+]);
+
+async function isDeviceTrusted(
+  userId: string,
+  deviceToken: string | undefined,
+  _ipAddress: string,
+  _userAgent: string,
+): Promise<boolean> {
+  // TODO (Phase 53 — MFA trusted devices): verify dt_token JWT against
+  // a per-user signing key. Currently a stub — every device must complete MFA.
+  void userId; void deviceToken;
   return false;
 }
 
@@ -835,7 +892,7 @@ router.post("/api/auth/mfa/verify", async (req, res) => {
 
     // Verify TOTP or backup code
     const mfaResult = await verifyMfaToken(userId, data.totpCode);
-    if (!mfaResult.valid) {
+    if (!mfaResult.success) {
       recordIpAuthFailure(req.ip || req.socket?.remoteAddress || 'unknown');
       return res.status(401).json({ message: "Invalid authentication code. Please try again." });
     }
@@ -924,7 +981,9 @@ router.post("/api/auth/mfa/verify", async (req, res) => {
 
     return res.json({
       message: "Login successful",
-      usedBackupCode: mfaResult.isBackupCode ?? false,
+      // The lightweight wrapper here doesn't carry isBackupCode — the canonical
+      // services/auth/mfa verifier records it in audit, not in the response.
+      usedBackupCode: false,
       user: {
         id: user.id,
         email: user.email,

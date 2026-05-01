@@ -500,6 +500,9 @@ class TrinityChatService {
    */
   async chat(request: ChatRequest): Promise<ChatResponse> {
     const { userId, workspaceId, message, sessionId, images } = request;
+    // `mode` is deprecated on the request but is still threaded through
+    // for the conversation-session row's default — capture it explicitly.
+    const mode: ConversationMode = (request.mode ?? 'general') as ConversationMode;
     // Trinity has no mode toggle — her biological brain decides how to respond
 
     // THALAMUS — Universal Sensory Gateway (first organ every signal passes through)
@@ -637,7 +640,10 @@ class TrinityChatService {
             supportMode: true,
             supportAgentId: userId,
             supportTicketId: request.supportTicketId || null,
-            sessionId: session?.id || null,
+            // Session has not been created yet at this point — the audit fires
+            // before session creation as a hard "support agent entered Trinity"
+            // marker. The session id is logged separately on first message persist.
+            sessionId: null,
             messagePreview: request.message.substring(0, 120),
             trustTier: request.trustTier || 'owner',
           }),

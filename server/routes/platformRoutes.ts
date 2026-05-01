@@ -112,7 +112,6 @@ router.get('/personal-data', async (req: AuthenticatedRequest, res) => {
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userName = (req.user)?.fullName || (req.user)?.email || 'Admin';
 
     // Count open escalation tickets assigned to this staff member
@@ -1169,7 +1168,6 @@ router.post('/staff/grant-role', async (req: AuthenticatedRequest, res) => {
     const PLATFORM_ROLE_LEVELS: Record<string, number> = {
       root_admin: 5, deputy_admin: 4, sysop: 3, support_manager: 3, compliance_officer: 3, support_agent: 2,
     };
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const grantorRole = (req.user)?.platformRole as string | undefined;
     const grantorLevel = grantorRole ? (PLATFORM_ROLE_LEVELS[grantorRole] ?? 0) : 0;
     const targetLevel = PLATFORM_ROLE_LEVELS[role] ?? 0;
@@ -1671,7 +1669,6 @@ router.post('/team/agents', async (req: AuthenticatedRequest, res) => {
 // Returns platform pool balance and deposit history from forfeited tenant credits
 router.get('/credits/recycled', async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     // Legacy credit pipeline removed — use tokenManager for usage stats
     const getRecycledCreditsStats = async () => ({ recycled: 0, pending: 0 });
     const stats = await getRecycledCreditsStats();

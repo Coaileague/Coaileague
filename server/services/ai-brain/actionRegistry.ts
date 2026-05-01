@@ -31,7 +31,6 @@ import {
   clients,
   notifications,
   workspaces,
-  employees,
 } from '@shared/schema';
 import { universalNotificationEngine } from '../universalNotificationEngine';
 import { broadcastShiftUpdate, broadcastToWorkspace } from '../../websocket';
@@ -2097,10 +2096,12 @@ class AIBrainActionRegistry {
         // OVERTIME_APPROACHING: Will this push the officer close to 40h/week?
         if (targetShift) {
           try {
+            // targetShift.startTime/endTime are typed as Date by the
+            // drizzle select. Pass them directly to new Date(...) — no cast.
             const shiftHours = targetShift.endTime && targetShift.startTime
-              ? (new Date(targetShift.endTime as string).getTime() - new Date(targetShift.startTime as string).getTime()) / 3600000
+              ? (new Date(targetShift.endTime).getTime() - new Date(targetShift.startTime).getTime()) / 3600000
               : 0;
-            const weekStart = new Date(targetShift.startTime as string);
+            const weekStart = new Date(targetShift.startTime);
             weekStart.setDate(weekStart.getDate() - weekStart.getDay());
             weekStart.setHours(0,0,0,0);
             const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 7);
@@ -3738,7 +3739,10 @@ class AIBrainActionRegistry {
         const start = Date.now();
         const { contractPipelineService } = await import('../contracts/contractPipelineService');
         const searchTerm = request.payload?.query || '';
-        const contracts = await contractPipelineService.getContracts(request.workspaceId!, {});        const filtered = (contracts as any).filter(c => 
+        const result = await contractPipelineService.getContracts(request.workspaceId!, {});
+        // getContracts returns { contracts: [...], total: number } — pull the array.
+        const contractList = Array.isArray(result) ? result : (result as any).contracts ?? [];
+        const filtered = (contractList as any[]).filter((c: any) =>
           c.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           c.title?.toLowerCase().includes(searchTerm.toLowerCase())
         );

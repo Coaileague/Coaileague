@@ -67,7 +67,6 @@ export async function flipInvitedToActive(payload: HandshakePayload): Promise<Ha
   await db.transaction(async (tx) => {
     // Flip client status to ACTIVE + persist verified POC data
     await tx.update(clients).set({
-      // @ts-expect-error — TS migration: schema columns added progressively
       clientOnboardingStatus: 'active',
       pocEmail: payload.pocEmail,
       updatedAt: new Date(),

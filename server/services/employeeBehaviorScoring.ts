@@ -241,7 +241,6 @@ export class EmployeeBehaviorScoringService {
     }
     
     await db.update(employeeBehaviorScores)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .set(updates)
       .where(eq(employeeBehaviorScores.employeeId, employeeId));
   }
