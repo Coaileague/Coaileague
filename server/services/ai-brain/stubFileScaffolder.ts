@@ -141,12 +141,12 @@ ${req.expectedExports?.map(exp => `
    * TODO: Implement ${exp}
    * Purpose: Part of ${req.purpose}
    */
-  async ${exp}(...args: any[]): Promise<any> {
+  async ${exp}(...args: any[]): Promise<unknown> {
     console.warn('[STUB] ${getServiceName(req.filePath)}.${exp} is not yet implemented');
     return null;
   }
 `).join('\n') || `
-  async execute(...args: any[]): Promise<any> {
+  async execute(...args: any[]): Promise<unknown> {
     console.warn('[STUB] ${getServiceName(req.filePath)} is not yet implemented');
     return null;
   }

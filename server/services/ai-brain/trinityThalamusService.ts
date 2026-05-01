@@ -102,7 +102,7 @@ export interface ThalamicSignal {
   routedTo: BrainRegionTarget[];
   routingReason: string;
   highPriorityCopySent: boolean;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   rawSignalHash: string;
 }
 
@@ -165,7 +165,7 @@ class TrinityThalamusService {
    * @returns             The structured ThalamicSignal, or null if deduplicated/dropped
    */
   async process(
-    rawPayload: Record<string, any>,
+    rawPayload: Record<string, unknown>,
     sourceHint: string,
     userId?: string,
     workspaceId?: string,
@@ -255,7 +255,7 @@ class TrinityThalamusService {
   // OPERATION 1 — CLASSIFICATION
   // ==========================================================================
 
-  classify(payload: Record<string, any>, sourceHint: string): ThalamicSignalType {
+  classify(payload: Record<string, unknown>, sourceHint: string): ThalamicSignalType {
     const hint = sourceHint.toLowerCase();
     const type = (payload.type || payload.eventType || payload.signalType || '').toLowerCase();
     const event = (payload.event || '').toLowerCase();
@@ -357,7 +357,7 @@ class TrinityThalamusService {
   score(
     signalType: ThalamicSignalType,
     trustTier: TrustTier,
-    payload: Record<string, any>,
+    payload: Record<string, unknown>,
     workspaceId?: string,
   ): number {
     // Base score by signal type
@@ -418,7 +418,7 @@ class TrinityThalamusService {
   route(
     signalType: ThalamicSignalType,
     priorityScore: number,
-    payload: Record<string, any>,
+    payload: Record<string, unknown>,
   ): { routedTo: BrainRegionTarget[]; routingReason: string } {
     const targets: Set<BrainRegionTarget> = new Set();
     let reason = '';
@@ -587,7 +587,7 @@ class TrinityThalamusService {
   // ==========================================================================
 
   private hashSignal(
-    payload: Record<string, any>,
+    payload: Record<string, unknown>,
     signalType: string,
     workspaceId?: string,
     userId?: string,
@@ -658,9 +658,9 @@ class TrinityThalamusService {
   }
 
   // Strip sensitive fields before persisting
-  private sanitizePayload(payload: Record<string, any>): Record<string, any> {
+  private sanitizePayload(payload: Record<string, unknown>): Record<string, unknown> {
     const SENSITIVE_KEYS = ['password', 'token', 'secret', 'ssn', 'creditCard', 'apiKey'];
-    const clean: Record<string, any> = {};
+    const clean: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(payload)) {
       if (SENSITIVE_KEYS.some(s => k.toLowerCase().includes(s))) continue;
       clean[k] = typeof v === 'object' && v !== null ? '[object]' : v;
@@ -697,7 +697,7 @@ class TrinityThalamusService {
   }
 
   async processPlatformEvent(
-    event: Record<string, any>,
+    event: Record<string, unknown>,
     workspaceId?: string,
     userId?: string,
   ): Promise<ThalamicSignal | null> {
@@ -706,14 +706,14 @@ class TrinityThalamusService {
 
   async processWebhook(
     source: string,
-    payload: Record<string, any>,
+    payload: Record<string, unknown>,
     workspaceId?: string,
   ): Promise<ThalamicSignal | null> {
     return this.process({ ...payload, source }, `webhook_${source}`, undefined, workspaceId, 'external');
   }
 
   async processIncident(
-    incidentData: Record<string, any>,
+    incidentData: Record<string, unknown>,
     userId: string,
     workspaceId: string,
     trustTier: TrustTier = 'officer',
@@ -723,7 +723,7 @@ class TrinityThalamusService {
 
   async processSensorEvent(
     sensorType: string,
-    data: Record<string, any>,
+    data: Record<string, unknown>,
     userId?: string,
     workspaceId?: string,
   ): Promise<ThalamicSignal | null> {
@@ -732,7 +732,7 @@ class TrinityThalamusService {
 
   async processSelfSignal(
     signalName: string,
-    data: Record<string, any>,
+    data: Record<string, unknown>,
     workspaceId?: string,
   ): Promise<ThalamicSignal | null> {
     return this.process({ ...data, type: signalName }, 'trinity_self', undefined, workspaceId, 'trinity_self');

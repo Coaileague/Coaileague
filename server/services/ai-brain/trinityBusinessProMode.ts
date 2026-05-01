@@ -582,7 +582,7 @@ class TrinityBusinessProMode {
   async discoverMoney(
     mode: MoneyDiscoveryMode,
     vertical: IndustryVertical,
-    businessData: Record<string, any>
+    businessData: Record<string, unknown>
   ): Promise<MoneyDiscovery[]> {
     const playbook = this.getPlaybook(vertical);
     const discoveries: MoneyDiscovery[] = [];

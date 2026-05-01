@@ -233,7 +233,7 @@ class ModelRouter {
           rawCostUsd,
         };
 
-      } catch (err: any) {
+      } catch (err: unknown) {
         lastError = err;
         log.error(`[ModelRouter] ${modelName} failed: ${(err instanceof Error ? err.message : String(err))}`);
         this.recordFailure(model, (err instanceof Error ? err.message : String(err)));
@@ -458,7 +458,7 @@ class ModelRouter {
         outputTokens: params.outputTokens,
         triggeredByUserId: params.userId,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[ModelRouter] Failed to track usage:', (err instanceof Error ? err.message : String(err)));
     }
   }
@@ -505,7 +505,7 @@ class ModelRouter {
         model.cooldownUntil = null;
         report.push({ model: name, status: 'healthy' });
         log.info(`[ModelRouter] Health check: ${name} is healthy`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         report.push({ model: name, status: 'unhealthy' });
         log.warn(`[ModelRouter] Health check: ${name} unhealthy — ${(err instanceof Error ? err.message : String(err))}`);
       }
@@ -549,7 +549,7 @@ class ModelRouter {
           log.info(`[ModelRouter] Health check — testing ${cooledDown.length} recovered model(s)`);
           await this.healthCheck();
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.warn('[ModelRouter] Health loop error (will retry):', error?.message || 'unknown');
       }
     }, HEALTH_CHECK_INTERVAL_MS);

@@ -124,7 +124,6 @@ router.post("/custom-forms", requirePlatformStaff, async (req: AuthenticatedRequ
       createdByRole: platformRole,
     };
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const form = await storage.createCustomForm(formData);
     res.json(form);
   } catch (error) {
@@ -274,7 +273,6 @@ router.post("/custom-form-submissions", requireAuth, async (req: AuthenticatedRe
       submittedAt: new Date(),
     };
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const submission = await storage.createCustomFormSubmission(submissionData);
     
     await universalAudit.log({
@@ -332,7 +330,6 @@ router.post("/forms", requirePlatformStaff, async (req: AuthenticatedRequest, re
     const validatedData = validationResult.data;
     const workspace = await storage.getWorkspace(validatedData.workspaceId);
     if (!workspace) return res.status(404).json({ message: "Workspace not found" });
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const form = await storage.createCustomForm({ ...validatedData, createdBy: userId, createdByRole: req.platformRole });
     res.json(form);
   } catch (error) {

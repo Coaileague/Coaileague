@@ -24,7 +24,7 @@ router.get('/modules', requireAuth, ensureWorkspaceAccess, async (req: Authentic
       ORDER BY tm.created_at DESC
     `, [req.workspaceId]);
     res.json({ modules: rows });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/training/attempts/:employeeId — training attempts for an officer
@@ -38,7 +38,7 @@ router.get('/attempts/:employeeId', requireAuth, ensureWorkspaceAccess, async (r
       ORDER BY ta.started_at DESC
     `, [req.params.employeeId, req.workspaceId]);
     res.json({ attempts: rows });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/training/certificates — all training certificates for workspace
@@ -55,7 +55,7 @@ router.get('/certificates', requireAuth, ensureWorkspaceAccess, async (req: Auth
       LIMIT 100
     `, [req.workspaceId]);
     res.json({ certificates: rows });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/training/compliance-summary — training completion rates
@@ -72,7 +72,7 @@ router.get('/compliance-summary', requireAuth, ensureWorkspaceAccess, async (req
       WHERE e.workspace_id=$1 AND e.status='active'
     `, [req.workspaceId]);
     res.json(rows[0]);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 export default router;

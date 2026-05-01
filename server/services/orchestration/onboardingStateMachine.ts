@@ -48,7 +48,7 @@ export interface OnboardingChecklistItem {
   completed: boolean;
   completedAt?: Date;
   completedBy?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   order: number;
 }
 
@@ -158,13 +158,12 @@ class OnboardingStateMachine {
     workspaceId: string;
     step: OnboardingStep;
     userId: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<OnboardingState | null> {
     const { workspaceId, step, userId, metadata } = params;
 
     let state = this.states.get(workspaceId);
     if (!state) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       state = await this.loadState(workspaceId);
       if (!state) {
         log.warn(`[OnboardingStateMachine] No onboarding state found for workspace ${workspaceId}`);
@@ -251,7 +250,6 @@ class OnboardingStateMachine {
   async getState(workspaceId: string): Promise<OnboardingState | null> {
     let state = this.states.get(workspaceId);
     if (!state) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       state = await this.loadState(workspaceId);
     }
     return state || null;

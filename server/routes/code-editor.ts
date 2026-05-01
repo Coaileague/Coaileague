@@ -128,7 +128,6 @@ router.post('/change/:id/approve', requirePlatformStaff, async (req: Request, re
 
     const result = await aiBrainCodeEditor.approveChange(
       req.params.id,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       user.id,
       parsed.success ? parsed.data.reviewNotes : undefined
     );
@@ -151,7 +150,6 @@ router.post('/change/:id/reject', requirePlatformStaff, async (req: Request, res
 
     const result = await aiBrainCodeEditor.rejectChange(
       req.params.id,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       user.id,
       parsed.success ? parsed.data.reviewNotes : undefined
     );
@@ -174,7 +172,6 @@ router.post('/change/:id/apply', requirePlatformStaff, async (req: Request, res:
 
     const result = await aiBrainCodeEditor.applyChange(
       req.params.id,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       user.id,
       sendWhatsNew
     );

@@ -549,7 +549,7 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
       syncNotificationCleared(id);
       toast({ title: "Notification deleted" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       // Only show error if it's a real failure (not 404 which means it was already deleted)
       if (error?.status === 404) {
         // Already deleted - just refresh
@@ -622,7 +622,7 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
   const userNotifications = (notificationsData as any)?.notifications || (notificationsData as any)?.userNotifications || [];
   const platformUpdates = notificationsData?.platformUpdates || [];
   const allNotifications: UserNotification[] = [
-    ...userNotifications.map((n: any) => ({
+    ...userNotifications.map((n) => ({
       id: n.id,
       type: n.type || 'notification',
       title: n.title || 'Notification',
@@ -635,7 +635,7 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
       actionType: n.actionType,
       actionData: n.actionData,
     })),
-    ...platformUpdates.map((p: any) => ({
+    ...platformUpdates.map((p) => ({
       id: p.id,
       type: 'platform',
       title: p.title,

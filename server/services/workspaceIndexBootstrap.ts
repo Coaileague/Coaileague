@@ -218,7 +218,7 @@ export async function ensureWorkspaceIndexes(): Promise<void> {
       }
       await pool.query(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${table}" ("workspace_id")`);
       installed++;
-    } catch (err: any) {
+    } catch (err: unknown) {
       failed++;
       log.warn(`[workspaceIndex] ${table}: ${err?.message}`);
     }

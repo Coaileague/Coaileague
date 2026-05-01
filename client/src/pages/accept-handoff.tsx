@@ -67,7 +67,7 @@ export default function AcceptHandoff() {
         toast({ title: "Error", description: data.error, variant: "destructive" });
       }
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to complete handoff", variant: "destructive" });
     },
   });

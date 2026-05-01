@@ -43,7 +43,7 @@ async function ensureTables(): Promise<void> {
       );
     `);
     bootstrapped = true;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[CallerIdLookup] Bootstrap failed (non-fatal):', err?.message);
   }
 }
@@ -120,7 +120,7 @@ export async function lookupCallerId(rawPhone: string): Promise<LookupResult> {
     );
 
     return { phone, risk, lineType, carrierName, countryCode, cached: false };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[CallerIdLookup] lookup failed (open):', err?.message);
     return { phone, risk: 'unknown', cached: false };
   }
@@ -148,7 +148,7 @@ export async function flagMultipleSpeakers(params: {
       [params.speakerCount, params.callSid]
     );
     log.info(`[CallerIdLookup] Flagged ${params.callSid} with ${params.speakerCount} speakers`);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[CallerIdLookup] flag failed:', err?.message);
   }
 }

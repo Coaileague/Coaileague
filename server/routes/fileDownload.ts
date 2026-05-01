@@ -21,7 +21,6 @@ const log = createLogger('FileDownload');
 
 const router = Router();
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
@@ -42,7 +41,6 @@ interface AuthenticatedRequest extends Request {
  * - /api/files/download/expense-receipts/{workspaceId}/{fileId}.ext
  * - /api/files/download/signatures/{signatureId}
  */
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/download/*', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id;
@@ -153,7 +151,6 @@ router.get('/download/*', requireAuth, async (req: AuthenticatedRequest, res: Re
  *
  * Chat attachments are stored inline in the chatMessages table
  */
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/chat-attachment/:messageId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { messageId } = req.params;
@@ -226,7 +223,6 @@ router.get('/chat-attachment/:messageId', requireAuth, async (req: Authenticated
  *
  * Employee documents include I-9, W-4, certifications, etc.
  */
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/document/:documentId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { documentId } = req.params;
@@ -311,7 +307,6 @@ router.get('/document/:documentId', requireAuth, async (req: AuthenticatedReques
  * Get file metadata without downloading
  * Endpoint: GET /api/files/info/*
  */
-// @ts-expect-error — TS migration: fix in refactoring sprint
 router.get('/info/*', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id;

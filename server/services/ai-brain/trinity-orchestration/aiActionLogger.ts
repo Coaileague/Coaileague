@@ -50,17 +50,16 @@ class AIActionLogger {
     actionType: string;
     context: AIActionContext;
     collaboration: AICollaborationInfo;
-    requestData?: Record<string, any>;
-    responseData?: Record<string, any>;
-    contextProvided?: Record<string, any>;
+    requestData?: Record<string, unknown>;
+    responseData?: Record<string, unknown>;
+    contextProvided?: Record<string, unknown>;
     verification?: AIVerificationInfo;
     metrics?: AIActionMetrics;
     success?: boolean;
     errorMessage?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<void> {
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const logEntry: InsertAiActionLog = {
         sessionId: params.context.sessionId,
         workspaceId: params.context.workspaceId || null,
@@ -88,7 +87,6 @@ class AIActionLogger {
         metadata: params.metadata || {},
       };
 
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(aiActionLogs).values(logEntry);
     } catch (error) {
       log.error('[AIActionLogger] Failed to log AI action:', error);
@@ -98,15 +96,15 @@ class AIActionLogger {
   async logTrinityAction(params: {
     actionType: string;
     context: AIActionContext;
-    requestData?: Record<string, any>;
-    responseData?: Record<string, any>;
+    requestData?: Record<string, unknown>;
+    responseData?: Record<string, unknown>;
     supportFromClaude?: boolean;
     collaborationType?: AICollaborationInfo['collaborationType'];
     routingDecision?: string;
     metrics?: AIActionMetrics;
     success?: boolean;
     errorMessage?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<void> {
     return this.log({
       ...params,
@@ -122,15 +120,15 @@ class AIActionLogger {
   async logClaudeAction(params: {
     actionType: string;
     context: AIActionContext;
-    requestData?: Record<string, any>;
-    responseData?: Record<string, any>;
+    requestData?: Record<string, unknown>;
+    responseData?: Record<string, unknown>;
     supportFromTrinity?: boolean;
     collaborationType?: AICollaborationInfo['collaborationType'];
     routingDecision?: string;
     metrics?: AIActionMetrics;
     success?: boolean;
     errorMessage?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<void> {
     return this.log({
       ...params,
@@ -149,12 +147,12 @@ class AIActionLogger {
     primaryAi: 'trinity' | 'claude';
     supportAi: 'trinity' | 'claude';
     collaborationType: AICollaborationInfo['collaborationType'];
-    requestData?: Record<string, any>;
-    responseData?: Record<string, any>;
-    contextProvided?: Record<string, any>;
+    requestData?: Record<string, unknown>;
+    responseData?: Record<string, unknown>;
+    contextProvided?: Record<string, unknown>;
     routingDecision?: string;
     metrics?: AIActionMetrics;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<void> {
     return this.log({
       ...params,
@@ -172,8 +170,8 @@ class AIActionLogger {
     operationType: string;
     trinityConfidenceScore: number;
     verification: AIVerificationInfo;
-    requestData?: Record<string, any>;
-    responseData?: Record<string, any>;
+    requestData?: Record<string, unknown>;
+    responseData?: Record<string, unknown>;
     metrics?: AIActionMetrics;
   }): Promise<void> {
     return this.log({

@@ -49,7 +49,7 @@ export interface DeliberationContext {
   targetId?: string;
   targetType?: 'employee' | 'client';
   rawCommand?: string;
-  parameters?: Record<string, any>;
+  parameters?: Record<string, unknown>;
 }
 
 export interface DeliberationResult {
@@ -134,7 +134,7 @@ async function gatherTargetData(
         data.targetOutstandingBalance = parseFloat(rows[0].outstanding || '0');
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[Deliberation] Data gather failed (non-fatal):', err?.message);
   }
   return data;
@@ -196,7 +196,7 @@ Deliberate. Return JSON:
     const cleaned = text.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(cleaned);
     return { ...parsed, dataPoints };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[Deliberation] AI reasoning failed:', err?.message);
     return {
       verdict: 'pause_and_warn',
@@ -233,7 +233,7 @@ export async function persistDeliberationDocuments(
         ctx.requestedBy,
         JSON.stringify({ content: doc.content, generatedBy: 'trinity_deliberation', requestType: ctx.requestType }),
       ]);
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[Deliberation] Document persist failed (non-fatal):', err?.message);
     }
   }

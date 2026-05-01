@@ -23,7 +23,7 @@ const SENSITIVE_KEYS = ['password', 'token', 'secret', 'key', 'auth', 'credit_ca
 
 function sanitize<T extends Record<string, any> | undefined | null>(value: T): T {
   if (!value || typeof value !== 'object') return value;
-  const out: Record<string, any> = Array.isArray(value) ? [...value] : { ...value };
+  const out: Record<string, unknown> = Array.isArray(value) ? [...value] : { ...value };
   for (const k of Object.keys(out)) {
     if (SENSITIVE_KEYS.some(sk => k.toLowerCase().includes(sk))) {
       out[k] = '[REDACTED]';

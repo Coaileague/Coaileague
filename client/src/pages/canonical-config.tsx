@@ -141,7 +141,7 @@ function ValueDialog({
   const set = (k: keyof ValueFormData, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/platform-config/values", data),
+    mutationFn: (data) => apiRequest("POST", "/api/platform-config/values", data),
     onSuccess: () => {
       toast({ title: "Value created" });
       queryClient.invalidateQueries({ queryKey: ["/api/platform-config/values"] });
@@ -149,18 +149,18 @@ function ValueDialog({
       onSaved();
       onClose();
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("PATCH", `/api/platform-config/values/${existing!.id}`, data),
+    mutationFn: (data) => apiRequest("PATCH", `/api/platform-config/values/${existing!.id}`, data),
     onSuccess: () => {
       toast({ title: "Value updated" });
       queryClient.invalidateQueries({ queryKey: ["/api/platform-config/values"] });
       onSaved();
       onClose();
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   function handleSubmit() {
@@ -338,7 +338,7 @@ export default function CanonicalConfigPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/platform-config/values"] });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -348,7 +348,7 @@ export default function CanonicalConfigPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/platform-config/values"] });
       queryClient.invalidateQueries({ queryKey: ["/api/platform-config/groups"] });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   // ── Derived data ──────────────────────────────────────────────────────────

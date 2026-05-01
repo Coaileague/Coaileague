@@ -757,7 +757,6 @@ router.post("/saved", async (req: AuthenticatedRequest, res) => {
       return res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [report] = await db.insert(savedReports).values(parsed.data).returning();
     res.status(201).json(report);
   } catch (error: unknown) {
@@ -776,7 +775,7 @@ router.patch("/saved/:id", async (req: AuthenticatedRequest, res) => {
 
     const { id } = req.params;
     const allowedFields = ['name', 'filters', 'schedule', 'scheduleRecipients', 'lastGeneratedAt'] as const;
-    const safeUpdates: Record<string, any> = { updatedAt: new Date() };
+    const safeUpdates: Record<string, unknown> = { updatedAt: new Date() };
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) {
         safeUpdates[field] = req.body[field];

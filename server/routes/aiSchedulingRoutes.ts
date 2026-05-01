@@ -31,7 +31,6 @@ router.get("/suggestions", async (req: Request, res: Response) => {
     }
     
     // Platform admins can view any workspace via query param, or their own if set
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const isPlatformAdmin = ['root_admin', 'deputy_admin', 'sysop'].includes(user?.platformRole);
     const queryWorkspaceId = req.query.workspaceId as string;
     const workspaceId = (isPlatformAdmin && queryWorkspaceId) || req.workspaceId || (user as any)?.workspaceId;
@@ -112,9 +111,7 @@ router.get("/suggestions", async (req: Request, res: Response) => {
 
     // Check for coverage gaps
     const shiftsByDate = upcomingShifts.reduce((acc, shift) => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (!acc[shift.date]) acc[shift.date] = 0;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       acc[shift.date]++;
       return acc;
     }, {} as Record<string, number>);

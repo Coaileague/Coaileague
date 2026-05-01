@@ -253,7 +253,6 @@ export async function auditWorkspaceHandbooks(workspaceId: string): Promise<Hand
     .where(and(
       eq(complianceDocuments.workspaceId, workspaceId),
       inArray(complianceDocuments.documentTypeId, ['employee_handbook', 'handbook', 'policy']),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       ne(complianceDocuments.status, 'archived')
     ))
     .orderBy(desc(complianceDocuments.createdAt))

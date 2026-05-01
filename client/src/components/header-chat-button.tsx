@@ -73,7 +73,7 @@ export function HeaderChatButton() {
           status: data.session.status as SessionState['status'],
           ticketNumber: data.session.ticketNumber,
         });
-        setMessages(data.session.messages.map((m: any) => ({
+        setMessages(data.session.messages.map((m) => ({
           ...m,
           timestamp: new Date(m.timestamp),
         })));
@@ -175,7 +175,7 @@ export function HeaderChatButton() {
         }));
 
         if (data.session.messages) {
-          const newMessages = data.session.messages.map((m: any) => ({
+          const newMessages = data.session.messages.map((m) => ({
             ...m,
             timestamp: new Date(m.timestamp),
           }));
@@ -205,7 +205,7 @@ export function HeaderChatButton() {
           
           if (data.success && data.session) {
             if (data.session.messages) {
-              setMessages(data.session.messages.map((m: any) => ({
+              setMessages(data.session.messages.map((m) => ({
                 ...m,
                 timestamp: new Date(m.timestamp),
               })));

@@ -128,7 +128,6 @@ async function getOrCreateRoomAnalytics(
 
     if (conv.length > 0) {
       roomType = conv[0].conversationType === "shift_chat" ? "work" : "meeting";
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       roomName = conv[0].subject;
     }
   }
@@ -160,7 +159,7 @@ export async function trackMessagePosted(
     await getOrCreateRoomAnalytics(workspaceId, conversationId);
 
     // Update current metrics
-    const setFields: Record<string, any> = {
+    const setFields: Record<string, unknown> = {
       totalMessages: sql`${roomAnalytics.totalMessages} + 1`,
       messageCountToday: sql`${roomAnalytics.messageCountToday} + 1`,
       messageCountThisWeek: sql`${roomAnalytics.messageCountThisWeek} + 1`,
@@ -212,7 +211,6 @@ export async function trackParticipantJoined(
       .where(
         and(
           eq(chatParticipants.conversationId, conversationId),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           eq(chatParticipants.userId, userId)
         )
       )
@@ -221,7 +219,7 @@ export async function trackParticipantJoined(
     const isNewParticipant = participantRecord.length === 0;
 
     // Update metrics using simpler increment logic
-    const updateFields: Record<string, any> = {
+    const updateFields: Record<string, unknown> = {
       activeParticipantsNow: sql`${roomAnalytics.activeParticipantsNow} + 1`,
       updatedAt: new Date(),
     };
@@ -284,7 +282,6 @@ export async function trackTicketCreated(
 
     await db.update(roomAnalytics).set({
       ticketsCreated: sql`${roomAnalytics.ticketsCreated} + 1`,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       unresolvedTickets: sql`${roomAnalytics.unresovledTickets} + 1`,
       updatedAt: new Date(),
     }).where(and(eq(roomAnalytics.workspaceId, workspaceId), eq(roomAnalytics.conversationId, conversationId)));
@@ -333,7 +330,6 @@ export async function trackTicketResolved(
 
       await db.update(roomAnalytics).set({
         ticketsResolved: sql`${roomAnalytics.ticketsResolved} + 1`,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         unresolvedTickets: sql`GREATEST(0, ${roomAnalytics.unresovledTickets} - 1)`,
         avgResolutionTimeHours: newAvgTime,
         updatedAt: new Date(),
@@ -654,10 +650,9 @@ export async function getAnalyticsData(
   roomType?: 'support' | 'work' | 'meeting' | 'org',
   timeframe: 'hourly' | 'daily' = 'daily',
   days: number = 7
-): Promise<any> {
+): Promise<unknown> {
   try {
     // Get base room analytics
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const analytics = await getRoomsAnalytics(workspaceId, roomType);
 
     // Get time-series data for all rooms

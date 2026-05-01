@@ -110,7 +110,7 @@ class StaffingClaimService {
       }
 
       return { claimKey, alreadyClaimed: false };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[StaffingClaim] registerInterest error:', (err instanceof Error ? err.message : String(err)));
       return { claimKey, alreadyClaimed: false };
     }
@@ -174,7 +174,7 @@ class StaffingClaimService {
         claimedByWorkspaceName: existing?.claimedByWorkspaceName || undefined,
         claimKey: params.claimKey,
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[StaffingClaim] attemptClaim error:', (err instanceof Error ? err.message : String(err)));
       // On error, allow the org to proceed (fail open to not block staffing)
       return { success: true, alreadyClaimed: false, claimKey: params.claimKey };
@@ -223,7 +223,7 @@ class StaffingClaimService {
           });
 
           log.info(`[StaffingClaim] Drop notification sent to ${params.clientEmail} on behalf of ${loser.workspaceName}`);
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.error(`[StaffingClaim] Failed to send drop to loser ${loser.workspaceId}:`, (err instanceof Error ? err.message : String(err)));
         }
       }
@@ -232,7 +232,7 @@ class StaffingClaimService {
       await db.update(staffingClaimTokens)
         .set({ dropNotificationsSent: true })
         .where(eq(staffingClaimTokens.claimKey, params.claimKey));
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[StaffingClaim] sendDropNotifications error:', (err instanceof Error ? err.message : String(err)));
     }
   }
@@ -255,7 +255,7 @@ class StaffingClaimService {
         clientEmail: params.clientEmail,
         referenceNumber: params.referenceNumber,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[StaffingClaim] handleLoss error:', (err instanceof Error ? err.message : String(err)));
     }
   }

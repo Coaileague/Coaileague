@@ -32,7 +32,7 @@ export default function WellnessPage() {
   });
 
   const startSessionMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       const res = await apiRequest("POST", "/api/wellness/sessions", data);
       return res.json();
     },
@@ -42,7 +42,7 @@ export default function WellnessPage() {
       setEmployeeId("");
       toast({ title: "Session started", description: "Lone worker safety session is now active." });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Failed to start session", description: error.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -57,7 +57,7 @@ export default function WellnessPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/wellness/overdue"] });
       toast({ title: "Check-in successful" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Check-in failed", description: error.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -70,7 +70,7 @@ export default function WellnessPage() {
     onSuccess: () => {
       toast({ title: "SOS Triggered", variant: "destructive" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "SOS failed to send", description: error.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -85,7 +85,7 @@ export default function WellnessPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/wellness/overdue"] });
       toast({ title: "Session ended" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Failed to end session", description: error.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -188,7 +188,7 @@ export default function WellnessPage() {
             Overdue Alerts
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {overdue?.map((session: any) => (
+            {overdue?.map((session) => (
               <Card key={session.id} className="border-amber-200 bg-amber-50/30 dark:border-amber-900/30 dark:bg-amber-950/20">
                 <CardContent className="pt-6">
                   <div className="flex justify-between items-start mb-4">
@@ -252,7 +252,7 @@ export default function WellnessPage() {
               ) : sessions?.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No active sessions</TableCell></TableRow>
               ) : (
-                sessions?.map((session: any) => {
+                sessions?.map((session) => {
                   const isOverdue = new Date(session.next_check_in_due) < new Date();
                   return (
                     <TableRow key={session.id} data-testid={`row-session-${session.id}`}>

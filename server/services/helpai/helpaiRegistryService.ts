@@ -21,13 +21,13 @@ export interface APIRegistryPayload {
   apiEndpoint: string;
   apiCategory: string;
   description?: string;
-  requestSchema?: Record<string, any>;
-  responseSchema?: Record<string, any>;
+  requestSchema?: Record<string, unknown>;
+  responseSchema?: Record<string, unknown>;
   requiredScopes?: string[];
   rateLimitPerMinute?: number;
   rateLimitPerDay?: number;
   tags?: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface RegistryValidationResult {

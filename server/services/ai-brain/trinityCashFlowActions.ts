@@ -17,7 +17,6 @@ import { db } from '../../db';
 import { invoices, payrollRuns, workspaceMembers } from '@shared/schema';
 import { eq, and, gte, lte, lt, inArray, sql, desc } from 'drizzle-orm';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
-// @ts-expect-error — TS migration: fix in refactoring sprint
 import type { ActionRequest, ActionResult, ActionHandler } from './actionRegistry';
 import { createNotification } from '../notificationService';
 import { createLogger } from '../../lib/logger';
@@ -176,7 +175,7 @@ const cashFlowGapAction = mkAction('billing.cash_flow_gap', async (req) => {
     const horizonDays = req.payload?.horizonDays || 14;
     const gap = await computeCashFlowGap(wid, horizonDays);
     return createResult(req.actionId, true, gap.details, gap, start);
-  } catch (e: any) {
+  } catch (e: unknown) {
     return createResult(req.actionId, false, e.message, null, start);
   }
 });
@@ -219,7 +218,7 @@ const agingReportAction = mkAction('billing.aging_report_detailed', async (req) 
     const summary = `Aging report: ${agingDetail.length} outstanding invoices. Current: $${gap.agingBuckets.current.toLocaleString()}, 1-30d: $${gap.agingBuckets.days1_30.toLocaleString()}, 31-60d: $${gap.agingBuckets.days31_60.toLocaleString()}, 61-90d: $${gap.agingBuckets.days61_90.toLocaleString()}, 90+d: $${gap.agingBuckets.days90plus.toLocaleString()}. Total outstanding: $${gap.receivablesTotal.toLocaleString()}.`;
 
     return createResult(req.actionId, true, summary, { invoices: agingDetail, buckets: gap.agingBuckets, totalOutstanding: gap.receivablesTotal }, start);
-  } catch (e: any) {
+  } catch (e: unknown) {
     return createResult(req.actionId, false, e.message, null, start);
   }
 });
@@ -260,7 +259,7 @@ const payrollCashReadiness = mkAction('billing.payroll_cash_readiness', async (r
     return createResult(req.actionId, true,
       `Payroll readiness: ${readinessLevel}. ${recommendation}`,
       { ...gap, readinessLevel, recommendation }, start);
-  } catch (e: any) {
+  } catch (e: unknown) {
     return createResult(req.actionId, false, e.message, null, start);
   }
 });
@@ -300,7 +299,7 @@ const receivablesCollectionPriority = mkAction('billing.collection_priority', as
     return createResult(req.actionId, true,
       `Top ${prioritized.length} collection priorities — $${total.toLocaleString()} recoverable. Call the oldest/largest first.`,
       { priorities: prioritized, totalRecoverable: total }, start);
-  } catch (e: any) {
+  } catch (e: unknown) {
     return createResult(req.actionId, false, e.message, null, start);
   }
 });
@@ -333,7 +332,7 @@ const revenueForecast = mkAction('billing.revenue_forecast', async (req) => {
     return createResult(req.actionId, true,
       `Revenue forecast: Last 30 days $${lastMonthRevenue.toLocaleString()}, prior 30 days $${priorMonthRevenue.toLocaleString()} (${trend >= 0 ? '+' : ''}${trend.toFixed(1)}% trend). Projected next 30 days: $${Math.round(forecastNext30).toLocaleString()}.`,
       { lastMonthRevenue, priorMonthRevenue, trendPercent: trend, forecastNext30: Math.round(forecastNext30) }, start);
-  } catch (e: any) {
+  } catch (e: unknown) {
     return createResult(req.actionId, false, e.message, null, start);
   }
 });
@@ -361,7 +360,7 @@ const quickCashSummary = mkAction('billing.quick_cash_summary', async (req) => {
     const summary = `${statusIcon} Cash Summary — ${gap.riskLevel.toUpperCase()}\n• Outstanding receivables: $${gap.receivablesTotal.toLocaleString()}\n• Overdue: $${gap.overdueTotal.toLocaleString()}\n• Next payroll: $${gap.upcomingPayroll.toLocaleString()}${gap.nextPayrollDate ? ' (' + gap.nextPayrollDate + ')' : ''}\n• Cash gap (receivables vs payroll): ${gap.cashGap >= 0 ? '+' : ''}$${gap.cashGap.toLocaleString()}\n• Last 30d collected: $${forecast.toLocaleString()}`;
 
     return createResult(req.actionId, true, summary, { ...gap, collected30d: forecast }, start);
-  } catch (e: any) {
+  } catch (e: unknown) {
     return createResult(req.actionId, false, e.message, null, start);
   }
 });

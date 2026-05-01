@@ -21,12 +21,9 @@ function mkAction(actionId: string, fn: (params: any) => Promise<any>): ActionHa
     description: `Trinity action: ${actionId}`,
     handler: async (req: ActionRequest): Promise<ActionResult> => {
       try {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const data = await fn(req.params || {});
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return { success: true, data };
-      } catch (err: any) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
+      } catch (err: unknown) {
         return { success: false, error: err?.message || 'Unknown error' };
       }
     }
@@ -53,7 +50,6 @@ export function registerCommsProactiveActions() {
   helpaiOrchestrator.registerAction(mkAction('notify.sms', async (params) => {
     const { phoneNumber, message, workspaceId } = params;
     if (!phoneNumber || !message) return { error: 'phoneNumber and message required' };
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const notifId = await NotificationDeliveryService.send({ type: 'sms_broadcast', workspaceId: workspaceId || 'system', recipientUserId: phoneNumber, channel: 'sms', body: { to: phoneNumber, body: message.substring(0, 1600) } });
     return { sent: true, phoneNumber: phoneNumber.replace(/\d(?=\d{4})/g, '*'), messageId: notifId };
   }));
@@ -69,7 +65,6 @@ export function registerCommsProactiveActions() {
       .catch((err: Error) => log.warn(`[TrinityComms] Officer email notification persist failed for user ${userId}:`, err.message));
     const emailAddr = (emp as any)?.email;
     if (emailAddr) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint,
       await NotificationDeliveryService.send({ type: 'ai_brain_email', workspaceId: workspaceId || 'system', recipientUserId: userId, channel: 'email', body: { to: emailAddr, subject: subject || 'Message from CoAIleague', html: `<p>${message}</p>` } }).catch(() => null);
     }
     return { sent: true, officerId, subject, emailSent: !!emailAddr };
@@ -112,7 +107,6 @@ export function registerCommsProactiveActions() {
       toEmail = (client as any)?.email || (client as any)?.billingEmail || (client as any)?.pocEmail;
     }
     if (!toEmail) return { sent: false, error: 'No email address found for client', clientId };
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const notifId = await NotificationDeliveryService.send({ type: 'ai_brain_email', workspaceId: workspaceId || 'system', recipientUserId: clientId || toEmail, channel: 'email', body: { to: toEmail, subject: subject || 'Update from CoAIleague', html: `<p>${message}</p>` } }).catch(() => null);
     return { sent: true, clientId, toEmail, subject, notifId };
   }));
@@ -120,7 +114,6 @@ export function registerCommsProactiveActions() {
   helpaiOrchestrator.registerAction(mkAction('notify.post_announcement', async (params) => {
     const { workspaceId, title, content, targetType, createdBy } = params;
     if (!workspaceId || !content) return { error: 'workspaceId and content required' };
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const broadcast = await broadcastService.createBroadcast({
       workspaceId,
       title: title || 'Announcement',
@@ -291,7 +284,6 @@ export function registerCommsProactiveActions() {
   helpaiOrchestrator.registerAction(mkAction('system.trinity_audit_log', async (params) => {
     const { workspaceId, action, trigger, parameters, result, modelUsed, tokensUsed, humanReviewRequired } = params;
     if (!action) return { error: 'action required' };
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(auditLogs).values({
       workspaceId: workspaceId || 'system',
       entityType: 'trinity_action',
@@ -377,7 +369,6 @@ export function registerCommsProactiveActions() {
     }).catch(() => []);
     const roleCounts: Record<string, number> = {};
     for (const m of members) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       roleCounts[m.role] = (roleCounts[m.role] || 0) + 1;
     }
     return { workspaceId, total_members: members.length, role_breakdown: roleCounts };

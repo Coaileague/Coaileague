@@ -158,7 +158,6 @@ class PostOrderQuizService {
     const questions = generateQuestionsFromPostOrders(
       postOrders || '',
       siteName,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       specialInstructions
     );
 
@@ -199,7 +198,6 @@ class PostOrderQuizService {
     const score = quiz.questions.length > 0 ? Math.round((correct / quiz.questions.length) * 100) : 100;
     const passed = score >= 75;
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(shiftAcknowledgments).values({
       workspaceId,
       shiftId,

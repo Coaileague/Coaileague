@@ -27,7 +27,6 @@ import { z } from 'zod';
 const log = createLogger('ExperienceRoutes');
 
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 interface AuthRequest extends Request {
   user?: {
     id: string;
@@ -120,7 +119,7 @@ router.get('/role-theme/:role', async (req: Request, res: Response) => {
   try {
     const { role } = req.params;
     
-    const themes: Record<string, any> = {
+    const themes: Record<string, unknown> = {
       root_admin: {
         name: 'Executive',
         gradient: 'from-violet-600 via-purple-600 to-fuchsia-600',

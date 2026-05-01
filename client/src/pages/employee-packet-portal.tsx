@@ -325,7 +325,7 @@ export default function EmployeePacketPortal() {
       return res.json();
     },
     onSuccess: () => setSubmittedOk(true),
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const setField = (key: string, value: any) =>

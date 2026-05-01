@@ -33,7 +33,7 @@ function mkAction(actionId: string, fn: (params: any, request: ActionRequest) =>
           data,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (err: any) {
+      } catch (err: unknown) {
         return { 
           success: false, 
           actionId, 

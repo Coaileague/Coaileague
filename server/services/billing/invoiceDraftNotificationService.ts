@@ -57,7 +57,7 @@ export async function notifyDraftInvoiceCreated(
     });
 
     log.info('Draft invoice notification sent', { workspaceId, invoiceId, invoiceNumber });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('Failed to send draft invoice notification (non-blocking)', { error: (err instanceof Error ? err.message : String(err)) });
   }
 }
@@ -175,7 +175,7 @@ export async function runDraftInvoiceSweep(): Promise<{
           nudgesSent++;
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('Error processing stale draft invoice', { invoiceId: draft.id, error: (err instanceof Error ? err.message : String(err)) });
     }
   }

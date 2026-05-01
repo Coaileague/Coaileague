@@ -37,7 +37,7 @@ export interface Experience {
   reward: number;
   humanIntervention: boolean;
   feedback?: 'positive' | 'negative' | 'neutral';
-  contextWindow: Record<string, any>;
+  contextWindow: Record<string, unknown>;
   executionTimeMs: number;
   timestamp: Date;
 }
@@ -49,7 +49,7 @@ export interface StateRepresentation {
   priorSuccessRate: number;
   similarExperienceCount: number;
   confidenceLevel: number;
-  contextFactors: Record<string, any>;
+  contextFactors: Record<string, unknown>;
 }
 
 export interface StrategyAdaptation {
@@ -138,7 +138,7 @@ class ReinforcementLearningLoop {
             return;
           }
           await this.instance.loadFromDatabase();
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn('[RL Loop] Deferred DB load failed (non-fatal):', err?.message);
         }
       }, 120000);
@@ -199,7 +199,7 @@ class ReinforcementLearningLoop {
 
       this.dbInitialized = true;
       log.info(`[RL Loop] Loaded ${dbExperiences.length} experiences and ${dbModels.length} confidence models from database`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[RL Loop] Database load error:', (error instanceof Error ? error.message : String(error)));
     }
   }
@@ -219,7 +219,7 @@ class ReinforcementLearningLoop {
     outcome: 'success' | 'failure' | 'partial' | 'escalated';
     humanIntervention?: boolean;
     feedback?: 'positive' | 'negative' | 'neutral';
-    contextWindow?: Record<string, any>;
+    contextWindow?: Record<string, unknown>;
     executionTimeMs?: number;
   }): Experience {
     const { agentId, workspaceId, domain, action, outcome, humanIntervention = false, feedback, contextWindow = {}, executionTimeMs = 0 } = params;
@@ -387,7 +387,7 @@ class ReinforcementLearningLoop {
     return reward;
   }
 
-  private estimateComplexity(context: Record<string, any>): 'low' | 'medium' | 'high' | 'critical' {
+  private estimateComplexity(context: Record<string, unknown>): 'low' | 'medium' | 'high' | 'critical' {
     const keys = Object.keys(context);
     if (keys.length < 3) return 'low';
     if (keys.length < 7) return 'medium';

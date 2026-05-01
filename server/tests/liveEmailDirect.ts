@@ -190,7 +190,7 @@ async function send(to: string, subject: string, html: string, label: string) {
     } else {
       console.log(`  ✅ MessageId: ${(result as any).data?.id ?? JSON.stringify(result)}\n`);
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error(`  ❌ Exception: ${e.message}\n`);
   }
 }

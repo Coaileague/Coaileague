@@ -71,7 +71,7 @@ async function send(
       results.push({ name, id });
       passed++;
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error(`  ❌ [${name}] Exception: ${e.message}`);
     results.push({ name, error: e.message });
     failed++;

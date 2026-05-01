@@ -50,9 +50,9 @@ export default function EthicsHotline() {
   function invalidate() { queryClient.invalidateQueries({ queryKey: ["/api/ethics"] }); }
 
   const submitPublicReport = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/ethics/report", { ...data, workspaceId }),
-    onSuccess: (d: any) => { setPublicResult(d); toast({ title: "Report submitted" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    mutationFn: (data) => apiRequest("POST", "/api/ethics/report", { ...data, workspaceId }),
+    onSuccess: (d) => { setPublicResult(d); toast({ title: "Report submitted" }); },
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const resolveReport = useMutation({
@@ -77,9 +77,9 @@ export default function EthicsHotline() {
     }
   };
 
-  const pending = reports.data?.reports?.filter((r: any) => r.status === "pending") || [];
-  const reviewing = reports.data?.reports?.filter((r: any) => r.status === "reviewing") || [];
-  const resolved = reports.data?.reports?.filter((r: any) => r.status === "resolved") || [];
+  const pending = reports.data?.reports?.filter((r) => r.status === "pending") || [];
+  const reviewing = reports.data?.reports?.filter((r) => r.status === "reviewing") || [];
+  const resolved = reports.data?.reports?.filter((r) => r.status === "resolved") || [];
 
   const tabs = [
     { id: "dashboard", label: "Reports Dashboard" },
@@ -117,7 +117,7 @@ export default function EthicsHotline() {
               <p className="text-sm text-muted-foreground">No reports submitted yet.</p>
             ) : (
               <div className="space-y-1">
-                {reports.data?.reports?.map((r: any) => (
+                {reports.data?.reports?.map((r) => (
                   <DsDataRow key={r.id} data-testid={`row-ethics-${r.id}`} interactive onClick={() => setViewReport(r)}>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">

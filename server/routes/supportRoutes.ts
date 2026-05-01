@@ -76,7 +76,6 @@ router.post('/create-ticket', async (req, res) => {
       userId = authReq.session.userId;
       workspaceId = authReq.session.workspaceId || null;
     }
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     else if (authReq.requireAuth?.() && authReq.user?.id) {
       userId = authReq.user.id;
       userEmail = (authReq as any).user?.claims?.email || userEmail;
@@ -140,7 +139,6 @@ router.post('/helpos-chat', async (req, res) => {
       userId = authReq.session.userId;
       requireAuth = true;
     }
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     else if (authReq.requireAuth?.() && authReq.user?.id) {
       userId = authReq.user.id;
       requireAuth = true;
@@ -192,12 +190,10 @@ router.post('/helpos-chat', async (req, res) => {
       }
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const user = requireAuth ? await storage.getUser(userId) : null;
     const userName = user?.email || (requireAuth ? 'User' : 'Guest');
     const userEmail = user?.email || '';
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const { bubbleAgent_reply } = await import('../helpos-ai');
     const response = await bubbleAgent_reply({
       workspaceId,
@@ -240,7 +236,6 @@ router.post('/helpos-chat', async (req, res) => {
           customerName: userName || 'Guest',
           customerEmail: userEmail || 'guest@anonymous',
           subject: `HelpAI Escalation - ${response.escalationReason}`,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           isActive: true,
           priority: 'medium',
         });
@@ -258,14 +253,12 @@ router.post('/helpos-chat', async (req, res) => {
 
       const escalationData = await helposService.handleEscalation({
         workspaceId,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         userId,
         userName,
         userEmail,
         sessionId: response.sessionId,
         escalationReason: response.escalationReason,
         aiSummary,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         storage,
       });
 
@@ -310,7 +303,6 @@ router.post('/helpos-copilot', async (req, res) => {
     const { workspaceId } = await resolveWorkspaceForUser(userId, req.workspaceId);
 
     const suggestion = await helposService.staffCopilot_suggestResponse({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       workspaceId,
       userMessage: message,
       chatHistory: chatHistory || [],
@@ -803,7 +795,6 @@ ${conversationText}
 Summary:`;
 
       const summary = await generateGeminiResponse({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         model: 'gemini-2.5-flash',
         messages: [{
           role: 'user',
@@ -975,7 +966,6 @@ router.patch('/tickets/:id/status', async (req: AuthenticatedRequest, res) => {
 
     const updatedTicket = await storage.updateSupportTicket(id, {
       status,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       lockVersion: (ticket.lockVersion ?? 0) + 1,
       updatedAt: new Date(),
     }, user.currentWorkspaceId);
@@ -987,14 +977,12 @@ router.patch('/tickets/:id/status', async (req: AuthenticatedRequest, res) => {
     try {
       const { ChatServerHub } = await import('../services/ChatServerHub');
       ChatServerHub.emit({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         type: 'ticket_status_changed',
         title: 'Support Ticket Status Updated',
         description: `Ticket #${ticket.ticketNumber} status changed to ${status}`,
         metadata: {
           ticketId: id,
           ticketNumber: ticket.ticketNumber,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           oldStatus: ticket.status,
           newStatus: status,
           updatedBy: userId,
@@ -1045,11 +1033,9 @@ router.delete('/tickets/:id', async (req: AuthenticatedRequest, res) => {
     try {
       const { ChatServerHub } = await import('../services/ChatServerHub');
       ChatServerHub.emit({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         type: 'ticket_deleted',
         title: 'Support Ticket Deleted',
         description: `Ticket #${ticket.ticketNumber} has been deleted`,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         metadata: {
           ticketId: id,
           ticketNumber: ticket.ticketNumber,
@@ -1136,7 +1122,7 @@ router.patch('/performance-reviews/:id', requirePlatformStaff, async (req: any, 
     }
 
     const { overallRating, comments, strengths, areasForImprovement, goals, status: reviewStatus } = updates;
-    const safeReviewUpdates: Record<string, any> = {};
+    const safeReviewUpdates: Record<string, unknown> = {};
     if (overallRating !== undefined) safeReviewUpdates.overallRating = overallRating;
     if (comments !== undefined) safeReviewUpdates.comments = comments;
     if (strengths !== undefined) safeReviewUpdates.strengths = strengths;
@@ -1254,7 +1240,7 @@ router.patch('/employer-ratings/:id', requirePlatformStaff, async (req: any, res
     }
 
     const { overallRating: ratingScore, communicationScore, paymentReliability, workEnvironment, managementQuality, comments: ratingComments, status: ratingStatus } = updates;
-    const safeRatingUpdates: Record<string, any> = {};
+    const safeRatingUpdates: Record<string, unknown> = {};
     if (ratingScore !== undefined) safeRatingUpdates.overallRating = ratingScore;
     if (communicationScore !== undefined) safeRatingUpdates.communicationScore = communicationScore;
     if (paymentReliability !== undefined) safeRatingUpdates.paymentReliability = paymentReliability;
@@ -1430,7 +1416,6 @@ router.post('/session/elevate', async (req: AuthenticatedRequest, res) => {
     const userId = req.user!;
     const sessionId = req.sessionID;
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const eligibility = await elevatedSessionService.canReceiveElevation(userId);
     if (!eligibility.canElevate) {
       return res.status(403).json({
@@ -1441,7 +1426,6 @@ router.post('/session/elevate', async (req: AuthenticatedRequest, res) => {
     }
 
     const result = await elevatedSessionService.issueElevation(
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId,
       sessionId,
       'auto_support_login',
@@ -1487,7 +1471,6 @@ router.post('/session/revoke', async (req: AuthenticatedRequest, res) => {
   try {
     const elevatedSessionService = await import("../services/session/elevatedSessionService");
     const userId = req.user!;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const count = await elevatedSessionService.revokeAllUserElevations(userId, 'manual_logout');
     res.json({ success: true, revokedCount: count });
   } catch (error: unknown) {
@@ -1499,7 +1482,6 @@ router.post('/session/ai-service', async (req: AuthenticatedRequest, res) => {
   try {
     const { aiBrainAuthorizationService } = await import("../services/ai-brain/aiBrainAuthorizationService");
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const authCheck = await aiBrainAuthorizationService.validateSupportStaff(req.user!);
     if (!authCheck.valid || !['root_admin', 'deputy_admin', 'sysop'].includes(authCheck.role || '')) {
       return res.status(403).json({ success: false, error: 'Insufficient permissions to issue AI service elevations' });

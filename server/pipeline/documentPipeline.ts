@@ -45,7 +45,7 @@ class DocumentPipelineService {
       title?: string;
       priority?: 'low' | 'normal' | 'high' | 'urgent';
       workspaceId?: string;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
       tags?: string[];
     }
   ): Promise<PipelineDocument> {

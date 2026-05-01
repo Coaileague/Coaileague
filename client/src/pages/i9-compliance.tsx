@@ -37,7 +37,7 @@ export default function I9CompliancePage() {
     return <Badge variant="secondary">Valid</Badge>;
   };
 
-  const compliantRecords = allRecords.filter((r: any) => 
+  const compliantRecords = allRecords.filter((r) => 
     r.status === 'verified' && (!r.expirationDate || differenceInDays(new Date(r.expirationDate), new Date()) > 30)
   );
 
@@ -107,7 +107,7 @@ export default function I9CompliancePage() {
               Urgent Re-Verification Required (7 Days)
             </h2>
             <div className="space-y-4">
-              {expiring7.map((record: any) => (
+              {expiring7.map((record) => (
                 <Card key={record.id} className="border-red-200" data-testid={`card-urgent-${record.id}`}>
                   <CardHeader>
                     <div className="flex items-start justify-between gap-2">
@@ -148,7 +148,7 @@ export default function I9CompliancePage() {
               Upcoming Expiration (8-30 Days)
             </h2>
             <div className="space-y-4">
-              {expiring30.filter((r: any) => !expiring7.some((e: any) => e.id === r.id)).map((record: any) => (
+              {expiring30.filter((r) => !expiring7.some((e) => e.id === r.id)).map((record) => (
                 <Card key={record.id} data-testid={`card-upcoming-${record.id}`}>
                   <CardHeader>
                     <div className="flex items-start justify-between gap-2">

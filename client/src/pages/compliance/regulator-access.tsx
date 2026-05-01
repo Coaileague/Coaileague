@@ -88,7 +88,7 @@ export default function RegulatorAccessManagement() {
     mutationFn: async (data: typeof formData) => {
       return await apiRequest('POST', '/api/security-compliance/regulator', data);
     },
-    onSuccess: (response: any) => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['/api/security-compliance/regulator'] });
       setNewAccessToken(response.portalUrl);
       toast({
@@ -96,7 +96,7 @@ export default function RegulatorAccessManagement() {
         description: "Regulator portal access has been created",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         variant: "destructive",
         title: "Failed to Create Access",
@@ -119,7 +119,7 @@ export default function RegulatorAccessManagement() {
         description: "Regulator access has been revoked",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         variant: "destructive",
         title: "Revoke Failed",

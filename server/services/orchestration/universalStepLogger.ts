@@ -81,11 +81,11 @@ export interface StepLogEntry {
   startedAt: Date;
   completedAt?: Date;
   durationMs?: number;
-  inputPayload?: Record<string, any>;
-  outputPayload?: Record<string, any>;
+  inputPayload?: Record<string, unknown>;
+  outputPayload?: Record<string, unknown>;
   error?: string;
   errorCode?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface OrchestrationContext {
@@ -96,7 +96,7 @@ export interface OrchestrationContext {
   workspaceId: string;
   userId?: string;
   triggeredBy: 'user' | 'cron' | 'event' | 'api' | 'ai_brain' | 'webhook';
-  triggerDetails?: Record<string, any>;
+  triggerDetails?: Record<string, unknown>;
   requiredFeature?: string;
   requiredTier?: FeatureTier;
   requiresApproval?: boolean;
@@ -104,7 +104,7 @@ export interface OrchestrationContext {
   parentOrchestrationId?: string;
   steps: StepLogEntry[];
   status: 'in_progress' | 'completed' | 'failed' | 'pending_approval' | 'rejected';
-  stagedPayload?: Record<string, any>;
+  stagedPayload?: Record<string, unknown>;
   idempotencyKey?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -117,7 +117,7 @@ export interface StartOrchestrationParams {
   workspaceId: string;
   userId?: string;
   triggeredBy: OrchestrationContext['triggeredBy'];
-  triggerDetails?: Record<string, any>;
+  triggerDetails?: Record<string, unknown>;
   requiredFeature?: string;
   requiredTier?: FeatureTier;
   requiresApproval?: boolean;
@@ -502,7 +502,7 @@ class UniversalStepLogger {
     step: OrchestrationStep,
     executor: () => Promise<StepResult>,
     options?: {
-      inputPayload?: Record<string, any>;
+      inputPayload?: Record<string, unknown>;
       validateSubscription?: boolean;
       acquireLock?: string;
       skipOnPreviousFailure?: boolean;
@@ -675,7 +675,7 @@ class UniversalStepLogger {
   /**
    * Stage payload for approval (holds MUTATE until approved)
    */
-  async stagePayload(orchestrationId: string, payload: Record<string, any>): Promise<void> {
+  async stagePayload(orchestrationId: string, payload: Record<string, unknown>): Promise<void> {
     const context = this.orchestrations.get(orchestrationId);
     if (!context) {
       throw new Error('Orchestration not found');
@@ -762,7 +762,7 @@ class UniversalStepLogger {
   /**
    * Complete orchestration successfully
    */
-  async completeOrchestration(orchestrationId: string, summary?: Record<string, any>): Promise<void> {
+  async completeOrchestration(orchestrationId: string, summary?: Record<string, unknown>): Promise<void> {
     const context = this.orchestrations.get(orchestrationId);
     if (!context) {
       throw new Error('Orchestration not found');
@@ -913,8 +913,8 @@ class UniversalStepLogger {
     context: OrchestrationContext,
     step: OrchestrationStep,
     status: StepStatus,
-    inputPayload?: Record<string, any>,
-    outputPayload?: Record<string, any>,
+    inputPayload?: Record<string, unknown>,
+    outputPayload?: Record<string, unknown>,
     error?: string
   ): Promise<void> {
     const now = new Date();
@@ -1054,7 +1054,7 @@ class UniversalStepLogger {
   private async logToDatabase(
     context: OrchestrationContext,
     action: string,
-    details: Record<string, any>
+    details: Record<string, unknown>
   ): Promise<void> {
     if (!context.workspaceId) {
       return;

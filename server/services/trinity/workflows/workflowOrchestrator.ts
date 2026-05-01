@@ -91,7 +91,7 @@ const executeCalloffAction: ActionHandler = {
       return result.success
         ? ok(request.actionId, result.summary, result, start)
         : fail(request.actionId, result.summary, start);
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Calloff workflow error: ${err.message}`, start);
     }
   },
@@ -119,7 +119,7 @@ const scanStaleCalloffsAction: ActionHandler = {
         result,
         start,
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Stale calloff sweep error: ${err.message}`, start);
     }
   },
@@ -145,7 +145,7 @@ const missedClockInAction: ActionHandler = {
         `Missed clock-in sweep: scanned=${result.scanned}, sms=${result.smsSent}, ` +
         `calls=${result.callsPlaced}, escalated=${result.escalated}, resolved=${result.resolved}`;
       return ok(request.actionId, summary, result, start);
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Missed clock-in sweep error: ${err.message}`, start);
     }
   },
@@ -169,7 +169,7 @@ const sendShiftRemindersAction: ActionHandler = {
       const result = await runShiftReminderSweep();
       const summary = `Shift reminders: 4h=${result.fourHourSent}, 1h=${result.oneHourSent} (scanned=${result.scanned})`;
       return ok(request.actionId, summary, result, start);
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Shift reminder sweep error: ${err.message}`, start);
     }
   },
@@ -204,7 +204,7 @@ const invoiceLifecycleAction: ActionHandler = {
       return result.success
         ? ok(request.actionId, result.summary, result, start)
         : fail(request.actionId, result.summary, start);
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Invoice lifecycle error: ${err.message}`, start);
     }
   },
@@ -232,7 +232,7 @@ const complianceScanAction: ActionHandler = {
         result,
         start,
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Compliance scan error: ${err.message}`, start);
     }
   },
@@ -277,7 +277,7 @@ const payrollAnomalyAction: ActionHandler = {
       return result.success
         ? ok(request.actionId, result.summary, result, start)
         : fail(request.actionId, result.summary, start);
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Payroll anomaly workflow error: ${err.message}`, start);
     }
   },

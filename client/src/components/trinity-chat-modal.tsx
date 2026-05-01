@@ -1073,7 +1073,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
       }
       return response.json();
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       agentState.stopExecution();
       
       // Determine confidence based on response
@@ -1090,7 +1090,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
         unlimitedCredits: data.usage.unlimited || data.usage.unlimited_credits || false,
         tier: data.usage.tier || undefined,
         monthlyAllowance: data.usage.monthlyAllowance || data.usage.monthly_allowance || undefined,
-        actions: (data.usage.actions || []).map((a: any) => ({
+        actions: (data.usage.actions || []).map((a) => ({
           model: a.model || 'unknown',
           tokens: a.tokens || 0,
           credits: a.credits || 0,

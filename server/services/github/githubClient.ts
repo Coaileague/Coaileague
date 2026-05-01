@@ -20,7 +20,7 @@ export const githubClient = {
       });
       if (!resp.ok) { log.warn(`[GitHub] ${method} /${path} → ${resp.status}`); return null; }
       return resp.json() as T;
-    } catch (err: any) { log.warn(`[GitHub] Request failed: ${err?.message}`); return null; }
+    } catch (err: unknown) { log.warn(`[GitHub] Request failed: ${err?.message}`); return null; }
   },
 
   async getLatestCommit(): Promise<{ sha: string; message: string; author: string } | null> {
@@ -38,6 +38,6 @@ export const githubClient = {
         VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW())
       `, [scanType, JSON.stringify(findings), commit?.sha, findings.length]);
       log.info(`[GitHub] Recorded scan: ${findings.length} findings at ${commit?.sha?.slice(0,7)}`);
-    } catch (err: any) { log.warn(`[GitHub] Record scan failed: ${err?.message}`); }
+    } catch (err: unknown) { log.warn(`[GitHub] Record scan failed: ${err?.message}`); }
   },
 };

@@ -70,7 +70,7 @@ router.post('/conversations/:conversationId/polls', requireAuth, async (req: Aut
     const poll = { id: pollId, question, options, votes: {}, allowMultiple, expiresAt, isClosed: false, createdBy: userId };
     log.info(`[ChatPolls] Poll created: ${pollId} in ${conversationId}`);
     return res.status(201).json(poll);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[ChatPolls] Create error:', err?.message);
     return res.status(500).json({ error: 'Failed to create poll' });
   }
@@ -90,7 +90,7 @@ router.get('/conversations/:conversationId/polls', requireAuth, async (req: Auth
       ORDER BY created_at DESC LIMIT 20
     `);
     return res.json(result.rows ?? []);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[ChatPolls] Failed to fetch polls:', err?.message);
     return res.status(500).json({ error: 'Failed to fetch polls' });
   }
@@ -120,7 +120,7 @@ router.post('/polls/:pollId/vote', requireAuth, async (req: AuthenticatedRequest
     const result = await db.execute(sql`SELECT * FROM chat_polls WHERE id = ${pollId}`);
     if (!result.rows?.[0]) return res.status(404).json({ error: 'Poll not found or expired' });
     return res.json(result.rows[0]);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[ChatPolls] Vote error:', err?.message);
     return res.status(500).json({ error: 'Failed to record vote' });
   }
@@ -132,7 +132,7 @@ router.get('/polls/:pollId', requireAuth, async (req: AuthenticatedRequest, res)
     const result = await db.execute(sql`SELECT * FROM chat_polls WHERE id = ${req.params.pollId}`);
     if (!result.rows?.length) return res.status(404).json({ error: 'Poll not found' });
     return res.json(result.rows[0]);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to fetch poll' });
   }
 });
@@ -157,7 +157,7 @@ router.get('/tickets/:ticketId', requireAuth, async (req: AuthenticatedRequest, 
     });
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
     return res.json(ticket);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[ChatTickets] Fetch error:', err?.message);
     return res.status(500).json({ error: 'Failed to fetch ticket' });
   }

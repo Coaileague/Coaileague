@@ -31,7 +31,7 @@ export interface ValidationResult {
 }
 
 // Step 1 — Required fields present
-function validateRequiredFields(template: DocumentTemplate, data: Record<string, any>): ValidationError[] {
+function validateRequiredFields(template: DocumentTemplate, data: Record<string, unknown>): ValidationError[] {
   const errors: ValidationError[] = [];
   for (const section of template.sections) {
     for (const field of section.fields) {
@@ -48,7 +48,7 @@ function validateRequiredFields(template: DocumentTemplate, data: Record<string,
 }
 
 // Step 2 — Format validation
-function validateFormats(template: DocumentTemplate, data: Record<string, any>): ValidationError[] {
+function validateFormats(template: DocumentTemplate, data: Record<string, unknown>): ValidationError[] {
   const errors: ValidationError[] = [];
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const phoneRe = /^\+?[\d\s\-().]{7,15}$/;
@@ -100,7 +100,7 @@ function validateFormats(template: DocumentTemplate, data: Record<string, any>):
 }
 
 // Step 3 — Signature validation
-function validateSignatures(template: DocumentTemplate, data: Record<string, any>): ValidationError[] {
+function validateSignatures(template: DocumentTemplate, data: Record<string, unknown>): ValidationError[] {
   const errors: ValidationError[] = [];
   for (const section of template.sections) {
     if (!section.requiresSignature) continue;
@@ -118,7 +118,7 @@ function validateSignatures(template: DocumentTemplate, data: Record<string, any
 }
 
 // Step 4 — Acknowledgment validation
-function validateAcknowledgments(template: DocumentTemplate, data: Record<string, any>): ValidationError[] {
+function validateAcknowledgments(template: DocumentTemplate, data: Record<string, unknown>): ValidationError[] {
   const errors: ValidationError[] = [];
   for (const section of template.sections) {
     if (!section.requiresAcknowledgment) continue;
@@ -135,7 +135,7 @@ function validateAcknowledgments(template: DocumentTemplate, data: Record<string
 }
 
 // Step 5 — Initials validation
-function validateInitials(template: DocumentTemplate, data: Record<string, any>): ValidationError[] {
+function validateInitials(template: DocumentTemplate, data: Record<string, unknown>): ValidationError[] {
   const errors: ValidationError[] = [];
   for (const section of template.sections) {
     if (!section.requiresInitials) continue;
@@ -152,7 +152,7 @@ function validateInitials(template: DocumentTemplate, data: Record<string, any>)
 }
 
 // Step 6 — Date validation
-function validateDates(template: DocumentTemplate, data: Record<string, any>): ValidationError[] {
+function validateDates(template: DocumentTemplate, data: Record<string, unknown>): ValidationError[] {
   const errors: ValidationError[] = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -178,7 +178,7 @@ function validateDates(template: DocumentTemplate, data: Record<string, any>): V
 }
 
 // Step 7 — Custom business rules from template
-function validateBusinessRules(rules: ValidationRule[], data: Record<string, any>): ValidationError[] {
+function validateBusinessRules(rules: ValidationRule[], data: Record<string, unknown>): ValidationError[] {
   const errors: ValidationError[] = [];
   for (const rule of rules) {
     const val = data[rule.field];
@@ -213,7 +213,7 @@ function validateBusinessRules(rules: ValidationRule[], data: Record<string, any
 
 export function validateDocumentForm(
   template: DocumentTemplate,
-  data: Record<string, any>,
+  data: Record<string, unknown>,
 ): ValidationResult {
   const allErrors: ValidationError[] = [];
   const passedSteps: number[] = [];

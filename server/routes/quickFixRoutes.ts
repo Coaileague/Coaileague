@@ -14,7 +14,6 @@ import { createLogger } from '../lib/logger';
 const log = createLogger('QuickFixRoutes');
 
 // Extend Express Request for authenticated user
-// @ts-expect-error — TS migration: fix in refactoring sprint
 interface AuthRequest extends Request {
   user?: {
     id: string;
@@ -39,12 +38,9 @@ function buildContext(req: AuthRequest): QuickFixContext {
   }
 
   return {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     userId: user.id,
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     platformRole: user.platformRole || 'none',
     deviceType,
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     workspaceId: user.currentWorkspaceId,
   };
 }
@@ -55,7 +51,6 @@ function buildContext(req: AuthRequest): QuickFixContext {
  */
 router.get('/actions', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const context = buildContext(req);
     const actions = await quickFixService.getAvailableActions(context);
     const limits = await quickFixService.getUserLimits(context);
@@ -81,7 +76,6 @@ router.get('/actions', requirePlatformStaff, async (req: Request, res: Response)
  */
 router.get('/suggestions', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const context = buildContext(req);
     const suggestions = await quickFixService.getAISuggestions(context);
 
@@ -117,7 +111,6 @@ router.post('/requests', requirePlatformStaff, async (req: Request, res: Respons
       return res.status(400).json({ error: 'Invalid request', details: validation.error.errors });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const context = buildContext(req);
     const { actionCode, payload, aiRecommendation } = validation.data;
 
@@ -141,7 +134,6 @@ router.post('/requests', requirePlatformStaff, async (req: Request, res: Respons
  */
 router.get('/requests', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const context = buildContext(req);
     const status = req.query.status as string | undefined;
     const limit = Math.min(Math.max(1, parseInt(req.query.limit as string) || 50), 500);
@@ -181,7 +173,6 @@ router.post('/execute', requirePlatformStaff, async (req: Request, res: Response
       });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const context = buildContext(req);
     const { actionCode, targetId, metadata } = validation.data;
     
@@ -197,7 +188,6 @@ router.post('/execute', requirePlatformStaff, async (req: Request, res: Response
     // Import storage for clearing notifications (sets clearedAt so they don't appear in feed)
     const { storage } = await import('../storage');
     // Import broadcast function for real-time updates
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const { broadcastNotification } = await import('../websocket');
     
     // Helper to clear notification and broadcast update

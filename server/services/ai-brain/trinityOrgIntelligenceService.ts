@@ -51,7 +51,7 @@ export interface OrgPattern {
   workspaceId: string;
   patternType: OrgPatternType;
   patternKey: string;
-  value: Record<string, any>;
+  value: Record<string, unknown>;
   confidence: number;
   learnedAt: Date;
   lastConfirmedAt: Date;
@@ -221,7 +221,7 @@ class TrinityOrgIntelligenceService {
       log.info(`[TrinityOrgIntel] Learned ${patterns.length} patterns for workspace ${workspaceId}`);
 
       return patterns;
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[TrinityOrgIntel] Pattern learning failed for ${workspaceId}:`, (err instanceof Error ? err.message : String(err)));
       return this.orgPatterns.get(workspaceId) || [];
     }
@@ -1036,7 +1036,7 @@ class TrinityOrgIntelligenceService {
           });
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[TrinityOrgIntel] Financial config pattern detection failed:`, (err instanceof Error ? err.message : String(err)));
     }
     return patterns;
@@ -1213,7 +1213,7 @@ class TrinityOrgIntelligenceService {
       }
 
       this.activeTasks.set(task.id, task);
-    } catch (err: any) {
+    } catch (err: unknown) {
       task.error = (err instanceof Error ? err.message : String(err));
       if (task.attempts < task.maxAttempts) {
         task.status = 'retrying';
@@ -1760,7 +1760,7 @@ class TrinityOrgIntelligenceService {
             activeIssues: issues.length,
             activeTasks: tasks.length,
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.error(`[TrinityOrgIntel] Platform scan: skipped workspace ${ws.id}:`, (err instanceof Error ? err.message : String(err)));
           workspaceSummaries.push({
             workspaceId: ws.id,
@@ -1785,7 +1785,7 @@ class TrinityOrgIntelligenceService {
         platformIssues: allPlatformIssues,
         scannedAt: new Date().toISOString(),
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[TrinityOrgIntel] Platform-wide scan failed:', (err instanceof Error ? err.message : String(err)));
       return {
         totalWorkspaces: 0,
@@ -1913,7 +1913,7 @@ class TrinityOrgIntelligenceService {
             detectedAt: new Date(),
           });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.error(`[TrinityOrgIntel] Sub-org scan failed for ${sub.id}:`, (err instanceof Error ? err.message : String(err)));
       }
     }

@@ -75,9 +75,9 @@ export function dataAttributionMiddleware(req: Request, _res: Response, next: Ne
 
 export function enforceAttribution(
   tableName: string,
-  data: Record<string, any>,
+  data: Record<string, unknown>,
   context: AttributionContext
-): Record<string, any> {
+): Record<string, unknown> {
   const enriched = { ...data };
 
   if (!GLOBAL_TABLES.has(tableName)) {
@@ -116,9 +116,9 @@ export function enforceAttribution(
 }
 
 export function enforceUpdateAttribution(
-  data: Record<string, any>,
+  data: Record<string, unknown>,
   context: AttributionContext
-): Record<string, any> {
+): Record<string, unknown> {
   const enriched = { ...data };
   enriched.updated_at = new Date();
 

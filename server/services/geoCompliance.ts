@@ -123,7 +123,6 @@ export class GeoComplianceService {
         await this.createDiscrepancy(
           timeEntryId,
           workspaceId,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           shift[0].employeeId, // Pass employeeId from shift
           'clock_in_location',
           {
@@ -154,7 +153,6 @@ export class GeoComplianceService {
         await this.createDiscrepancy(
           timeEntryId,
           workspaceId,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           shift[0].employeeId, // Pass employeeId from shift
           'clock_out_location',
           {
@@ -184,7 +182,7 @@ export class GeoComplianceService {
     workspaceId: string,
     employeeId: string,
     discrepancyType: string,
-    metadata: Record<string, any>
+    metadata: Record<string, unknown>
   ): Promise<void> {
     await db.insert(timeEntryDiscrepancies).values({
       workspaceId,
@@ -216,7 +214,7 @@ export class GeoComplianceService {
     ipAddress?: string
   ): Promise<void> {
     // Calculate field-level changes
-    const fieldChanges: Record<string, any> = {};
+    const fieldChanges: Record<string, unknown> = {};
     if (changesBefore && changesAfter) {
       Object.keys(changesAfter).forEach(key => {
         if (changesBefore[key] !== changesAfter[key]) {

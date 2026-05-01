@@ -121,10 +121,10 @@ export function useChatroomNotifications() {
 
     const unsubs = [
       unsubConnect,
-      bus.subscribe('new_chatroom_message', (data: any) => handleNotification(data)),
-      bus.subscribe('user_added_to_chatroom', (data: any) => handleNotification(data)),
-      bus.subscribe('chatroom_invitation', (data: any) => handleNotification(data)),
-      bus.subscribe('notification_new', (data: any) => handleNotification(data)),
+      bus.subscribe('new_chatroom_message', (data) => handleNotification(data)),
+      bus.subscribe('user_added_to_chatroom', (data) => handleNotification(data)),
+      bus.subscribe('chatroom_invitation', (data) => handleNotification(data)),
+      bus.subscribe('notification_new', (data) => handleNotification(data)),
     ];
 
     return () => {

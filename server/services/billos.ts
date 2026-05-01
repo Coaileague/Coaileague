@@ -14,14 +14,11 @@ export { tokenManager } from './billing/tokenManager';
 export { orgBillingService } from './billing/orgBillingService';
 export { featureGateService } from './billing/featureGateService';
 export { subscriptionManager } from './billing/subscriptionManager';
-// @ts-expect-error — TS migration: fix in refactoring sprint
 export { overdueCollectionsService } from './billing/overdueCollectionsService';
-// @ts-expect-error — TS migration: fix in refactoring sprint
 export { invoiceResendService } from './billing/invoiceResendService';
 export { trialManager } from './billing/trialManager';
 export { platformBillService } from './billing/platformBillService';
 export { aiTokenGateway } from './billing/aiTokenGateway';
-// @ts-expect-error — TS migration: fix in refactoring sprint
 export { universalAIBillingInterceptor } from './billing/universalAIBillingInterceptor';
 
 import { db } from '../db';
@@ -87,7 +84,7 @@ class SmartBillingService {
       if (!hasActiveSubscription) status = 'critical';
 
       return { workspaceId, tier: row.subscriptionTier || 'free', creditsRemaining, isOverCap, hasActiveSubscription, nextBillingDate: null, lastInvoiceAmount: null, status };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('getWorkspaceBillingHealth failed', { workspaceId, error: (err instanceof Error ? err.message : String(err)) });
       return { workspaceId, tier: 'unknown', creditsRemaining: 0, isOverCap: false, hasActiveSubscription: false, nextBillingDate: null, lastInvoiceAmount: null, status: 'critical' };
     }
@@ -108,13 +105,13 @@ class SmartBillingService {
         activeWorkspaces: Number(activeWorkspaces.rows[0]?.count || 0),
         generatedAt: new Date().toISOString(),
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('getPlatformRevenueSummary failed', { error: (err instanceof Error ? err.message : String(err)) });
       return { invoicesLast30Days: 0, revenueLast30Days: 0, activeWorkspaces: 0, generatedAt: new Date().toISOString() };
     }
   }
 
-  async publishBillingEvent(type: string, workspaceId: string, metadata: Record<string, any>) {
+  async publishBillingEvent(type: string, workspaceId: string, metadata: Record<string, unknown>) {
     await platformEventBus.publish({
       type: type as any,
       category: 'automation',

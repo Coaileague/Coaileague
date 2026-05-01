@@ -163,7 +163,6 @@ class VisitorLogService {
     if (onsite) query += ` AND checked_out_at IS NULL`;
     query += ` ORDER BY checked_in_at DESC LIMIT ${limit}`;
     const rows = await typedPool(query, params);
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     return rows.rows;
   }
 
@@ -178,7 +177,6 @@ class VisitorLogService {
          AND expected_departure IS NOT NULL AND expected_departure < NOW() AND alert_sent=false`,
       [workspaceId]
     );
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     return rows.rows;
   }
 

@@ -582,7 +582,6 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  enabled: isAuthenticated,
  refetchInterval: 5000,
  retry: 1,
- // @ts-expect-error — TS migration: fix in refactoring sprint
  queryFn: () => apiFetch('/api/helpdesk/queue', AnyResponse),
  });
 
@@ -604,13 +603,12 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  queryKey: ['/api/promotional-banners'],
  enabled: isAuthenticated,
  retry: 1,
- // @ts-expect-error — TS migration: fix in refactoring sprint
  queryFn: () => apiFetch('/api/promotional-banners', AnyResponse),
  });
 
  // Transform promotional banners to match BannerManager format
  // @ts-expect-error — TS migration: fix in refactoring sprint
- const promotionalBanners = promotionalBannersRaw.map((banner: any) =>({
+ const promotionalBanners = promotionalBannersRaw.map((banner) =>({
  id: banner.id,
  text: banner.message,
  type: 'promo' as const,
@@ -801,15 +799,13 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  queryKey: ['/api/chat/rooms'],
  enabled: !!conversationToJoin && conversationToJoin !== MAIN_ROOM_ID,
  staleTime: 30000,
- // @ts-expect-error — TS migration: fix in refactoring sprint
  queryFn: () => apiFetch('/api/chat/rooms', AnyResponse),
  });
 
  useEffect(() =>{
- // @ts-expect-error — TS migration: fix in refactoring sprint
  if (roomListData?.rooms && conversationToJoin) {
  // @ts-expect-error — TS migration: fix in refactoring sprint
- const room = roomListData.rooms.find((r: any) =>
+ const room = roomListData.rooms.find((r) =>
  r.roomId === conversationToJoin || r.id === conversationToJoin
  );
  if (room?.status === 'closed') {
@@ -835,7 +831,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  queryClient.invalidateQueries({ queryKey: ['/api/chat/rooms'] });
  toast({ title: "Room Closed", description: "This room has been closed. No new messages can be sent." });
  },
- onError: (error: any) =>{
+ onError: (error) =>{
  toast({ title: "Error", description: error.message || "Failed to close room", variant: "destructive" });
  },
  });
@@ -849,7 +845,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  queryClient.invalidateQueries({ queryKey: ['/api/chat/rooms'] });
  toast({ title: "Room Reopened", description: "This room is now active. Messages can be sent again." });
  },
- onError: (error: any) =>{
+ onError: (error) =>{
  toast({ title: "Error", description: error.message || "Failed to reopen room", variant: "destructive" });
  },
  });
@@ -877,7 +873,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  queryFn: () => apiFetch(`/api/chat/manage/conversations/${sessionId}/search?q=${encodeURIComponent(chatSearchQuery)}`, AnyResponse),
  });
  const searchHits = (chatSearchResults as any)?.messages || [];
- const searchHitIds = new Set(searchHits.map((m: any) =>m.id));
+ const searchHitIds = new Set(searchHits.map((m) =>m.id));
 
  const editMessageMutation = useMutation({
  mutationFn: ({ messageId, message }: { messageId: string; message: string }) =>
@@ -994,7 +990,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  
  return result;
  },
- onSuccess: (data: any) =>{
+ onSuccess: (data) =>{
  const newTicketId = data.ticketId;
  saveTicketNumber(newTicketId);
  setTicketNumber(newTicketId);
@@ -1003,7 +999,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  apiRequest("POST", "/api/helpai/session/start", {
  guestName: guestIntakeData.name,
  guestEmail: guestIntakeData.email,
- }).then((session: any) =>{
+ }).then((session) =>{
  if (session?.sessionId) {
  setHelpaiSessionId(session.sessionId);
  try { sessionStorage.setItem('helpai_session_id', session.sessionId); } catch {}
@@ -1061,7 +1057,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  description: CHAT_CONFIG.messages.ticketCreated.description(newTicketId),
  });
  },
- onError: (error: any) =>{
+ onError: (error) =>{
  // Set error on current pipeline step - use functional update to avoid stale state
  setPipelineState(prev =>prev ? setStepError(prev, error.message || "Failed to create ticket") : prev);
  toast({
@@ -1133,10 +1129,9 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  // H005: Detect HelpAI rating prompt in last bot message
  useEffect(() =>{
  if (ratingSubmitted) return;
- const botMessages = messages.filter((m: any) =>m.role === 'bot' || m.senderRole === 'bot' || m.senderId?.startsWith('helpbot') || m.senderId === 'helpai-bot');
+ const botMessages = messages.filter((m) =>m.role === 'bot' || m.senderRole === 'bot' || m.senderId?.startsWith('helpbot') || m.senderId === 'helpai-bot');
  if (botMessages.length === 0) return;
  const lastBotMsg = botMessages[botMessages.length - 1];
- // @ts-expect-error — TS migration: fix in refactoring sprint
  const text = (lastBotMsg.content || lastBotMsg.message || '').toLowerCase();
  const isRatingPrompt = (text.includes('rate') || text.includes('rating')) && (text.includes('1') || text.includes('five')) && (text.includes('experience') || text.includes('support'));
  setShowRatingWidget(isRatingPrompt);
@@ -1148,7 +1143,6 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  setHelpaiRating(star);
  setRatingSubmitted(true);
  setShowRatingWidget(false);
- // @ts-expect-error — TS migration: fix in refactoring sprint
  sendMessage(String(star));
  // Also update HelpAI orchestrator session if one was created during intake
  if (helpaiSessionId) {
@@ -1317,7 +1311,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  };
  }
  throw new Error('No upload data returned');
- } catch (err: any) {
+ } catch (err: unknown) {
  toast({ title: "Upload failed", description: err.message || "Could not upload file", variant: "destructive" });
  return null;
  } finally {
@@ -1633,7 +1627,6 @@ export function HelpDesk(props?: HelpDeskProps & any) {
 
  const isStaff = user && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent'].includes((user as any).platformRole);
  const userPlatformRole = (user as any)?.platformRole;
- // @ts-expect-error — TS migration: fix in refactoring sprint
  const queueLength = queueData?.length || 0;
 
  // Role-based permission system
@@ -1650,7 +1643,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  const SYSTEM_ONLY = ['root_admin', 'sysop'];
 
  // Support command handlers (27 comprehensive commands)
- const handleQuickReply = (targetUser: any) =>{
+ const handleQuickReply = (targetUser) =>{
  const quickReplies = [
  "Thank you for contacting support. I'll be happy to assist you!",
  "I'm looking into this for you right now.",
@@ -1662,7 +1655,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  toast({ title: "Quick reply sent" });
  };
 
- const handleInternalNote = (targetUser: any) =>{
+ const handleInternalNote = (targetUser) =>{
  sendRawMessage({ 
  type: 'internal_note', 
  targetUserId: targetUser.id,
@@ -1671,47 +1664,47 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  toast({ title: "Internal note added", description: "Note visible to staff only" });
  };
 
- const handleResetPassword = (targetUser: any) =>{
+ const handleResetPassword = (targetUser) =>{
  // Initiate password reset via slash command
  sendQuickMessage(`/resetpassword ${targetUser.id}`);
  toast({ title: "Password Reset Sent" });
  };
 
- const handleUnlockAccount = (targetUser: any) =>{
+ const handleUnlockAccount = (targetUser) =>{
  // Send slash command to unlock account
  sendQuickMessage(`/unlock ${targetUser.id}`);
  toast({ title: "Account Unlocked" });
  };
 
- const handleLockAccount = (targetUser: any) =>{
+ const handleLockAccount = (targetUser) =>{
  // Send slash command that will be processed by websocket handler
  sendQuickMessage(`/lock ${targetUser.id} Security concern - locked by support`);
  toast({ title: "Account Locked", description: "User has been logged out from all sessions" });
  };
 
- const handleResetEmail = (targetUser: any) =>{
+ const handleResetEmail = (targetUser) =>{
  setResetEmailDialogUser({ userId: targetUser.id, userName: targetUser.name });
  };
 
- const handleViewSessions = (targetUser: any) =>{
+ const handleViewSessions = (targetUser) =>{
  // Send slash command to view sessions
  sendQuickMessage(`/sessions ${targetUser.id}`);
  toast({ title: "Sessions Viewer", description: `Viewing active sessions for ${targetUser.name}` });
  };
 
- const handleRevokeSessions = (targetUser: any) =>{
+ const handleRevokeSessions = (targetUser) =>{
  // Send slash command to revoke sessions
  sendQuickMessage(`/sessions ${targetUser.id} revoke`);
  toast({ title: "Sessions Revoked", description: "User logged out from all devices" });
  };
 
- const handleVerifyIdentity = (targetUser: any) =>{
+ const handleVerifyIdentity = (targetUser) =>{
  // Send slash command for identity verification
  sendQuickMessage(`/requestinfo ${targetUser.id} identity`);
  toast({ title: "Identity Verification Started" });
  };
 
- const handleViewDocuments = (targetUser: any) =>{
+ const handleViewDocuments = (targetUser) =>{
  sendRawMessage({ 
  type: 'view_documents', 
  targetUserId: targetUser.id 
@@ -1719,13 +1712,13 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  toast({ title: "Document viewer opened", description: `Viewing ${targetUser.name}'s submitted documents` });
  };
 
- const handleEscalate = (targetUser: any) =>{
+ const handleEscalate = (targetUser) =>{
  // Send slash command to escalate
  sendQuickMessage(`/escalate urgent Issue with ${targetUser.name}`);
  toast({ title: "Ticket escalated", description: "Transferred to Tier 2 support" });
  };
 
- const handlePriorityTag = (targetUser: any) =>{
+ const handlePriorityTag = (targetUser) =>{
  sendRawMessage({ 
  type: 'priority_tag', 
  targetUserId: targetUser.id 
@@ -1733,7 +1726,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  toast({ title: "Priority flag added", description: `${targetUser.name}'s ticket marked as high priority` });
  };
 
- const handleFollowUp = (targetUser: any) =>{
+ const handleFollowUp = (targetUser) =>{
  sendRawMessage({ 
  type: 'follow_up', 
  targetUserId: targetUser.id 
@@ -1741,7 +1734,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  toast({ title: "Follow-up scheduled", description: "Reminder set for 24 hours" });
  };
 
- const handleEmailSummary = (targetUser: any) =>{
+ const handleEmailSummary = (targetUser) =>{
  sendRawMessage({ 
  type: 'email_summary', 
  targetUserId: targetUser.id 
@@ -1750,7 +1743,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  toast({ title: "Email Summary Sent" });
  };
 
- const handleMarkVIP = (targetUser: any) =>{
+ const handleMarkVIP = (targetUser) =>{
  sendRawMessage({ 
  type: 'mark_vip', 
  targetUserId: targetUser.id 
@@ -1758,7 +1751,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  toast({ title: "VIP Status Granted" });
  };
 
- const handleUserHistory = (targetUser: any) =>{
+ const handleUserHistory = (targetUser) =>{
  sendRawMessage({ 
  type: 'user_history', 
  targetUserId: targetUser.id 
@@ -1766,7 +1759,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  toast({ title: "History Loaded" });
  };
 
- const handleIssueWarning = (targetUser: any) =>{
+ const handleIssueWarning = (targetUser) =>{
  sendRawMessage({ 
  type: 'issue_warning', 
  targetUserId: targetUser.id 
@@ -1775,7 +1768,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  toast({ title: "Warning Issued", description: `${targetUser.name}` });
  };
 
- const handleTempMute = (targetUser: any) =>{
+ const handleTempMute = (targetUser) =>{
  sendRawMessage({ 
  type: 'temp_mute', 
  targetUserId: targetUser.id,
@@ -1784,7 +1777,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  toast({ title: "User Muted", description: `${targetUser.name} • 5min` });
  };
 
- const handleBan = (targetUser: any) =>{
+ const handleBan = (targetUser) =>{
  sendRawMessage({ 
  type: 'ban_user', 
  targetUserId: targetUser.id 
@@ -1800,7 +1793,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  toast({ title: "Analytics Opened" });
  };
 
- const handleForceReconnect = (targetUser: any) =>{
+ const handleForceReconnect = (targetUser) =>{
  sendRawMessage({ 
  type: 'force_reconnect', 
  targetUserId: targetUser.id 
@@ -1814,7 +1807,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  toast({ title: "Test Message Sent" });
  };
 
- const handleClearCache = (targetUser: any) =>{
+ const handleClearCache = (targetUser) =>{
  sendRawMessage({ 
  type: 'clear_cache', 
  targetUserId: targetUser.id 
@@ -1823,7 +1816,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  };
 
  // Stateful menu helpers - for context menu toggles
- const toggleSilence = (targetUser: any) =>{
+ const toggleSilence = (targetUser) =>{
  const isSilencedNow = silencedUsers.has(targetUser.id);
  if (isSilencedNow) {
  // Unmute
@@ -1840,7 +1833,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  }
  };
 
- const toggleBan = (targetUser: any) =>{
+ const toggleBan = (targetUser) =>{
  const isBannedNow = bannedUsers.has(targetUser.id);
  if (isBannedNow) {
  // Unban
@@ -2709,7 +2702,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  </div>
  {!showContextPanel && isStaff && (
  <div className="mt-2">
- <Select value={priorityFilter} onValueChange={(value: any) =>setPriorityFilter(value)}>
+ <Select value={priorityFilter} onValueChange={(value) =>setPriorityFilter(value)}>
  <SelectTrigger data-testid="select-priority-filter" className="h-8 text-xs">
  <SelectValue placeholder="Filter by priority" />
  </SelectTrigger>
@@ -3128,7 +3121,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  homeButtonPath="/pricing"
  isGuest={true}
  // @ts-expect-error — TS migration: fix in refactoring sprint
- onPointerDownOutside={(e: any) =>{
+ onPointerDownOutside={(e) =>{
  // Prevent closing by clicking outside dialog if form is incomplete
  if (!isFormComplete()) {
  e.preventDefault();
@@ -3379,7 +3372,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  isOpen={showQueuePanel}
  onClose={() =>setShowQueuePanel(false)}
  // @ts-expect-error — TS migration: fix in refactoring sprint
- queueUsers={queueData?.map((q: any) =>({
+ queueUsers={queueData?.map((q) =>({
  id: q.userId,
  name: q.userName,
  type: q.ticketNumber ? 'ticket' : 'chat',
@@ -3977,7 +3970,6 @@ export function HelpDesk(props?: HelpDeskProps & any) {
          data-testid="button-end-chat-confirm"
          onClick={() => {
            setEndChatConfirmOpen(false);
-           // @ts-expect-error — TS migration: fix in refactoring sprint
            sendMessage('/quit');
            navigate('/dashboard');
          }}

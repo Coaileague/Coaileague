@@ -58,13 +58,13 @@ export default function SupervisorDashboard() {
     : (incidentsRes as any)?.data ?? [];
 
   const today = new Date();
-  const todayShifts = shifts.filter((s: any) => {
+  const todayShifts = shifts.filter((s) => {
     if (!s.startTime) return false;
     const start = new Date(s.startTime);
     return start.toDateString() === today.toDateString();
   });
 
-  const openIncidents = incidents.filter((i: any) => i.status !== "closed" && i.status !== "resolved");
+  const openIncidents = incidents.filter((i) => i.status !== "closed" && i.status !== "resolved");
 
   const orgName = workspace?.name ?? "Your Organization";
 
@@ -110,7 +110,7 @@ export default function SupervisorDashboard() {
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">On Shift</p>
             </div>
             <p className="text-2xl font-bold text-foreground tracking-tight">
-              {shifts.filter((s: any) => s.status === "active" || s.status === "clocked_in").length || "—"}
+              {shifts.filter((s) => s.status === "active" || s.status === "clocked_in").length || "—"}
             </p>
           </div>
 
@@ -160,7 +160,7 @@ export default function SupervisorDashboard() {
               </Button>
             </div>
             <div className="space-y-2">
-              {todayShifts.slice(0, 4).map((shift: any) => (
+              {todayShifts.slice(0, 4).map((shift) => (
                 <div key={shift.id} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <MapPin className="w-3 h-3 text-muted-foreground shrink-0" />

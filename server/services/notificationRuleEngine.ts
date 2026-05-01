@@ -1,8 +1,6 @@
 import { db } from '../db';
-// @ts-expect-error — TS migration: fix in refactoring sprint
 import { notificationRules, notifications, notificationActivity } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
-// @ts-expect-error — TS migration: fix in refactoring sprint
 import type { UNSNotification } from "../../client/src/components/notifications-popover";
 
 interface RuleMatch {
@@ -262,7 +260,7 @@ export class NotificationRuleEngine {
       priority?: number;
       workspaceId?: string;
     }
-  ): Promise<any> {
+  ): Promise<unknown> {
     const [rule] = await db
       .insert(notificationRules)
       .values({
@@ -293,7 +291,7 @@ export class NotificationRuleEngine {
       priority: number;
       isActive: boolean;
     }>
-  ): Promise<any> {
+  ): Promise<unknown> {
     const [rule] = await db
       .update(notificationRules)
       .set({

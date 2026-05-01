@@ -156,7 +156,7 @@ function ClientProfitabilityReport({ startDate, endDate }: { startDate: string; 
               {rows.length === 0 && (
                 <tr><td colSpan={5} className="text-center p-6 text-muted-foreground">No client margin data is available for this period yet.</td></tr>
               )}
-              {rows.map((r: any) => (
+              {rows.map((r) => (
                 <tr key={r.clientId} className="border-b last:border-0" data-testid={`row-client-${r.clientId}`}>
                   <td className="p-3 font-medium">{r.clientName}</td>
                   <td className="p-3 text-right">${fmt(r.revenue)}</td>
@@ -210,7 +210,7 @@ function PayrollSummaryReport({ startDate, endDate }: { startDate: string; endDa
               {topEarners.length === 0 && (
                 <tr><td colSpan={5} className="text-center p-6 text-muted-foreground">No payroll activity is available for this period yet.</td></tr>
               )}
-              {topEarners.map((e: any) => (
+              {topEarners.map((e) => (
                 <tr key={e.employeeId} className="border-b last:border-0">
                   <td className="p-3 font-medium">{e.name}</td>
                   <td className="p-3 text-right">${fmt(e.grossPay)}</td>
@@ -303,7 +303,7 @@ function ARAgingReport({ startDate, endDate }: { startDate: string; endDate: str
                       </tr>
                     </thead>
                     <tbody>
-                      {bucket.invoices.map((inv: any) => (
+                      {bucket.invoices.map((inv) => (
                         <tr key={inv.id} className="border-b last:border-0">
                           <td className="p-3">{inv.invoiceNumber || `#${inv.id}`}</td>
                           <td className="p-3 text-right">${fmt(inv.total)}</td>
@@ -388,7 +388,7 @@ function LaborCostReport({ startDate, endDate }: { startDate: string; endDate: s
             </thead>
             <tbody>
               {bySite.length === 0 && <tr><td colSpan={6} className="text-center p-6 text-muted-foreground">No labor cost data is available for the selected range yet.</td></tr>}
-              {bySite.map((s: any) => (
+              {bySite.map((s) => (
                 <tr key={s.siteId || "none"} className="border-b last:border-0">
                   <td className="p-3 font-medium">{s.siteName}</td>
                   <td className="p-3 text-right">{s.totalHours.toFixed(1)}</td>
@@ -462,7 +462,7 @@ function TaxLiabilityReport({ startDate, endDate }: { startDate: string; endDate
             </thead>
             <tbody>
               {quarters.length === 0 && <tr><td colSpan={7} className="text-center p-6 text-muted-foreground">No tax liability data is available for this period yet.</td></tr>}
-              {quarters.map((q: any) => (
+              {quarters.map((q) => (
                 <tr key={q.quarter} className="border-b last:border-0">
                   <td className="p-3 font-medium">{q.quarter}</td>
                   <td className="p-3 text-right">${fmt(q.federalTax)}</td>
@@ -551,7 +551,7 @@ function WorkersCompReport({ startDate, endDate }: { startDate: string; endDate:
             </thead>
             <tbody>
               {classifications.length === 0 && <tr><td colSpan={5} className="text-center p-6 text-muted-foreground">No workers' comp classification data is available for this period yet.</td></tr>}
-              {classifications.map((c: any) => (
+              {classifications.map((c) => (
                 <tr key={c.classificationCode} className="border-b last:border-0">
                   <td className="p-3 font-medium">{c.classificationCode}</td>
                   <td className="p-3 text-right">{c.employeeCount}</td>

@@ -93,7 +93,7 @@ export interface ExecutionStep {
   order: number;
   capability: CapabilityType;
   action: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   
   // Dependencies
   dependsOn?: string[];
@@ -123,7 +123,7 @@ export interface PreflightCheck {
 export interface PreflightResult {
   passed: boolean;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   canProceed: boolean;
   warnings?: string[];
 }
@@ -155,7 +155,7 @@ export interface StepResult {
 export interface RollbackStep {
   stepId: string;
   rollbackAction: string;
-  rollbackParams: Record<string, any>;
+  rollbackParams: Record<string, unknown>;
   executed: boolean;
 }
 
@@ -220,7 +220,7 @@ export interface ExecutionTimelineEntry {
   stepId: string;
   phase: ExecutionPhase;
   action: string;
-  input: Record<string, any>;
+  input: Record<string, unknown>;
   output: any;
   durationMs: number;
   success: boolean;
@@ -275,10 +275,10 @@ export interface ReplayDivergence {
 interface CapabilityAdapter {
   name: string;
   type: CapabilityType;
-  execute: (params: Record<string, any>, context: ExecutionContext) => Promise<any>;
-  validate: (params: Record<string, any>) => Promise<boolean>;
-  estimateCost: (params: Record<string, any>) => number;
-  createRollback?: (params: Record<string, any>, result: any) => RollbackStep | null;
+  execute: (params: Record<string, unknown>, context: ExecutionContext) => Promise<any>;
+  validate: (params: Record<string, unknown>) => Promise<boolean>;
+  estimateCost: (params: Record<string, unknown>) => number;
+  createRollback?: (params: Record<string, unknown>, result: any) => RollbackStep | null;
 }
 
 const capabilityAdapters: Map<CapabilityType, CapabilityAdapter> = new Map();
@@ -514,7 +514,6 @@ class TrinityExecutionFabric {
     log.info(`[TrinityFabric] Recorded execution ${manifestId} as ${recordingId} (reason: ${reason})`);
     
     // Publish event for observability
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     platformEventBus.publish('ai_brain_action', {
       action: 'execution_recorded',
       recordingId,
@@ -725,7 +724,6 @@ class TrinityExecutionFabric {
       log.info(`[TrinityFabric] Replay ${replayId} completed: ${stepsExecuted} executed, ${stepsFailed} failed, ${divergences.length} divergences`);
 
       // Publish event
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       platformEventBus.publish('ai_brain_action', {
         action: 'execution_replayed',
         replayId,
@@ -1474,8 +1472,8 @@ class TrinityExecutionFabric {
     return steps;
   }
 
-  private inferParameters(capability: CapabilityType, intent: string): Record<string, any> {
-    const params: Record<string, any> = {};
+  private inferParameters(capability: CapabilityType, intent: string): Record<string, unknown> {
+    const params: Record<string, unknown> = {};
     
     // Extract file paths
     const pathMatch = intent.match(/['"]([^'"]+\.(ts|js|tsx|jsx|json|md|css|html))['"]/);

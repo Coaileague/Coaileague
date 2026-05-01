@@ -43,7 +43,7 @@ export interface MeteredGenerateOptions {
   model?: 'gemini-2.5-flash-lite' | 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gemini-exp-1206';
   temperature?: number;
   maxOutputTokens?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   feature?: string;
   /** When true, forces the model to return valid JSON (responseMimeType: application/json) */
   jsonMode?: boolean;
@@ -204,7 +204,6 @@ class MeteredGeminiClient {
             callType: featureKey || 'gemini_metered',
             inputTokens,
             outputTokens,
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             triggeredByUserId: userId,
             responseTimeMs: Date.now() - startTime,
           });
@@ -233,7 +232,6 @@ class MeteredGeminiClient {
       // Still record the attempt for audit
       await usageMeteringService.recordUsage({
         workspaceId,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         userId,
         featureKey,
         usageType: 'api_call',

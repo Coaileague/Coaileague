@@ -46,10 +46,10 @@ export default function ContractorDashboard() {
   const dashboardError = earningsError || docsError || shiftsError;
 
   const docs: any[] = Array.isArray(docsRes) ? docsRes : (docsRes as any)?.data ?? [];
-  const pendingDocs = docs.filter((d: any) => d.status === "pending" || d.status === "requires_signature");
+  const pendingDocs = docs.filter((d) => d.status === "pending" || d.status === "requires_signature");
 
   const shifts: any[] = Array.isArray(shiftsRes) ? shiftsRes : (shiftsRes as any)?.data ?? [];
-  const upcomingShifts = shifts.filter((s: any) => {
+  const upcomingShifts = shifts.filter((s) => {
     if (!s.startTime) return false;
     return new Date(s.startTime) >= new Date();
   });
@@ -134,7 +134,7 @@ export default function ContractorDashboard() {
               </Button>
             </div>
             <div className="space-y-2">
-              {upcomingShifts.slice(0, 4).map((shift: any) => (
+              {upcomingShifts.slice(0, 4).map((shift) => (
                 <div key={shift.id} className="flex items-center justify-between text-sm">
                   <span className="text-foreground truncate max-w-[160px]">{shift.siteName || "Assignment"}</span>
                   <Badge variant="secondary" className="text-xs">{shift.status ?? "scheduled"}</Badge>

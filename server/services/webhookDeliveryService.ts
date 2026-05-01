@@ -96,7 +96,7 @@ export async function validateWebhookUrl(rawUrl: string): Promise<void> {
         throw new Error('Webhook URL resolves to a private IP address');
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err.message?.startsWith('Webhook URL')) throw err;
     throw new Error(`Webhook URL hostname resolution failed: ${err.message}`);
   }
@@ -178,7 +178,7 @@ interface DeliveryAttempt {
   url: string;
   secret: string;
   eventType: string;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   attemptNumber: number;
 }
 
@@ -194,7 +194,7 @@ async function attemptDelivery(attempt: DeliveryAttempt): Promise<{
   // SSRF guard — validate before making the outbound request
   try {
     await validateWebhookUrl(attempt.url);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[webhookDelivery] SSRF guard blocked delivery', { url: attempt.url, reason: err.message });
     return { statusCode: 0, responseBody: `SSRF blocked: ${err.message}`, success: false };
   }
@@ -225,7 +225,7 @@ async function attemptDelivery(attempt: DeliveryAttempt): Promise<{
       responseBody: responseBody.substring(0, 2000), // Cap at 2KB
       success: response.status >= 200 && response.status < 300,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     clearTimeout(timeout);
     return {
       statusCode: 0,
@@ -241,7 +241,7 @@ async function deliverToWebhook(
   webhookId: string,
   workspaceId: string,
   eventType: string,
-  payload: Record<string, any>,
+  payload: Record<string, unknown>,
   webhookUrl: string,
   webhookSecret: string,
   attemptNumber: number
@@ -341,7 +341,7 @@ async function notifyOrgOwnerOfWebhookFailure(
 
     log.info(`[WebhookDelivery] Notifying org_owner ${rows[0].email} of webhook failure: webhookId=${webhookId} url=${url} eventType=${eventType}`);
     // NDS integration would go here; logging is sufficient for this phase
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[WebhookDelivery] Failed to notify org_owner:', err.message);
   }
 }
@@ -357,7 +357,7 @@ async function notifyOrgOwnerOfWebhookFailure(
 export async function deliverWebhookEvent(
   workspaceId: string,
   eventType: WebhookEventType | string,
-  payload: Record<string, any>
+  payload: Record<string, unknown>
 ): Promise<void> {
   try {
     // Find all active webhooks subscribed to this event type
@@ -391,7 +391,7 @@ export async function deliverWebhookEvent(
         1
       ).catch(err => log.error('[WebhookDelivery] Delivery error:', err.message));
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[WebhookDelivery] deliverWebhookEvent error:', err.message);
   }
 }
@@ -455,7 +455,7 @@ export async function initWebhookTables(): Promise<void> {
       `CREATE INDEX IF NOT EXISTS webhook_log_webhook_idx ON webhook_outbound_log(webhook_id, delivered_at DESC)`
     );
     log.info('[WebhookDelivery] webhook_outbound_log table initialized');
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[WebhookDelivery] Failed to init webhook tables:', err.message);
   }
 }

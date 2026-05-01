@@ -95,7 +95,7 @@ class TrinityGlobalWorkspace {
         signal.workspaceId,
         Math.min(1, signal.intensity / 10),
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[GlobalWorkspace] Connectome broadcast failed (non-fatal):', err?.message);
     }
   }

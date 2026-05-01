@@ -124,7 +124,7 @@ export default function MyAuditRecord() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {auditData.shifts.map((shift: any) => (
+                    {auditData.shifts.map((shift) => (
                       <TableRow key={shift.id} data-testid={`row-shift-${shift.id}`}>
                         <TableCell>{format(new Date(shift.startTime), 'MMM dd, yyyy')}</TableCell>
                         <TableCell>{format(new Date(shift.startTime), 'h:mm a')}</TableCell>
@@ -161,7 +161,7 @@ export default function MyAuditRecord() {
             <CardContent>
               {auditData?.reviews && auditData.reviews.length > 0 ? (
                 <div className="space-y-4">
-                  {auditData.reviews.map((review: any) => (
+                  {auditData.reviews.map((review) => (
                     <Card key={review.id} data-testid={`card-review-${review.id}`}>
                       <CardHeader>
                         <div className="flex items-start justify-between gap-4">
@@ -222,7 +222,7 @@ export default function MyAuditRecord() {
             <CardContent>
               {auditData?.writeups && auditData.writeups.length > 0 ? (
                 <div className="space-y-4">
-                  {auditData.writeups.map((writeup: any) => (
+                  {auditData.writeups.map((writeup) => (
                     <Card key={writeup.id} data-testid={`card-writeup-${writeup.id}`} className="border-l-4 border-l-destructive">
                       <CardHeader>
                         <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -297,7 +297,7 @@ export default function MyAuditRecord() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {auditData.lockedRecords.map((record: any) => (
+                    {auditData.lockedRecords.map((record) => (
                       <TableRow key={record.id} data-testid={`row-locked-${record.id}`}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">

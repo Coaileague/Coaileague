@@ -63,7 +63,7 @@ export function handleSales(params: {
       `<Record action="${baseUrl}/api/voice/recording-done?ext=sales&lang=en" maxLength="120" playBeep="true" />` +
       say('Thank you. Have a great day.')
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[salesExtension] Error:', err?.message);
     return twiml(s('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }

@@ -88,7 +88,7 @@ async function requireNdaAccepted(req: any, res: Response, next: NextFunction): 
       return;
     }
     next();
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[AuditorRoutes] NDA gate check failed:', err?.message);
     res.status(500).json({ ok: false, error: 'NDA gate failed' });
   }
@@ -112,7 +112,7 @@ auditorRouter.post('/intake', async (req: Request, res: Response) => {
     });
     if (!result.success) return res.status(400).json({ ok: false, error: result.reason });
     return res.json({ ok: true, ...result });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[AuditorRoutes] intake error:', err.message);
     res.status(500).json({ ok: false, error: 'Intake failed' });
   }
@@ -131,7 +131,7 @@ auditorRouter.post('/claim', async (req: Request, res: Response) => {
     if (!result.success) return res.status(400).json({ ok: false, error: result.reason });
     req.session.auditorId = result.auditorId;
     return res.json({ ok: true, auditorId: result.auditorId });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[AuditorRoutes] claim error:', err.message);
     res.status(500).json({ ok: false, error: 'Claim failed' });
   }
@@ -165,7 +165,7 @@ auditorRouter.post('/login', async (req: Request, res: Response) => {
     await recordSuccessfulAuth(auth.auditorId!, req.ip, req.headers['user-agent'] as string);
     req.session.auditorId = auth.auditorId;
     return res.json({ ok: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[AuditorRoutes] login error:', err.message);
     res.status(500).json({ ok: false, error: 'Login failed' });
   }
@@ -215,7 +215,7 @@ auditorRouter.post('/nda/accept', requireAuditor, async (req: any, res: Response
     });
     if (!r.success) return res.status(500).json({ ok: false, error: 'Failed to record NDA acceptance' });
     res.json({ ok: true, version: r.version });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[AuditorRoutes] NDA accept error:', err.message);
     res.status(500).json({ ok: false, error: 'NDA accept failed' });
   }
@@ -227,7 +227,7 @@ auditorRouter.get('/me/audits', requireAuditor, requireNdaAccepted, async (req: 
   try {
     const audits = await listAuditsForAuditor(req.session.auditorId);
     res.json({ ok: true, audits });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[AuditorRoutes] list audits error:', err.message);
     res.status(500).json({ ok: false, error: 'Failed to list audits' });
   }
@@ -239,7 +239,7 @@ auditorRouter.get('/me/workspaces', requireAuditor, requireNdaAccepted, async (r
   try {
     const workspaces = await listWorkspacesForAuditor(req.session.auditorId);
     res.json({ ok: true, workspaces });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[AuditorRoutes] list workspaces error:', err.message);
     res.status(500).json({ ok: false, error: 'Failed to list workspaces' });
   }
@@ -262,7 +262,7 @@ auditorRouter.get(
       }
       const score = await computeComplianceScore(workspaceId);
       res.json({ ok: true, ...score });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[AuditorRoutes] compliance score error:', err.message);
       res.status(500).json({ ok: false, error: 'Failed to compute score' });
     }
@@ -285,7 +285,7 @@ auditorRouter.get(
       }
       const trend = await getComplianceTrend(workspaceId);
       res.json({ ok: true, trend });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[AuditorRoutes] compliance trend error:', err.message);
       res.status(500).json({ ok: false, error: 'Failed to fetch trend' });
     }
@@ -324,7 +324,7 @@ auditorRouter.post(
       });
       if (!r.success) return res.status(500).json({ ok: false, error: 'Failed to log notification' });
       res.json({ ok: true, id: r.id });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[AuditorRoutes] flag error:', err.message);
       res.status(500).json({ ok: false, error: 'Flag failed' });
     }
@@ -345,7 +345,7 @@ auditorRouter.get(
       }
       const rows = await listRegulatorNotificationsForWorkspace(workspaceId);
       res.json({ ok: true, notifications: rows });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[AuditorRoutes] notifications list error:', err.message);
       res.status(500).json({ ok: false, error: 'Failed to list notifications' });
     }
@@ -363,7 +363,7 @@ auditorRouter.post('/audits', requireAuditor, requireNdaAccepted, async (req: an
     });
     if (!result.success) return res.status(400).json({ ok: false, error: result.reason });
     res.json({ ok: true, auditId: result.auditId });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[AuditorRoutes] request audit error:', err.message);
     res.status(500).json({ ok: false, error: 'Request failed' });
   }
@@ -375,7 +375,7 @@ auditorRouter.post('/audits/:id/close', requireAuditor, async (req: any, res: Re
   try {
     const r = await closeAudit(req.params.id, req.session.auditorId);
     res.json({ ok: r.success });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[AuditorRoutes] close audit error:', err.message);
     res.status(500).json({ ok: false, error: 'Close failed' });
   }
@@ -388,7 +388,7 @@ auditorRouter.post('/audits/:id/extend', requireAuditor, async (req: any, res: R
     const days = Math.min(parseInt(req.body?.days || '30', 10) || 30, 90);
     const r = await extendAudit(req.params.id, days);
     res.json({ ok: r.success });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[AuditorRoutes] extend audit error:', err.message);
     res.status(500).json({ ok: false, error: 'Extend failed' });
   }
@@ -419,7 +419,7 @@ auditorRouter.post('/invite-link', requireManager, async (req: any, res) => {
         html: '<h2>Auditor Access</h2><p><a href="' + inviteUrl + '">Click to claim your auditor access</a></p><p>Expires in ' + String(expiresInDays) + ' days.</p>' });
     } catch(emailErr) { log.warn('[AuditorInvite] Email failed:', emailErr); }
     res.json({ success: true, inviteUrl, token: token.slice(0,8)+'...', expiresAt });
-  } catch(err: any) { log.error('[AuditorInvite]', err); res.status(500).json({ error: 'Failed' }); }
+  } catch (err: unknown) { log.error('[AuditorInvite]', err); res.status(500).json({ error: 'Failed' }); }
 });
 
 auditorRouter.get('/claim/:token', async (req, res) => {
@@ -431,7 +431,7 @@ auditorRouter.get('/claim/:token', async (req, res) => {
     if (new Date(r.rows[0].invite_expires_at) < new Date()) return res.status(410).json({ error: 'Expired' });
     const domain = process.env.RAILWAY_PUBLIC_DOMAIN || 'app.coaileague.com';
     return res.redirect('https://' + domain + '/auditor/register?token=' + token + '&email=' + encodeURIComponent(r.rows[0].email));
-  } catch(err: any) { log.error('[AuditorClaim]', err); res.status(500).json({ error: 'Failed' }); }
+  } catch (err: unknown) { log.error('[AuditorClaim]', err); res.status(500).json({ error: 'Failed' }); }
 });
 
 

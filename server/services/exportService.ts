@@ -680,7 +680,6 @@ export async function exportShiftHistory(
   if (clientIds.length > 0) {
     const cls = await db.select({ id: clients.id, companyName: clients.companyName })
       .from(clients).where(sql`${clients.id} IN (${sql.join(clientIds.map(id => sql`${id}`), sql`, `)})`);
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     cls.forEach(c => clientMap.set(c.id, c.companyName));
   }
 

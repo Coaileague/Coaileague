@@ -906,7 +906,6 @@ router.post('/dashboard/:workspaceId/report', requireAuditorPortalAuth, async (r
 router.get('/audit-readiness', requireAuth, requirePlan('business'), async (req: Request, res: Response) => {
   try {
     const workspaceId = req.workspaceId;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const result = await calculateAuditReadinessScore(workspaceId);
     return res.json({ success: true, data: result });
   } catch (err: unknown) {
@@ -943,7 +942,6 @@ router.post(
 
       // STORAGE QUOTA CHECK: Enforce documents quota before writing (audit_reserve is always allowed)
       const { checkCategoryQuota, recordStorageUsage } = await import('../../services/storage/storageQuotaService');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const quotaCheck = await checkCategoryQuota(workspaceId, 'documents', req.file.buffer.length);
       if (!quotaCheck.allowed) {
         return res.status(507).json({
@@ -960,14 +958,12 @@ router.post(
       });
 
       // Record usage AFTER successful upload — never skipped
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       recordStorageUsage(workspaceId, 'documents', req.file.buffer.length).catch(() => null);
 
       const existing = await db
         .select({ id: employeeDocuments.id })
         .from(employeeDocuments)
         .where(and(
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           eq(employeeDocuments.workspaceId, workspaceId),
           eq(employeeDocuments.employeeId, 'company'),
           eq(employeeDocuments.documentType, docKey as any),
@@ -991,7 +987,6 @@ router.post(
           })
           .where(eq(employeeDocuments.id, existing[0].id));
       } else {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(employeeDocuments).values({
           id: crypto.randomUUID(),
           workspaceId,
@@ -1022,7 +1017,6 @@ router.post(
 router.get('/violations', requireAuth, requireManagerRole, async (req: Request, res: Response) => {
   try {
     const workspaceId = req.workspaceId;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const violations = await listRegulatoryViolations(workspaceId);
     return res.json({ success: true, data: violations });
   } catch (err: unknown) {
@@ -1033,7 +1027,6 @@ router.get('/violations', requireAuth, requireManagerRole, async (req: Request, 
 router.get('/officer-score/:employeeId', requireAuth, requireManagerRole, async (req: Request, res: Response) => {
   try {
     const workspaceId = req.workspaceId;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const score = await calculateOfficerComplianceScore(req.params.employeeId, workspaceId);
     return res.json({ success: true, data: score });
   } catch (err: unknown) {
@@ -1227,7 +1220,7 @@ router.get('/tax-compliance/audit', async (_req, res) => {
   try {
     const report = runTaxComplianceAudit();
     return res.json({ success: true, report });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[RegulatoryPortal] Tax compliance audit error:', err);
     return res.status(500).json({ success: false, error: 'Tax compliance audit failed' });
   }
@@ -1251,7 +1244,7 @@ router.get('/tax-compliance/registry', async (_req, res) => {
         sutaCount: rules.sutaDefaults.length,
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[RegulatoryPortal] Registry status error:', err);
     return res.status(500).json({ success: false, error: 'Failed to get registry status' });
   }
@@ -1279,7 +1272,7 @@ router.get('/tax-compliance/states/:stateCode', async (req, res) => {
       reciprocity,
       localTaxes,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[RegulatoryPortal] State tax details error:', err);
     return res.status(500).json({ success: false, error: 'Failed to get state tax details' });
   }

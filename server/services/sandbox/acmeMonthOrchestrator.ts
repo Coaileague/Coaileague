@@ -60,7 +60,7 @@ export async function runAcmeMonthSimulation(opts?: { baseUrl?: string }): Promi
       seedSummary = 'seedAcmeFullDemo() completed';
     }
     if (seedMod?.DEMO_WORKSPACE_ID) workspaceId = seedMod.DEMO_WORKSPACE_ID;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[ACME] seed step warning: ${err?.message}`);
     seedSummary = `seed warning: ${err?.message ?? String(err)}`;
   }

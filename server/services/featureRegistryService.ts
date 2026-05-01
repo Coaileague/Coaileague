@@ -56,7 +56,7 @@ export interface EnrichedNotificationContent {
   featureReferences: FeatureReference[];
   metadata: {
     validatedAt: string;
-    featureContext: Record<string, any>;
+    featureContext: Record<string, unknown>;
     enrichmentApplied: boolean;
   };
 }
@@ -188,7 +188,7 @@ class FeatureRegistryService {
   validateNotificationContent(
     title: string,
     message: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): ValidationResult {
     const issues: ValidationIssue[] = [];
     const suggestions: string[] = [];
@@ -455,8 +455,8 @@ class FeatureRegistryService {
   /**
    * Build feature context for enriched notifications
    */
-  private buildFeatureContext(refs: FeatureReference[]): Record<string, any> {
-    const context: Record<string, any> = {};
+  private buildFeatureContext(refs: FeatureReference[]): Record<string, unknown> {
+    const context: Record<string, unknown> = {};
     
     for (const ref of refs) {
       const feature = FEATURE_REGISTRY[ref.featureId];
@@ -538,7 +538,7 @@ class FeatureRegistryService {
   enrichNotification(
     title: string,
     message: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): EnrichedNotificationContent {
     const validation = this.validateNotificationContent(title, message, metadata);
     
@@ -590,7 +590,6 @@ class FeatureRegistryService {
    */
   getTrinityContext(): {
     features: PlatformFeature[];
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     summary: ReturnType<typeof this.getFeatureSummary>;
     recentChanges: PlatformFeature[];
     deprecatedFeatures: PlatformFeature[];

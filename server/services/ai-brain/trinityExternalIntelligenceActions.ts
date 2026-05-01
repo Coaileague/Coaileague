@@ -36,7 +36,7 @@ function mkAction(actionId: string, fn: (params: any) => Promise<any>): ActionHa
           data,
           executionTimeMs: 0 // Will be handled by hub if needed
         };
-      } catch (err: any) {
+      } catch (err: unknown) {
         return { 
           success: false, 
           actionId,

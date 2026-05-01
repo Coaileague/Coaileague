@@ -42,7 +42,7 @@ export default function AuditorLogin() {
         setError("Login failed. Please check your credentials.");
       }
     },
-    onError: async (err: any) => {
+    onError: async (err) => {
       try {
         const body = await err.response?.json?.();
         setError(body?.error ?? "Login failed. Please try again.");

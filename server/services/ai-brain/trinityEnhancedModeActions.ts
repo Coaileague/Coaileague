@@ -156,7 +156,7 @@ export function registerTrinityEnhancedModeActions(orchestrator: any): void {
           data: result,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (e: any) {
+      } catch (e: unknown) {
         return {
           success: false,
           actionId: request.actionId,

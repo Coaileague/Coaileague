@@ -441,7 +441,7 @@ async function handleAuditorHelpAI(
         return `• ${r.name} (${r.employee_number || 'N/A'}) — ${r.is_armed ? 'Armed' : 'Unarmed'} — Expires: ${expiry}`;
       }).join('\n');
       return { reply: `Officers with licenses expiring in 60 days (${rows.length}):\n\n${summary}`, resolved: true };
-    } catch (err: any) {
+    } catch (err: unknown) {
       return { reply: 'Unable to retrieve expiry data right now. Please try again.', resolved: false };
     }
   }
@@ -473,7 +473,7 @@ async function handleAuditorHelpAI(
         reply: `Active officers in this organization (${rows.length} total):\n\n${summary}`,
         resolved: true,
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       return { reply: 'Unable to retrieve officer records right now. Please try again.', resolved: false };
     }
   }
@@ -495,7 +495,7 @@ async function handleAuditorHelpAI(
         `• ${r.incident_number || 'N/A'} — ${new Date(r.incident_date).toLocaleDateString()} — ${r.incident_type || 'general'} — ${r.severity || 'low'} — Officer: ${r.officer_name || 'Unknown'}`,
       ).join('\n');
       return { reply: `Recent incident reports (last 25):\n\n${summary}`, resolved: true };
-    } catch (err: any) {
+    } catch (err: unknown) {
       return { reply: 'Unable to retrieve incident reports right now. Please try again.', resolved: false };
     }
   }
@@ -568,7 +568,7 @@ router.post('/triage', requireAuth, async (req: AuthenticatedRequest, res: Respo
             },
           });
         }
-      } catch (auditErr: any) {
+      } catch (auditErr: unknown) {
         log.warn('[HelpAITriage] Audit intelligence failed, falling back to pattern handler:', auditErr?.message);
       }
 
@@ -635,7 +635,7 @@ router.post('/triage', requireAuth, async (req: AuthenticatedRequest, res: Respo
     }
 
     // ── TIER 1: Trinity auto-resolution by category ──
-    let workspaceContext: Record<string, any> = {};
+    let workspaceContext: Record<string, unknown> = {};
     if (workspaceId) {
       workspaceContext = await loadWorkspaceContext(workspaceId).catch(() => ({}));
     }
@@ -727,7 +727,7 @@ router.post('/triage', requireAuth, async (req: AuthenticatedRequest, res: Respo
 
 // ─── Contextual Response Generator (Tier 2 fallback) ──────────────────────
 
-function generateContextualResponse(category: string, ctx: Record<string, any>, message: string): string {
+function generateContextualResponse(category: string, ctx: Record<string, unknown>, message: string): string {
   const orgName = ctx.workspace?.name ? `for ${ctx.workspace.name}` : '';
   switch (category) {
     case 'scheduling_issue':

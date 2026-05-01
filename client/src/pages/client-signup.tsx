@@ -376,7 +376,6 @@ export default function ClientSignup() {
               <p className="text-center text-sm text-muted-foreground">
                 Already have an account?{' '}
                 <Button 
-                  // @ts-expect-error — TS migration: fix in refactoring sprint
                   variant="link" 
                   className="p-0 h-auto"
                   onClick={() => setLocation('/login')}

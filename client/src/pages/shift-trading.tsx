@@ -134,7 +134,7 @@ function AddAvailabilityDialog({ onCreated }: { onCreated: () => void }) {
   const [form, setForm] = useState({ dayOfWeek: "1", startTime: "08:00", endTime: "16:00", isAvailable: "true" });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/shift-trading/availability", data),
+    mutationFn: (data) => apiRequest("POST", "/api/shift-trading/availability", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/shift-trading/availability"] });
       setOpen(false);

@@ -290,7 +290,7 @@ export async function initializeVoiceTables(): Promise<void> {
             `, [platformWorkspaceId]);
             log.info(`[VoiceRoutes] Platform workspace ${platformWorkspaceId} ensured`);
           }
-        } catch (wsErr: any) {
+        } catch (wsErr: unknown) {
           log.warn(`[VoiceRoutes] Platform workspace ensure failed (non-fatal): ${wsErr?.message}`);
         }
 
@@ -331,7 +331,7 @@ export async function initializeVoiceTables(): Promise<void> {
     } finally {
       client.release();
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[VoiceRoutes] Voice table init failed (non-fatal):', err.message);
   }
 }
@@ -389,7 +389,7 @@ async function validateTwilioSignature(req: Request): Promise<boolean> {
 
     log.warn(`[VoiceRoutes] Sig invalid on both ${url} and ${altUrl}`);
     return false;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[VoiceRoutes] Twilio validateRequest error:', err.message);
     return false;
   }
@@ -500,7 +500,7 @@ voiceRouter.post('/inbound', twilioSignatureMiddleware, async (req: Request, res
 
     const xml = await handleInbound({ to: To, from: From, callSid: CallSid, baseUrl });
     xmlResponse(res, xml);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] Inbound error:', err.message);
     xmlResponse(res, twiml('<Say>We are experiencing technical difficulties. Please try again. Goodbye.</Say>'));
   }
@@ -534,7 +534,7 @@ voiceRouter.post('/language-select', twilioSignatureMiddleware, async (req: Requ
     const extEnabled = (workspace.phoneRecord.extensionConfig as Record<string, boolean>) || {};
     const xml = buildMainIVR(lang, baseUrl, extEnabled);
     xmlResponse(res, xml);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] Language-select error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -654,7 +654,7 @@ voiceRouter.post('/caller-identify', twilioSignatureMiddleware, async (req: Requ
             ));
           }
         }
-      } catch (pinErr: any) {
+      } catch (pinErr: unknown) {
         log.warn('[VoiceRoutes] Owner-PIN gate check failed (non-fatal):', pinErr?.message);
       }
 
@@ -691,7 +691,7 @@ voiceRouter.post('/caller-identify', twilioSignatureMiddleware, async (req: Requ
     const extEnabled = (workspace.phoneRecord.extensionConfig as Record<string, boolean>) || {};
     return xmlResponse(res, buildGeneralMenu(lang, baseUrl, extEnabled));
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] caller-identify error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Please try again.</Say>'));
   }
@@ -734,7 +734,7 @@ voiceRouter.post('/staff-identify', twilioSignatureMiddleware, async (req: Reque
           [workspaceId, `%${cleaned}%`, cleaned]
         );
         if (result.rows.length) foundFirst = result.rows[0].first_name;
-      } catch (e: any) {
+      } catch (e: unknown) {
         log.warn('[VoiceRoutes] staff-identify lookup failed (non-fatal):', e.message);
       }
     }
@@ -753,7 +753,7 @@ voiceRouter.post('/staff-identify', twilioSignatureMiddleware, async (req: Reque
         : 'Taking you to the staff menu now.'), voiceId, langCode) +
       redirect(`${baseUrl}/api/voice/main-menu-route?lang=${lang}&_d=4`)
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] staff-identify error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -810,7 +810,7 @@ voiceRouter.post('/owner-pin-verify', twilioSignatureMiddleware, async (req: Req
       });
       verified = result.valid;
       log.info(`[VoiceRoutes] owner-pin-verify: workspace=${workspaceId} valid=${verified} reason=${result.reason}`);
-    } catch (pinErr: any) {
+    } catch (pinErr: unknown) {
       log.warn('[VoiceRoutes] owner-pin-verify call failed (non-fatal):', pinErr?.message);
     }
 
@@ -830,7 +830,7 @@ voiceRouter.post('/owner-pin-verify', twilioSignatureMiddleware, async (req: Req
             WHERE twilio_call_sid = $1`,
           [CallSid],
         );
-      } catch (metaErr: any) {
+      } catch (metaErr: unknown) {
         log.warn('[VoiceRoutes] owner-pin session stamp failed (non-fatal):', metaErr?.message);
       }
     }
@@ -854,7 +854,7 @@ voiceRouter.post('/owner-pin-verify', twilioSignatureMiddleware, async (req: Req
       say(ack, voiceId, langCode) +
       redirect(nextTarget)
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] owner-pin-verify error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -902,7 +902,7 @@ voiceRouter.post('/client-identify', twilioSignatureMiddleware, async (req: Requ
           resolvedProviderWorkspaceId = r.rows[0].id;
           resolvedProviderName = r.rows[0].company_name || r.rows[0].name;
         }
-      } catch (lookupErr: any) {
+      } catch (lookupErr: unknown) {
         log.warn('[VoiceRoutes] client-identify provider lookup failed:', lookupErr?.message);
       }
 
@@ -918,7 +918,7 @@ voiceRouter.post('/client-identify', twilioSignatureMiddleware, async (req: Requ
               client_provider_resolved: !!resolvedProviderWorkspaceId,
             },
           });
-        } catch (metaErr: any) {
+        } catch (metaErr: unknown) {
           log.warn('[VoiceRoutes] client-identify session metadata write failed (non-fatal):', metaErr?.message);
         }
       }
@@ -950,7 +950,7 @@ voiceRouter.post('/client-identify', twilioSignatureMiddleware, async (req: Requ
       say(ack, voiceId, langCode) +
       redirect(`${baseUrl}/api/voice/main-menu-route?lang=${lang}&_d=2`)
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] client-identify error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -969,7 +969,7 @@ voiceRouter.post('/general-menu', twilioSignatureMiddleware, async (req: Request
 
     const extEnabled = (workspace.phoneRecord.extensionConfig as Record<string, boolean>) || {};
     return xmlResponse(res, buildGeneralMenu(lang, baseUrl, extEnabled));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] general-menu error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -1138,7 +1138,7 @@ voiceRouter.post('/main-menu-route', twilioSignatureMiddleware, async (req: Requ
       default:
         return xmlResponse(res, buildGeneralMenu(lang, baseUrl, extEnabled));
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] Main-menu-route error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -1178,7 +1178,7 @@ voiceRouter.post('/staff-menu', twilioSignatureMiddleware, async (req: Request, 
       default:
         return xmlResponse(res, handleStaff(baseParams));
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] Staff-menu error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -1211,7 +1211,7 @@ voiceRouter.post('/clock-out-pin', twilioSignatureMiddleware, async (req: Reques
     return xmlResponse(res, handleCollectClockOutPin({
       callSid: CallSid, sessionId, workspaceId, lang, baseUrl, employeeNumber,
     }));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] Clock-out-pin error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -1237,7 +1237,7 @@ voiceRouter.post('/clock-out-verify', twilioSignatureMiddleware, async (req: Req
       callSid: CallSid, sessionId, workspaceId, lang, employeeNumber, pin: Digits,
     });
     xmlResponse(res, xml);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] Clock-out-verify error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred processing your clock-out. Goodbye.</Say>'));
   }
@@ -1274,7 +1274,7 @@ voiceRouter.post('/clock-in-pin', twilioSignatureMiddleware, async (req: Request
     return xmlResponse(res, handleCollectPin({
       callSid: CallSid, sessionId, workspaceId, lang, baseUrl, employeeNumber,
     }));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] Clock-in-pin error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -1301,7 +1301,7 @@ voiceRouter.post('/clock-in-verify', twilioSignatureMiddleware, async (req: Requ
       baseUrl: getBaseUrl(req),
     });
     xmlResponse(res, xml);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] Clock-in-verify error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred processing your clock-in. Goodbye.</Say>'));
   }
@@ -1360,7 +1360,7 @@ voiceRouter.post('/recording-done', twilioSignatureMiddleware, async (req: Reque
                 }
               }
             }
-          } catch (wErr: any) {
+          } catch (wErr: unknown) {
             log.warn('[VoiceRoutes] Whisper transcription failed, falling back to Twilio:', wErr?.message?.slice(0, 100));
           }
         }
@@ -1376,7 +1376,7 @@ voiceRouter.post('/recording-done', twilioSignatureMiddleware, async (req: Reque
               statusCallbackUrl: `${baseUrl}/api/voice/transcription-done`,
             });
             log.info(`[VoiceRoutes] Twilio transcription fallback requested for ${RecordingSid}`);
-          } catch (tErr: any) {
+          } catch (tErr: unknown) {
             log.warn('[VoiceRoutes] Twilio transcription fallback failed:', tErr?.message?.slice(0, 100));
           }
         }
@@ -1423,14 +1423,14 @@ voiceRouter.post('/recording-done', twilioSignatureMiddleware, async (req: Reque
             triggerSource: 'voice_calloff',
             reason: `Voice calloff (recording ${RecordingSid})`,
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn('[VoiceRoutes] Voice calloff workflow error (non-fatal):', err?.message);
         }
       });
     }
 
     xmlResponse(res, twiml('<Say>Thank you. Goodbye.</Say>'));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] Recording-done error:', err.message);
     xmlResponse(res, twiml('<Say>Goodbye.</Say>'));
   }
@@ -1458,7 +1458,7 @@ voiceRouter.post('/transcription-done', twilioSignatureMiddleware, async (req: R
         const { estimateSpeakerCountFromTranscript, flagMultipleSpeakers } = await import('../services/trinityVoice/callerIdLookup');
         const speakers = estimateSpeakerCountFromTranscript(TranscriptionText);
         if (speakers > 1) await flagMultipleSpeakers({ callSid: CallSid, speakerCount: speakers });
-      } catch (e: any) {
+      } catch (e: unknown) {
         log.warn('[VoiceRoutes] Sentiment/speaker post-processing failed:', e?.message);
       }
 
@@ -1532,7 +1532,7 @@ voiceRouter.post('/transcription-done', twilioSignatureMiddleware, async (req: R
               metadata: { ticketNumber, callSid: CallSid, callerPhone, complaintCompany, complaintOfficer, channel: 'voice' },
             });
           } catch { /* non-fatal */ }
-        } catch (gcErr: any) {
+        } catch (gcErr: unknown) {
           log.error('[VoiceRoutes] Guest complaint persistence failed:', gcErr?.message);
         }
       }
@@ -1615,7 +1615,7 @@ voiceRouter.post('/transcription-done', twilioSignatureMiddleware, async (req: R
               });
             } catch { /* non-fatal */ }
           }
-        } catch (psErr: any) {
+        } catch (psErr: unknown) {
           log.error(`[VoiceRoutes] Provider-scoped ${caseType} persistence failed:`, psErr?.message);
         }
       }
@@ -1624,7 +1624,7 @@ voiceRouter.post('/transcription-done', twilioSignatureMiddleware, async (req: R
     }
 
     res.status(200).send();
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] Transcription-done error:', err.message);
     res.status(200).send(); // Always 200 to Twilio
   }
@@ -1707,7 +1707,7 @@ voiceRouter.post('/status-callback', twilioSignatureMiddleware, async (req: Requ
     }
 
     res.status(204).send();
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] Status-callback error:', err.message);
     res.status(200).send(); // Always 200 to Twilio
   }
@@ -1757,7 +1757,7 @@ voiceRouter.post('/support-resolve', twilioSignatureMiddleware, async (req: Requ
           channel: 'voice',
           tokensUsed: 300,
         }).catch(() => {});
-      } catch (capErr: any) {
+      } catch (capErr: unknown) {
         log.warn('[VoiceGuest] cap check failed (non-blocking):', capErr?.message);
       }
     }
@@ -1826,7 +1826,7 @@ voiceRouter.post('/support-resolve', twilioSignatureMiddleware, async (req: Requ
             extension: 'support',
           },
         });
-      } catch (auditErr: any) {
+      } catch (auditErr: unknown) {
         log.warn('[VoiceRoutes] support-resolve audit failed (non-fatal):', auditErr?.message);
       }
 
@@ -1861,7 +1861,7 @@ voiceRouter.post('/support-resolve', twilioSignatureMiddleware, async (req: Requ
         'No escuché su nombre. Permítame crear un caso de soporte y nuestro equipo se comunicará con usted pronto. Adiós.'
       )
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] support-resolve error:', err.message);
     xmlResponse(res, twiml('<Say>We encountered a technical issue. Please call back. Goodbye.</Say>'));
   }
@@ -1930,7 +1930,7 @@ voiceRouter.post('/support-confirm', twilioSignatureMiddleware, async (req: Requ
         'No escuché su nombre. Crearemos un caso de soporte y alguien se comunicará con usted pronto. Adiós.'
       )
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] support-confirm error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -1985,7 +1985,7 @@ voiceRouter.post('/support-gather-name', twilioSignatureMiddleware, async (req: 
       `</Gather>` +
       redirect(`${issueAction}&skipMessage=true`)
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] support-gather-name error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -2062,7 +2062,7 @@ voiceRouter.post('/support-create-case', twilioSignatureMiddleware, async (req: 
           : `Hi${callerName ? ` ${callerName.split(' ')[0]}` : ''}, your support case has been created: ${supportCase.case_number}. A specialist from ${orgName} will follow up with you shortly. Reply STOP to unsubscribe.`;
         await sendSMS({ to: callerNumber, body: smsBody, workspaceId, type: 'system_alert' });
         log.info(`[VoiceRoutes] Post-call SMS sent to ${callerNumber} — case ${supportCase.case_number}`);
-      } catch (smsErr: any) {
+      } catch (smsErr: unknown) {
         log.warn(`[VoiceRoutes] Post-call SMS failed (non-fatal): ${smsErr?.message}`);
       }
     }
@@ -2075,7 +2075,7 @@ voiceRouter.post('/support-create-case', twilioSignatureMiddleware, async (req: 
     return xmlResponse(res, twiml(
       (lang === 'es' ? sayEs(casePhrase) : sayEn(casePhrase))
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] support-create-case error:', err.message);
     xmlResponse(res, twiml(
       '<Say>I was unable to create a support case at this time. Please call back or reach out by email. Goodbye.</Say>'
@@ -2143,7 +2143,7 @@ voiceRouter.post('/case-check', twilioSignatureMiddleware, async (req: Request, 
         `Su caso ${supportCase.case_number.split('').join(' ')} está actualmente ${statusText}.${resolvedNote} Gracias por llamar. Que tenga un buen día.`
       )
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] case-check error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -2259,7 +2259,7 @@ voiceRouter.post('/agent-clear', twilioSignatureMiddleware, async (req: Request,
     }
 
     xmlResponse(res, twiml(sayEn('Invalid step. Goodbye.')));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] agent-clear error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -2300,7 +2300,7 @@ voiceRouter.post('/status', twilioSignatureMiddleware, async (req: Request, res:
       }
     }
     res.status(200).send();
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] Status alias error:', err.message);
     res.status(200).send();
   }
@@ -2328,7 +2328,7 @@ voiceRouter.post('/sms-inbound', twilioSignatureMiddleware, async (req: Request,
             [From, From.replace('+1', '')]
           );
         } finally { client.release(); }
-      } catch (e: any) {
+      } catch (e: unknown) {
         log.warn('[VoiceRoutes] SMS STOP db update failed:', e.message);
       }
       res.type('text/xml').send(
@@ -2366,7 +2366,7 @@ voiceRouter.post('/sms-inbound', twilioSignatureMiddleware, async (req: Request,
             recoverable: isSubscriptionSuspended(smsWorkspace.subscriptionStatus),
           },
         });
-      } catch (auditErr: any) {
+      } catch (auditErr: unknown) {
         log.warn('[VoiceRoutes] SMS subscription-gate audit failed (non-fatal):', auditErr?.message);
       }
 
@@ -2392,7 +2392,7 @@ voiceRouter.post('/sms-inbound', twilioSignatureMiddleware, async (req: Request,
           );
           return;
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[VoiceRoutes] Shift offer accept error (non-fatal):', err.message);
       }
       // No live shift offer — treat YES/Y as opt-in (existing behavior). ACCEPT
@@ -2417,7 +2417,7 @@ voiceRouter.post('/sms-inbound', twilioSignatureMiddleware, async (req: Request,
           );
           return;
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[VoiceRoutes] Shift offer decline error (non-fatal):', err.message);
       }
     }
@@ -2436,7 +2436,7 @@ voiceRouter.post('/sms-inbound', twilioSignatureMiddleware, async (req: Request,
         );
         return;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[VoiceRoutes] SMS keyword router error (non-fatal):', err.message);
     }
 
@@ -2451,7 +2451,7 @@ voiceRouter.post('/sms-inbound', twilioSignatureMiddleware, async (req: Request,
             [From, From.replace('+1', '')]
           );
         } finally { client.release(); }
-      } catch (e: any) {
+      } catch (e: unknown) {
         log.warn('[VoiceRoutes] SMS START db update failed:', e.message);
       }
       res.type('text/xml').send(
@@ -2484,7 +2484,7 @@ voiceRouter.post('/sms-inbound', twilioSignatureMiddleware, async (req: Request,
         );
         return;
       }
-    } catch (abuseErr: any) {
+    } catch (abuseErr: unknown) {
       log.warn('[VoiceRoutes] SMS abuse check failed (non-fatal):', abuseErr?.message);
     }
 
@@ -2513,19 +2513,19 @@ voiceRouter.post('/sms-inbound', twilioSignatureMiddleware, async (req: Request,
               channel: 'sms',
               tokensUsed: 150,
             });
-          } catch (billingErr: any) {
+          } catch (billingErr: unknown) {
             log.warn('[VoiceRoutes] Guest SMS billing failed (non-fatal):', billingErr?.message);
           }
         }
         return;
       }
-    } catch (resolverErr: any) {
+    } catch (resolverErr: unknown) {
       log.warn('[VoiceRoutes] SMS auto-resolver failed (non-fatal):', resolverErr?.message);
     }
 
     // Fallback acknowledgement
     res.status(200).type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?><Response></Response>`);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] SMS inbound error:', err.message);
     res.status(200).type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?><Response></Response>`);
   }
@@ -2556,12 +2556,12 @@ voiceRouter.post('/sms-status', twilioSignatureMiddleware, async (req: Request, 
           [MessageSid, To, From, MessageStatus, ErrorCode || null, JSON.stringify(req.body)]
         );
       } finally { client.release(); }
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.warn('[VoiceRoutes] SMS status log failed (table may not exist):', e.message);
     }
 
     res.status(200).send();
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] SMS status webhook error:', err.message);
     res.status(200).send();
   }
@@ -2615,7 +2615,7 @@ voiceRouter.post('/send-verification', twilioSignatureMiddleware, async (req: Re
       `</Gather>` +
       say(lang === 'es' ? 'No se recibió ningún código. Adiós.' : 'No code received. Goodbye.', voiceId, langCode)
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] send-verification error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -2653,7 +2653,7 @@ voiceRouter.post('/verify-code', twilioSignatureMiddleware, async (req: Request,
         await updateCallSession(CallSid, {
           metadata: { verified_by: '2fa_email', employee_id: employeeId },
         });
-      } catch (metaErr: any) {
+      } catch (metaErr: unknown) {
         log.warn('[VoiceRoutes] 2fa-verify session metadata write failed (non-fatal):', metaErr?.message);
       }
       logCallAction({
@@ -2693,7 +2693,7 @@ voiceRouter.post('/verify-code', twilioSignatureMiddleware, async (req: Request,
       `</Gather>` +
       redirect(`${baseUrl}/api/voice/general-menu?lang=${lang}`)
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] verify-code error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -2748,7 +2748,7 @@ async function runTrinityTalkTurn(params: {
           .map((t) => `Caller: "${t.issue}"\nTrinity: "${t.answer}"`)
           .join('\n');
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.warn('[VoiceRoutes] trinity-talk memory load failed (non-fatal):', e?.message);
     }
   }
@@ -2774,7 +2774,7 @@ async function runTrinityTalkTurn(params: {
           WHERE id = $2 OR twilio_call_sid = $2`,
         [JSON.stringify(nextHistory), sessionId]
       );
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.warn('[VoiceRoutes] trinity-talk memory save failed (non-fatal):', e?.message);
     }
   }
@@ -2798,7 +2798,7 @@ async function runTrinityTalkTurn(params: {
           turn,
         },
       });
-    } catch (auditErr: any) {
+    } catch (auditErr: unknown) {
       log.warn('[VoiceRoutes] trinity-talk audit failed (non-fatal):', auditErr?.message);
     }
   }
@@ -2821,7 +2821,7 @@ async function runTrinityTalkTurn(params: {
           sessionId: sessionId || 'voice-session',
           source: 'voice-trinity-talk',
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[VoiceRoutes] trinity-talk dispatch failed (non-fatal):', err?.message);
       }
     });
@@ -2919,7 +2919,7 @@ voiceRouter.post('/trinity-talk', twilioSignatureMiddleware, async (req: Request
               detectedAt: new Date().toISOString(),
             },
           });
-        } catch (evErr: any) {
+        } catch (evErr: unknown) {
           log.warn('[VoiceRoutes] panic_alert.voice publish failed:', evErr?.message);
         }
 
@@ -2950,7 +2950,7 @@ voiceRouter.post('/trinity-talk', twilioSignatureMiddleware, async (req: Request
               ].join('\n'),
             ],
           );
-        } catch (tkErr: any) {
+        } catch (tkErr: unknown) {
           log.warn('[VoiceRoutes] panic ticket insert failed:', tkErr?.message);
         }
 
@@ -2979,7 +2979,7 @@ voiceRouter.post('/trinity-talk', twilioSignatureMiddleware, async (req: Request
 
     const xml = await runTrinityTalkTurn({ issue, sessionId, workspaceId, lang, turn, baseUrl });
     xmlResponse(res, xml);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] trinity-talk error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -3033,7 +3033,7 @@ voiceRouter.post('/trinity-talk-confirm', twilioSignatureMiddleware, async (req:
       `</Gather>` +
       say(lang === 'es' ? 'Gracias por llamar. Adiós.' : 'Thank you for calling. Goodbye.', voiceId, langCode)
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] trinity-talk-confirm error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -3074,7 +3074,7 @@ voiceRouter.post('/sales-choice', twilioSignatureMiddleware, async (req: Request
             [workspaceId],
           );
           salesPhone = r.rows[0]?.phone || '';
-        } catch (e: any) {
+        } catch (e: unknown) {
           log.warn('[VoiceRoutes] Workspace sales phone lookup failed:', e?.message);
         }
       }
@@ -3133,7 +3133,7 @@ voiceRouter.post('/sales-choice', twilioSignatureMiddleware, async (req: Request
       `<Record action="${baseUrl}/api/voice/recording-done?ext=sales&lang=${lang}" maxLength="120" playBeep="true" />` +
       say(lang === 'es' ? 'Gracias. Que tenga un excelente día.' : 'Thank you. Have a great day.', voiceId, langCode)
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] sales-choice error:', err.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -3215,10 +3215,10 @@ voiceRouter.post('/schedule-callback', twilioSignatureMiddleware, async (req: Re
           } as any,
           workspaceId,
         });
-      } catch (notifyErr: any) {
+      } catch (notifyErr: unknown) {
         log.warn('[VoiceRoutes] Callback agent notify failed (non-fatal):', notifyErr?.message);
       }
-    } catch (dbErr: any) {
+    } catch (dbErr: unknown) {
       log.warn('[VoiceRoutes] Callback persistence failed (non-fatal):', dbErr?.message);
     }
 
@@ -3226,7 +3226,7 @@ voiceRouter.post('/schedule-callback', twilioSignatureMiddleware, async (req: Re
       ? 'Su solicitud de llamada ha sido programada. Un miembro del equipo se comunicará con usted pronto. Gracias por llamar a Co-League.'
       : 'Your callback has been scheduled. A team member will reach out to you shortly. Thank you for calling Co-League!';
     return xmlResponse(res, twiml(say(goodbye, voiceId, langCode)));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] schedule-callback error:', err.message);
     xmlResponse(res, twiml('<Say>Thank you for your callback request. Goodbye.</Say>'));
   }
@@ -3338,7 +3338,7 @@ voiceRouter.post('/verify-employee-id', twilioSignatureMiddleware, async (req: R
       )
     ));
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] verify-employee-id error:', err?.message);
     xmlResponse(res, twiml('<Say>An error occurred. Please call back or submit your request in writing.</Say>'));
   }
@@ -3404,7 +3404,7 @@ voiceRouter.post('/verify-employee-id-channel', twilioSignatureMiddleware, async
             type: 'verify_employment_link',
           } as any);
           sent = true;
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn('[VoiceRoutes] /verify-employee-id-channel SMS failed:', err?.message);
         }
       }
@@ -3424,7 +3424,7 @@ voiceRouter.post('/verify-employee-id-channel', twilioSignatureMiddleware, async
       ? `La dirección de correo electrónico es: ${spelled}. Repito: ${spelled}. Le responderemos dentro de dos días hábiles. Su número de referencia es ${(ref || '').split('').join(' ')}. Gracias.`
       : `The email address is: ${spelled}. I'll repeat: ${spelled}. We will respond within two business days. Your reference number is ${(ref || '').split('').join(' ')}. Thank you.`;
     return xmlResponse(res, twiml(say(msg, voice, langCode)));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] /verify-employee-id-channel error:', err?.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -3458,7 +3458,7 @@ mgmtRouter.use(async (req: AuthenticatedRequest, res: Response, next: NextFuncti
       });
     }
     next();
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceMgmt] Tier check error — failing closed:', err.message);
     return res.status(402).json({
       error: 'PAYMENT_REQUIRED',
@@ -3477,7 +3477,7 @@ mgmtRouter.get('/numbers', async (req: AuthenticatedRequest, res: Response) => {
       .where(eq(workspacePhoneNumbers.workspaceId, workspaceId))
       .orderBy(desc(workspacePhoneNumbers.createdAt));
     res.json({ numbers });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[Route] Internal error:', err);
         res.status(500).json({ error: 'Internal server error' });
   }
@@ -3515,7 +3515,7 @@ mgmtRouter.patch('/numbers/:id', async (req: AuthenticatedRequest, res: Response
       .returning();
 
     res.json({ number: updated });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[Route] Internal error:', err);
         res.status(500).json({ error: 'Internal server error' });
   }
@@ -3536,7 +3536,7 @@ mgmtRouter.get('/calls', async (req: AuthenticatedRequest, res: Response) => {
       .offset(offset);
 
     res.json({ calls, total: calls.length });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[Route] Internal error:', err);
         res.status(500).json({ error: 'Internal server error' });
   }
@@ -3558,7 +3558,7 @@ mgmtRouter.get('/calls/:id/transcript', async (req: AuthenticatedRequest, res: R
 
     if (!session) return res.status(404).json({ error: 'Call not found' });
     res.json({ transcript: session.transcript, recordingUrl: session.recordingUrl, session });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[Route] Internal error:', err);
         res.status(500).json({ error: 'Internal server error' });
   }
@@ -3575,7 +3575,7 @@ mgmtRouter.get('/support/cases', async (req: AuthenticatedRequest, res: Response
       ? await listOpenCases(workspaceId, 100)
       : await listAllCases(workspaceId, 200);
     res.json({ cases, total: cases.length });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[Route] Internal error:', err);
         res.status(500).json({ error: 'Internal server error' });
   }
@@ -3589,7 +3589,7 @@ mgmtRouter.get('/support/cases/:caseNumber', async (req: AuthenticatedRequest, r
     const supportCase = await findCaseByNumber(caseNumber, workspaceId);
     if (!supportCase) return res.status(404).json({ error: 'Case not found' });
     res.json({ case: supportCase });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[Route] Internal error:', err);
         res.status(500).json({ error: 'Internal server error' });
   }
@@ -3612,7 +3612,7 @@ mgmtRouter.post('/support/cases/:caseNumber/resolve', async (req: AuthenticatedR
 
     if (!resolved) return res.status(404).json({ error: 'Case not found or already resolved' });
     res.json({ success: true, case: resolved });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[Route] Internal error:', err);
         res.status(500).json({ error: 'Internal server error' });
   }
@@ -3624,7 +3624,7 @@ mgmtRouter.get('/support/agents', async (req: AuthenticatedRequest, res: Respons
     const workspaceId = req.workspaceId!;
     const agents = await getAllAgents(workspaceId);
     res.json({ agents, total: agents.length });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[Route] Internal error:', err);
         res.status(500).json({ error: 'Internal server error' });
   }
@@ -3645,7 +3645,7 @@ mgmtRouter.post('/support/agents', async (req: AuthenticatedRequest, res: Respon
       notificationChannels: notificationChannels || ['email'],
     });
     res.json({ success: true, agent });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[Route] Internal error:', err);
         res.status(500).json({ error: 'Internal server error' });
   }
@@ -3658,7 +3658,7 @@ mgmtRouter.delete('/support/agents/:id', async (req: AuthenticatedRequest, res: 
     const { id } = req.params;
     await deactivateAgent(id, workspaceId);
     res.json({ success: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[Route] Internal error:', err);
         res.status(500).json({ error: 'Internal server error' });
   }
@@ -3694,7 +3694,7 @@ mgmtRouter.get('/analytics', async (req: AuthenticatedRequest, res: Response) =>
       totalSpentCents,
       byExtension,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[Route] Internal error:', err);
         res.status(500).json({ error: 'Internal server error' });
   }
@@ -3741,7 +3741,7 @@ voiceRouter.post('/client-or-guest', twilioSignatureMiddleware, async (req: Requ
       say(fallbackMsg, lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US') +
       redirect(`${baseUrl}/api/voice/guest-intake?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`)
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] /client-or-guest error:', err?.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -3869,7 +3869,7 @@ voiceRouter.post('/client-provider-lookup', twilioSignatureMiddleware, async (re
           }
         }
       }
-    } catch (lookupErr: any) {
+    } catch (lookupErr: unknown) {
       log.warn('[VoiceRoutes] /client-provider-lookup DB error:', lookupErr?.message);
     }
 
@@ -3931,7 +3931,7 @@ voiceRouter.post('/client-provider-lookup', twilioSignatureMiddleware, async (re
       say(fallMsg, lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US') +
       redirect(`${baseUrl}/api/voice/guest-intake?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`)
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] /client-provider-lookup error:', err?.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -3990,7 +3990,7 @@ voiceRouter.post('/guest-intake', twilioSignatureMiddleware, async (req: Request
       `</Gather>` +
       say(lang === 'es' ? 'No recibí ninguna selección. Adiós.' : "I did not receive a selection. Goodbye.", lang === 'es' ? VOICE_ES : VOICE, lang === 'es' ? 'es-US' : 'en-US')
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] /guest-intake error:', err?.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -4087,7 +4087,7 @@ voiceRouter.post('/guest-complaint-intake', twilioSignatureMiddleware, async (re
     return xmlResponse(res, twiml(
       redirect(`${baseUrl}/api/voice/guest-complaint-intake?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&step=company`)
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] /guest-complaint-intake error:', err?.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -4183,7 +4183,7 @@ voiceRouter.post('/guest-employment-verify', twilioSignatureMiddleware, async (r
           tokensUsed: 500,
         }).catch((e: any) => log.warn('[VoiceVerify] session usage record failed:', e?.message));
 
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[VoiceVerify] Submit path failed:', err?.message);
       }
 
@@ -4200,7 +4200,7 @@ voiceRouter.post('/guest-employment-verify', twilioSignatureMiddleware, async (r
       redirect(`${baseUrl}/api/voice/guest-employment-verify?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&step=intro`)
     ));
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] /guest-employment-verify error:', err?.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -4299,7 +4299,7 @@ voiceRouter.post('/provider-branded-menu', twilioSignatureMiddleware, async (req
       say(lang === 'es' ? 'No recibí ninguna selección. Un momento, le conecto con Trinity.' : "I didn't catch a selection. One moment, connecting you with Trinity.", voice, langCode) +
       redirect(`${baseUrl}/api/voice/trinity-talk?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`)
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] /provider-branded-menu error:', err?.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -4439,7 +4439,7 @@ voiceRouter.post('/provider-menu-route', twilioSignatureMiddleware, async (req: 
         ));
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] /provider-menu-route error:', err?.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -4514,7 +4514,7 @@ voiceRouter.post('/client-complaint-intake', twilioSignatureMiddleware, async (r
     return xmlResponse(res, twiml(
       redirect(`${baseUrl}/api/voice/client-complaint-intake?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&step=officer`)
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] /client-complaint-intake error:', err?.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -4569,7 +4569,7 @@ voiceRouter.post('/sra-identify', twilioSignatureMiddleware, async (req: Request
           status: r.rows[0].status,
           fullLegalName: r.rows[0].full_legal_name,
         };
-      } catch (lookupErr: any) {
+      } catch (lookupErr: unknown) {
         log.warn('[VoiceRoutes] /sra-identify DB error:', lookupErr?.message);
       }
 
@@ -4636,7 +4636,7 @@ voiceRouter.post('/sra-identify', twilioSignatureMiddleware, async (req: Request
     return xmlResponse(res, twiml(
       redirect(`${baseUrl}/api/voice/sra-identify?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&step=prompt-badge`)
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] /sra-identify error:', err?.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -4668,7 +4668,7 @@ voiceRouter.post('/provider-schedule-record', twilioSignatureMiddleware, async (
         `transcribeCallback="${baseUrl}/api/voice/transcription-done?caseType=provider_schedule_update&${qs}" ` +
         `playBeep="true"/>`
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] /provider-schedule-record error:', err?.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -4753,7 +4753,7 @@ voiceRouter.post('/client-pin-gate', twilioSignatureMiddleware, async (req: Requ
         );
         if (r.rows.length) clientId = r.rows[0].id;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[VoiceRoutes] /client-pin-gate client lookup failed:', err?.message);
     }
 
@@ -4816,7 +4816,7 @@ voiceRouter.post('/client-pin-gate', twilioSignatureMiddleware, async (req: Requ
         voice, langCode) +
       redirect(`${baseUrl}/api/voice/client-pin-gate?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&next=${encodeURIComponent(nextUrl)}`)
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] /client-pin-gate error:', err?.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -4890,7 +4890,7 @@ voiceRouter.post('/owner-menu', twilioSignatureMiddleware, async (req: Request, 
           type: 'owner_action_link',
         } as any);
         return true;
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[VoiceRoutes] /owner-menu SMS failed:', err?.message);
         return false;
       }
@@ -5032,7 +5032,7 @@ voiceRouter.post('/owner-menu', twilioSignatureMiddleware, async (req: Request, 
       `</Gather>` +
       redirect(`${baseUrl}/api/voice/main-menu-route?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&_d=4`)
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VoiceRoutes] /owner-menu error:', err?.message);
     xmlResponse(res, twiml('<Say>An error occurred. Goodbye.</Say>'));
   }
@@ -5092,7 +5092,7 @@ voiceRouter.post('/outbound-response', twilioSignatureMiddleware, async (req: Re
           WHERE twilio_call_sid = $2`,
         [response.slice(0, 500), CallSid],
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[VoiceRoutes] outbound-response metadata write failed (non-fatal):', err?.message);
     }
   }

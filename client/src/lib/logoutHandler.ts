@@ -14,7 +14,6 @@
 import { secureFetch } from "@/lib/csrf";
 import { LOGOUT_CONFIG } from "@/config/logout";
 import { queryClient } from "@/lib/queryClient";
-// @ts-expect-error — TS migration: fix in refactoring sprint
 import { startLogoutTransition, type TransitionLoaderContextValue } from "@/components/canvas-hub";
 import { broadcastLogout } from "@/lib/tabSync";
 

@@ -78,7 +78,7 @@ export default function SRAFindings() {
   const findings: any[] = data?.data || [];
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => sraRequest("POST", "/api/sra/findings", body),
+    mutationFn: (body) => sraRequest("POST", "/api/sra/findings", body),
     onSuccess: (res) => {
       if (!res.success) { setFormError(res.error || "Failed to create finding."); return; }
       qc.invalidateQueries({ queryKey: ["/api/sra/findings"] });
@@ -86,7 +86,7 @@ export default function SRAFindings() {
       setFormError("");
       setNewFinding({ findingType: "", severity: "minor", description: "", occupationCodeReference: "", recommendedAction: "", complianceDeadline: "", fineAmount: "" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       setFormError(error.message || "Failed to create finding. Please try again.");
     },
   });
@@ -94,7 +94,7 @@ export default function SRAFindings() {
   const updateMutation = useMutation({
     mutationFn: ({ id, body }: { id: string; body: any }) => sraRequest("PATCH", `/api/sra/findings/${id}`, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/sra/findings"] }),
-    onError: (error: any) => {
+    onError: (error) => {
       setFormError(error.message || "Failed to update finding. Please try again.");
     },
   });
@@ -288,7 +288,7 @@ export default function SRAFindings() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filtered.map((f: any) => (
+            {filtered.map((f) => (
               <Card key={f.id} data-testid={`finding-card-${f.id}`} className="hover-elevate">
                 <CardContent className="p-5">
                   <div className="flex items-start gap-4 flex-wrap">

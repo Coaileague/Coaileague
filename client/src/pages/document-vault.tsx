@@ -211,7 +211,7 @@ export default function DocumentVault() {
       resetForm();
       toast({ title: "Document Uploaded", description: "Document has been added to the vault." });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Error", description: err.message || "Failed to upload document", variant: "destructive" });
     },
   });
@@ -226,7 +226,7 @@ export default function DocumentVault() {
       setDetailDoc(null);
       toast({ title: "Document Deleted", description: "Document has been removed from the vault." });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Error", description: err.message || "Failed to delete document", variant: "destructive" });
     },
   });

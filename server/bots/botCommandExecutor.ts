@@ -59,7 +59,7 @@ export interface BotCommandRequest {
   targetEntityType: string; // 'employee', 'workspace', 'user', 'ticket', etc.
   targetEntityId: string;
   targetWorkspaceId?: string;
-  data?: Record<string, any>; // the actual changes to apply
+  data?: Record<string, unknown>; // the actual changes to apply
   approvedBy?: string; // userId of the supervisor who approved (for financial actions)
   approvalId?: string; // reference to the approval record
 }
@@ -229,7 +229,7 @@ class BotCommandExecutorService {
   /**
    * Enforce soft-delete only - bots cannot hard-delete records
    */
-  private enforceNoHardDelete(data?: Record<string, any>): { allowed: boolean; reason: string } {
+  private enforceNoHardDelete(data?: Record<string, unknown>): { allowed: boolean; reason: string } {
     if (data) {
       const hardDeleteIndicators = ['DROP', 'DELETE FROM', 'TRUNCATE', 'hardDelete', 'permanentDelete', 'destroy'];
       const dataStr = JSON.stringify(data).toLowerCase();

@@ -17,7 +17,7 @@ interface ErrorLog {
   level: 'error' | 'warn' | 'info';
   message: string;
   stack?: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   userId?: string;
   workspaceId?: string;
   requestId?: string;
@@ -168,7 +168,7 @@ class MonitoringService {
     workspaceId?: string;
     requestId?: string;
     severity?: 'info' | 'warn' | 'error' | 'high' | 'critical';
-    additionalData?: Record<string, any>;
+    additionalData?: Record<string, unknown>;
   }): void {
     const errorLog: ErrorLog = {
       timestamp: new Date(),

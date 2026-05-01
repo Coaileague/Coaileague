@@ -101,7 +101,6 @@ async function requireSubagentAccess(req: AuthenticatedRequest, res: Response, n
   }
 
   req.platformRole = platformRole;
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   req.user = userId;
   next();
 }
@@ -614,7 +613,7 @@ router.post('/execute', requireSubagentAccess, async (req: Request, res: Respons
     const { domain, actionId, parameters, workspaceId } = validation.data;
     
     // Simple test handler for debugging
-    const testHandler = async (params: Record<string, any>) => {
+    const testHandler = async (params: Record<string, unknown>) => {
       return { executed: true, params, timestamp: new Date().toISOString() };
     };
     

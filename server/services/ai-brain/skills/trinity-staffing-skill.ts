@@ -248,7 +248,6 @@ export class TrinityStaffingSkill extends BaseSkill {
       const deductionResult = await premiumFeatureGating.recordUsage(
         context.workspaceId,
         'trinity_staffing_request_parse',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         context.userId,
         1,
         { emailId: payload.emailId }
@@ -323,7 +322,6 @@ export class TrinityStaffingSkill extends BaseSkill {
       const deductionResult = await premiumFeatureGating.recordUsage(
         context.workspaceId,
         'trinity_staffing_auto_assign',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         context.userId,
         1,
         { shiftId: payload.shiftId }
@@ -471,7 +469,6 @@ export class TrinityStaffingSkill extends BaseSkill {
       const deductionResult = await premiumFeatureGating.recordUsage(
         context.workspaceId,
         'trinity_staffing_confirmation',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         context.userId,
         1,
         { clientEmail: payload.workRequest.clientEmail }
@@ -607,7 +604,6 @@ Trinity Staffing Team
       const deductionResult = await premiumFeatureGating.recordUsage(
         context.workspaceId,
         'trinity_staffing_cancellation',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         context.userId,
         1,
         { shiftId: payload.shiftId }

@@ -193,7 +193,7 @@ router.post('/api/internal/reset-password', async (req: Request, res: Response) 
         entityId: targetUser.id,
         metadata: { source: 'internal_reset_endpoint', clientIp, targetSource },
       });
-    } catch (auditErr: any) {
+    } catch (auditErr: unknown) {
       log.warn('[InternalReset] Audit log write failed (non-fatal):', auditErr?.message);
     }
 
@@ -211,7 +211,7 @@ router.post('/api/internal/reset-password', async (req: Request, res: Response) 
         'Redeploy to ensure the endpoint is disabled',
       ],
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[InternalReset] Unexpected error:', err);
     return res.status(500).json({
       error: 'Reset failed',

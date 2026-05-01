@@ -88,7 +88,6 @@ class OnboardingQuickBooksFlow {
     }});
 
     platformEventBus.subscribe('partner_sync_complete', { name: 'OnboardingQBFlow-PartnerSyncComplete', handler: async (event) => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const flow = this.getFlowByWorkspace(event.workspaceId);
       if (flow && flow.stage === 'initial_sync_running') {
         await this.handleSyncComplete(flow.flowId, event.payload || {});
@@ -531,7 +530,6 @@ class OnboardingQuickBooksFlow {
           flowId,
           importedEmployeeCount: flow.importedEmployeeCount,
           automationSettings: flow.automationSettings,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           durationMs: flow.completedAt.getTime() - flow.startedAt.getTime(),
         },
       }),
@@ -708,7 +706,7 @@ class OnboardingQuickBooksFlow {
   }
 
 
-  private serializeFlowData(flow: QuickBooksFlowState): Record<string, any> {
+  private serializeFlowData(flow: QuickBooksFlowState): Record<string, unknown> {
     return {
       flowId: flow.flowId,
       workspaceId: flow.workspaceId,

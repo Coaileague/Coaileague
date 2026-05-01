@@ -494,7 +494,7 @@ function FormBuilder({
   initial, onSave, onCancel, isSaving
 }: {
   initial?: CustomForm | null;
-  onSave: (data: any) => void;
+  onSave: (data) => void;
   onCancel: () => void;
   isSaving: boolean;
 }) {
@@ -519,7 +519,6 @@ function FormBuilder({
   function genId() { return `field_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`; }
 
   function addField(type: FieldType) {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const defaults: Partial<FormField> = {
       select: { options: ["Option 1", "Option 2", "Option 3"] },
       radio: { options: ["Yes", "No"] },
@@ -1172,7 +1171,7 @@ export default function AdminCustomForms() {
   const { data: forms = [], isLoading, isError } = useQuery<CustomForm[]>({ queryKey: ["/api/form-builder/forms"] });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/form-builder/forms", data),
+    mutationFn: (data) => apiRequest("POST", "/api/form-builder/forms", data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/form-builder/forms"] }); toast({ title: "Form created" }); setBuilderMode("list"); setEditingForm(null); },
     onError: () => toast({ title: "Failed to save form", variant: "destructive" }),
   });
@@ -1286,7 +1285,6 @@ export default function AdminCustomForms() {
                 onDelete={() => setDeleteConfirmId(form.id)}
                 onDuplicate={() => handleDuplicate(form)}
                 onViewSubmissions={() => { setViewingSubmissionsForm(form); setBuilderMode("submissions"); }}
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 analytics={getAnalytics(form.id)}
               />
             ))}

@@ -34,7 +34,7 @@ export interface AutomationStepState {
   status: StepStatus;
   startedAt?: string;
   completedAt?: string;
-  result?: Record<string, any>;
+  result?: Record<string, unknown>;
   error?: string;
   attemptCount: number;
 }
@@ -49,7 +49,7 @@ export interface AutomationCheckpoint {
   steps: AutomationStepState[];
   resumable: boolean;
   resumeFromStep?: string;
-  partialResults: Record<string, any>;
+  partialResults: Record<string, unknown>;
 }
 
 export interface StepDefinition {
@@ -162,7 +162,7 @@ export class AutomationCheckpointer {
    * Mark a step as successfully completed. Call this AFTER the step's logic succeeds.
    * result is stored and available to subsequent steps via getStepResult().
    */
-  async stepCompleted(stepName: string, result?: Record<string, any>): Promise<AutomationCheckpoint> {
+  async stepCompleted(stepName: string, result?: Record<string, unknown>): Promise<AutomationCheckpoint> {
     const cp = await this._requireCheckpoint();
     const step = cp.steps.find(s => s.name === stepName);
     if (!step) throw new Error(`[Checkpoint] Unknown step "${stepName}"`);
@@ -203,7 +203,7 @@ export class AutomationCheckpointer {
   /**
    * Mark a step as skipped (already completed in a previous run).
    */
-  async stepSkipped(stepName: string, priorResult?: Record<string, any>): Promise<AutomationCheckpoint> {
+  async stepSkipped(stepName: string, priorResult?: Record<string, unknown>): Promise<AutomationCheckpoint> {
     const cp = await this._requireCheckpoint();
     const step = cp.steps.find(s => s.name === stepName);
     if (step) {

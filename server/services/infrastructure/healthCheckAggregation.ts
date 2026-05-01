@@ -27,7 +27,7 @@ export interface ServiceHealth {
   lastCheck: number;
   consecutiveFailures: number;
   uptime: number; // percentage
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface HealthCheckConfig {

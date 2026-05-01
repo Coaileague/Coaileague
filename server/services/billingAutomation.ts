@@ -339,7 +339,6 @@ async function createInvoiceFromBillableSummary(
       `no billing rate at shift, client, or workspace level (${unbilledHours.toFixed(2)}h held).`,
     );
     publishEvent(
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       platformEventBus.publish({
         type: 'billing_rate_missing',
         category: 'billing',
@@ -416,13 +415,11 @@ async function createInvoiceFromBillableSummary(
     const employeeName = entries[0].employeeName;
 
     // B4: Guard — employees with $0 billing rate are skipped but managers MUST be alerted
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const hasZeroRate = entries.every(e => !e.billingRate || e.billingRate === 0);
     if (hasZeroRate) {
       log.warn(`[BillingAutomation] REVENUE RISK: Skipping ${employeeName} (${employeeId}) — $0 billing rate. Hours will NOT be invoiced to client.`);
       // Emit platform event so this surfaces in the manager dashboard, not just server logs
       publishEvent(
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         platformEventBus.publish({
           type: 'billing_rate_missing',
           category: 'billing',
@@ -489,7 +486,6 @@ async function createInvoiceFromBillableSummary(
         ? `${employeeName}: ${manuallyEditedEntries.length} time entr${manuallyEditedEntries.length === 1 ? 'y was' : 'ies were'} manually corrected before billing. Reason(s): ${reasons}`
         : `${employeeName}: ${manuallyEditedEntries.length} time entr${manuallyEditedEntries.length === 1 ? 'y was' : 'ies were'} manually corrected before billing.`;
       publishEvent(
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         platformEventBus.publish({
           type: 'billing_manual_edit_flagged',
           category: 'billing',
@@ -1310,7 +1306,6 @@ export async function processDelinquentInvoices(workspaceId: string) {
       await sendInvoiceOverdueReminderEmail(client.email, {
         clientName: client.companyName || `${client.firstName || ''} ${client.lastName || ''}`.trim() || 'Valued Customer',
         invoiceNumber: invoice.invoiceNumber,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         total: invoice.total,
         dueDate: invoice.dueDate?.toLocaleDateString('en-US', { dateStyle: 'medium' }) || 'N/A',
         daysOverdue,
@@ -1370,7 +1365,6 @@ export async function processDelinquentInvoices(workspaceId: string) {
       // can react (collections escalation, AI alerts, audit trail). Fires for all milestone reminders
       // (7-day, 14-day, 30-day) — Trinity decides which to act on based on daysOverdue.
       publishEvent(
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         platformEventBus.publish({
           type: 'invoice_overdue',
           category: 'automation',

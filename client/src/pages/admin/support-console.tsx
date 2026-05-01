@@ -74,7 +74,7 @@ function SupportDashboard() {
   });
 
   const executeMutation = useMutation({
-    mutationFn: (payload: any) => apiRequest("POST", "/api/support/actions/execute", payload).then(r => r.json()),
+    mutationFn: (payload) => apiRequest("POST", "/api/support/actions/execute", payload).then(r => r.json()),
     onSuccess: (data) => {
       if (data.success) {
         toast({ title: "Action executed", description: data.actionDescription });
@@ -85,7 +85,7 @@ function SupportDashboard() {
         toast({ title: "Action failed", description: data.error || "Unknown error", variant: "destructive" });
       }
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     }
   });
@@ -93,7 +93,7 @@ function SupportDashboard() {
   const escalatedTickets = ticketsData?.tickets || ticketsData || [];
   const priorityQueue = queueData?.queue || queueData || [];
 
-  const openCount = Array.isArray(escalatedTickets) ? escalatedTickets.filter((t: any) => t.status === 'open' || t.status === 'escalated').length : 0;
+  const openCount = Array.isArray(escalatedTickets) ? escalatedTickets.filter((t) => t.status === 'open' || t.status === 'escalated').length : 0;
 
   return (
     <div className="flex flex-col h-full gap-4 p-4 overflow-auto">
@@ -161,7 +161,7 @@ function SupportDashboard() {
                 <div className="py-8 text-center text-muted-foreground text-sm">Loading tickets...</div>
               ) : Array.isArray(escalatedTickets) && escalatedTickets.length > 0 ? (
                 <div className="divide-y">
-                  {escalatedTickets.map((ticket: any) => (
+                  {escalatedTickets.map((ticket) => (
                     <div
                       key={ticket.id}
                       className="flex flex-wrap items-start gap-2 py-3 hover-elevate cursor-pointer rounded-md px-2"
@@ -276,7 +276,7 @@ function SupportDashboard() {
             </CardHeader>
             <CardContent>
               <div className="divide-y">
-                {(actionRegistry || []).map((action: any) => (
+                {(actionRegistry || []).map((action) => (
                   <div key={action.actionType} className="flex flex-wrap items-center gap-2 py-2.5">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium font-mono">{action.actionType}</p>
@@ -396,7 +396,7 @@ function SupportDashboard() {
                   <SelectValue placeholder="Select an action..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {(actionRegistry || []).map((a: any) => (
+                  {(actionRegistry || []).map((a) => (
                     <SelectItem key={a.actionType} value={a.actionType}>{a.label}</SelectItem>
                   ))}
                 </SelectContent>
@@ -559,7 +559,7 @@ function WorkspaceDeepDive({ workspaceId, data, isLoading, onExecuteAction }: {
           </CardHeader>
           <CardContent>
             <div className="space-y-1.5">
-              {(data.officers || []).slice(0, 8).map((officer: any) => (
+              {(data.officers || []).slice(0, 8).map((officer) => (
                 <div key={officer.id} className="flex items-center gap-2 text-sm" data-testid={`officer-row-${officer.id}`}>
                   <div className={`w-2 h-2 rounded-full flex-shrink-0 ${officer.status === 'active' ? 'bg-green-500' : 'bg-gray-400'}`} />
                   <span className="flex-1 truncate">{officer.first_name} {officer.last_name}</span>
@@ -587,7 +587,7 @@ function WorkspaceDeepDive({ workspaceId, data, isLoading, onExecuteAction }: {
               <p className="text-xs text-muted-foreground">No recent tickets</p>
             ) : (
               <div className="space-y-2">
-                {(data.recentSupportTickets ?? []).slice(0, 6).map((t: any) => (
+                {(data.recentSupportTickets ?? []).slice(0, 6).map((t) => (
                   <div key={t.id} className="text-sm" data-testid={`ws-ticket-${t.id}`}>
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-xs text-muted-foreground">{t.ticket_number}</span>

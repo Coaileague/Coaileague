@@ -429,7 +429,6 @@ export async function runDevDataEnrichment(): Promise<{ success: boolean; messag
       periodEnd.setHours(23, 59, 59, 999);
 
       // Converted to Drizzle ORM: ON CONFLICT
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(payrollRuns).values({
         id: pr.id,
         workspaceId: WS,

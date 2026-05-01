@@ -167,7 +167,6 @@ router.post("/api/auth/register", async (req, res) => {
       );
     } catch (emailError: unknown) {
       // Log but don't fail registration - user can request resend later
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       log.warn(`[Registration] Verification email failed for ${newUser.email}:`, emailError.message);
     }
 
@@ -190,7 +189,7 @@ router.post("/api/auth/register", async (req, res) => {
     try {
       const { saveSessionAsync } = await import('../services/session/sessionWorkspaceService');
       await saveSessionAsync(req);
-    } catch (sessionErr: any) {
+    } catch (sessionErr: unknown) {
       log.error('[Auth] Session save failed after successful login:', sessionErr?.message);
       // Return a clear, actionable error rather than a generic 500
       return res.status(503).json({
@@ -405,7 +404,6 @@ router.post("/api/auth/resend-verification", async (req, res) => {
         undefined
       );
     } catch (emailError: unknown) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       log.warn(`[ResendVerification] Email send failed for ${user.email}:`, emailError.message);
     }
 
@@ -757,7 +755,7 @@ router.post("/api/auth/login", async (req, res) => {
     try {
       const { saveSessionAsync } = await import('../services/session/sessionWorkspaceService');
       await saveSessionAsync(req);
-    } catch (sessionErr: any) {
+    } catch (sessionErr: unknown) {
       log.error('[Auth] Session save failed after successful login:', sessionErr?.message);
       // Return a clear, actionable error rather than a generic 500
       return res.status(503).json({
@@ -909,7 +907,7 @@ router.post("/api/auth/mfa/verify", async (req, res) => {
     try {
       const { saveSessionAsync } = await import('../services/session/sessionWorkspaceService');
       await saveSessionAsync(req);
-    } catch (sessionErr: any) {
+    } catch (sessionErr: unknown) {
       log.error('[Auth] Session save failed after successful login:', sessionErr?.message);
       // Return a clear, actionable error rather than a generic 500
       return res.status(503).json({
@@ -963,7 +961,7 @@ router.get("/api/auth/sessions", requireAuth, async (req: any, res) => {
         isCurrent: s.session_id === req.session?.id,
       })),
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to fetch sessions' });
   }
 });
@@ -978,7 +976,7 @@ router.delete("/api/auth/sessions/:id", requireAuth, async (req: any, res) => {
     await removeSession(rows[0].session_id);
     await pool.query(`DELETE FROM user_sessions WHERE id = $1`, [req.params.id]);
     return res.json({ success: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to revoke session' });
   }
 });
@@ -999,7 +997,7 @@ router.post("/api/mfa/admin-reset", requireAuth, async (req: any, res) => {
 
     await adminResetUserMfa(targetUserId, actorId, role, workspaceId);
     return res.json({ success: true, message: `2FA reset for user ${targetUserId}. They will need to re-enroll.` });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[MFA AdminReset] error:', err.message);
     return res.status(500).json({ error: 'Failed to reset MFA. Please try again.' });
   }
@@ -1313,7 +1311,7 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
             currentEmployeeRecord = newEmployee;
           });
           log.info(`[Auth] Linked user ${freshUser.id} to owned workspace ${effectiveWorkspaceId} and created employee record`);
-        } catch (createError: any) {
+        } catch (createError: unknown) {
           log.warn(`[Auth] Failed to link workspace or create employee record for org_owner:`, createError?.message || createError);
         }
       } else if (workspaceWasDynamicallyResolved) {
@@ -1460,7 +1458,7 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
       },
     },
   });
-  } catch (error: any) {
+  } catch (error: unknown) {
     log.error('[Auth] /api/auth/me error:', error?.message || error);
     res.status(500).json({ message: 'Internal server error' });
   }
@@ -1511,7 +1509,7 @@ router.patch("/api/user/preferences", requireAuth, async (req, res) => {
     }
     
     // Update user-level simpleMode (global fallback)
-    const userUpdates: Record<string, any> = {};
+    const userUpdates: Record<string, unknown> = {};
     if (data.simpleMode !== undefined) {
       userUpdates.simpleMode = data.simpleMode;
     }
@@ -1744,7 +1742,6 @@ router.post("/api/auth/change-password", requireAuth, mutationLimiter, async (re
       const { authService: _authSvc } = await import('../services/authService');
       await _authSvc.logoutAllSessions(user.id);
     } catch (sessionErr: unknown) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       log.error('[AuthCoreRoutes] Failed to invalidate sessions after password change:', sessionErr.message);
     }
     // Destroy the current session last (after persisting the password update)
@@ -1808,9 +1805,7 @@ router.get("/api/demo-login", async (req, res) => {
         claims: {
           sub: user.id,
           email: user.email,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           first_name: user.firstName,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           last_name: user.lastName,
         },
         expires_at: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60),
@@ -2031,7 +2026,7 @@ router.post("/api/auth/sms-otp/verify", async (req, res) => {
     try {
       const { saveSessionAsync } = await import('../services/session/sessionWorkspaceService');
       await saveSessionAsync(req);
-    } catch (sessionErr: any) {
+    } catch (sessionErr: unknown) {
       log.error('[Auth] Session save failed after successful login:', sessionErr?.message);
       // Return a clear, actionable error rather than a generic 500
       return res.status(503).json({

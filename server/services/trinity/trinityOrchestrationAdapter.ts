@@ -60,7 +60,7 @@ export interface TrinityEventContract {
   sessionId?: string;
   correlationId?: string;
   parentEventId?: string;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   metrics?: {
     durationMs?: number;
     retryCount?: number;
@@ -143,8 +143,8 @@ export interface ABACEvent extends Omit<TrinityEventContract, 'domain' | 'eventT
     | 'condition.failed';
   payload: {
     policyId?: string;
-    attributes?: Record<string, any>;
-    conditions?: Record<string, any>;
+    attributes?: Record<string, unknown>;
+    conditions?: Record<string, unknown>;
     result?: 'allow' | 'deny';
     reason?: string;
     [key: string]: any;
@@ -243,7 +243,7 @@ interface OrchestrationContext {
   domain: TrinityEventDomain;
   startTime: number;
   events: string[];
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 class TrinityOrchestrationAdapter {
@@ -261,7 +261,7 @@ class TrinityOrchestrationAdapter {
   /**
    * Start a new orchestration context for tracking related events
    */
-  startContext(domain: TrinityEventDomain, metadata?: Record<string, any>): string {
+  startContext(domain: TrinityEventDomain, metadata?: Record<string, unknown>): string {
     const correlationId = this.generateCorrelationId();
     this.contexts.set(correlationId, {
       correlationId,
@@ -286,7 +286,7 @@ class TrinityOrchestrationAdapter {
   /**
    * End an orchestration context and emit summary
    */
-  endContext(correlationId: string, success: boolean, summary?: Record<string, any>): void {
+  endContext(correlationId: string, success: boolean, summary?: Record<string, unknown>): void {
     const context = this.contexts.get(correlationId);
     if (context) {
       const durationMs = Date.now() - context.startTime;
@@ -548,7 +548,7 @@ class TrinityOrchestrationAdapter {
    * ABAC Policy Events
    */
   abac = {
-    policyEvaluated: (userId: string, policyId: string, result: 'allow' | 'deny', attributes: Record<string, any>, workspaceId?: string) => {
+    policyEvaluated: (userId: string, policyId: string, result: 'allow' | 'deny', attributes: Record<string, unknown>, workspaceId?: string) => {
       this.emit({
         eventId: this.generateEventId(),
         timestamp: new Date().toISOString(),
@@ -620,7 +620,7 @@ class TrinityOrchestrationAdapter {
       });
     },
 
-    anomalyDetected: (userId: string, anomalyType: string, riskScore: number, details: Record<string, any>) => {
+    anomalyDetected: (userId: string, anomalyType: string, riskScore: number, details: Record<string, unknown>) => {
       this.emit({
         eventId: this.generateEventId(),
         timestamp: new Date().toISOString(),
@@ -776,7 +776,7 @@ class TrinityOrchestrationAdapter {
       });
     },
 
-    processed: (source: string, correlationId: string, result: Record<string, any>) => {
+    processed: (source: string, correlationId: string, result: Record<string, unknown>) => {
       this.emit({
         eventId: this.generateEventId(),
         timestamp: new Date().toISOString(),
@@ -810,7 +810,7 @@ class TrinityOrchestrationAdapter {
    * Generic platform event emission
    */
   platform = {
-    custom: (domain: TrinityEventDomain, eventType: string, phase: TrinityLifecyclePhase, severity: TrinityEventSeverity, payload: Record<string, any>, options?: { workspaceId?: string; userId?: string; correlationId?: string }) => {
+    custom: (domain: TrinityEventDomain, eventType: string, phase: TrinityLifecyclePhase, severity: TrinityEventSeverity, payload: Record<string, unknown>, options?: { workspaceId?: string; userId?: string; correlationId?: string }) => {
       this.emit({
         eventId: this.generateEventId(),
         timestamp: new Date().toISOString(),

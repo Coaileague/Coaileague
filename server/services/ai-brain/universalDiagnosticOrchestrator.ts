@@ -107,7 +107,7 @@ export interface LogEntry {
   level: 'info' | 'warn' | 'error' | 'debug';
   source: string;
   message: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // ============================================================================
@@ -129,7 +129,6 @@ const RBAC_PERMISSIONS: Record<string, {
     canExecuteHotpatch: true,
     canEditCode: true,
     canDeleteWithoutApproval: false, // Even root needs two-code for delete
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     hotpatchTypes: ['config_update', 'cache_clear', 'service_restart', 'data_fix', 'code_edit', 'query_fix', 'permission_fix']
   },
   support_agent: {
@@ -138,7 +137,6 @@ const RBAC_PERMISSIONS: Record<string, {
     canExecuteHotpatch: true,
     canEditCode: false,
     canDeleteWithoutApproval: false,
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     hotpatchTypes: ['config_update', 'cache_clear', 'service_restart', 'data_fix']
   },
   sysop: {
@@ -147,7 +145,6 @@ const RBAC_PERMISSIONS: Record<string, {
     canExecuteHotpatch: true,
     canEditCode: true,
     canDeleteWithoutApproval: false,
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     hotpatchTypes: ['config_update', 'cache_clear', 'service_restart', 'data_fix', 'code_edit', 'query_fix', 'permission_fix']
   },
   // Workspace roles
@@ -174,7 +171,6 @@ const RBAC_PERMISSIONS: Record<string, {
     canExecuteHotpatch: true,
     canEditCode: true,
     canDeleteWithoutApproval: false, // Trinity cannot delete without two-code
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     hotpatchTypes: ['config_update', 'cache_clear', 'service_restart', 'data_fix', 'code_edit', 'query_fix', 'permission_fix']
   }
 };
@@ -221,7 +217,6 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
             autoFixable: true,
             suggestedFix: {
               id: crypto.randomUUID(),
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               type: 'data_fix',
               title: 'Archive old notifications',
               description: 'Move notifications older than 30 days to archive',
@@ -233,7 +228,6 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
           });
         }
       } catch (error: any) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         issues.push({
           id: crypto.randomUUID(),
           domain: 'notifications',
@@ -278,7 +272,6 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
             autoFixable: true,
             suggestedFix: {
               id: crypto.randomUUID(),
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               type: 'data_fix',
               title: 'Run AI conflict resolver',
               description: 'Use AI to suggest optimal resolution for conflicts',
@@ -325,7 +318,6 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
             autoFixable: true,
             suggestedFix: {
               id: crypto.randomUUID(),
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               type: 'data_fix',
               title: 'Cleanup expired sessions',
               description: 'Remove expired session records',
@@ -348,7 +340,6 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
     }
   },
   {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     domain: 'websocket',
     name: 'WebSocketDiagnostician',
     description: 'Monitors WebSocket connections, message delivery, reconnection health',
@@ -376,7 +367,6 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
         const latency = Date.now() - start;
         
         if (latency > 500) {
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           issues.push({
             id: crypto.randomUUID(),
             domain: 'database',
@@ -388,7 +378,6 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
           });
         }
       } catch (error: any) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         issues.push({
           id: crypto.randomUUID(),
           domain: 'database',
@@ -408,7 +397,6 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
     }
   },
   {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     domain: 'frontend',
     name: 'FrontendDiagnostician',
     description: 'Monitors React errors, rendering issues, scroll behavior, component health',
@@ -423,7 +411,6 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
     }
   },
   {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     domain: 'ai_brain',
     name: 'AIBrainDiagnostician',
     description: 'Monitors AI Brain health, Gemini API, subagent performance, credit usage',
@@ -438,7 +425,6 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
         if (inactiveCount > allSubagents.length * 0.3) {
           issues.push({
             id: crypto.randomUUID(),
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             domain: 'ai_brain',
             severity: 'warning',
             title: `${inactiveCount} subagents inactive`,
@@ -451,7 +437,6 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
               title: 'Reset inactive subagents',
               description: 'Restart subagents that failed health checks',
               estimatedImpact: 'low',
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               requiresTwoCodeApproval: false,
               rbacMinimumRole: 'support_agent',
               canAutoExecute: true
@@ -681,7 +666,6 @@ class HotpatchExecutor {
           execution.result = 'Service restart initiated';
           break;
           
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         case 'data_fix':
           if (hotpatch.code) {
             // Additional security check for data_fix
@@ -788,7 +772,6 @@ class UniversalDiagnosticOrchestrator {
 
     // Collect all issues
     healthChecks.forEach(check => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       allIssues.push(...check.issues);
     });
 
@@ -823,7 +806,6 @@ class UniversalDiagnosticOrchestrator {
       geminiSummary = 'All systems healthy. No issues detected.';
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const report: DiagnosticReport = {
       id: crypto.randomUUID(),
       runAt: new Date(),

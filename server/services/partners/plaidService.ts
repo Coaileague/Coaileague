@@ -250,7 +250,7 @@ export async function initiateTransfer(opts: {
     try {
       transferResponse = await client.transferCreate(transferCreateBody);
       break; // success
-    } catch (err: any) {
+    } catch (err: unknown) {
       const status = err?.response?.status ?? err?.status;
       const isRateLimit = status === 429 || err?.error_code === 'RATE_LIMIT_EXCEEDED';
       if (isRateLimit && attempt < MAX_PLAID_RETRIES) {
@@ -299,7 +299,7 @@ export async function verifyBankAccount(accessToken: string): Promise<{ valid: b
       valid: isActive,
       status: account.verification_status || 'active',
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     return { valid: false, status: err?.message || 'verification_error' };
   }
 }
@@ -384,7 +384,7 @@ export async function verifyPlaidWebhookJwt(token: string | undefined): Promise<
     await jwtVerify(token, cached.key);
 
     return true;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[PlaidWebhook] JWT signature verification failed:', (err instanceof Error ? err.message : String(err)));
     return false;
   }

@@ -399,15 +399,10 @@ function SubmitTaskDialog({ isMobile }: { isMobile: boolean }) {
     }
   };
   
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const DialogWrapper = isMobile ? Sheet : Dialog;
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const ContentWrapper = isMobile ? SheetContent : DialogContent;
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const HeaderWrapper = isMobile ? SheetHeader : DialogHeader;
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const TitleWrapper = isMobile ? SheetTitle : DialogTitle;
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const DescWrapper = isMobile ? SheetDescription : DialogDescription;
   
   return (

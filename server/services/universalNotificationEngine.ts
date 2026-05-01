@@ -158,7 +158,7 @@ export interface NotificationPayload {
   priority?: "low" | "medium" | "high" | "urgent";
   title: string;
   message: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   severity?: "info" | "warning" | "error" | "critical";
   userId?: string;
   targetRoles?: string[];
@@ -695,7 +695,7 @@ export class UniversalNotificationEngine {
     type: string;
     title: string;
     message: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     severity?: "info" | "warning" | "error" | "critical";
     actionUrl?: string;
     targetRoles?: string[];
@@ -943,7 +943,7 @@ export class UniversalNotificationEngine {
     workspaceId?: string;
     priority?: number;
     learnMoreUrl?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<{ success: boolean; id?: string; isDuplicate?: boolean }> {
     try {
       // Validate title - reject empty or undefined titles
@@ -1030,7 +1030,7 @@ export class UniversalNotificationEngine {
       
       let finalTitle: string;
       let finalDescription: string;
-      let enrichedMetadata: Record<string, any>;
+      let enrichedMetadata: Record<string, unknown>;
 
       if (skipAIEnrichment) {
         finalTitle = sanitizeForEndUser(payload.title);

@@ -215,7 +215,7 @@ export default function FieldReports() {
       setAiAnalysis(null);
       setAiAnalyzed(false);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: 'Failed to submit report', description: error.message, variant: 'destructive' });
     },
   });
@@ -265,12 +265,12 @@ export default function FieldReports() {
       });
       return res.json();
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       setAiAnalysis(data);
       setAiAnalyzed(true);
       toast({ title: 'AI Analysis Complete', description: 'Review the recommendations below before submitting.' });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       setAiAnalyzed(true);
       setAiAnalysis({
         recommendations: ['Unable to perform AI analysis. You can still submit the report manually.'],

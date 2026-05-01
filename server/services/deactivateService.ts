@@ -13,7 +13,6 @@
 import { db } from '../db';
 import { eq, and } from 'drizzle-orm';
 import { employees, clients, workspaces, sessions, auditLogs, authTokens } from '@shared/schema';
-// @ts-expect-error — TS migration: fix in refactoring sprint
 import type { Server as IOServer } from 'socket.io';
 import { platformEventBus } from './platformEventBus';
 import { createLogger } from '../lib/logger';
@@ -90,7 +89,6 @@ export async function deactivateEmployee(
   // this, a terminated employee could use a pre-issued reset-link to regain access
   // to their account after their employee record has been deactivated.
   if (emp.userId) {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.delete(sessions).where(eq(sessions.userId, emp.userId));
     await db.delete(authTokens).where(eq(authTokens.userId, emp.userId));
     emitToUser(emp.userId, 'session:terminated', {
@@ -124,7 +122,6 @@ export async function deactivateEmployee(
   // Unassign the officer from all future shifts and trigger coverage pipeline
   try {
     const { handleOfficerDeactivation } = await import('./scheduling/officerDeactivationHandler');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await handleOfficerDeactivation(emp.id, emp.workspaceId, 'terminated');
   } catch (err) {
     log.error('[DeactivateService] Failed to unassign future shifts for terminated employee:', err);
@@ -216,7 +213,6 @@ export async function deactivateClient(
       isActive: false,
       deactivatedAt: new Date(),
       deactivatedBy: actorId,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       deactivationReason: reason ?? null,
     })
     .where(and(eq(clients.id, clientId), eq(clients.workspaceId, workspaceId)))
@@ -325,7 +321,6 @@ export async function deactivateWorkspace(
 
   for (const emp of orgEmployees) {
     if (emp.userId) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.delete(sessions).where(eq(sessions.userId, emp.userId));
     }
   }

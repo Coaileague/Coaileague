@@ -29,7 +29,7 @@ export async function withAIRetry<T>(
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await fn();
-    } catch (err: any) {
+    } catch (err: unknown) {
       lastError = err instanceof Error ? err : new Error(String(err));
 
       if (attempt < maxAttempts) {

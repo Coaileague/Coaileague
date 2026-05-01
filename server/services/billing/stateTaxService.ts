@@ -146,7 +146,7 @@ export class StateTaxService {
           };
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('Failed to look up client state for tax', { clientId, error: (err instanceof Error ? err.message : String(err)) });
     }
 

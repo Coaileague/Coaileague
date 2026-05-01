@@ -243,7 +243,7 @@ function verifyResendSignature(rawBody: Buffer | string, headers: Record<string,
 
     log.warn('[InboundEmail] No matching svix signature found');
     return false;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[InboundEmail] Signature verification error:', err.message);
     return false;
   }
@@ -496,7 +496,7 @@ async function handleInboundWebhook(
   let rawParsed: any;
   try {
     rawParsed = typeof req.body === 'object' ? req.body : JSON.parse(rawBody.toString());
-  } catch (parseErr: any) {
+  } catch (parseErr: unknown) {
     // Check 10: Malformed payload — log and return 200 (never 5xx)
     log.error(`[InboundEmail] Malformed payload for ${targetAddress}:`, parseErr.message);
     res.status(200).json({ received: true, warning: 'Malformed payload — flagged for admin review' });
@@ -629,7 +629,7 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
             skipUnsubscribeCheck: true,
           });
           log.info(`[InboundEmail/root] Forwarded ${toEmail} to ${ROOT_EMAIL_FORWARD_TO}`);
-        } catch (fwdErr: any) {
+        } catch (fwdErr: unknown) {
           log.warn(`[InboundEmail/root] ${toEmail} forward failed: ${fwdErr?.message}`);
         }
       });
@@ -699,7 +699,7 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
                 emailType: 'inbound_forward',
                 skipUnsubscribeCheck: true,
               });
-            } catch (fwdErr: any) {
+            } catch (fwdErr: unknown) {
               log.warn(`[InboundEmail/root] Unrouted forward failed: ${fwdErr?.message}`);
             }
           });
@@ -845,7 +845,7 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
             skipUnsubscribeCheck: true,
           });
           log.info(`[InboundEmail] Personal forward sent to ${forwardTo} for user ${targetUserId}`);
-        } catch (fwdErr: any) {
+        } catch (fwdErr: unknown) {
           log.warn('[InboundEmail] Personal forward failed (non-blocking):', fwdErr?.message);
         }
       });
@@ -902,13 +902,13 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
             skipUnsubscribeCheck: true,
           });
           log.info(`[InboundEmail/forward] Forwarded email to ${forwardTo} for workspace ${workspaceId}`);
-        } catch (fwdErr: any) {
+        } catch (fwdErr: unknown) {
           log.warn(`[InboundEmail/forward] Forward failed for workspace ${workspaceId}: ${fwdErr?.message}`);
         }
       });
     }
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[InboundEmail/root] Unhandled error:', err.message);
     // Still return 200 — never 5xx to Resend
     if (!res.headersSent) {

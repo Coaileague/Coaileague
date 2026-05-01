@@ -240,7 +240,7 @@ export default function SpsPacketPortal() {
 
   // Auto-save mutation
   const saveMutation = useMutation({
-    mutationFn: (data: any) =>
+    mutationFn: (data) =>
       apiRequest("PATCH", `/api/public/sps/${token}`, data),
   });
 
@@ -279,7 +279,7 @@ export default function SpsPacketPortal() {
         description: `Your documents have been processed successfully. Ref: ${data.documentNumber}`,
       });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({
         title: "Error",
         description: err.message,

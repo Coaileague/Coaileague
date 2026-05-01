@@ -30,7 +30,7 @@ export interface ToolSelectionConfig {
 }
 
 // Parameter schemas for common action types
-const COMMON_PARAMETER_SCHEMAS: Record<string, any> = {
+const COMMON_PARAMETER_SCHEMAS: Record<string, unknown> = {
   workspaceId: { type: SchemaType.STRING, description: "Workspace ID for the operation" },
   userId: { type: SchemaType.STRING, description: "User ID performing the action" },
   employeeId: { type: SchemaType.STRING, description: "Target employee ID" },
@@ -46,7 +46,6 @@ const COMMON_PARAMETER_SCHEMAS: Record<string, any> = {
 };
 
 // Category-specific parameter mappings
-// @ts-expect-error — TS migration: fix in refactoring sprint
 const CATEGORY_PARAMETER_SCHEMAS: Record<ActionCategory, Record<string, any>> = {
   scheduling: {
     shiftId: COMMON_PARAMETER_SCHEMAS.shiftId,
@@ -230,7 +229,7 @@ class GeminiToolSchemaGenerator {
       const categoryParams = CATEGORY_PARAMETER_SCHEMAS[action.category] || {};
       
       // Build parameter schema based on action category and name
-      const properties: Record<string, any> = {
+      const properties: Record<string, unknown> = {
         workspaceId: {
           type: SchemaType.STRING,
           description: "Workspace ID (optional, uses current context if not provided)",
@@ -273,8 +272,8 @@ class GeminiToolSchemaGenerator {
   /**
    * Infer parameters based on action name patterns
    */
-  private inferParametersFromActionName(actionId: string, actionName: string): Record<string, any> {
-    const params: Record<string, any> = {};
+  private inferParametersFromActionName(actionId: string, actionName: string): Record<string, unknown> {
+    const params: Record<string, unknown> = {};
     const lowerName = actionName.toLowerCase();
     const lowerId = actionId.toLowerCase();
 

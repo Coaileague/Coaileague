@@ -75,9 +75,9 @@ export default function ServiceRequestsPage() {
 
   const filtered = filterStatus === "all"
     ? requests
-    : requests.filter((r: any) => r.status === filterStatus);
+    : requests.filter((r) => r.status === filterStatus);
 
-  const openCount = requests.filter((r: any) => ["submitted", "acknowledged", "in_review"].includes(r.status)).length;
+  const openCount = requests.filter((r) => ["submitted", "acknowledged", "in_review"].includes(r.status)).length;
 
   return (
     <CanvasHubPage config={pageConfig}>
@@ -131,7 +131,7 @@ export default function ServiceRequestsPage() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {filtered.map((request: any) => {
+            {filtered.map((request) => {
               const urgency = URGENCY_CONFIG[request.urgency] ?? URGENCY_CONFIG.normal;
               const status = STATUS_CONFIG[request.status] ?? STATUS_CONFIG.submitted;
               const UrgencyIcon = urgency.icon;

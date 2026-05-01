@@ -100,7 +100,6 @@ export default function ExpensesPage() {
           
           const formData = new FormData();
           formData.append('file', file);
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           formData.append('path', `receipts/${expense.id}/${file.name}`);
           
           const uploadRes = await secureFetch('/api/object-storage/upload', {
@@ -114,7 +113,6 @@ export default function ExpensesPage() {
           
           const { url } = await uploadRes.json();
           
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           await apiRequest('POST', `/api/expenses/${expense.id}/receipts`, {
             fileName: file.name,
             fileUrl: url,
@@ -143,7 +141,7 @@ export default function ExpensesPage() {
       setUploadProgress(0);
       setIsUploading(false);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to submit expense",
@@ -163,7 +161,7 @@ export default function ExpensesPage() {
   };
 
   const isMileageCategory = (categoryId: string) => {
-    const category = categories.find((c: any) => c.id === categoryId);
+    const category = categories.find((c) => c.id === categoryId);
     return category?.name?.toLowerCase().includes('mileage');
   };
 
@@ -243,7 +241,7 @@ export default function ExpensesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {categories.map((cat: any) => (
+                              {categories.map((cat) => (
                                 <SelectItem key={cat.id} value={cat.id} data-testid={`option-category-${cat.name.toLowerCase().replace(/\s+/g, '-')}`}>
                                   {cat.name}
                                 </SelectItem>
@@ -534,49 +532,49 @@ export default function ExpensesPage() {
                 </CardContent>
               </Card>
             ) : (
-              expenses.map((expense: any) => (
+              expenses.map((expense) => (
                 <ExpenseCard key={expense.id} expense={expense} getStatusBadge={getStatusBadge} />
               ))
             )}
           </TabsContent>
 
           <TabsContent value="submitted" className="space-y-4 mt-4">
-            {expenses.filter((e: any) => e.status === 'submitted').length === 0 ? (
+            {expenses.filter((e) => e.status === 'submitted').length === 0 ? (
               <Card>
                 <CardContent className="p-6 text-center text-muted-foreground">
                   No submitted expenses
                 </CardContent>
               </Card>
             ) : (
-              expenses.filter((e: any) => e.status === 'submitted').map((expense: any) => (
+              expenses.filter((e) => e.status === 'submitted').map((expense) => (
                 <ExpenseCard key={expense.id} expense={expense} getStatusBadge={getStatusBadge} />
               ))
             )}
           </TabsContent>
 
           <TabsContent value="approved" className="space-y-4 mt-4">
-            {expenses.filter((e: any) => e.status === 'approved').length === 0 ? (
+            {expenses.filter((e) => e.status === 'approved').length === 0 ? (
               <Card>
                 <CardContent className="p-6 text-center text-muted-foreground">
                   No approved expenses
                 </CardContent>
               </Card>
             ) : (
-              expenses.filter((e: any) => e.status === 'approved').map((expense: any) => (
+              expenses.filter((e) => e.status === 'approved').map((expense) => (
                 <ExpenseCard key={expense.id} expense={expense} getStatusBadge={getStatusBadge} />
               ))
             )}
           </TabsContent>
 
           <TabsContent value="reimbursed" className="space-y-4 mt-4">
-            {expenses.filter((e: any) => e.status === 'reimbursed').length === 0 ? (
+            {expenses.filter((e) => e.status === 'reimbursed').length === 0 ? (
               <Card>
                 <CardContent className="p-6 text-center text-muted-foreground">
                   No reimbursed expenses
                 </CardContent>
               </Card>
             ) : (
-              expenses.filter((e: any) => e.status === 'reimbursed').map((expense: any) => (
+              expenses.filter((e) => e.status === 'reimbursed').map((expense) => (
                 <ExpenseCard key={expense.id} expense={expense} getStatusBadge={getStatusBadge} />
               ))
             )}

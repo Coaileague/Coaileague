@@ -112,7 +112,7 @@ export async function runShiftBotSimulation(): Promise<{
     }).returning();
     shiftId = shift.id;
     results.push({ scenario: '1. Create Test Shift', passed: true, details: `Shift ${shiftId} created for ${officer.name}`, data: { shiftId } });
-  } catch (e: any) {
+  } catch (e: unknown) {
     results.push({ scenario: '1. Create Test Shift', passed: false, details: `Failed: ${e.message}` });
     return summarize(results, conversationId);
   }
@@ -139,7 +139,7 @@ export async function runShiftBotSimulation(): Promise<{
       details: roomResult.created ? `Room created: ${conversationId}` : `Room already existed: ${conversationId}`,
       data: roomResult
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     results.push({ scenario: '2. Shift Room Auto-Creation', passed: false, details: `Failed: ${e.message}` });
     await cleanup(shiftId);
     return summarize(results, conversationId);
@@ -158,7 +158,7 @@ export async function runShiftBotSimulation(): Promise<{
       passed: !!reportBotMsg,
       details: reportBotMsg ? `ReportBot entered: "${reportBotMsg.message?.substring(0, 80)}..."` : 'No ReportBot message found',
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     results.push({ scenario: '3. ReportBot Auto-Entry', passed: false, details: `Check failed: ${e.message}` });
   }
 
@@ -183,7 +183,7 @@ export async function runShiftBotSimulation(): Promise<{
       passed: !!helpReply,
       details: helpReply ? `HelpAI responded: "${helpReply.message?.substring(0, 80)}..."` : 'HelpAI did not respond',
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     results.push({ scenario: '4. @HelpAI Mention Response', passed: false, details: `Failed: ${e.message}` });
   }
 
@@ -208,7 +208,7 @@ export async function runShiftBotSimulation(): Promise<{
       passed: !!clockReply,
       details: clockReply ? `ClockBot responded: "${clockReply.message?.substring(0, 80)}..."` : 'ClockBot did not respond',
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     results.push({ scenario: '5. @ClockBot Summon', passed: false, details: `Failed: ${e.message}` });
   }
 
@@ -234,7 +234,7 @@ export async function runShiftBotSimulation(): Promise<{
         passed: true, // CONFIRM accepted even if no pending (TTL or same user)
         details: confirmReply ? `ClockBot response: "${confirmReply.message?.substring(0, 80)}..."` : 'No pending CONFIRM found (TTL may have expired or manager === officer)',
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       results.push({ scenario: '6. ClockBot CONFIRM Flow', passed: false, details: `Failed: ${e.message}` });
     }
   } else {
@@ -262,14 +262,13 @@ export async function runShiftBotSimulation(): Promise<{
       passed: !!incidentMsg,
       details: incidentMsg ? `Bot detected incident: "${incidentMsg.message?.substring(0, 80)}..."` : 'Incident not flagged by bot (may require AI)',
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     results.push({ scenario: '7. Incident Keyword Detection', passed: false, details: `Failed: ${e.message}` });
   }
 
   // ─── 9. MeetingBot action item tracking ─────────────────────────────────
   try {
     // Create a meeting room to test MeetingBot
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [meetingConv] = await db.insert(chatConversations).values({
       workspaceId: ACME_WS,
       subject: 'Meeting — Weekly Ops',
@@ -299,7 +298,7 @@ export async function runShiftBotSimulation(): Promise<{
 
     // Clean up meeting room
     await db.delete(chatConversations).where(eq(chatConversations.id, meetingConv.id));
-  } catch (e: any) {
+  } catch (e: unknown) {
     results.push({ scenario: '8. MeetingBot Action Item', passed: false, details: `Failed: ${e.message}` });
   }
 
@@ -318,7 +317,7 @@ export async function runShiftBotSimulation(): Promise<{
         : `Failed: ${pdfResult.error}`,
       data: { documentId: pdfResult.documentId }
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     results.push({ scenario: '9. End-of-Shift PDF Report', passed: false, details: `Failed: ${e.message}` });
   }
 

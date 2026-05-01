@@ -134,7 +134,7 @@ This is an automated ticket created by the health monitoring system. Immediate i
     previouslyDownServices.add(serviceHealth.service);
 
     log.info(`[HealthCheck] Created support ticket ${ticket.ticketNumber} for critical ${serviceHealth.service} failure`);
-  } catch (error: any) {
+  } catch (error: unknown) {
     log.error(`[HealthCheck] Failed to create support ticket for ${serviceHealth.service}:`, (error instanceof Error ? error.message : String(error)));
   }
 }
@@ -172,7 +172,7 @@ async function checkAndAutoResolveRecoveredServices(serviceHealth: ServiceHealth
       await autoResolveHealthTicket(openTicket.id);
       log.info(`[HealthCheck] Auto-resolved ticket ${openTicket.id} — ${serviceHealth.service} recovered`);
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[HealthCheck] Auto-resolve failed for ${serviceHealth.service}: ${(err instanceof Error ? err.message : String(err))}`);
   }
 }
@@ -216,7 +216,7 @@ export async function checkDatabase(): Promise<ServiceHealth> {
 
       setCache('database', result, CACHE_TTL_MS);
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       lastError = error;
       
       // Only retry if in cold start period and not the last attempt
@@ -277,7 +277,7 @@ export async function checkChatWebSocket(): Promise<ServiceHealth> {
 
     setCache('chat_websocket', result, CACHE_TTL_MS);
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     const result: ServiceHealth = {
       service: 'chat_websocket',
       status: 'down',
@@ -330,7 +330,7 @@ export async function checkGeminiAI(): Promise<ServiceHealth> {
 
     setCache('gemini_ai', result, CACHE_TTL_MS);
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     const result: ServiceHealth = {
       service: 'gemini_ai',
       status: 'degraded',
@@ -387,7 +387,7 @@ export async function checkObjectStorage(): Promise<ServiceHealth> {
 
     setCache('object_storage', result, CACHE_TTL_MS);
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     const result: ServiceHealth = {
       service: 'object_storage',
       status: 'degraded',
@@ -440,7 +440,7 @@ export async function checkStripe(): Promise<ServiceHealth> {
 
     setCache('stripe', result, CACHE_TTL_MS);
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     const result: ServiceHealth = {
       service: 'stripe',
       status: 'down',
@@ -506,7 +506,7 @@ export async function checkQuickBooks(): Promise<ServiceHealth> {
 
     setCache('quickbooks', result, CACHE_TTL_MS);
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     const result: ServiceHealth = {
       service: 'quickbooks',
       status: 'degraded',
@@ -570,7 +570,7 @@ export async function checkGusto(): Promise<ServiceHealth> {
 
     setCache('gusto', result, CACHE_TTL_MS);
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     const result: ServiceHealth = {
       service: 'gusto',
       status: 'degraded',
@@ -617,7 +617,7 @@ export async function checkEmail(): Promise<ServiceHealth> {
     };
     setCache('email', result, FAILURE_CACHE_TTL_MS);
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     const result: ServiceHealth = {
       service: 'email',
       status: 'degraded',
@@ -824,7 +824,7 @@ export async function getGatewayHealth(): Promise<GatewayHealthResponse> {
       platformReadiness,
       timestamp: new Date().toISOString(),
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     log.error('[HealthCheck] Error computing gateway health:', error);
     
     // Return degraded response if we can't compute full health

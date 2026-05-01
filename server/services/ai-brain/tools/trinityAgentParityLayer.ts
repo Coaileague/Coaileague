@@ -25,7 +25,6 @@ import { aiBrainService } from '../aiBrainService';
 import { platformEventBus } from '../../platformEventBus';
 import { db } from '../../../db';
 import { systemAuditLogs } from '@shared/schema';
-// @ts-expect-error — TS migration: fix in refactoring sprint
 import specIndex from '../../../spec-index.json';
 import crypto from 'crypto';
 
@@ -69,7 +68,7 @@ export interface AgentExecutionContext {
 export interface ExecutedStepResult {
   stepId: string;
   action: string;
-  input: Record<string, any>;
+  input: Record<string, unknown>;
   output: any;
   success: boolean;
   confidence: number;
@@ -199,7 +198,6 @@ class TrinityAgentParityLayer {
       await this.logExecution(context, result);
       
       // Publish event
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       platformEventBus.publish('ai_brain_action', {
         action: 'agent_execution_complete',
         executionId,
@@ -453,7 +451,6 @@ class TrinityAgentParityLayer {
       
       switch (step.action) {
         case 'search_code':
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           output = await trinityCodeOps.searchCode(step.parameters);
           break;
         case 'read_file':
@@ -507,7 +504,7 @@ class TrinityAgentParityLayer {
     }
   }
 
-  private async executeFileOperation(action: string, params: Record<string, any>): Promise<any> {
+  private async executeFileOperation(action: string, params: Record<string, unknown>): Promise<unknown> {
     const filePath = params.path || params.filePath;
     const fs = await import('fs/promises');
     
@@ -528,7 +525,7 @@ class TrinityAgentParityLayer {
     }
   }
 
-  private async executeTestRun(params: Record<string, any>): Promise<any> {
+  private async executeTestRun(params: Record<string, unknown>): Promise<unknown> {
     const { exec } = await import('child_process');
     const { promisify } = await import('util');
     const execAsync = promisify(exec);
@@ -875,7 +872,6 @@ class TrinityAgentParityLayer {
     }
     
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const { workspaceContextService } = await import('./workspaceContextService');
       const wsCtx = await workspaceContextService.getFullContext(context.workspaceId);
       contextStr += `\n\n${workspaceContextService.formatForPrompt(wsCtx)}`;
@@ -939,7 +935,6 @@ class TrinityAgentParityLayer {
         workspaceId: context.workspaceId,
         userId: context.userId,
         goal: `Recover from pre-flight failure: ${preFlightResult.reason}`,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         executedSteps: context.executedSteps.map(s => ({
           action: s.action,
           input: s.input,
@@ -1010,7 +1005,6 @@ class TrinityAgentParityLayer {
           goal: context.goal,
           confidence: context.overallConfidence,
           handoffId: handoffResult.handoffId,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           severity,
         },
       }).catch((err) => this.log.warn('[trinityAgentParityLayer] Fire-and-forget failed:', err));
@@ -1054,7 +1048,7 @@ class TrinityAgentParityLayer {
     }
   }
 
-  private async analyzeCode(params: any, context: AgentExecutionContext): Promise<any> {
+  private async analyzeCode(params: any, context: AgentExecutionContext): Promise<unknown> {
     const files = params.files || context.relevantFiles || [];
     const stepResults = context.executedSteps.filter(s => s.success);
     return {
@@ -1066,7 +1060,7 @@ class TrinityAgentParityLayer {
     };
   }
 
-  private async validateChanges(context: AgentExecutionContext): Promise<any> {
+  private async validateChanges(context: AgentExecutionContext): Promise<unknown> {
     const successCount = context.executedSteps.filter(s => s.success).length;
     const failCount = context.executedSteps.filter(s => !s.success).length;
     return {
@@ -1165,5 +1159,4 @@ class TrinityAgentParityLayer {
 export const trinityAgentParityLayer = TrinityAgentParityLayer.getInstance();
 
 // Export types for use elsewhere
-// @ts-expect-error — TS migration: fix in refactoring sprint
 export type { AgentExecutionContext, ExecutedStepResult, VerificationResult, AgentExecutionResult, ChangeRecord };

@@ -204,7 +204,7 @@ async function fetchPhotoBuffer(url: string): Promise<Buffer | null> {
     const objectPath = url.startsWith('/') ? url.slice(1) : url;
     const [buffer] = await bucket.file(objectPath).download();
     return buffer;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[DarPDF] Photo fetch skipped (${url.slice(0, 60)}): ${(err instanceof Error ? err.message : String(err))}`);
     return null;
   }
@@ -831,7 +831,7 @@ async function uploadPdfBuffer(buffer: Buffer, darId: string, workspaceId: strin
     const { recordStorageUsage } = await import('./storage/storageQuotaService');
     recordStorageUsage(workspaceId, 'documents', buffer.length).catch(() => null);
     return objectPath;
-  } catch (uploadErr: any) {
+  } catch (uploadErr: unknown) {
     log.error('[DarPDF] Object storage upload failed:', uploadErr.message);
     return null;
   }
@@ -1122,7 +1122,7 @@ export async function generateShiftTransparencyPdf(darId: string, workspaceId: s
   }
 
   // Enrich manifest entries with GPS from message metadata where not already present
-  const messageMetaMap: Record<string, any> = {};
+  const messageMetaMap: Record<string, unknown> = {};
   chatMessages.forEach(m => { if (m.id) messageMetaMap[m.id] = m.metadata; });
   photos = photos.map(p => {
     if (p.messageId && messageMetaMap[p.messageId] && !p.gpsLat) {

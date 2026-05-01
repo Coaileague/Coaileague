@@ -64,7 +64,7 @@ export interface AutonomousAction {
   completedAt?: Date;
   success: boolean;
   result?: string;
-  metrics?: Record<string, any>;
+  metrics?: Record<string, unknown>;
   escalatedTo?: string[];
   requiresHumanReview: boolean;
 }
@@ -506,7 +506,7 @@ class TrinityAutonomousOps {
     this.scanInterval = setInterval(async () => {
       try {
         await this.runHealthScan();
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.warn('[TrinityAutonomousOps] Health scan failed (will retry):', error?.message || 'unknown');
       }
     }, this.HEALTH_SCAN_INTERVAL);
@@ -700,7 +700,6 @@ class TrinityAutonomousOps {
     if (criticalAlerts.length > 0 || healthSummary?.overallStatus === 'critical') {
       return 'critical';
     }
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (errorAlerts.length >= 3 || healthSummary?.overallStatus === 'critical') {
       return 'degraded';
     }
@@ -710,7 +709,7 @@ class TrinityAutonomousOps {
   private calculateHealthScore(
     healthSummary: PlatformHealthSummary | null,
     alerts: SentinelAlert[],
-    connectorDiagnostics: Record<string, any>
+    connectorDiagnostics: Record<string, unknown>
   ): number {
     let score = 100;
 
@@ -738,7 +737,7 @@ class TrinityAutonomousOps {
     this.maintenanceInterval = setInterval(async () => {
       try {
         await this.runMaintenanceCycle();
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.warn('[TrinityAutonomousOps] Maintenance cycle failed (will retry):', error?.message || 'unknown');
       }
     }, this.MAINTENANCE_INTERVAL);
@@ -932,7 +931,7 @@ class TrinityAutonomousOps {
           managementPatternsLearned += patterns.filter(p => p.patternType === 'management_preference').length;
           reportInsightsLearned += patterns.filter(p => p.patternType === 'report_insight').length;
           conversationLearningsFound += patterns.filter(p => p.patternType === 'conversation_learning').length;
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn(`[TrinityAutonomousOps] Org learning failed for workspace ${ws.id}:`, err?.message);
         }
       }
@@ -984,7 +983,7 @@ class TrinityAutonomousOps {
         try {
           const decayed = trinityOrgIntelligenceService.applyPatternDecay(ws.id);
           totalDecayed += decayed;
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn(`[TrinityAutonomousOps] Pattern decay failed for workspace ${ws.id}:`, err?.message);
         }
       }
@@ -1028,7 +1027,7 @@ class TrinityAutonomousOps {
         try {
           const suggestions = trinityOrgIntelligenceService.generateImprovementSuggestions(ws.id);
           totalSuggestions += suggestions.length;
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn(`[TrinityAutonomousOps] Proactive suggestions failed for workspace ${ws.id}:`, err?.message);
         }
       }
@@ -1140,7 +1139,7 @@ class TrinityAutonomousOps {
 
   private async logAuditEvent(
     action: string,
-    details: Record<string, any>
+    details: Record<string, unknown>
   ): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({
@@ -1202,7 +1201,7 @@ class TrinityAutonomousOps {
     return this.recentAnomalies.slice(0, limit);
   }
 
-  getDiagnostics(): Record<string, any> {
+  getDiagnostics(): Record<string, unknown> {
     const status = this.getStatus();
     return {
       ...status,

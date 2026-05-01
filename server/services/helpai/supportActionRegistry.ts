@@ -45,18 +45,18 @@ export interface SupportActionPayload {
   actorId: string;
   actorType: 'system' | 'support_agent' | 'trinity';
   ticketId?: string;
-  correctionData?: Record<string, any>;
-  overrideData?: Record<string, any>;
+  correctionData?: Record<string, unknown>;
+  overrideData?: Record<string, unknown>;
 }
 
 export interface SupportActionResult {
   success: boolean;
   actionType: string;
   actionDescription: string;
-  beforeState?: Record<string, any>;
-  afterState?: Record<string, any>;
+  beforeState?: Record<string, unknown>;
+  afterState?: Record<string, unknown>;
   error?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }
 
 const SUPPORT_ROLES = new Set([
@@ -103,7 +103,7 @@ async function logAudit(
   entityType: string,
   entityId: string | undefined,
   description: string,
-  changes: Record<string, any>
+  changes: Record<string, unknown>
 ): Promise<void> {
   try {
     await pool.query(`

@@ -80,7 +80,7 @@ export default function Insights() {
       const response = await apiRequest('POST', '/api/insights/generate', {});
       return response;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/insights'] });
       toast({
         title: data.aiPowered ? "AI Insights Generated" : "Insights Generated",
@@ -186,7 +186,6 @@ export default function Insights() {
     id: 'insights',
     title: 'AI Analytics™',
     subtitle: 'AI-powered analytics & autonomous insights',
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     category: 'workspace',
     headerActions: generateButton,
   };

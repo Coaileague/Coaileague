@@ -69,7 +69,7 @@ interface IntentMatch {
   actionId: string;
   risk: RiskLevel;
   category: string;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   reason: string;
 }
 
@@ -203,7 +203,7 @@ export function detectIntent(text: string): IntentMatch | null {
 export function buildIdempotencyKey(
   workspaceId: string,
   actionId: string,
-  payload: Record<string, any>,
+  payload: Record<string, unknown>,
 ): string {
   const digest = createHash('sha256').update(JSON.stringify(payload || {})).digest('hex').slice(0, 32);
   return `${workspaceId}:${actionId}:${digest}`;
@@ -217,7 +217,7 @@ export function buildIdempotencyKey(
 export async function queueForApproval(
   context: DispatchContext,
   actionId: string,
-  payload: Record<string, any>,
+  payload: Record<string, unknown>,
   reason: string,
   risk: RiskLevel,
 ): Promise<{ approvalId: string; wasExisting: boolean }> {
@@ -253,7 +253,7 @@ export async function queueForApproval(
     const row = rows[0];
     resolvedId = row?.id || approvalId;
     wasExisting = row ? row.inserted === false : false;
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Fallback path: schema may not yet include idempotency_key. Plain insert.
     try {
       await pool.query(
@@ -272,7 +272,7 @@ export async function queueForApproval(
           expiresAt,
         ],
       );
-    } catch (fallbackErr: any) {
+    } catch (fallbackErr: unknown) {
       log.warn('[Dispatcher] approval insert failed:', fallbackErr?.message);
     }
   }
@@ -288,7 +288,7 @@ export async function queueForApproval(
         workspaceId: context.workspaceId,
         metadata: { actionType: actionId, risk, approvalId: resolvedId },
       } as any);
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[Dispatcher] pending_approval event publish failed (non-fatal):', err?.message);
     }
   });
@@ -298,7 +298,7 @@ export async function queueForApproval(
 
 async function enrichPayload(
   actionId: string,
-  basePayload: Record<string, any>,
+  basePayload: Record<string, unknown>,
   userMessage: string,
   context: DispatchContext,
 ): Promise<Record<string, any>> {
@@ -341,7 +341,7 @@ async function executeImmediate(
   context: DispatchContext,
   actionId: string,
   category: string,
-  payload: Record<string, any>,
+  payload: Record<string, unknown>,
 ): Promise<ActionResult> {
   const request: ActionRequest = {
     actionId,
@@ -421,7 +421,7 @@ export async function dispatchFromChat(
       { baseScore: RISK_CONFIDENCE[intent.risk] },
       context.platformRole,
     );
-  } catch (govErr: any) {
+  } catch (govErr: unknown) {
     log.warn('[Dispatcher] Governance evaluation error (falling back to risk tier):', govErr?.message);
     governance = {
       canExecute: true,
@@ -477,7 +477,7 @@ export async function dispatchFromChat(
         ? `\n\n⏳ An identical request for \`${intent.actionId}\` is already pending approval.`
         : `\n\n⏳ **Approval needed** — I've queued \`${intent.actionId}\` for manager approval (${intent.risk} risk). Reason: ${intent.reason}. Check **Approvals** in your dashboard. Expires in ${intent.risk === 'high' ? '4' : '24'} hours.`,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[Dispatcher] Dispatch failed:', err?.message);
     return {
       detected: true,

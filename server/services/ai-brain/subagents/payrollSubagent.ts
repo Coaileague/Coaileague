@@ -66,7 +66,7 @@ interface TraceContext {
   parentSpanId?: string;
   operation: string;
   startTime: number;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 interface PayrollExecutionResult {
@@ -98,7 +98,7 @@ interface AuditEntry {
   spanId: string;
   action: string;
   status: 'started' | 'completed' | 'failed';
-  details: Record<string, any>;
+  details: Record<string, unknown>;
   durationMs?: number;
 }
 
@@ -180,7 +180,7 @@ class DistributedTracer {
   private traces: Map<string, TraceContext> = new Map();
   private auditLog: AuditEntry[] = [];
 
-  startTrace(operation: string, metadata: Record<string, any> = {}): TraceContext {
+  startTrace(operation: string, metadata: Record<string, unknown> = {}): TraceContext {
     const traceId = `prl-${Date.now()}-${crypto.randomBytes(8).toString('hex')}`;
     const spanId = crypto.randomBytes(4).toString('hex');
     
@@ -215,7 +215,7 @@ class DistributedTracer {
     return context;
   }
 
-  endSpan(context: TraceContext, status: 'completed' | 'failed', details: Record<string, any> = {}): void {
+  endSpan(context: TraceContext, status: 'completed' | 'failed', details: Record<string, unknown> = {}): void {
     const duration = Date.now() - context.startTime;
     this.logAudit(context.traceId, context.spanId, context.operation, status, { ...details, durationMs: duration });
     
@@ -226,7 +226,7 @@ class DistributedTracer {
     }
   }
 
-  endTrace(context: TraceContext, status: 'completed' | 'failed', details: Record<string, any> = {}): void {
+  endTrace(context: TraceContext, status: 'completed' | 'failed', details: Record<string, unknown> = {}): void {
     const duration = Date.now() - context.startTime;
     this.logAudit(context.traceId, context.spanId, context.operation, status, { ...details, totalDurationMs: duration });
     this.traces.delete(context.traceId);
@@ -234,7 +234,7 @@ class DistributedTracer {
     log.info(`[PayrollSubagent] Trace ${status}: ${context.traceId} (${duration}ms)`);
   }
 
-  private logAudit(traceId: string, spanId: string, action: string, status: 'started' | 'completed' | 'failed', details: Record<string, any>): void {
+  private logAudit(traceId: string, spanId: string, action: string, status: 'started' | 'completed' | 'failed', details: Record<string, unknown>): void {
     this.auditLog.push({
       timestamp: new Date(),
       traceId,
@@ -399,7 +399,6 @@ class PayrollSubagentService {
         workspaceId,
         userId: 'payroll-subagent',
         featureKey: 'payroll_session_fee',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         featureName: 'Payroll Processing Fee',
         description: `Payroll session ${trace.traceId.substring(0, 16)} — processing fee (calculation, validation, compliance checks)`,
       });
@@ -410,7 +409,6 @@ class PayrollSubagentService {
       return {
         success: false,
         payrollRunId: `billing-failed-${Date.now()}`,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         summary: { totalEmployees: 0, processedCount: 0, failedCount: 0, totalGrossPay: '0', totalNetPay: '0', totalDeductions: '0', totalTaxes: '0' },
         employees: [],
         errors: [{ employeeId: 'billing', error: `Insufficient credits or billing error: ${feeErr.message}` }],
@@ -489,7 +487,6 @@ class PayrollSubagentService {
             await tokenManager.recordUsage({
               workspaceId,
               featureKey: 'per_payroll_employee',
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               featureName: 'Per-Employee Payroll Processing',
               description: `Payroll run ${trace.traceId.substring(0, 16)} — ${result.employeeCount} employees × ${perEmpRate}cr/employee = ${totalPerEmp}cr (total gross: $${result.totalGross.toFixed(2)})`,
               quantity: result.employeeCount,
@@ -983,7 +980,6 @@ class PayrollSubagentService {
     try {
       const [existing] = await db.select()
         .from(idempotencyKeys)
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .where(eq(idempotencyKeys.key, key))
         .limit(1);
 
@@ -998,7 +994,6 @@ class PayrollSubagentService {
 
   private async storeIdempotencyResult(key: string, result: any): Promise<void> {
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(idempotencyKeys).values({
         workspaceId: 'system',
         key,
@@ -1006,7 +1001,6 @@ class PayrollSubagentService {
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       }).onConflictDoUpdate({
         target: (idempotencyKeys as any).key,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         set: { result, updatedAt: new Date() },
       });
     } catch (error) {

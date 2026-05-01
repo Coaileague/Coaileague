@@ -142,7 +142,7 @@ export async function executeCalloffCoverageWorkflow(
       };
     }
     resolvedShiftId = shiftRow.id;
-  } catch (err: any) {
+  } catch (err: unknown) {
     await logWorkflowStep(record, 'fetch', false, err?.message);
     errors.push(`fetch:${err?.message}`);
   }
@@ -200,7 +200,7 @@ export async function executeCalloffCoverageWorkflow(
       changesBefore: { status: shiftRow.status },
       changesAfter: { status: 'calloff', reason: params.reason ?? null },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     await logWorkflowStep(record, 'mutate', false, `shift update failed: ${err?.message}`);
     errors.push(`mutate:${err?.message}`);
     await logWorkflowComplete(record, {
@@ -236,7 +236,7 @@ export async function executeCalloffCoverageWorkflow(
         params.triggerSource,
       ],
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.info('[calloff] shift_calloffs insert skipped (non-fatal):', err?.message);
   }
 
@@ -263,7 +263,7 @@ export async function executeCalloffCoverageWorkflow(
       `sent ${offersSent} offers (${result.errors.length} errors)`,
       { offered: offersSent, errorCount: result.errors.length },
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     await logWorkflowStep(record, 'process', false, `sendShiftOffers error: ${err?.message}`);
     errors.push(`process:${err?.message}`);
   }
@@ -403,11 +403,11 @@ export async function scanStaleCalloffWorkflows(): Promise<{
             } as any,
           })
           .where(eq(auditLogs.id, row.id));
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[calloff escalation] metadata update failed:', err?.message);
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[calloff escalation sweep] error:', err?.message);
   }
 
@@ -476,7 +476,7 @@ async function loadShiftDisplayContext(
         clientName: r.rows[0].client_name ?? null,
       };
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.info('[calloff] display context lookup skipped:', err?.message);
   }
   return { location: 'assigned site', clientName: null };
@@ -549,7 +549,7 @@ async function notifySupervisors(params: {
         ),
       ),
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[calloff] supervisor SMS alert failed (non-fatal):', err?.message);
   }
 }
@@ -573,7 +573,7 @@ async function publishCalloffEvent(params: {
         workflow: WORKFLOW_NAME,
       },
     } as any);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[calloff] event bus publish failed (non-fatal):', err?.message);
   }
 }
@@ -621,7 +621,7 @@ async function escalateToSupervisor(params: {
       description: body.summary,
       metadata: body as any,
     } as any);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[calloff] escalation event publish failed:', err?.message);
   }
 }
@@ -638,7 +638,7 @@ async function fetchWorkspaceSupervisors(workspaceId: string): Promise<string[]>
       [workspaceId],
     );
     return r.rows.map((row: any) => row.user_id).filter(Boolean);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.info('[calloff] supervisor lookup skipped:', err?.message);
     return [];
   }
@@ -660,7 +660,7 @@ async function fetchSupervisorContacts(workspaceId: string): Promise<Array<{ emp
     return r.rows
       .map((row: any) => ({ employeeId: row.id as string, phone: row.phone as string }))
       .filter((row: any) => row.employeeId && row.phone);
-  } catch (err: any) {
+  } catch (err: unknown) {
     // `role`/`is_supervisor` may not exist; fall back to any active phone for an owner/manager.
     try {
       const { pool } = await import('../../../db');
@@ -677,7 +677,7 @@ async function fetchSupervisorContacts(workspaceId: string): Promise<Array<{ emp
       return r.rows
         .map((row: any) => ({ employeeId: row.id as string, phone: row.phone as string }))
         .filter((row: any) => row.employeeId && row.phone);
-    } catch (fallbackErr: any) {
+    } catch (fallbackErr: unknown) {
       log.info('[calloff] supervisor phone fallback skipped:', fallbackErr?.message);
       return [];
     }

@@ -21,7 +21,7 @@ Respond ONLY with JSON: {"valid": true/false, "issues": ["issue1"], "confidence"
       const response = await claudeService.call(verificationPrompt, 'You are a verification agent. Respond only with valid JSON.', 256);
       const clean = response.replace(/```json|```/g, '').trim();
       return JSON.parse(clean);
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn(`[ClaudeVerification] Verification failed: ${err?.message}`);
       // Default to trusting the output on verification failure (non-critical path)
       return { valid: true, issues: [], confidence: 0.5 };

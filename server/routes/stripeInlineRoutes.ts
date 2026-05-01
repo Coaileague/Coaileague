@@ -101,9 +101,7 @@ router.post('/connect-account', flexAuth, async (req: any, res) => {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (workspace.stripeConnectedAccountId) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const account = await stripe.accounts.retrieve(workspace.stripeConnectedAccountId);
       return res.json({ 
         accountId: account.id,
@@ -123,7 +121,6 @@ router.post('/connect-account', flexAuth, async (req: any, res) => {
     }, { idempotencyKey: `connect-acct-${workspace.id}` });
 
     await storage.updateWorkspace(workspace.id, {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       stripeConnectedAccountId: account.id,
     });
 
@@ -172,7 +169,6 @@ router.post('/pay-invoice', requireAuth, async (req: any, res) => {
 
     const { invoiceId, paymentMethodId } = req.body;
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const invoice = await storage.getInvoice(invoiceId);
     if (!invoice) {
       return res.status(404).json({ message: "Invoice not found" });
@@ -217,7 +213,6 @@ router.post('/pay-invoice', requireAuth, async (req: any, res) => {
     // interpreted this as "payment complete" and showed a success message while the
     // invoice was never actually marked paid. Now we surface the clientSecret so the
     // frontend can complete the 3DS challenge via Stripe.js confirmCardPayment().
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (paymentIntent.status === 'requires_action' || paymentIntent.status === 'requires_source_action') {
       return res.json({
         success: false,
@@ -280,7 +275,7 @@ router.post('/pay-invoice', requireAuth, async (req: any, res) => {
               .catch((err: Error) => log.warn('[PayInvoice] Fee ledger record failed (non-blocking):', err.message))
           ).catch((err: Error) => log.warn('[PayInvoice] Fee ledger import failed:', err.message));
         }
-      } catch (feeErr: any) {
+      } catch (feeErr: unknown) {
         log.warn('[PayInvoice] Middleware fee charge failed (non-blocking):', feeErr?.message);
       }
 
@@ -370,7 +365,7 @@ router.post('/create-subscription', requireAuth, async (req: any, res) => {
           });
         }
         // Subscription exists but is not active (cancelled, past_due) — fall through to create new.
-      } catch (subLookupErr: any) {
+      } catch (subLookupErr: unknown) {
         // Stripe does not know this ID — the stored value is stale. Clear it and continue.
         log.warn(`[CreateSubscription] Stale stripeSubscriptionId on workspace ${workspace.id}: ${subLookupErr.message}`);
         await storage.updateWorkspace(workspace.id, { stripeSubscriptionId: null });
@@ -550,7 +545,6 @@ router.post('/webhook', async (req: any, res) => {
         return res.status(500).json({ error: `Handler failed: ${mainWebhookResult.error}` });
       }
     } catch (routeErr: unknown) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       log.error('[Stripe Webhook] Main pipeline threw for event:', event.type, routeErr.message);
       if (MONEY_CRITICAL_EVENTS.has(event.type)) {
         return res.status(500).json({ error: `Handler error: ${sanitizeError(routeErr)}` });
@@ -736,7 +730,6 @@ router.get('/connect-status', flexAuth, async (req: any, res) => {
       });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const account = await stripe.accounts.retrieve(workspace.stripeConnectedAccountId);
 
     let status: string;
@@ -776,7 +769,6 @@ router.get('/fee-schedule', flexAuth, async (req: any, res) => {
     const competitorInvoiceRates = [
       competitors.quickbooks.invoiceRate,
       competitors.square.invoiceRate,
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     ].filter((r): r is number => r !== null);
     const maxCompetitorRate = competitorInvoiceRates.length > 0 ? Math.max(...competitorInvoiceRates) : 0;
     const savingsPercent = maxCompetitorRate > 0
@@ -788,7 +780,6 @@ router.get('/fee-schedule', flexAuth, async (req: any, res) => {
       competitors.gusto.payrollPerEmployee,
       competitors.patriot.payrollPerEmployee,
       competitors.square.payrollPerEmployee,
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     ].filter((r): r is number => r !== null);
     const maxPayrollPerEmployee = competitorPayrollPerEmployee.length > 0 ? Math.max(...competitorPayrollPerEmployee) : 0;
     const payrollSavingsPercent = maxPayrollPerEmployee > 0
@@ -840,7 +831,6 @@ router.post('/connect-dashboard', flexAuth, async (req: any, res) => {
       return res.status(400).json({ message: "No Stripe Connect account linked to this workspace" });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const loginLink = await stripe.accounts.createLoginLink(workspace.stripeConnectedAccountId);
 
     res.json({ url: loginLink.url });
@@ -869,7 +859,7 @@ router.get('/stripe-health', requireAuth, async (req, res) => {
   }
 
   const issues: string[] = [];
-  const checks: Record<string, any> = {};
+  const checks: Record<string, unknown> = {};
 
   const requiredEnvVars = [
     'STRIPE_SECRET_KEY',
@@ -895,7 +885,7 @@ router.get('/stripe-health', requireAuth, async (req, res) => {
     const balance = await stripe.balance.retrieve();
     checks.stripeConnected = 'connected';
     checks.stripeLiveMode = balance.livemode ? 'live' : 'test';
-  } catch (stripeErr: any) {
+  } catch (stripeErr: unknown) {
     checks.stripeConnected = `failed: ${stripeErr?.message || 'unknown'}`;
     issues.push('Stripe API connection failed');
   }
@@ -909,7 +899,7 @@ router.get('/stripe-health', requireAuth, async (req, res) => {
     );
     checks.webhookRegistered = ourWebhook ? ourWebhook.url : 'not found';
     if (!ourWebhook) issues.push('Stripe webhook not registered');
-  } catch (err: any) {
+  } catch (err: unknown) {
     checks.webhookRegistered = `unverified: ${err?.message || 'unknown'}`;
   }
 

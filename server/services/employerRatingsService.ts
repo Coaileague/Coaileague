@@ -67,29 +67,23 @@ export async function calculateEmployerRatingStats(
   }
 
   // Calculate average rating
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const avgRating = ratings.reduce((sum, r) => sum + (parseFloat(r.overallRating?.toString() || '0')), 0) / ratings.length;
 
   // Calculate rating distribution
   const distribution = {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     excellent: ratings.filter(r => parseFloat(r.overallRating?.toString() || '0') >= 4.5).length,
     good: ratings.filter(r => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const rating = parseFloat(r.overallRating?.toString() || '0');
       return rating >= 3.5 && rating < 4.5;
     }).length,
     neutral: ratings.filter(r => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const rating = parseFloat(r.overallRating?.toString() || '0');
       return rating >= 2.5 && rating < 3.5;
     }).length,
     poor: ratings.filter(r => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const rating = parseFloat(r.overallRating?.toString() || '0');
       return rating >= 1.5 && rating < 2.5;
     }).length,
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     veryPoor: ratings.filter(r => parseFloat(r.overallRating?.toString() || '0') < 1.5).length,
   };
 
@@ -122,7 +116,6 @@ export async function calculateEmployerRatingStats(
 
   // Calculate recommendation score (how many would recommend)
   // Based on overall rating: 4.0+ = would recommend
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const recommendCount = ratings.filter(r => parseFloat(r.overallRating?.toString() || '0') >= 4.0).length;
   const recommendationScore = Math.round((recommendCount / ratings.length) * 100);
 
@@ -130,7 +123,6 @@ export async function calculateEmployerRatingStats(
   const latestRatings = ratings.slice(0, 5).map(r => ({
     ...r,
     ratingDisplay: {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       rating: parseFloat(r.overallRating?.toString() || '0').toFixed(1),
       sentiment: (r as any).sentiment,
       submittedAt: r.submittedAt,

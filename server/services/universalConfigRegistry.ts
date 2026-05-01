@@ -125,7 +125,7 @@ export class UniversalConfigRegistry {
       description?: string;
       valueType?: string;
       priority?: number;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
       changedBy?: string;
       changeSource?: string;
       reason?: string;
@@ -431,7 +431,7 @@ export class UniversalConfigRegistry {
     let skipped = 0;
 
     try {
-      const featureDefaults: Record<string, any> = {
+      const featureDefaults: Record<string, unknown> = {
         'ai.autoScheduling': true,
         'ai.sentimentAnalysis': true,
         'ai.predictiveAnalytics': true,
@@ -475,7 +475,7 @@ export class UniversalConfigRegistry {
         seeded++;
       }
 
-      const seasonalDefaults: Record<string, any> = {
+      const seasonalDefaults: Record<string, unknown> = {
         'enabled': false,
         'currentTheme': 'default',
         'autoDetect': true,
@@ -497,7 +497,7 @@ export class UniversalConfigRegistry {
         seeded++;
       }
 
-      const systemDefaults: Record<string, any> = {
+      const systemDefaults: Record<string, unknown> = {
         'platform.name': process.env.PLATFORM_NAME || 'CoAIleague',
         'platform.tagline': 'AI-Powered Workforce Intelligence',
         'platform.version': '1.0.0',
@@ -530,7 +530,7 @@ export class UniversalConfigRegistry {
     }
   }
 
-  async trinityExecute(action: string, params: Record<string, any>): Promise<{ success: boolean; message: string; data?: any }> {
+  async trinityExecute(action: string, params: Record<string, unknown>): Promise<{ success: boolean; message: string; data?: any }> {
     const source = 'trinity_ai';
     const changedBy = 'trinity';
 

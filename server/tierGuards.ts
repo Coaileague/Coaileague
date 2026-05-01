@@ -97,7 +97,6 @@ export function requirePlan(minimumTier: SubscriptionTier): RequestHandler {
         },
         sourceRoute: req.path,
       }).catch((auditErr: unknown) => {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         log.warn('[TierGuard] Failed to write tier.violation audit log (non-blocking)', {
           workspaceId: req.workspaceId,
           currentTier,

@@ -64,7 +64,7 @@ function PostOrderForm({ order, onClose }: { order?: any; onClose: () => void })
   });
 
   const mutation = useMutation({
-    mutationFn: (data: any) =>
+    mutationFn: (data) =>
       order
         ? apiRequest("PATCH", `/api/post-orders/templates/${order.id}`, data)
         : apiRequest("POST", "/api/post-orders/templates", { ...data, workspaceId }),
@@ -178,7 +178,7 @@ function PostOrderForm({ order, onClose }: { order?: any; onClose: () => void })
   );
 }
 
-function PostOrderCard({ order, onEdit, onViewAcks, onAcknowledge }: { order: any; onEdit: (o: any) => void; onViewAcks: (o: any) => void; onAcknowledge?: (o: any) => void }) {
+function PostOrderCard({ order, onEdit, onViewAcks, onAcknowledge }: { order: any; onEdit: (o) => void; onViewAcks: (o) => void; onAcknowledge?: (o) => void }) {
   const cfg = PRIORITY_CONFIG[order.priority] || PRIORITY_CONFIG.normal;
   const PriIcon = cfg.icon;
   const requirements: string[] = [];
@@ -267,7 +267,7 @@ function AcknowledgmentDialog({ order, onClose }: { order: any; onClose: () => v
   const workspaceId = (user as any)?.workspaceId;
 
   const mutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/post-orders/acknowledge", data),
+    mutationFn: (data) => apiRequest("POST", "/api/post-orders/acknowledge", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/post-orders", workspaceId] });
       queryClient.invalidateQueries({ queryKey: ["/api/post-orders/tracking", workspaceId] });
@@ -275,7 +275,7 @@ function AcknowledgmentDialog({ order, onClose }: { order: any; onClose: () => v
       toast({ title: "Post order acknowledged successfully" });
       onClose();
     },
-    onError: (err: any) => {
+    onError: (err) => {
       const msg = err?.message?.includes("409") ? "Already acknowledged" : "Failed to acknowledge";
       toast({ title: msg, variant: "destructive" });
     },
@@ -407,7 +407,7 @@ function AcknowledgmentTrackingPanel({ order, onClose }: { order: any; onClose: 
           </Card>
         ) : (
           <div className="space-y-2">
-            {acks.map((ack: any) => (
+            {acks.map((ack) => (
               <Card key={ack.id} data-testid={`card-ack-${ack.id}`}>
                 <CardContent className="p-3">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -460,7 +460,7 @@ function TrackingTab() {
 
   const totalOrders = trackingData.length;
   const totalAcks = trackingData.reduce((sum: number, o: any) => sum + (Number(o.ackCount) || 0), 0);
-  const pendingOrders = trackingData.filter((o: any) => Number(o.ackCount) === 0).length;
+  const pendingOrders = trackingData.filter((o) => Number(o.ackCount) === 0).length;
 
   return (
     <div className="space-y-6">
@@ -500,7 +500,7 @@ function TrackingTab() {
         </Card>
       ) : (
         <div className="space-y-2">
-          {trackingData.map((order: any) => {
+          {trackingData.map((order) => {
             const ackCount = Number(order.ackCount) || 0;
             const cfg = PRIORITY_CONFIG[order.priority] || PRIORITY_CONFIG.normal;
             const PriIcon = cfg.icon;

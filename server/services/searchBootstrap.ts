@@ -135,7 +135,7 @@ registerLegacyBootstrap('search_infrastructure', async (pool) => {
            ON ${idx.table} USING GIN (${idx.expr} gin_trgm_ops)`
       );
       log.info(`[searchBootstrap] GIN index ${idx.name} created`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Non-fatal — a missing column or transient error should not prevent boot
       log.warn(`[searchBootstrap] GIN index ${idx.name} skipped: ${err?.message}`);
     }

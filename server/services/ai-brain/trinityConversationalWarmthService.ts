@@ -179,7 +179,6 @@ class TrinityConversationalWarmthService {
       lastName: emp.lastName,
       significantShares,
       communicationStyle: memRows.find((r: any) => r.memoryKey === 'comm_style')?.memoryValue || 'standard',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       lastRecognitionGiven: recogRows[0] ? `${recogRows[0].milestone_type} on ${new Date(recogRows[0].triggered_at).toLocaleDateString()}` : null,
       lastProactiveReachOut: null,
       recurringConcerns: concernRows.map((r: any) => r.memoryValue),

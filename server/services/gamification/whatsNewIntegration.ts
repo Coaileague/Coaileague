@@ -14,7 +14,7 @@ export async function notifyWhatsNew(workspaceId: string, headline: string, deta
        ON CONFLICT DO NOTHING`,
       [workspaceId, headline, detail]
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.debug(`[GamificationWhatsNew] Could not write update: ${err?.message?.slice(0, 80)}`);
   }
 }

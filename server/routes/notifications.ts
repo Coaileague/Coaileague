@@ -235,7 +235,6 @@ router.post('/api/notifications/mark-all-read', requireAuth, async (req: Authent
   // Batch mark-read endpoint for mobile notification hub
 router.post('/api/notifications/mark-read-batch', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const userId = req.user.id;
       const { ids } = req.body as { ids: string[] };
       
@@ -262,7 +261,6 @@ router.post('/api/notifications/mark-read-batch', requireAuth, async (req: Authe
       }
       
       // Recalculate unread counts after batch operation
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const unreadNotifications = await storage.getUnreadNotificationCount(workspaceId);
       
       broadcastNotification(workspaceId, userId, 'notification_count_updated', {
@@ -281,7 +279,6 @@ router.post('/api/notifications/mark-read-batch', requireAuth, async (req: Authe
   // Alias route for acknowledge-all (frontend uses this endpoint)
 router.post('/api/notifications/acknowledge-all', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const userId = req.user.id;
       
       // Get user's workspace
@@ -535,7 +532,6 @@ router.get("/api/notifications/diagnostics", requireAuth, async (req: Authentica
       const workspaceId = authReq.workspaceId || authReq.user?.currentWorkspaceId || authReq.user?.workspaceId;
 
       const { notificationDiagnostics } = await import("../services/ai-brain/notificationDiagnostics");
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const result = await notificationDiagnostics.handleRequest(userId, workspaceId);
 
       log.info(`[NotificationDiagnostics] Diagnostic run for user ${userId}:`, result.diagnostic.overallHealth);
@@ -811,7 +807,6 @@ router.get('/api/notifications/unread-count', requireAuth, async (req: Authentic
   // Mark individual notification as read
 router.post('/api/notifications/:id/mark-read', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const userId = req.user.id;
       const { id: notificationId } = req.params;
       
@@ -847,7 +842,6 @@ router.post('/api/notifications/:id/mark-read', requireAuth, async (req: Authent
   // Mark platform update as viewed
 router.post('/api/platform-updates/:id/mark-viewed', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const userId = req.user.id;
       const { id: updateId } = req.params;
       
@@ -877,7 +871,6 @@ router.post('/api/platform-updates/:id/mark-viewed', requireAuth, async (req: Au
   // Sync notification counts (force refresh from database)
 router.post('/api/notifications/sync-counts', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const userId = req.user.id;
       
       const workspace = await storage.getWorkspaceByOwnerId(userId);

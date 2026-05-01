@@ -185,7 +185,7 @@ class TrinityAutonomousTaskQueue {
             await new Promise(resolve => setTimeout(resolve, 5000));
           }
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         lastError = err?.message || String(err);
         lastFailureClass = this.classifyFailure(lastError);
         attemptRecord.failureClass = lastFailureClass;
@@ -340,7 +340,6 @@ class TrinityAutonomousTaskQueue {
       weekHours: sql`SUM(EXTRACT(EPOCH FROM (${shifts.endTime} - ${shifts.startTime})) / 3600.0)`
     })
     .from(shifts)
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     .join(employees, eq(shifts.assignedEmployeeId, employees.id))
     .where(sql`
       ${shifts.workspaceId} = ${workspaceId}
@@ -468,7 +467,6 @@ class TrinityAutonomousTaskQueue {
             'autonomous_task',
             undefined,
             workspaceId,
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             'PLATFORM',
           ).catch(() => null);
         }

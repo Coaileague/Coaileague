@@ -411,7 +411,7 @@ Return JSON:
       
       return workOrder;
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[WorkOrderIntake] Parse failed:', (error instanceof Error ? error.message : String(error)));
       throw error;
     }
@@ -603,7 +603,7 @@ Order tasks logically: understand -> plan -> implement -> test -> commit`;
       
       return tasks;
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[TaskDecomposition] Decomposition failed:', (error instanceof Error ? error.message : String(error)));
       throw error;
     }
@@ -767,7 +767,7 @@ class SolutionDiscoveryLoop {
               decomposer.markTaskFailed(workOrder.id, task.id, result.error || 'Unknown error');
               attempt.issues.push(`Task ${task.title} failed: ${result.error}`);
             }
-          } catch (error: any) {
+          } catch (error: unknown) {
             decomposer.markTaskFailed(workOrder.id, task.id, (error instanceof Error ? error.message : String(error)));
             attempt.issues.push(`Task ${task.title} threw: ${(error instanceof Error ? error.message : String(error))}`);
           }
@@ -817,7 +817,7 @@ class SolutionDiscoveryLoop {
                                attemptNumber < this.MAX_ATTEMPTS;
                                
           log.info(`[SolutionDiscovery] Reflection: ${reflectionResult.passed ? 'PASSED' : 'FAILED'}, confidence: ${(reflectionResult.confidenceScore * 100).toFixed(0)}%`);
-        } catch (reflectionError: any) {
+        } catch (reflectionError: unknown) {
           log.error('[SolutionDiscovery] Reflection failed:', reflectionError.message);
           attempt.issues.push(`Self-reflection failed: ${reflectionError.message}`);
           attempt.confidenceScore = 0.5;
@@ -833,7 +833,7 @@ class SolutionDiscoveryLoop {
         attempt.issues.push('No tasks were executed');
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[SolutionDiscovery] Attempt error:', (error instanceof Error ? error.message : String(error)));
       attempt.issues.push(`Attempt failed: ${(error instanceof Error ? error.message : String(error))}`);
       attempt.success = false;
@@ -880,7 +880,7 @@ class SolutionDiscoveryLoop {
             output: searchResult,
             error: hasResults ? undefined : 'No matching code found',
           };
-        } catch (e: any) {
+        } catch (e: unknown) {
           task.durationMs = Date.now() - startTime;
           return { success: false, error: e.message };
         }
@@ -896,7 +896,7 @@ class SolutionDiscoveryLoop {
           const content = fs.default.readFileSync(filePath, 'utf-8');
           task.durationMs = Date.now() - startTime;
           return { success: true, output: { path: filePath, content: content.substring(0, 5000), lineCount: content.split('\n').length } };
-        } catch (e: any) {
+        } catch (e: unknown) {
           task.durationMs = Date.now() - startTime;
           return { success: false, error: e.message };
         }
@@ -935,7 +935,7 @@ class SolutionDiscoveryLoop {
             output: { filePath, analysisComplete: true, pendingApproval: true },
             changes: [changeRecord],
           };
-        } catch (e: any) {
+        } catch (e: unknown) {
           task.durationMs = Date.now() - startTime;
           return { success: false, error: e.message };
         }
@@ -953,12 +953,11 @@ class SolutionDiscoveryLoop {
           task.durationMs = Date.now() - startTime;
           const hasOutput = thinkResult.text && thinkResult.text.length > 10;
           return { 
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             success: hasOutput, 
             output: thinkResult.text,
             error: hasOutput ? undefined : 'Analysis produced no meaningful output',
           };
-        } catch (e: any) {
+        } catch (e: unknown) {
           task.durationMs = Date.now() - startTime;
           return { success: false, error: e.message };
         }
@@ -973,7 +972,7 @@ class SolutionDiscoveryLoop {
             output: testResult.summary,
             error: passed ? undefined : `${testResult.summary.failed}/${testResult.summary.total} tests failed`,
           };
-        } catch (e: any) {
+        } catch (e: unknown) {
           task.durationMs = Date.now() - startTime;
           return { success: false, error: `Test execution failed: ${e.message}` };
         }
@@ -997,7 +996,7 @@ class SolutionDiscoveryLoop {
             output: testResult.summary,
             error: passed ? undefined : `Validation failed: ${testResult.summary.failed} issues`,
           };
-        } catch (e: any) {
+        } catch (e: unknown) {
           task.durationMs = Date.now() - startTime;
           return { success: false, error: e.message };
         }
@@ -1023,7 +1022,7 @@ class SolutionDiscoveryLoop {
           });
           task.durationMs = Date.now() - startTime;
           return { success: true, output: dbResult.text };
-        } catch (e: any) {
+        } catch (e: unknown) {
           task.durationMs = Date.now() - startTime;
           return { success: false, error: e.message };
         }
@@ -1039,7 +1038,7 @@ class SolutionDiscoveryLoop {
           });
           task.durationMs = Date.now() - startTime;
           return { success: true, output: summaryResult.text };
-        } catch (e: any) {
+        } catch (e: unknown) {
           task.durationMs = Date.now() - startTime;
           return { success: false, error: e.message };
         }
@@ -1107,7 +1106,7 @@ class ConfidentCommitProtocol {
       } else {
         log.info(`[CommitProtocol] Tests PASSED: ${testResults.summary.passed}/${testResults.summary.total}`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[CommitProtocol] Test execution error:', (error instanceof Error ? error.message : String(error)));
       decision.testsPass = false;
       decision.riskMitigations.push(`Test execution failed: ${(error instanceof Error ? error.message : String(error))}`);
@@ -1135,7 +1134,7 @@ class ConfidentCommitProtocol {
         decision.reflectionPass = reflectionResult.passed;
         decision.confidenceScore = reflectionResult.confidenceScore;
         log.info(`[CommitProtocol] Reflection ${reflectionResult.passed ? 'PASSED' : 'FAILED'}: ${(reflectionResult.confidenceScore * 100).toFixed(0)}% confidence`);
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.error('[CommitProtocol] Reflection error:', (error instanceof Error ? error.message : String(error)));
         decision.reflectionPass = false;
         decision.riskMitigations.push(`Self-reflection failed: ${(error instanceof Error ? error.message : String(error))}`);

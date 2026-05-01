@@ -144,7 +144,7 @@ export class InboundOpportunityAgent {
               ))
               .limit(1);
             contractor = foundContractor;
-          } catch (error: any) {
+          } catch (error: unknown) {
             // Table may not exist - continue without contractor lookup
             log.info(`Known contractors lookup skipped: ${(error instanceof Error ? error.message : String(error))?.includes('does not exist') ? 'table not created' : (error instanceof Error ? error.message : String(error))}`);
           }
@@ -293,7 +293,7 @@ export class InboundOpportunityAgent {
             }).returning();
             emailRecordId = emailRecord?.id;
             recordsChanged++;
-          } catch (error: any) {
+          } catch (error: unknown) {
             log.info(`Email record insert skipped: ${(error instanceof Error ? error.message : String(error))?.includes('does not exist') ? 'table not created' : (error instanceof Error ? error.message : String(error))}`);
           }
           
@@ -316,15 +316,13 @@ export class InboundOpportunityAgent {
               }).returning();
               recordsChanged++;
               log.info(`Contract record created for review`);
-            } catch (contractErr: any) {
+            } catch (contractErr: unknown) {
               log.info(`Contract record skipped: ${contractErr.message}`);
             }
           }
           
           // Insert staged shifts if extracted (gracefully handle if table doesn't exist)
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           if (processResult.extractedShifts?.length > 0) {
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             for (const shift of processResult.extractedShifts) {
               const needsReview = Object.values(shift).some(v => v === null || v === undefined);
               
@@ -384,7 +382,7 @@ export class InboundOpportunityAgent {
                   processedByAi: true,
                 });
                 recordsChanged++;
-              } catch (error: any) {
+              } catch (error: unknown) {
                 log.info(`Staged shift insert skipped: ${(error instanceof Error ? error.message : String(error))?.includes('does not exist') ? 'table not created' : (error instanceof Error ? error.message : String(error))}`);
               }
             }
@@ -399,7 +397,6 @@ export class InboundOpportunityAgent {
         },
         
         // STEP 7: NOTIFY
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         notify: async (ctx, processResult) => {
           const notifications: string[] = [];
 
@@ -460,7 +457,6 @@ export class InboundOpportunityAgent {
           }
 
           // For shift requests, send extraction details
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           if (processResult.isShiftRequest && processResult.extractedShifts?.length > 0 && shouldEmailSender) {
             // @ts-expect-error — TS migration: fix in refactoring sprint
             const firstShift = processResult.extractedShifts[0] as ExtractedShiftDetails;
@@ -476,7 +472,6 @@ export class InboundOpportunityAgent {
                 currentStep: 'extracting',
                 stepNumber: 3,
                 totalSteps: 7,
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 stepDetails: `We've extracted ${processResult.extractedShifts.length} shift(s) from your request. Now finding available qualified personnel.`,
                 tempCode: processResult.tempCode,
                 statusPortalUrl: processResult.statusPortalUrl,
@@ -514,7 +509,6 @@ export class InboundOpportunityAgent {
               .where(and(
                 eq(employees.workspaceId, workspaceId),
                 eq(employees.isActive, true),
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 inArray(employees.workspaceRole, [...MANAGER_ROLES])
               ));
               
@@ -555,7 +549,6 @@ export class InboundOpportunityAgent {
               .where(and(
                 eq(employees.workspaceId, workspaceId),
                 eq(employees.isActive, true),
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 inArray(employees.workspaceRole, [...APPROVER_ROLES])
               ));
 
@@ -574,7 +567,6 @@ export class InboundOpportunityAgent {
             } catch (routeErr) {
               log.error('[InboundOpportunityAgent] Failed to route non-shift email to managers:', routeErr);
             }
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           } else if (processResult.extractedShifts?.length > 0) {
             const autoStaffEnabled = processResult.contractor?.autoStaffingEnabled;
             if (autoStaffEnabled) {
@@ -593,14 +585,11 @@ export class InboundOpportunityAgent {
               .where(and(
                 eq(employees.workspaceId, workspaceId),
                 eq(employees.isActive, true),
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 inArray(employees.workspaceRole, [...APPROVER_ROLES])
               ));
 
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               const shiftCount = processResult.extractedShifts.length;
               const contractorName = processResult.contractor?.name || email.fromName || email.fromEmail;
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               const shiftDetails = processResult.extractedShifts.map((s: ExtractedShiftDetails) =>
                 `- ${s.location || 'TBD'}: ${s.date || 'TBD'} ${s.startTime || ''}-${s.endTime || ''}`
               ).join('\n');
@@ -727,7 +716,6 @@ If NOT a staffing request, use isShiftRequest: false.`;
           isShiftRequest: parsed.isShiftRequest === true,
           confidence: parsed.confidence || 0.8,
           reason: parsed.reason || 'AI classification',
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           tokensUsed: result.tokensUsed,
         };
       }
@@ -735,11 +723,9 @@ If NOT a staffing request, use isShiftRequest: false.`;
       // If no valid JSON, check for clear yes/no indicators
       const lowerText = cleanText.toLowerCase();
       if (lowerText.includes('"isshiftrequest": true') || lowerText.includes('"isshiftrequest":true')) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return { isShiftRequest: true, confidence: 0.85, reason: 'AI indicated shift request', tokensUsed: result.tokensUsed };
       }
       if (lowerText.includes('"isshiftrequest": false') || lowerText.includes('"isshiftrequest":false')) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return { isShiftRequest: false, confidence: 0.85, reason: 'AI indicated not a shift request', tokensUsed: result.tokensUsed };
       }
       
@@ -845,7 +831,6 @@ Return ONLY the JSON array, no markdown, no explanations.`;
       
       return {
         shifts,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         tokensUsed: result.tokensUsed,
       };
     } catch (error) {
@@ -926,7 +911,7 @@ Return ONLY the JSON array, no markdown, no explanations.`;
       try {
         const result = await this.staffSingleShift(workspaceId, shift.id);
         results.push(result);
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Validation-failures (e.g. "No qualified employees available") throw
         // from executionPipeline. Record the failure so the caller can
         // escalate rather than swallowing the error in a batch short-circuit.
@@ -1153,7 +1138,7 @@ Return ONLY the JSON array, no markdown, no explanations.`;
                 notifications.push(`employee:${offer.employeeId}:shift_offer_email_failed`);
                 log.error(`[InboundOpportunityAgent] Failed to send shift offer email to ${employee.email}:`, emailResult.error);
               }
-            } catch (emailError: any) {
+            } catch (emailError: unknown) {
               notifications.push(`employee:${offer.employeeId}:shift_offer_email_error`);
               log.error(`[InboundOpportunityAgent] Error sending shift offer email to ${employee.email}:`, emailError.message);
             }
@@ -1217,7 +1202,7 @@ Return ONLY the JSON array, no markdown, no explanations.`;
               
               notifications.push(`sender:${notifyCtx.senderEmail}:status_updates_sent`);
               log.info(`[InboundOpportunityAgent] Staffing status updates sent to sender: ${notifyCtx.senderEmail}`);
-            } catch (senderErr: any) {
+            } catch (senderErr: unknown) {
               log.error('[InboundOpportunityAgent] Failed to send sender status update:', senderErr.message);
             }
           }
@@ -1293,7 +1278,6 @@ Consider: qualifications match, reliability history, preference match, availabil
       
       return {
         matches: Array.isArray(parsed) ? parsed : [],
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         tokensUsed: result.tokensUsed,
       };
     } catch (error) {
@@ -1346,7 +1330,6 @@ Consider: qualifications match, reliability history, preference match, availabil
         .where(and(
           eq(employees.workspaceId, workspaceId),
           eq(employees.isActive, true),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           inArray(employees.workspaceRole, [...MANAGER_ROLES]),
         ));
 
@@ -1358,7 +1341,6 @@ Consider: qualifications match, reliability history, preference match, availabil
         if (!manager.email) continue;
         try {
           await NotificationDeliveryService.send({
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             type: 'staffing_escalation',
             workspaceId,
             recipientUserId: manager.email,
@@ -1376,7 +1358,7 @@ Consider: qualifications match, reliability history, preference match, availabil
             },
             idempotencyKey: `stage-b-escalate-${workspaceId}-${referenceNumber || 'na'}-${Date.now()}`,
           });
-        } catch (mgrErr: any) {
+        } catch (mgrErr: unknown) {
           log.warn(`[InboundOpportunityAgent] Manager escalation email failed for ${manager.email}: ${mgrErr?.message}`);
         }
       }
@@ -1387,7 +1369,6 @@ Consider: qualifications match, reliability history, preference match, availabil
       if (senderEmail) {
         try {
           await NotificationDeliveryService.send({
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             type: 'staffing_escalation_sender',
             workspaceId,
             recipientUserId: senderEmail,
@@ -1404,11 +1385,11 @@ Consider: qualifications match, reliability history, preference match, availabil
             },
             idempotencyKey: `stage-b-escalate-sender-${workspaceId}-${referenceNumber || 'na'}`,
           });
-        } catch (senderErr: any) {
+        } catch (senderErr: unknown) {
           log.warn(`[InboundOpportunityAgent] Sender escalation email failed for ${senderEmail}: ${senderErr?.message}`);
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[InboundOpportunityAgent] escalateUnfillableShifts failed:', err?.message);
     }
   }
@@ -1541,7 +1522,6 @@ Consider: qualifications match, reliability history, preference match, availabil
             const claimKey = (processResult as any).notificationContext?.claimKey;
             let claimWon = true;
             if (claimKey) {
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               const claimResult = await staffingClaimService.attemptClaim({
                 workspaceId,
                 claimKey,
@@ -1581,7 +1561,6 @@ Consider: qualifications match, reliability history, preference match, availabil
             recordsChanged++;
             
             // Update employee behavior score
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             await this.updateEmployeeBehaviorOnAcceptance(processResult.employee.id, workspaceId);
             recordsChanged++;
 
@@ -1619,7 +1598,7 @@ Consider: qualifications match, reliability history, preference match, availabil
                 });
                 notifications.push(`sender:${notifyCtx.senderEmail}:step6_confirming_sent`);
                 log.info(`[InboundOpportunityAgent] Step 6 confirming notification sent to sender: ${notifyCtx.senderEmail}`);
-              } catch (senderErr: any) {
+              } catch (senderErr: unknown) {
                 log.error('[InboundOpportunityAgent] Failed to send step 6 sender notification:', senderErr.message);
               }
             }
@@ -1627,7 +1606,6 @@ Consider: qualifications match, reliability history, preference match, availabil
             // ── ONBOARDING INVITATION (Email 2) ───────────────────────────
             // Send after claim is confirmed won. Fires even if claimKey is absent
             // (single-org path), because claimWon defaults to true.
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             if (processResult.claimWon !== false && notifyCtx?.senderEmail) {
               try {
                 const shift = (processResult as any).shift;
@@ -1668,7 +1646,7 @@ Consider: qualifications match, reliability history, preference match, availabil
                 });
                 notifications.push(`sender:${notifyCtx.senderEmail}:onboarding_invitation_sent`);
                 log.info(`[InboundOpportunityAgent] Onboarding invitation sent to ${notifyCtx.senderEmail} [${confirmationNumber}]`);
-              } catch (onboardErr: any) {
+              } catch (onboardErr: unknown) {
                 log.error('[InboundOpportunityAgent] Failed to send onboarding invitation:', onboardErr.message);
               }
             }
@@ -1686,14 +1664,13 @@ Consider: qualifications match, reliability history, preference match, availabil
                   referenceNumber: notifyCtx?.referenceNumber,
                 });
                 notifications.push(`system:drop_notifications_sent:${(processResult as any).claimKey}`);
-              } catch (dropErr: any) {
+              } catch (dropErr: unknown) {
                 log.warn('[IOA] sendDropNotifications error (non-fatal):', dropErr?.message);
               }
             }
 
             // Trigger Stage D (contractor notification)
             setTimeout(() => {
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               this.notifyContractor(workspaceId, processResult.shift.id).catch((err: unknown) => log.warn('[InboundOpportunity] Contractor notification failed', err));
             }, 1000);
           } else {
@@ -1771,7 +1748,6 @@ Return JSON:
         decision: parsed.decision || 'REVIEW',
         confidence: parsed.confidence || 0.7,
         reasoning: parsed.reasoning || 'AI evaluation completed',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         tokensUsed: result.tokensUsed,
       };
     } catch (error) {
@@ -1941,7 +1917,6 @@ Return JSON:
             .where(eq(stagedShifts.id, stagedShiftId));
           
           // Update contractor stats
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           if (processResult.contractor?.id) {
             await db.update(knownContractors)
               .set({
@@ -1965,7 +1940,7 @@ Return JSON:
               await NotificationDeliveryService.send({ type: 'contractor_confirmation', workspaceId: workspaceId || 'system', recipientUserId: recipientEmail, channel: 'email', body: { to: recipientEmail, subject: processResult.emailContent.subject, html: processResult.emailContent.body.replace(/\n/g, '<br>') } });
               notifications.push('email:contractor_confirmation_sent');
               log.info(`[InboundOpportunityAgent] Contractor confirmation sent to ${recipientEmail}`);
-            } catch (emailError: any) {
+            } catch (emailError: unknown) {
               log.error('[InboundOpportunityAgent] Failed to send contractor email:', emailError);
               notifications.push('email:contractor_confirmation_failed');
             }
@@ -1977,7 +1952,6 @@ Return JSON:
             try {
               const employeeName = `${(processResult as any).employee.firstName} ${(processResult as any).employee.lastName}`.trim();
               const shiftDateStr = (processResult as any).shift.shiftDate
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 ? new Date(processResult.shift.shiftDate).toLocaleDateString('en-US', {
                     weekday: 'long',
                     year: 'numeric',
@@ -2006,7 +1980,7 @@ Return JSON:
               });
               notifications.push(`sender:${notifyCtx.senderEmail}:step7_completed_sent`);
               log.info(`[InboundOpportunityAgent] Step 7 completed notification sent to sender: ${notifyCtx.senderEmail}`);
-            } catch (senderErr: any) {
+            } catch (senderErr: unknown) {
               log.error('[InboundOpportunityAgent] Failed to send step 7 sender notification:', senderErr.message);
             }
           }
@@ -2042,7 +2016,7 @@ Return JSON:
                 await clientProspectService.incrementShiftsFilled(prospect.id);
                 notifications.push(`sender:${notifyCtx.senderEmail}:portal_already_invited`);
               }
-            } catch (portalErr: any) {
+            } catch (portalErr: unknown) {
               log.error('[InboundOpportunityAgent] Failed to send portal invitation:', portalErr.message);
             }
           }
@@ -2110,7 +2084,6 @@ Write a concise, professional email. Return JSON:
       return {
         subject: parsed.subject || `Shift Confirmation - ${shift.shiftDate}`,
         body: parsed.body || 'Your shift has been filled. Details will follow.',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         tokensUsed: result.tokensUsed,
       };
     } catch (error) {

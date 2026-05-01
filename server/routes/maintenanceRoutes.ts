@@ -113,7 +113,6 @@ router.post('/api/maintenance/activate', requireAuth, requirePlatformAdmin, asyn
       estimatedDurationMinutes: data.estimatedDurationMinutes,
       activatedBy: {
         type: 'admin',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         id: user.id,
         // @ts-expect-error — TS migration: fix in refactoring sprint
         name: user.email || (user as any).username
@@ -162,7 +161,6 @@ router.post('/api/maintenance/deactivate', requireAuth, requirePlatformAdmin, as
     if (trinityHeader === 'trinity') {
       deactivatedBy = { type: 'trinity', id: 'trinity-brain', name: 'Trinity AI' };
     } else {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       deactivatedBy = { type: 'admin', id: user.id, name: user.email };
     }
 
@@ -216,7 +214,6 @@ router.post('/api/maintenance/orchestrator/trigger', requireTrinityOrAdmin, asyn
       immediate
     });
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     res.json({ success: true, ...result });
   } catch (error: unknown) {
     log.error('[Maintenance] Orchestrator trigger error:', error);
@@ -227,7 +224,6 @@ router.post('/api/maintenance/orchestrator/trigger', requireTrinityOrAdmin, asyn
 router.post('/api/maintenance/orchestrator/complete', requireTrinityOrAdmin, async (req, res) => {
   try {
     const result = await trinityMaintenanceOrchestrator.completeMaintenance();
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     res.json({ success: true, ...result });
   } catch (error: unknown) {
     log.error('[Maintenance] Orchestrator complete error:', error);

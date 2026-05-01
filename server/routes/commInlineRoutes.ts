@@ -17,7 +17,6 @@ router.get("/alerts/config", requireAuth, async (req: AuthenticatedRequest, res)
     let configs = await alertService.getAlertConfigurations(workspaceId);
     
     if (configs.length === 0) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       configs = await alertService.initializeDefaultConfigs(workspaceId, req.user!);
     }
     res.json({ success: true, data: configs });
@@ -65,7 +64,6 @@ router.put("/alerts/config/:alertType", requireAuth, async (req: AuthenticatedRe
       workspaceId,
       // Tier-2 Zod guard: passthrough strip avoids prototype pollution
       { ...req.body, alertType },
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       req.user!
     );
     res.json({ success: true, data: config });
@@ -91,7 +89,6 @@ router.patch("/alerts/config/:alertType/toggle", requireAuth, async (req: Authen
     
     const config = await alertService.upsertAlertConfiguration(
       workspaceId,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       { alertType, isEnabled },
       req.user!
     );
@@ -158,7 +155,6 @@ router.post("/alerts/:id/acknowledge", requireAuth, async (req: AuthenticatedReq
       return res.status(403).json({ error: "Access denied" });
     }
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const alert = await alertService.acknowledgeAlert(id, req.user!, notes);
     res.json({ success: true, data: alert });
   } catch (error: unknown) {
@@ -181,7 +177,6 @@ router.post("/alerts/:id/resolve", requireAuth, async (req: AuthenticatedRequest
       return res.status(403).json({ error: "Access denied" });
     }
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const alert = await alertService.resolveAlert(id, req.user!, notes);
     res.json({ success: true, data: alert });
   } catch (error: unknown) {
@@ -278,7 +273,6 @@ router.delete("/push/unsubscribe", requireAuth, async (req: AuthenticatedRequest
     const { endpoint } = req.body;
     
     const { pushNotificationService } = await import("../services/pushNotificationService");
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const result = await pushNotificationService.unregisterPushSubscription(req.user!, endpoint);
     
     res.json({ success: true, unsubscribed: result.unsubscribed });
@@ -291,7 +285,6 @@ router.delete("/push/unsubscribe", requireAuth, async (req: AuthenticatedRequest
 router.get("/push/subscriptions", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { pushNotificationService } = await import("../services/pushNotificationService");
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const subscriptions = await pushNotificationService.getUserSubscriptions(req.user!);
     res.json({ success: true, subscriptions });
   } catch (error: unknown) {
@@ -303,7 +296,6 @@ router.get("/push/subscriptions", requireAuth, async (req: AuthenticatedRequest,
 router.post("/push/test", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { pushNotificationService } = await import("../services/pushNotificationService");
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const result = await pushNotificationService.sendPushToUser(req.user!, {
       title: "Test Notification",
       body: "Push notifications are working correctly!",

@@ -34,7 +34,7 @@ const requireRole = (allowedRoles: string[]): RequestHandler => {
 
 router.get('/circuit-breaker/status', requireAuth, requireRole(['root_admin', 'deputy_admin', 'sysop']), (req, res) => {
   const circuits = circuitBreaker.getAllCircuits();
-  const statuses: Record<string, any> = {};
+  const statuses: Record<string, unknown> = {};
   
   for (const circuit of circuits) {
     statuses[circuit.serviceId] = {
@@ -185,7 +185,6 @@ router.post('/financial-audit/report', requireAuth, requireRole(['root_admin', '
       workspaceId,
       new Date(periodStart),
       new Date(periodEnd),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       user.id
     );
 
@@ -262,7 +261,7 @@ router.post('/financial-audit/check-segregation', requireAuth, requireRole(['roo
 
 router.get('/health', requireAuth, (req, res) => {
   const circuits = circuitBreaker.getAllCircuits();
-  const circuitStatuses: Record<string, any> = {};
+  const circuitStatuses: Record<string, unknown> = {};
   
   for (const circuit of circuits) {
     circuitStatuses[circuit.serviceId] = {

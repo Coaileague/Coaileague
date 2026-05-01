@@ -377,7 +377,7 @@ router.get('/pending-approvals', requireAuth, async (req: AuthenticatedRequest, 
       .orderBy(desc((trinityProposedActions as any).createdAt))
       .limit(50);
     res.json({ approvals: pending });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[TrinityScheduling] pending-approvals GET failed:', err?.message);
     res.json({ approvals: [] }); // graceful empty on schema miss
   }
@@ -399,7 +399,7 @@ router.post('/pending-approvals/:id/approve', requireManager, async (req: Authen
       .where(eq((trinityProposedActions as any).id, id))
       .returning();
     res.json({ success: true, approval: updated });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: err.message });
   }
 });
@@ -421,7 +421,7 @@ router.post('/pending-approvals/:id/reject', requireManager, async (req: Authent
       .where(eq((trinityProposedActions as any).id, id))
       .returning();
     res.json({ success: true, approval: updated });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: err.message });
   }
 });

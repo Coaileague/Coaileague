@@ -120,7 +120,7 @@ async function handleCommandEmail(
           workspaceId,
           skipUnsubscribeCheck: true,
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[EmailProcessor] Command reply send failed (non-fatal):', err?.message);
       }
     });
@@ -131,7 +131,7 @@ async function handleCommandEmail(
       actionId: result.actionId,
       message: result.appendToResponse,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[EmailProcessor] Command dispatch failed:', err?.message);
     return { dispatched: false, queued: false };
   }
@@ -178,12 +178,9 @@ export function detectCategoryFromRecipient(toEmail: string): EmailCategory {
   if (local === 'support') return 'support';
   if (local.startsWith('careers') || local === 'jobs' || local === 'apply' || local === 'recruitment') return 'careers';
   // T010 FIX: billing@ and staffing@ were falling through to 'unknown' — now correctly routed.
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   if (local === 'billing' || local === 'invoice' || local === 'invoices' || local === 'accounts') return 'billing';
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   if (local === 'staffing' || local === 'staff' || local === 'scheduling' || local === 'payroll') return 'staffing';
   // L4 Fallback: Route general operations emails to staffing for triage
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   if (local === 'ops' || local === 'operations' || local === 'schedule') return 'staffing';
 
   // L3 CRM: Route calloffs@ to CRM for lead creation if no officer found
@@ -261,17 +258,14 @@ async function extractStructuredData(
   const guardContext: AIRequestContext = {
     workspaceId: 'inbound-email',
     userId: 'email-processor',
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     feature: 'email_classification',
     userInput: `${senderName}\n${subject}\n${bodyText.slice(0, 1500)}`,
   };
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const guardResult = await aiGuardRails.validateRequest(guardContext);
   if (!(guardResult as any).allowed) {
     throw new Error(`Email content blocked by AI guard rails: ${(guardResult as any).reason}`);
   }
 
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const prompts: Record<EmailCategory, string> = {
     calloff: `You are a security operations assistant. Extract calloff information from this email.
 Return ONLY valid JSON with these fields:
@@ -331,14 +325,13 @@ Body: ${bodyText.slice(0, 1500)}`,
     const ai = await getAIClient();
     const response = await ai.generateContent(prompts[category], { // withGemini
       temperature: 0.1,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       maxOutputTokens: 500,
     });
 
     const text = (response as any).trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
     const parsed = JSON.parse(text);
     return { data: parsed, confidence: Number(parsed.confidence) || 0 };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[InboundProcessor] Trinity extraction error:', err.message);
     return { data: {}, confidence: 0 };
   }
@@ -425,7 +418,6 @@ async function processCalloff(
     const confirmSubject = `Calloff Received — ${shiftDate}`;
     const confirmHtml = `<p>Hi ${sender.name},</p><p>Your calloff for <strong>${shiftDate}</strong> has been received and a replacement is being arranged. Your supervisor has been notified.</p><p>— ${PLATFORM.name} Operations</p>`;
     await NotificationDeliveryService.send({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       type: 'internal_email_received',
       workspaceId: sender.workspaceId || 'system',
       recipientUserId: email.fromEmail,
@@ -541,7 +533,6 @@ async function processIncident(
     const confirmSubject = `Incident Report Received — ${incidentNumber}`;
     const confirmHtml = `<p>Hi ${sender.name},</p><p>Your incident report has been received (Reference: <strong>${incidentNumber}</strong>) and routed to your supervisor for review.</p><p>— ${PLATFORM.name} Operations</p>`;
     await NotificationDeliveryService.send({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       type: 'internal_email_received',
       workspaceId: sender.workspaceId || 'system',
       recipientUserId: email.fromEmail,
@@ -574,7 +565,6 @@ async function processDocs(
       const confirmSubject = 'Document Submission — Attachment Required';
       const confirmHtml = `<p>Hi ${sender.name},</p><p>We received your email but no document was attached. Please resubmit your email with the document attached.</p><p>— ${PLATFORM.name} Document Processing</p>`;
       await NotificationDeliveryService.send({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         type: 'internal_email_received',
         workspaceId: sender.workspaceId || 'system',
         recipientUserId: email.fromEmail,
@@ -679,7 +669,6 @@ async function processDocs(
     const confirmSubject = 'Document Received';
     const confirmHtml = `<p>Hi ${sender.name},</p><p>Your document${attachments.length > 1 ? 's have' : ' has'} been received and routed for review. ${reviewerNote}</p><p>— CoAIleague Document Processing</p>`;
     await NotificationDeliveryService.send({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       type: 'internal_email_received',
       workspaceId: sender.workspaceId || 'system',
       recipientUserId: email.fromEmail,
@@ -778,7 +767,6 @@ async function processSupport(
       const subject = `${replySubjectPrefix} ${email.subject || (replyLang === 'es' ? 'Su solicitud de soporte' : 'Your Support Request')}`;
       const html = `${replyGreeting(senderName.split(' ')[0] || '')}<p>${faqAnswer}</p>${replyFaqFollowup}`;
       await NotificationDeliveryService.send({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         type: 'internal_email_received',
         workspaceId,
         recipientUserId: email.fromEmail,
@@ -800,7 +788,6 @@ async function processSupport(
       const subject = `${replySubjectPrefix} ${email.subject || (replyLang === 'es' ? 'Su solicitud de soporte' : 'Your Support Request')}`;
       const html = `${replyGreeting(senderName.split(' ')[0] || '')}<p>${instantAnswer}</p>${replySignoff}`;
       await NotificationDeliveryService.send({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         type: 'internal_email_received',
         workspaceId,
         recipientUserId: email.fromEmail,
@@ -829,7 +816,6 @@ async function processSupport(
           : '<p>If this didn\'t fully resolve your question, reply here and a specialist will follow up.</p><p>— Trinity Support</p>';
         const html = `${replyGreeting(senderName.split(' ')[0] || '')}<p>${aiAnswer.replace(/\n/g, '<br>')}</p>${aiFollowup}`;
         await NotificationDeliveryService.send({
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           type: 'internal_email_received',
           workspaceId,
           recipientUserId: email.fromEmail,
@@ -896,7 +882,6 @@ async function processSupport(
       ? `${replyGreeting(senderName.split(' ')[0] || '')}<p>Hemos recibido su solicitud de soporte (Ticket: <strong>${ticketNumber}</strong>). ${routingNoteLocalized} Le daremos seguimiento en breve.</p><p>— Soporte de Trinity</p>`
       : `${replyGreeting(senderName.split(' ')[0] || '')}<p>We've received your support request (Ticket: <strong>${ticketNumber}</strong>). ${routingNoteLocalized} We will follow up with you shortly.</p><p>— Trinity Support</p>`;
     await NotificationDeliveryService.send({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       type: 'internal_email_received',
       workspaceId,
       recipientUserId: email.fromEmail,
@@ -1066,7 +1051,7 @@ async function processCareersApplication(
           { ...candidate, qualificationScore: screenResult.score, stage: 'screening' },
           workspaceId,
         );
-      } catch (emailErr: any) {
+      } catch (emailErr: unknown) {
         log.warn('[CareersPipeline] Could not auto-send Round 1 email:', emailErr.message);
       }
     }
@@ -1089,7 +1074,7 @@ async function processCareersApplication(
       downstreamRecordId: candidate.id,
       downstreamRecordType: 'interview_candidate',
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[CareersPipeline] Error processing application:', err.message);
     return {
       needsReview: true,
@@ -1154,7 +1139,7 @@ async function resolveWorkspaceFromCareersAlias(toEmail: string): Promise<string
 async function processStaffing(
   email: ParsedInboundEmail,
   sender: ResolvedSender | null,
-  aiData: Record<string, any>,
+  aiData: Record<string, unknown>,
   logId: string,
 ): Promise<{ needsReview?: boolean; reviewReason?: string; actionTaken?: string }> {
   const workspaceId = sender?.workspaceId;
@@ -1228,7 +1213,7 @@ async function processStaffing(
           sessionId: `email-staffing-${logId}`,
         });
         log.info(`[processStaffing] Auto-fill triggered for workspace ${workspaceId} — ${openCount} open shifts`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[processStaffing] Auto-fill trigger failed (non-fatal):', err?.message);
       }
     });
@@ -1248,7 +1233,7 @@ No action needed on your part.`,
         source: 'inbound_staffing_pipeline',
         idempotencyKey: `staffing-email-${logId}`,
       } as any);
-    } catch (notifErr: any) {
+    } catch (notifErr: unknown) {
       log.warn('[processStaffing] Notification failed (non-fatal):', notifErr?.message);
     }
 
@@ -1256,7 +1241,7 @@ No action needed on your part.`,
       needsReview: false,
       actionTaken: `staffing.auto_fill.triggered.${openCount}_open_shifts`,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[processStaffing] Unexpected error:', err?.message);
     return { needsReview: true, reviewReason: `processStaffing error: ${err?.message}` };
   }
@@ -1299,7 +1284,6 @@ export async function processInboundEmail(email: ParsedInboundEmail): Promise<Pr
       const ackSubject = `Re: ${email.subject || 'Your message to CoAIleague'}`;
       const ackHtml = `<p>Hi there,</p><p>Thanks for emailing CoAIleague. We received your message and our team will follow up shortly.</p><p>— CoAIleague Operations</p>`;
       await NDS.send({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         type: 'internal_email_received',
         workspaceId: 'system',
         recipientUserId: email.fromEmail,
@@ -1421,7 +1405,6 @@ export async function processInboundEmail(email: ParsedInboundEmail): Promise<Pr
             processedAt: new Date(),
           })
           .where(eq(inboundEmailLog.id, logId));
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return { logId, status: 'tier_not_met', message: `Document email routing requires Professional plan (workspace on ${workspaceTier})` };
       }
     } catch (tierErr) {
@@ -1501,20 +1484,16 @@ export async function processInboundEmail(email: ParsedInboundEmail): Promise<Pr
   let pipelineResult: Awaited<ReturnType<typeof processCalloff>> = {};
   try {
     if (category === 'calloff') {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       pipelineResult = await processCalloff(email, sender, aiData, logId);
     } else if (category === 'incident') {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       pipelineResult = await processIncident(email, sender, aiData, logId);
     } else if (category === 'docs') {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       pipelineResult = await processDocs(email, sender, aiData, logId);
     } else if (category === 'support') {
       pipelineResult = await processSupport(email, sender, aiData, workspaceId, logId);
     } else if (category === 'careers') {
       pipelineResult = await processCareersApplication(email, workspaceId!, logId);
     } else if (category === 'staffing') {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       pipelineResult = await processStaffing(email, sender, aiData, logId);
     } else {
       pipelineResult = {
@@ -1522,7 +1501,7 @@ export async function processInboundEmail(email: ParsedInboundEmail): Promise<Pr
         reviewReason: `Unknown email category — recipient: ${email.toEmail}`,
       };
     }
-  } catch (pipelineErr: any) {
+  } catch (pipelineErr: unknown) {
     const failMsg = `Pipeline ${category} threw: ${pipelineErr.message}`;
     log.error('[InboundProcessor] Pipeline error:', failMsg);
     await db.update(inboundEmailLog)
@@ -1535,7 +1514,6 @@ export async function processInboundEmail(email: ParsedInboundEmail): Promise<Pr
 
     // Publish event so Trinity and monitors react
     publishEvent(
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       platformEventBus.publish({
         type: 'inbound_email_failed',
         category: 'communications',

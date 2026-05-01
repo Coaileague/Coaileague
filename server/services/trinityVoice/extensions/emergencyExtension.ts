@@ -67,7 +67,7 @@ export function handleEmergency(params: {
       `<Record maxLength="120" playBeep="true" />` +
       say('Your message has been received. A supervisor will contact you immediately.')
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[emergencyExtension] Error:', err?.message);
     return twiml(say('We encountered an error. If this is a life-threatening emergency please hang up and call 9-1-1. Otherwise press 0 to return to the main menu.'));
   }

@@ -90,10 +90,10 @@ export default function InboundOpportunitiesPage() {
   });
 
   const workflows = workflowsQuery.data?.workflows || [];
-  const activeCount = workflows.filter((w: any) => w.status === "active" || w.status === "in_progress").length;
-  const completedCount = workflows.filter((w: any) => w.status === "completed").length;
-  const pendingCount = workflows.filter((w: any) => w.status === "pending").length;
-  const escalatedCount = workflows.filter((w: any) => w.status === "escalated").length;
+  const activeCount = workflows.filter((w) => w.status === "active" || w.status === "in_progress").length;
+  const completedCount = workflows.filter((w) => w.status === "completed").length;
+  const pendingCount = workflows.filter((w) => w.status === "pending").length;
+  const escalatedCount = workflows.filter((w) => w.status === "escalated").length;
 
   const summaryCards = [
     { label: "Active", value: activeCount.toString(), icon: Play, color: "text-blue-500" },
@@ -203,7 +203,7 @@ export default function InboundOpportunitiesPage() {
                   </Card>
                 )}
 
-                {workflows.map((wf: any) => (
+                {workflows.map((wf) => (
                   <Card key={wf.id} data-testid={`card-workflow-${wf.id}`}>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between gap-3 flex-wrap">

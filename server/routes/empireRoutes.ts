@@ -73,7 +73,6 @@ router.get("/empire/scan/:workspaceId", requireAuth, async (req: Request, res: R
     res.json({ success: true, ...result, creditsUsed: EMPIRE_CREDIT_COSTS.strategyScan });
   } catch (error: unknown) {
     // Refund credits on error
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (creditsDeducted) {
       await subagentBanker.refillCredits({
         workspaceId, userId,
@@ -114,7 +113,6 @@ router.get("/empire/strategies/:workspaceId", requireAuth, async (req: Request, 
     const summary = await growthStrategist.getStrategySummary(workspaceId);
     res.json({ success: true, ...summary, creditsUsed: EMPIRE_CREDIT_COSTS.strategySummary });
   } catch (error: unknown) {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (creditsDeducted) {
       await subagentBanker.refillCredits({
         workspaceId, userId,
@@ -155,7 +153,6 @@ router.get("/empire/tools/:workspaceId", requireAuth, async (req: Request, res: 
     const opportunities = await growthStrategist.scanForToolOpportunities(workspaceId);
     res.json({ success: true, opportunities, creditsUsed: EMPIRE_CREDIT_COSTS.toolOpportunities });
   } catch (error: unknown) {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (creditsDeducted) {
       await subagentBanker.refillCredits({
         workspaceId, userId,
@@ -200,7 +197,6 @@ router.get("/empire/health/:workspaceId", requireAuth, async (req: Request, res:
     const report = await holisticGrowthEngine.analyzeBusinessHealth(workspaceId);
     res.json({ success: true, report, creditsUsed: EMPIRE_CREDIT_COSTS.healthAnalysis });
   } catch (error: unknown) {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (creditsDeducted) {
       await subagentBanker.refillCredits({
         workspaceId, userId,
@@ -242,7 +238,6 @@ router.post("/empire/health/refresh/:workspaceId", requireAuth, async (req: Requ
     const report = await holisticGrowthEngine.analyzeBusinessHealth(workspaceId);
     res.json({ success: true, report, refreshed: true, creditsUsed: EMPIRE_CREDIT_COSTS.healthRefresh });
   } catch (error: unknown) {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (creditsDeducted) {
       await subagentBanker.refillCredits({
         workspaceId, userId,

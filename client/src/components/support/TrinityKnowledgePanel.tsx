@@ -72,24 +72,21 @@ export function TrinityKnowledgePanel() {
   });
 
   const reseedMutation = useMutation({
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     mutationFn: () => apiRequest("/api/platform/knowledge/reseed", { method: "POST" }),
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/platform/knowledge/static"] });
       toast({ title: "Knowledge base reseeded", description: `${data.moduleCount} modules loaded.` });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Reseed failed", description: err.message, variant: "destructive" });
     },
   });
 
   const openModule = async (moduleKey: string) => {
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const res = await apiRequest(`/api/platform/knowledge/static/${moduleKey}`);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setSelectedModule(res.module);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: "Failed to load module", description: err.message, variant: "destructive" });
     }
   };

@@ -69,7 +69,7 @@ export async function runWellnessCheckSweep(): Promise<WellnessSweepResult> {
   let candidates: WellnessCandidate[];
   try {
     candidates = await findLongShiftClockouts();
-  } catch (err: any) {
+  } catch (err: unknown) {
     result.errors.push(`scan:${err?.message}`);
     return result;
   }
@@ -87,7 +87,7 @@ export async function runWellnessCheckSweep(): Promise<WellnessSweepResult> {
       const sent = await sendCheckInSms(c);
       if (sent) result.smsSent++;
       await recordSent(c);
-    } catch (err: any) {
+    } catch (err: unknown) {
       result.errors.push(`${c.timeEntryId}:${err?.message}`);
       log.warn(`[officerWellness] ${c.timeEntryId} failed:`, err?.message);
     }
@@ -121,11 +121,11 @@ export async function runWellnessStaleSweep(): Promise<WellnessStaleResult> {
       try {
         await markNoReply(row.workspace_id, row.id, row.employee_id, row.time_entry_id);
         result.noReplyNoted++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         result.errors.push(`${row.id}:${err?.message}`);
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     result.errors.push(`sweep:${err?.message}`);
   }
 
@@ -178,7 +178,7 @@ export async function handleWellnessReply(params: {
           audit.id,
         ],
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[officerWellness] resolve-ok write failed:', err?.message);
     }
     await logActionAudit({
@@ -217,10 +217,10 @@ export async function handleWellnessReply(params: {
     caseId = sc.case_number;
     try {
       await notifyHumanAgents({ supportCase: sc, workspaceId: params.workspaceId });
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.warn('[officerWellness] notify agents failed (non-fatal):', e?.message);
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[officerWellness] support case create failed:', err?.message);
   }
 
@@ -242,7 +242,7 @@ export async function handleWellnessReply(params: {
         audit.id,
       ],
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[officerWellness] resolve-help write failed:', err?.message);
   }
 
@@ -360,7 +360,7 @@ async function sendCheckInSms(c: WellnessCandidate): Promise<boolean> {
         severity: 'low',
         metadata: { timeEntryId: c.timeEntryId, employeeId: c.employeeId, hoursWorked: hours },
       } as any);
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[officerWellness] event publish failed (non-fatal):', err?.message);
     }
   }
@@ -388,7 +388,7 @@ async function recordSent(c: WellnessCandidate): Promise<void> {
         String(c.hoursWorked),
       ],
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[officerWellness] audit write failed (non-fatal):', err?.message);
   }
 }

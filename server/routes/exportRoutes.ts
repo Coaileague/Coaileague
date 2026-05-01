@@ -12,7 +12,7 @@ const log = createLogger('ExportRoutes');
 
 const router = Router();
 
-function auditExport(req: AuthenticatedRequest, category: string, filename: string, filters?: Record<string, any>) {
+function auditExport(req: AuthenticatedRequest, category: string, filename: string, filters?: Record<string, unknown>) {
   const workspaceId = req.workspaceId;
   const userId = req.user?.id;
   universalAudit.log({
@@ -21,7 +21,6 @@ function auditExport(req: AuthenticatedRequest, category: string, filename: stri
     action: 'data_export',
     entityType: 'export',
     entityId: category,
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     description: `Regulatory export: ${category} — file: ${filename}`,
     metadata: { category, filename, filters: filters || {}, ip: req.ip, userAgent: req.headers['user-agent'] },
   }).catch((err: any) => log.warn('[ExportAudit] Failed to write export audit log', { category, error: err?.message }));
@@ -212,7 +211,6 @@ router.post("/profit-loss", requireManager, async (req: AuthenticatedRequest, re
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const { format = 'csv', startDate, endDate } = req.body;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const result = await exportProfitLoss(workspaceId, userId, {
       format: format as any,
       startDate: startDate ? new Date(startDate) : undefined,
@@ -299,7 +297,7 @@ router.post("/tenant-takeout", requireOwner, async (req: AuthenticatedRequest, r
           sql`SELECT * FROM ${sql.identifier(table)} WHERE workspace_id = ${workspaceId}`,
         );
         return ((r as any).rows ?? []) as T[];
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn(`[tenant-takeout] ${table} export failed:`, err?.message);
         return [];
       }
@@ -323,7 +321,7 @@ router.post("/tenant-takeout", requireOwner, async (req: AuthenticatedRequest, r
          WHERE aa.workspace_id = ${workspaceId}
       `);
       ndaAcceptances = ((r as any).rows ?? []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[tenant-takeout] auditor_nda_acceptances export failed:', err?.message);
     }
 

@@ -29,7 +29,6 @@ import { z } from 'zod';
 const log = createLogger('AiBrainRoutes');
 
 // Type for authenticated request
-// @ts-expect-error — TS migration: fix in refactoring sprint
 interface AuthenticatedRequest extends Request {
   user?: {
     id: string;

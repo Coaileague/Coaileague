@@ -316,7 +316,6 @@ export const SEVERITY_GUIDE = [
 
 export async function logBreachIncident(incident: BreachIncident): Promise<void> {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(auditLogs).values({
       workspaceId: incident.affectedWorkspaceIds?.[0] || 'platform',
       userId: incident.reportedBy,

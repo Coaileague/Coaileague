@@ -22,7 +22,7 @@ interface LogEntry {
   level: LogLevel;
   service: string;
   message: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   traceId?: string;
   spanId?: string;
   userId?: number;
@@ -110,7 +110,7 @@ class LogAggregationService {
     service: string,
     message: string,
     options: {
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
       traceId?: string;
       spanId?: string;
       userId?: number;

@@ -34,7 +34,7 @@ export type JobPriority = 'critical' | 'high' | 'normal' | 'low';
 
 export interface JobDefinition {
   type: string;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   workspaceId?: string;
   priority?: JobPriority;
   maxRetries?: number;
@@ -51,7 +51,7 @@ export interface Job extends JobDefinition {
   nextAttemptAt?: Date;
   completedAt?: Date;
   error?: string;
-  result?: Record<string, any>;
+  result?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -521,9 +521,7 @@ class DurableJobQueueService {
       completedAt: row.completedAt ? new Date(row.completedAt) : undefined,
       error: row.error || undefined,
       result: row.result as Record<string, any> | undefined,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       createdAt: new Date(row.createdAt),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       updatedAt: new Date(row.updatedAt),
     };
   }

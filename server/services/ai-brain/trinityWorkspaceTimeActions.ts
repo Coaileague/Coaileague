@@ -14,12 +14,9 @@ function mkAction(actionId: string, fn: (params: any) => Promise<any>): ActionHa
     inputSchema: { type: 'object' as const, properties: {} },
     handler: async (req: ActionRequest): Promise<ActionResult> => {
       try {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const data = await fn(req.params || req.payload || {});
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return { success: true, data };
-      } catch (err: any) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
+      } catch (err: unknown) {
         return { success: false, error: err?.message || 'Unknown error' };
       }
     },

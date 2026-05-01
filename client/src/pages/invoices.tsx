@@ -196,7 +196,6 @@ const invoicesPageConfig: CanvasPageConfig = {
                 View Details
               </DropdownMenuItem>
               <DropdownMenuItem 
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 onClick={() => handleEditDetail(invoice)}
                 data-testid={`button-edit-invoice-${invoice.id}`}
               >
@@ -376,7 +375,6 @@ export default function Invoices() {
     resolver: zodResolver(insertInvoiceSchema),
     defaultValues: {
       clientId: "",
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       dueDate: "",
       subtotal: "",
       taxRate: "0",
@@ -391,7 +389,6 @@ export default function Invoices() {
     if (isEditDialogOpen && selectedInvoice) {
       editForm.reset({
         clientId: selectedInvoice.clientId,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         dueDate: selectedInvoice.dueDate ? parseLocalDate(selectedInvoice.dueDate).toISOString().split('T')[0] : "",
         subtotal: selectedInvoice.subtotal,
         taxRate: selectedInvoice.taxRate || "0",
@@ -422,7 +419,6 @@ export default function Invoices() {
     })),
     defaultValues: {
       clientId: "",
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       dueDate: "",
       subtotal: "",
       taxRate: "0",
@@ -526,7 +522,6 @@ export default function Invoices() {
 
   const isPastDue = (invoice: Invoice) => {
     if (invoice.status === 'paid' || !invoice.dueDate) return false;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     return parseLocalDate(invoice.dueDate) < new Date();
   };
 
@@ -588,7 +583,6 @@ export default function Invoices() {
       case 'past_due':
         result = result.filter(i => {
           if (i.status === 'overdue') return true;
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           if (i.status === 'sent' && i.dueDate && parseLocalDate(i.dueDate) < now) return true;
           return false;
         });
@@ -597,7 +591,6 @@ export default function Invoices() {
         result = result.filter(i => {
           if (i.status !== 'sent' && i.status !== 'overdue') return false;
           if (!i.dueDate) return false;
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           const daysUntilDue = Math.ceil((parseLocalDate(i.dueDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
           return daysUntilDue <= 7 && daysUntilDue > 0;
         });
@@ -618,13 +611,11 @@ export default function Invoices() {
 
     if (filterStartDate) {
       const start = parseLocalDate(filterStartDate);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       result = result.filter(inv => inv.issueDate && parseLocalDate(inv.issueDate) >= start);
     }
 
     if (filterEndDate) {
       const end = parseLocalDate(filterEndDate);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       result = result.filter(inv => inv.issueDate && parseLocalDate(inv.issueDate) <= end);
     }
 
@@ -654,7 +645,6 @@ export default function Invoices() {
     const outstanding = invoiceList.filter(i => i.status === 'sent' || i.status === 'overdue').reduce((sum, inv) => sum + (parseFloat(String(inv.total || 0))), 0);
     const overdue = invoiceList.filter(i => {
       if (i.status === 'overdue') return true;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (i.status === 'sent' && i.dueDate && parseLocalDate(i.dueDate) < now) return true;
       return false;
     }).reduce((sum, inv) => sum + (parseFloat(String(inv.total || 0))), 0);
@@ -835,21 +825,20 @@ export default function Invoices() {
   const hasActiveFilters = filterClientId || filterStartDate || filterEndDate || searchQuery;
 
   const generateFromHoursMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       const response = await apiRequest("POST", "/api/invoices/generate-from-hours", { ...data, workspaceId });
       return response.json();
     },
     onSuccess: () => {
       toast({ title: "Invoice Generated", description: "The invoice has been successfully generated from billable hours." });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices", workspaceId] });
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setIsGenerateFromHoursOpen(false);
     },
     onError: (error: Error) => toast({ title: "Generation Failed", description: error.message || "Failed to generate invoice from hours. Please check your data.", variant: "destructive" }),
   });
 
   const createInvoiceMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       const response = await apiRequest("POST", "/api/invoices", { ...data, workspaceId });
       return response.json();
     },
@@ -862,7 +851,7 @@ export default function Invoices() {
   });
 
   const generateInvoiceMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       const response = await apiRequest("POST", "/api/invoices/generate-from-time", { ...data, workspaceId });
       return response.json();
     },
@@ -879,7 +868,7 @@ export default function Invoices() {
       const response = await apiRequest("POST", "/api/invoices/auto-generate", { workspaceId });
       return response.json();
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       toast({ title: "Auto-Generate Complete", description: data?.message || "Invoices auto-generated from unbilled hours." });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices", workspaceId] });
     },
@@ -1031,7 +1020,6 @@ export default function Invoices() {
             <ResponsiveDialog
               open={isGenerateDialogOpen}
               onOpenChange={setIsGenerateDialogOpen}
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               trigger={
                 <Button variant="outline" data-testid="button-open-generate">
                   <Clock className="mr-2 h-4 w-4" />

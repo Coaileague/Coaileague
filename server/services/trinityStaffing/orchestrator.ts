@@ -218,7 +218,6 @@ class TrinityStaffingOrchestrator {
         const deductResult = await premiumFeatureGating.recordUsage(
           workspaceId,
           'trinity_staffing_request_parse',
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           userId,
           1,
           { emailId: emailData.id }
@@ -381,7 +380,6 @@ class TrinityStaffingOrchestrator {
     const deductResult = await premiumFeatureGating.recordUsage(
       workflow.workspaceId,
       'trinity_staffing_auto_assign',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId,
       1,
       { workflowId: workflow.id }
@@ -575,7 +573,6 @@ class TrinityStaffingOrchestrator {
     const deductResult = await premiumFeatureGating.recordUsage(
       workflow.workspaceId,
       'trinity_staffing_confirmation',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId,
       1,
       { workflowId: workflow.id }
@@ -747,7 +744,6 @@ class TrinityStaffingOrchestrator {
           and(
             eq(employees.workspaceId, workflow.workspaceId),
             eq(employees.isActive, true),
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             inArray(employees.workspaceRole, [...MANAGER_ROLES])
           )
         )

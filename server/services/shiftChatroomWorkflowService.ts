@@ -64,7 +64,7 @@ export interface ChatroomMessage {
   attachmentUrl?: string;
   attachmentType?: string;
   attachmentSize?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 class ShiftChatroomWorkflowService {
@@ -105,8 +105,8 @@ class ShiftChatroomWorkflowService {
     context: OrchestrationContext,
     step: OrchestrationStep,
     status: StepStatus,
-    inputPayload?: Record<string, any>,
-    outputPayload?: Record<string, any>,
+    inputPayload?: Record<string, unknown>,
+    outputPayload?: Record<string, unknown>,
     error?: string
   ): Promise<void> {
     try {
@@ -189,7 +189,7 @@ class ShiftChatroomWorkflowService {
             joinedAt: new Date(),
           });
         }
-      } catch (memberErr: any) {
+      } catch (memberErr: unknown) {
         log.warn('[ShiftChatroom] provisionChatroom: failed to pre-add member (non-fatal):', memberErr?.message);
       }
     }
@@ -392,7 +392,7 @@ class ShiftChatroomWorkflowService {
             new Date(shift.startTime),
             new Date(shift.endTime)
           );
-        } catch (botErr: any) {
+        } catch (botErr: unknown) {
           log.warn('[ShiftChatroomWorkflow] ReportBot welcome failed (non-blocking):', botErr.message);
         }
       })();
@@ -430,7 +430,7 @@ class ShiftChatroomWorkflowService {
         chatroomId,
         steps,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(`[ShiftChatroom] Error in step ${currentStep}:`, error);
       steps.push({ step: currentStep, status: 'failed', duration: Date.now() - stepStart });
       // Log error to UniversalStepLogger
@@ -582,7 +582,7 @@ class ShiftChatroomWorkflowService {
             );
             log.info(`[ShiftChatroom] Auto-generated Shift Transparency PDF for DAR ${darResult.darId}`);
           }
-        } catch (pdfErr: any) {
+        } catch (pdfErr: unknown) {
           log.error(`[ShiftChatroom] Auto PDF generation failed (non-blocking):`, pdfErr.message);
         }
 
@@ -610,7 +610,7 @@ class ShiftChatroomWorkflowService {
         darId: darResult.darId,
         steps,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(`[ShiftChatroom] Error in step ${currentStep}:`, error);
       steps.push({ step: currentStep, status: 'failed', duration: Date.now() - stepStart });
       // Log error to UniversalStepLogger
@@ -751,14 +751,14 @@ class ShiftChatroomWorkflowService {
               message.content,
               chatroom.shiftId || null
             );
-          } catch (botErr: any) {
+          } catch (botErr: unknown) {
             log.warn('[ShiftChatroomWorkflow] Bot processing failed (non-blocking):', botErr.message);
           }
         })();
       }
 
       return { success: true, messageId };
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[ShiftChatroom] Error sending message:', error);
       return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
@@ -1188,7 +1188,7 @@ class ShiftChatroomWorkflowService {
         .where(eq(darReports.id, darId));
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
@@ -1226,7 +1226,7 @@ class ShiftChatroomWorkflowService {
       log.info(`[ShiftChatroom] DAR ${darId} sent to client`);
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
@@ -1354,7 +1354,7 @@ class ShiftChatroomWorkflowService {
         isPremium: true,
         creditCost: access.creditCost,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[ShiftChatroom] Error enabling Trinity recording:', error);
       return {
         success: false,
@@ -1477,7 +1477,7 @@ class ShiftChatroomWorkflowService {
             updatedAt: new Date(),
           })
           .where(eq(shiftChatrooms.id, chatroomId));
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.error('[ShiftChatroom] Failed to update chatroom after transcript:', (err instanceof Error ? err.message : String(err)));
       }
 
@@ -1492,7 +1492,7 @@ class ShiftChatroomWorkflowService {
         actionItems: transcript.actionItems,
         creditsUsed: deduction.creditsDeducted,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[ShiftChatroom] Error generating transcript:', error);
       return {
         success: false,

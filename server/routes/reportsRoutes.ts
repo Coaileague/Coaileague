@@ -189,7 +189,6 @@ router.post('/share', requireManager, async (req: AuthenticatedRequest, res) => 
 
 router.get('/billable-hours', requireSupervisor, requireStarter, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspace = await storage.getWorkspaceByOwnerId(req.user?.id) || await storage.getWorkspaceByMembership(req.user.id);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
@@ -218,7 +217,6 @@ router.get('/billable-hours', requireSupervisor, requireStarter, async (req: Aut
 
 router.get('/payroll', requireManager, requireProfessional, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspace = await storage.getWorkspaceByOwnerId(req.user.id) || await storage.getWorkspaceByMembership(req.user.id);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
@@ -246,7 +244,6 @@ router.get('/payroll', requireManager, requireProfessional, async (req: Authenti
 
 router.get('/client-summary', requireManager, requireStarter, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspace = await storage.getWorkspaceByOwnerId(req.user.id) || await storage.getWorkspaceByMembership(req.user.id);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
@@ -274,7 +271,6 @@ router.get('/client-summary', requireManager, requireStarter, async (req: Authen
 
 router.get('/employee-activity', requireSupervisor, requireStarter, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspace = await storage.getWorkspaceByOwnerId(req.user.id) || await storage.getWorkspaceByMembership(req.user.id);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
@@ -302,7 +298,6 @@ router.get('/employee-activity', requireSupervisor, requireStarter, async (req: 
 
 router.get('/audit-logs', requireManager, requireProfessional, async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspace = await storage.getWorkspaceByOwnerId(req.user.id) || await storage.getWorkspaceByMembership(req.user.id);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
@@ -479,7 +474,6 @@ router.post('/auto-generate', requireManager, async (req: AuthenticatedRequest, 
         .from(timeEntriesTable)
         .where(and(
           eq(timeEntriesTable.workspaceId, workspaceId),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           eq(timeEntriesTable.userId, userId),
           gte(timeEntriesTable.clockIn, weekStart),
           lt(timeEntriesTable.clockIn, weekEnd)

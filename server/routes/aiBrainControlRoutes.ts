@@ -80,7 +80,6 @@ router.post('/services/:serviceName/pause', requirePlatformAdmin, async (req: Re
     
     const result = await serviceControlManager.pauseService(
       serviceName as OrchestrationServiceName,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       user?.id,
       reason
     );
@@ -111,7 +110,6 @@ router.post('/services/:serviceName/resume', requirePlatformAdmin, async (req: R
     
     const result = await serviceControlManager.resumeService(
       serviceName as OrchestrationServiceName,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       user?.id
     );
     
@@ -169,12 +167,10 @@ router.post('/workflows/:runId/cancel', requirePlatformAdmin, async (req: Reques
     const { reason } = req.body;
     const user = req.user;
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await workflowLedger.cancelRun(runId, reason || `Cancelled by ${user.email || user.id}`);
     
     aiBrainEvents.emit('workflow_cancelled', {
       runId,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       cancelledBy: user.id,
       reason,
       timestamp: new Date().toISOString(),
@@ -207,7 +203,6 @@ router.post('/workflows/:runId/retry', requirePlatformAdmin, async (req: Request
       {
         source: 'api',
         workspaceId: workflow.workspaceId || undefined,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         userId: user.id,
         parentRunId: runId,
       },
@@ -217,7 +212,6 @@ router.post('/workflows/:runId/retry', requirePlatformAdmin, async (req: Request
     aiBrainEvents.emit('workflow_retried', {
       originalRunId: runId,
       newRunId: newRun.id,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       retriedBy: user.id,
       timestamp: new Date().toISOString(),
     });
@@ -247,7 +241,6 @@ router.post('/commitments/:commitmentId/approve', requirePlatformAdmin, async (r
     const { commitmentId } = req.params;
     const user = req.user;
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const result = await commitmentManager.approveCommitment(commitmentId, user.id);
     
     if (!result) {
@@ -271,7 +264,6 @@ router.post('/commitments/:commitmentId/reject', requirePlatformAdmin, async (re
       return res.status(400).json({ error: 'Reason is required for rejection' });
     }
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const result = await commitmentManager.rejectCommitment(commitmentId, user.id, reason);
     
     if (!result) {
@@ -295,7 +287,6 @@ router.post('/test-alert', requirePlatformAdmin, async (req: Request, res: Respo
       type,
       message,
       actionId: 'test.alert',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       triggeredBy: user.id,
       timestamp: new Date().toISOString(),
     });

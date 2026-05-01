@@ -86,7 +86,7 @@ function LogInspectionDialog({ open, onOpenChange }: { open: boolean; onOpenChan
       onOpenChange(false);
       setWeaponId(""); setFindings(""); setInspectionType("routine"); setCondition("good");
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Failed to log inspection", description: err?.message || "Try again.", variant: "destructive" });
     },
   });
@@ -192,7 +192,7 @@ function RecordQualificationDialog({ open, onOpenChange }: { open: boolean; onOp
       onOpenChange(false);
       setEmployeeId(""); setCaliber(""); setScore(""); setMaxScore(""); setInstructorName("");
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Failed to record qualification", description: err?.message || "Try again.", variant: "destructive" });
     },
   });
@@ -319,7 +319,7 @@ function ReceiveAmmoDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       onOpenChange(false);
       setAmmoInventoryId(""); setCaliber(""); setQuantity(""); setReason(""); setManufacturer(""); setReorderThreshold("");
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Failed to receive ammo", description: err?.message || "Try again.", variant: "destructive" });
     },
   });

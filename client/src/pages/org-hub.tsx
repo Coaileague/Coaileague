@@ -193,7 +193,7 @@ export default function OrgHub() {
       setNewBranchState("");
       toast({ title: "Branch created", description: "New sub-organization added to your network" });
     },
-    onError: (e: any) => toast({ title: "Failed to create branch", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Failed to create branch", description: e.message, variant: "destructive" }),
   });
 
   const attachBranch = useMutation({
@@ -206,7 +206,7 @@ export default function OrgHub() {
       setAttachLabel("");
       toast({ title: "Organization linked", description: "Workspace attached to your org network" });
     },
-    onError: (e: any) => toast({ title: "Failed to attach organization", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Failed to attach organization", description: e.message, variant: "destructive" }),
   });
 
   const detachBranch = useMutation({
@@ -215,12 +215,12 @@ export default function OrgHub() {
       queryClient.invalidateQueries({ queryKey: ["/api/workspace/org-tree"] });
       toast({ title: "Branch detached", description: "The organization is now independent" });
     },
-    onError: (e: any) => toast({ title: "Failed to detach", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Failed to detach", description: e.message, variant: "destructive" }),
   });
 
   const batchPayroll = useMutation({
     mutationFn: (body: object) => apiRequest("POST", "/api/workspace/sub-orgs/batch-payroll", body),
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       setBatchResult(data);
       setShowBatchPayrollModal(false);
       toast({
@@ -228,12 +228,12 @@ export default function OrgHub() {
         description: `${data.summary.succeeded}/${data.summary.total} organizations processed`,
       });
     },
-    onError: (e: any) => toast({ title: "Batch payroll failed", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Batch payroll failed", description: e.message, variant: "destructive" }),
   });
 
   const batchInvoice = useMutation({
     mutationFn: (body: object) => apiRequest("POST", "/api/workspace/sub-orgs/batch-invoices", body),
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       setBatchResult(data);
       setShowBatchInvoiceModal(false);
       toast({
@@ -241,7 +241,7 @@ export default function OrgHub() {
         description: `${data.summary.succeeded}/${data.summary.total} organizations invoiced — $${(data.summary.totalInvoiced || 0).toFixed(2)} total`,
       });
     },
-    onError: (e: any) => toast({ title: "Batch invoicing failed", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Batch invoicing failed", description: e.message, variant: "destructive" }),
   });
 
   const pageConfig: CanvasPageConfig = {

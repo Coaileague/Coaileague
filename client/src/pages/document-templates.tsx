@@ -223,7 +223,7 @@ export default function DocumentTemplatesPage() {
       setShowCreateModal(false);
       setForm({ ...EMPTY_FORM });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Error", description: err.message || "Failed to create template", variant: "destructive" });
     },
   });
@@ -238,7 +238,7 @@ export default function DocumentTemplatesPage() {
       toast({ title: "Template Updated", description: "Document template has been updated." });
       setEditTemplate(null);
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Error", description: err.message || "Failed to update template", variant: "destructive" });
     },
   });
@@ -253,7 +253,7 @@ export default function DocumentTemplatesPage() {
       toast({ title: "Template Deactivated", description: "Template has been soft-deleted." });
       setEditTemplate(null);
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Error", description: err.message || "Failed to deactivate template", variant: "destructive" });
     },
   });
@@ -269,7 +269,7 @@ export default function DocumentTemplatesPage() {
     onSuccess: () => {
       toast({ title: "Document Generated", description: "A new document instance has been created from this template." });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Error", description: err.message || "Failed to generate document", variant: "destructive" });
     },
   });

@@ -52,7 +52,7 @@ export interface FeatureToggleRequest {
 
 export interface ConsoleCommand {
   command: string;
-  args?: Record<string, any>;
+  args?: Record<string, unknown>;
   targetWorkspace?: string;
   dryRun?: boolean;
 }
@@ -179,7 +179,6 @@ export class ServiceController {
       title: `Service Restart: ${serviceName}`,
       message: `AI Brain initiated restart of ${serviceName} service`,
       targetUserIds: [userId],
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       severity: 'medium',
       source: 'orchestrator_capabilities',
       skipFeatureCheck: true, // Operational notification
@@ -246,10 +245,8 @@ export class FeatureToggleManager {
           type: 'system_update',
       title: `Feature Toggle Updated`,
       message: `${request.featurePath} ${request.enabled ? 'enabled' : 'disabled'}: ${request.reason}`,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       workspaceId: request.workspaceId || undefined,
       targetUserIds: [request.userId],
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       severity: 'low',
       source: 'feature_toggle_manager',
       skipFeatureCheck: true, // Operational notification
@@ -381,7 +378,7 @@ export class ConsoleCommandExecutor {
     }
   }
 
-  private async handleCacheCommand(action: string, args?: Record<string, any>): Promise<ConsoleCommandResult> {
+  private async handleCacheCommand(action: string, args?: Record<string, unknown>): Promise<ConsoleCommandResult> {
     const startTime = Date.now();
     
     if (action === 'clear') {
@@ -407,7 +404,7 @@ export class ConsoleCommandExecutor {
     };
   }
 
-  private async handleDbCommand(action: string, args?: Record<string, any>): Promise<ConsoleCommandResult> {
+  private async handleDbCommand(action: string, args?: Record<string, unknown>): Promise<ConsoleCommandResult> {
     const startTime = Date.now();
 
     if (action === 'stats') {
@@ -436,7 +433,7 @@ export class ConsoleCommandExecutor {
     };
   }
 
-  private async handleJobsCommand(action: string, args?: Record<string, any>): Promise<ConsoleCommandResult> {
+  private async handleJobsCommand(action: string, args?: Record<string, unknown>): Promise<ConsoleCommandResult> {
     const startTime = Date.now();
 
     if (action === 'list') {
@@ -454,7 +451,7 @@ export class ConsoleCommandExecutor {
     };
   }
 
-  private async handleUsersCommand(action: string, args?: Record<string, any>, workspaceId?: string): Promise<ConsoleCommandResult> {
+  private async handleUsersCommand(action: string, args?: Record<string, unknown>, workspaceId?: string): Promise<ConsoleCommandResult> {
     const startTime = Date.now();
 
     if (action === 'list' && workspaceId) {
@@ -486,7 +483,7 @@ export class ConsoleCommandExecutor {
     };
   }
 
-  private async handleWorkspaceCommand(action: string, args?: Record<string, any>, workspaceId?: string): Promise<ConsoleCommandResult> {
+  private async handleWorkspaceCommand(action: string, args?: Record<string, unknown>, workspaceId?: string): Promise<ConsoleCommandResult> {
     const startTime = Date.now();
 
     if (action === 'stats') {
@@ -505,7 +502,7 @@ export class ConsoleCommandExecutor {
     };
   }
 
-  private async handleNotificationsCommand(action: string, args?: Record<string, any>): Promise<ConsoleCommandResult> {
+  private async handleNotificationsCommand(action: string, args?: Record<string, unknown>): Promise<ConsoleCommandResult> {
     const startTime = Date.now();
 
     if (action === 'broadcast' && args?.message) {
@@ -523,7 +520,7 @@ export class ConsoleCommandExecutor {
     };
   }
 
-  private async handleFaqCommand(action: string, args?: Record<string, any>): Promise<ConsoleCommandResult> {
+  private async handleFaqCommand(action: string, args?: Record<string, unknown>): Promise<ConsoleCommandResult> {
     const startTime = Date.now();
 
     if (action === 'reindex') {
@@ -603,7 +600,6 @@ export class EndUserBotSupport {
     const faqs = await db
       .select()
       .from(helposFaqs)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .where(eq(helposFaqs.isActive, true))
       .limit(10);
 

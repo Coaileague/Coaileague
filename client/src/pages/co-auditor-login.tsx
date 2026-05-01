@@ -22,7 +22,7 @@ export default function CoAuditorLogin() {
       const body = await res.json();
       if (!body.ok) { setError(body.error || "Login failed"); setSubmitting(false); return; }
       setLocation("/co-auditor/dashboard");
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e?.message || "Login failed");
       setSubmitting(false);
     }

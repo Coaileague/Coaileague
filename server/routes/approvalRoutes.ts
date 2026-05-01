@@ -301,7 +301,7 @@ router.get('/pending', requireAuth, async (req: any, res) => {  // mounted at /a
       .orderBy(desc(timesheetEditRequests.createdAt))
       .limit(50);
     res.json(pending);
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: err.message });
   }
 });
@@ -324,7 +324,7 @@ router.put('/:id/review', requireAuth, async (req: any, res) => {  // mounted at
       .returning();
     if (!updated) return res.status(404).json({ error: 'Edit request not found' });
     res.json({ success: true, request: updated });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: err.message });
   }
 });

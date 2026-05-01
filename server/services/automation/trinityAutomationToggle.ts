@@ -98,7 +98,7 @@ export interface AutomationRequest {
   workspaceId: string;
   feature: AutomationFeature;
   requestedBy: string;
-  context: Record<string, any>;
+  context: Record<string, unknown>;
 }
 
 export interface AutomationResult {
@@ -238,7 +238,7 @@ class TrinityAutomationToggleService {
         where: eq(trinityAutomationSettings.workspaceId, workspaceId),
       });
 
-      const updateData: Record<string, any> = {
+      const updateData: Record<string, unknown> = {
         schedulingEnabled: settings.scheduling,
         invoicingEnabled: settings.invoicing,
         payrollEnabled: settings.payroll,
@@ -468,7 +468,7 @@ class TrinityAutomationToggleService {
       await this.broadcastRequestUpdate(request.workspaceId, result!);
       return result!;
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       await db.update(trinityAutomationRequests)
         .set({
           status: 'failed',
@@ -619,7 +619,7 @@ class TrinityAutomationToggleService {
       const result = await this.getRequestResult(requestId);
       return { ...(result!), analysis: analysis.summary };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       await db.update(trinityAutomationRequests)
         .set({
           status: 'failed',
@@ -1009,7 +1009,7 @@ class TrinityAutomationToggleService {
         const result = await fn();
         await checkpointer.stepCompleted(name, toSave ? toSave(result) : undefined);
         return result;
-      } catch (err: any) {
+      } catch (err: unknown) {
         await checkpointer.stepFailed(name, err?.message ?? String(err));
         throw err;
       }
@@ -1120,7 +1120,6 @@ class TrinityAutomationToggleService {
             const periodEnd = context.periodEnd ? new Date(context.periodEnd) : undefined;
             const result = await PayrollAutomationEngine.processAutomatedPayroll(
               workspaceId,
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               requestedBy,
               periodStart,
               periodEnd,
@@ -1268,7 +1267,7 @@ class TrinityAutomationToggleService {
         default:
           summaryDetail = `${feature} automation executed`;
       }
-    } catch (execError: any) {
+    } catch (execError: unknown) {
       // Checkpoint already saved the failed step — re-throw so approveAutomation marks as failed
       log.error(`[TrinityAutomation] ${feature} execution error for workspace ${workspaceId}:`, execError);
       throw execError;
@@ -1417,7 +1416,7 @@ class TrinityAutomationToggleService {
   async revisePayload(
     requestId: string,
     revisedBy: string,
-    revisedPayload: Record<string, any>,
+    revisedPayload: Record<string, unknown>,
     notes: string,
   ): Promise<AutomationResult> {
     const request = await db.query.trinityAutomationRequests.findFirst({
@@ -1481,7 +1480,6 @@ class TrinityAutomationToggleService {
     const revisedPayload = request.revisedPayload;
     const effectivePayload = revisedPayload || preview.previewData || preview;
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const prompt = `You are Trinity, the AI brain for ${PLATFORM.name} workforce management platform. 
 A user has requested you to re-analyze a staged automation payload before it is approved and executed.
 

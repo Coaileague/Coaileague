@@ -30,7 +30,6 @@ import { platformEventBus } from '../platformEventBus';
 import { db } from '../../db';
 import { systemAuditLogs, workspaces } from '@shared/schema';
 import { eq, and, desc, gte, sql } from 'drizzle-orm';
-// @ts-expect-error — TS migration: fix in refactoring sprint
 import { v4 as uuidv4 } from 'uuid';
 import { classifyPipelineError, notifyWorkspaceFailure } from './pipelineErrorHandler';
 import { createLogger } from '../../lib/logger';
@@ -62,7 +61,7 @@ export interface AutomationParams {
   workspaceId?: string;
   userId?: string;
   triggeredBy: 'cron' | 'event' | 'api' | 'ai_brain' | 'system' | 'webhook';
-  payload?: Record<string, any>;
+  payload?: Record<string, unknown>;
   billable?: boolean;
   creditCost?: number;
   maxRetries?: number;
@@ -93,7 +92,7 @@ interface AutomationStepContext {
   automationName: string;
   automationType: AutomationType;
   workspaceId?: string;
-  fetchedData: Record<string, any>;
+  fetchedData: Record<string, unknown>;
 }
 
 const AUTOMATION_ERROR_CODES: Record<string, { remediation: string; retryable: boolean }> = {
@@ -204,7 +203,7 @@ class AutomationOrchestrationService {
       });
 
       await universalStepLogger.logStep(orchestrationCtx, 'FETCH', 'started');
-      let fetchedData: Record<string, any> = {};
+      let fetchedData: Record<string, unknown> = {};
       
       if (options?.fetch) {
         fetchedData = await options.fetch({
@@ -355,7 +354,6 @@ class AutomationOrchestrationService {
       await universalStepLogger.logStep(orchestrationCtx, 'NOTIFY', 'started');
       
       if (options?.notify) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await options.notify(result, stepContext);
       }
 
@@ -376,7 +374,6 @@ class AutomationOrchestrationService {
       }).catch(err => log.warn('[AutomationOrchestration] Event publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
       await universalStepLogger.logStep(orchestrationCtx, 'NOTIFY', 'completed');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await universalStepLogger.completeOrchestration(orchestrationCtx.orchestrationId, 'completed');
 
       this.recordExecution(orchestrationId, params.domain, params.automationName, 'success', Date.now() - startTime);
@@ -420,7 +417,6 @@ class AutomationOrchestrationService {
           error: (error instanceof Error ? error.message : String(error)),
           errorCode,
         });
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await universalStepLogger.completeOrchestration(orchestrationCtx.orchestrationId, 'failed');
       }
 

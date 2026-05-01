@@ -20,10 +20,10 @@ const log = createLogger('sessionCheckpointService');
 
 
 export interface CheckpointPayload {
-  formData?: Record<string, any>;
-  pageState?: Record<string, any>;
-  userInputs?: Record<string, any>;
-  customData?: Record<string, any>;
+  formData?: Record<string, unknown>;
+  pageState?: Record<string, unknown>;
+  userInputs?: Record<string, unknown>;
+  customData?: Record<string, unknown>;
 }
 
 export interface CreateCheckpointParams {

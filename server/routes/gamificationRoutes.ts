@@ -17,7 +17,7 @@ router.get('/leaderboard', requireAuth, ensureWorkspaceAccess, async (req: Authe
     const workspaceId = req.workspaceId!;
     const leaderboard = await gamificationService.getLeaderboard(workspaceId, period);
     res.json({ leaderboard, period });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: err?.message });
   }
 });
@@ -30,7 +30,7 @@ router.get('/my-points', requireAuth, ensureWorkspaceAccess, async (req: Authent
     if (!employeeId) return res.status(404).json({ error: 'No employee record found' });
     const points = await gamificationService.getPoints(workspaceId, employeeId);
     res.json(points);
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: err?.message });
   }
 });
@@ -48,7 +48,7 @@ router.post('/award', requireAuth, ensureWorkspaceAccess, async (req: Authentica
     const workspaceId = req.workspaceId!;
     const result = await gamificationService.award(workspaceId, employeeId, eventId);
     res.json({ success: true, ...result });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: err?.message });
   }
 });

@@ -54,7 +54,7 @@ function dateAgo(days: number): string {
 async function q(sql: string, params?: any[]): Promise<void> {
   try {
     await pool.query(sql, params);
-  } catch (err: any) {
+  } catch (err: unknown) {
     const msg = (err.message || '').substring(0, 200);
     // Only log non-trivial errors (not unique violations from idempotent runs)
     if (!msg.includes('duplicate key')) {
@@ -68,7 +68,7 @@ async function seedSection(name: string, fn: () => Promise<void>): Promise<void>
   try {
     await fn();
     console.log(`[SeedACME] ✓ ${name}`);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(`[SeedACME] ✗ ${name}: ${(err.message || '').substring(0, 300)}`);
   }
 }

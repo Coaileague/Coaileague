@@ -61,7 +61,7 @@ export interface PreShiftFlag {
   code: FlagCode;
   severity: FlagSeverity;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 export interface PreShiftSweepResult {
@@ -88,7 +88,7 @@ export async function runPreShiftIntelligenceSweep(): Promise<PreShiftSweepResul
   let upcoming: Array<UpcomingShift>;
   try {
     upcoming = await findUpcomingShifts();
-  } catch (err: any) {
+  } catch (err: unknown) {
     result.errors.push(`scan:${err?.message}`);
     return result;
   }
@@ -115,7 +115,7 @@ export async function runPreShiftIntelligenceSweep(): Promise<PreShiftSweepResul
 
         await recordNotified(flag);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       result.errors.push(`${shift.shiftId}:${err?.message}`);
       log.warn(`[preShiftIntel] shift ${shift.shiftId} failed:`, err?.message);
     }
@@ -278,7 +278,7 @@ async function notify(flag: PreShiftFlag, shift: UpcomingShift): Promise<boolean
         details: flag.details ?? null,
       },
     } as any);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[preShiftIntel] event publish failed (non-fatal):', err?.message);
   }
 
@@ -396,7 +396,7 @@ async function findExpiringCerts(shift: UpcomingShift): Promise<CertFlag[]> {
       daysUntilExpiry: Number(row.days_until_expiry ?? 0),
       expired: Number(row.days_until_expiry ?? 0) < 0,
     }));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[preShiftIntel] cert lookup failed:', err?.message);
     return [];
   }
@@ -464,7 +464,7 @@ async function recordNotified(flag: PreShiftFlag): Promise<void> {
         flag.severity,
       ],
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[preShiftIntel] audit write failed (non-fatal):', err?.message);
   }
 }

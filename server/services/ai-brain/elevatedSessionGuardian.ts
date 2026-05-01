@@ -85,7 +85,7 @@ export interface TelemetryEvent {
   durationMs: number;
   anomalyCode?: SessionAnomalyCode;
   healingAction?: HealingAction;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 type ElevationReason = 'auto_support_login' | 'governance_approved' | 'mfa_verified' | 'bot_service' | 'subagent_service' | 'trinity_service' | 'helpai_service';
@@ -670,7 +670,7 @@ class ElevatedSessionGuardian {
 
   private async createSupportTicket(
     anomalyCode: SessionAnomalyCode,
-    context: Record<string, any>,
+    context: Record<string, unknown>,
     details: string,
     riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'medium'
   ): Promise<void> {

@@ -67,7 +67,6 @@ export default function OfficerHrRecord() {
     id: "officer-hr-record",
     title: "Officer HR Record",
     subtitle: "Performance notes and disciplinary history",
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     category: "workforce",
   };
 
@@ -138,7 +137,7 @@ export default function OfficerHrRecord() {
       });
       return await res.json();
     },
-    onSuccess: (result: any) => {
+    onSuccess: (result) => {
       setTrinityDraft(result);
       toast({ title: "Trinity drafted the document — review before sending" });
     },
@@ -248,7 +247,7 @@ export default function OfficerHrRecord() {
               </Card>
             ) : (
               <div className="space-y-3">
-                {performanceNotes.map((note: any) => {
+                {performanceNotes.map((note) => {
                   const config = NOTE_TYPE_CONFIG[note.noteType] ?? NOTE_TYPE_CONFIG.neutral;
                   const Icon = config.icon;
                   return (
@@ -314,7 +313,7 @@ export default function OfficerHrRecord() {
               </Card>
             ) : (
               <div className="space-y-3">
-                {disciplinaryRecords.map((record: any) => {
+                {disciplinaryRecords.map((record) => {
                   const config = DISCIPLINARY_TYPE_CONFIG[record.recordType] ?? DISCIPLINARY_TYPE_CONFIG.verbal_warning;
                   return (
                     <Card key={record.id} data-testid={`card-disciplinary-record-${record.id}`}>

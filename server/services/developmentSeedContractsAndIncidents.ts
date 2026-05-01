@@ -358,7 +358,6 @@ export async function runContractsAndIncidentsSeed(): Promise<{ success: boolean
     for (const inc of incidents) {
       const createdAt = daysAgo(inc.daysAgo);
       // CATEGORY C — Genuine schema mismatch: SQL uses polished_summary=inc.title but schema polishedSummary is separate field; photos passed as string with ::jsonb cast; sent_to_client_at/occurred_at need ::timestamptz casts
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await typedExec(sql`
         INSERT INTO incident_reports (id, workspace_id, incident_number, reported_by,
           title, severity, incident_type,
@@ -467,7 +466,6 @@ export async function runContractsAndIncidentsSeed(): Promise<{ success: boolean
     for (const inc of incidents) {
       const createdAt = daysAgo(inc.daysAgo);
       // CATEGORY C — Genuine schema mismatch: SQL uses polished_summary=inc.title but schema polishedSummary is separate field; photos passed as string with ::jsonb cast; sent_to_client_at/occurred_at need ::timestamptz casts
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await typedExec(sql`
         INSERT INTO incident_reports (id, workspace_id, incident_number, reported_by,
           title, severity, incident_type,

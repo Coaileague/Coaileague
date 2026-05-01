@@ -73,7 +73,6 @@ async function persistGapFinding(finding: GapFinding, detectedBy: string): Promi
       .from(aiGapFindings)
       .where(and(
         eq(aiGapFindings.filePath, finding.filePath),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         eq(aiGapFindings.gapType, finding.gapType),
         eq(aiGapFindings.title, finding.title),
         eq(aiGapFindings.status, 'open')
@@ -154,12 +153,9 @@ async function persistComponent(component: ComponentAnalysis, registeredBy: stri
     // Check if component already exists
     const existing = await db
       .select()
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .from(aiComponentRegistry)
       .where(and(
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         eq(aiComponentRegistry.filePath, component.filePath),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         eq(aiComponentRegistry.componentName, component.componentName)
       ))
       .limit(1);
@@ -167,7 +163,6 @@ async function persistComponent(component: ComponentAnalysis, registeredBy: stri
     if (existing.length > 0) {
       // Update existing component
       await db
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .update(aiComponentRegistry)
         .set({
           exports: component.exports,
@@ -176,14 +171,12 @@ async function persistComponent(component: ComponentAnalysis, registeredBy: stri
           lastScannedAt: new Date(),
           updatedAt: new Date(),
         })
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .where(eq(aiComponentRegistry.id, existing[0].id));
       return existing[0].id;
     }
 
     // Insert new component
     const [inserted] = await db
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .insert(aiComponentRegistry)
       .values({
         workspaceId: 'system',

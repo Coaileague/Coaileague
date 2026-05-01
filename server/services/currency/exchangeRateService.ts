@@ -122,9 +122,7 @@ class ExchangeRateService {
         .from(exchangeRates)
         .where(
           and(
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             eq(exchangeRates.fromCurrency, from),
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             eq(exchangeRates.toCurrency, to),
             gte(exchangeRates.fetchedAt, cutoff)
           )
@@ -137,11 +135,8 @@ class ExchangeRateService {
           fromCurrency: (rate as any).fromCurrency,
           toCurrency: (rate as any).toCurrency,
           rate: parseFloat(rate.rate),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           source: rate.source,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           fetchedAt: rate.fetchedAt,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           validUntil: new Date(rate.fetchedAt.getTime() + this.cacheTTLMs),
         };
       }

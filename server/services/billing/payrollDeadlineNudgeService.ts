@@ -60,7 +60,7 @@ async function recordNudgeSent(runId: string, workspaceId: string, urgencyBand: 
        VALUES ($1, 'payroll_deadline_nudge', 'payroll_run', $2, $3::jsonb, NOW(), 'system')`,
       [workspaceId, runId, JSON.stringify({ urgency_band: urgencyBand, sent_at: new Date().toISOString() })]
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[PayrollDeadlineNudge] Failed to record nudge audit for run ${runId}:`, err?.message);
   }
 }
@@ -111,7 +111,6 @@ export async function runPayrollDeadlineNudge(): Promise<NudgeResult> {
         // In-app notification via NDS
         if (run.owner_id) {
           await NotificationDeliveryService.send({
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             type: 'payroll_deadline_alert',
             workspaceId: run.workspace_id,
             recipientUserId: run.owner_id,
@@ -161,14 +160,14 @@ export async function runPayrollDeadlineNudge(): Promise<NudgeResult> {
 
         nudgesSent++;
         log.info(`[PayrollDeadlineNudge] Nudged workspace=${run.workspace_id} run=${run.id} status=${run.status} hoursLeft=${hoursLeft} urgency=${urgencyBand}`);
-      } catch (innerErr: any) {
+      } catch (innerErr: unknown) {
         log.warn(`[PayrollDeadlineNudge] Failed for run ${run.id}:`, innerErr?.message);
       }
     }
 
     log.info(`[PayrollDeadlineNudge] Complete — workspacesChecked=${workspacesChecked}, nudgesSent=${nudgesSent}, nudgesSkipped=${nudgesSkipped}`);
     return { nudgesSent, nudgesSkipped, workspacesChecked };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[PayrollDeadlineNudge] Fatal error:', err?.message);
     return { nudgesSent: 0, nudgesSkipped: 0, workspacesChecked: 0 };
   }

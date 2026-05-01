@@ -74,7 +74,7 @@ export default function OversightHub() {
       });
       handleCloseDialog();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to approve item",
@@ -96,7 +96,7 @@ export default function OversightHub() {
       });
       handleCloseDialog();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to reject item",

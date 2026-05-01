@@ -61,7 +61,7 @@ export default function AuditChatdock() {
       queryClient.invalidateQueries({ queryKey: ['/api/audit-suite/audits', auditId, 'packets'] });
       toast({ title: 'Audit packet ready for review', description: 'Trinity has compiled your audit packet. Please review and approve before sending.' });
     },
-    onError: (err: any) => toast({ title: 'Generation failed', description: err?.message, variant: 'destructive' }),
+    onError: (err) => toast({ title: 'Generation failed', description: err?.message, variant: 'destructive' }),
   });
 
   const approveMutation = useMutation({
@@ -71,7 +71,7 @@ export default function AuditChatdock() {
       queryClient.invalidateQueries({ queryKey: ['/api/audit-suite/audits', auditId, 'packets'] });
       toast({ title: 'Document released', description: 'The audit packet has been sent to the auditor.' });
     },
-    onError: (err: any) => toast({ title: 'Approval failed', description: err?.message, variant: 'destructive' }),
+    onError: (err) => toast({ title: 'Approval failed', description: err?.message, variant: 'destructive' }),
   });
 
   const rejectMutation = useMutation({
@@ -85,7 +85,7 @@ export default function AuditChatdock() {
       setModifyText('');
       toast({ title: 'Revision requested', description: 'Trinity is generating a revised packet based on your instructions.' });
     },
-    onError: (err: any) => toast({ title: 'Revision failed', description: err?.message, variant: 'destructive' }),
+    onError: (err) => toast({ title: 'Revision failed', description: err?.message, variant: 'destructive' }),
   });
 
   const drafts: any[] = draftsData?.drafts ?? [];
@@ -235,7 +235,7 @@ export default function AuditChatdock() {
             <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
               <Send className="h-4 w-4" /> Documents Released to Auditor
             </h3>
-            {sentDrafts.map((d: any) => (
+            {sentDrafts.map((d) => (
               <Card key={d.id} className="border-green-200">
                 <CardContent className="pt-4 pb-4 flex items-center justify-between">
                   <div className="text-sm text-slate-700">

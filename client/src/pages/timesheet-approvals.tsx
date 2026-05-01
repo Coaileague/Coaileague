@@ -64,7 +64,7 @@ export default function TimesheetApprovals() {
       setSelectedRequest(null);
       setReviewNotes("");
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Action Failed",
         description: error.message || "Failed to process request",

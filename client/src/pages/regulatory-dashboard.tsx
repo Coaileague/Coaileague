@@ -148,13 +148,13 @@ function OfficerCard({ officer, expanded, onToggle }: { officer: any; expanded: 
   const scoreTier = score?.tier?.replace(/_/g, " ") ?? "unknown";
   const licenseStatus = score?.breakdown?.licenseStatus ?? "unknown";
 
-  const i9Doc = officer.documents?.find((d: any) => d.documentType === 'i9');
-  const w4Doc = officer.documents?.find((d: any) => d.documentType === 'w4' || d.documentType === 'w_4');
-  const w9Doc = officer.documents?.find((d: any) => d.documentType === 'w9' || d.documentType === 'w_9');
-  const drugFreeDoc = officer.documents?.find((d: any) => d.documentType?.includes('drug'));
-  const bgCheckDoc = officer.documents?.find((d: any) => d.documentType?.includes('background'));
-  const applicationDoc = officer.documents?.find((d: any) => d.documentType?.includes('application'));
-  const guardCardDoc = officer.documents?.find((d: any) => d.documentType?.includes('guard_card') || d.documentType?.includes('license'));
+  const i9Doc = officer.documents?.find((d) => d.documentType === 'i9');
+  const w4Doc = officer.documents?.find((d) => d.documentType === 'w4' || d.documentType === 'w_4');
+  const w9Doc = officer.documents?.find((d) => d.documentType === 'w9' || d.documentType === 'w_9');
+  const drugFreeDoc = officer.documents?.find((d) => d.documentType?.includes('drug'));
+  const bgCheckDoc = officer.documents?.find((d) => d.documentType?.includes('background'));
+  const applicationDoc = officer.documents?.find((d) => d.documentType?.includes('application'));
+  const guardCardDoc = officer.documents?.find((d) => d.documentType?.includes('guard_card') || d.documentType?.includes('license'));
 
   const isContractor = officer.workerType === 'contractor' || officer.is1099Eligible;
 
@@ -359,7 +359,7 @@ function OfficerCard({ officer, expanded, onToggle }: { officer: any; expanded: 
                 <p className="text-slate-300 text-xs font-semibold uppercase tracking-wider">Training & Certifications</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {officer.certifications.map((cert: any) => (
+                {officer.certifications.map((cert) => (
                   <div key={cert.id} className="bg-slate-800 rounded-md px-3 py-2 flex items-center justify-between gap-2">
                     <div>
                       <p className="text-white text-xs font-medium">{cert.certificationName ?? cert.trainingType?.replace(/_/g, " ")}</p>
@@ -633,25 +633,25 @@ export default function RegulatoryDashboard() {
               ) : (
                 <>
                   {/* Hard-blocked officers shown first with a callout */}
-                  {officersQuery.data?.data?.officers?.filter((o: any) => o.complianceScore?.isHardBlocked).length > 0 && (
+                  {officersQuery.data?.data?.officers?.filter((o) => o.complianceScore?.isHardBlocked).length > 0 && (
                     <div className="p-3 rounded-md bg-red-900/20 border border-red-800 mb-2">
                       <div className="flex items-center gap-2">
                         <XCircle size={14} className="text-red-400" />
                         <p className="text-red-300 text-xs font-medium">
-                          {officersQuery?.data?.data?.officers.filter((o: any) => (o as any).complianceScore?.isHardBlocked).length} officer(s) have active hard blocks (expired license or missing qualification).
+                          {officersQuery?.data?.data?.officers.filter((o) => (o as any).complianceScore?.isHardBlocked).length} officer(s) have active hard blocks (expired license or missing qualification).
                           These officers cannot be legally assigned to shifts.
                         </p>
                       </div>
                     </div>
                   )}
                   {officersQuery.data?.data?.officers
-                    ?.filter((o: any) => {
+                    ?.filter((o) => {
                       const q = officerSearch.toLowerCase();
                       if (!q) return true;
                       return `${o.firstName} ${o.lastName}`.toLowerCase().includes(q)
                         || (o.role ?? o.position ?? "").toLowerCase().includes(q);
                     })
-                    .map((officer: any) => (
+                    .map((officer) => (
                       <OfficerCard
                         key={officer.id}
                         officer={officer}
@@ -689,7 +689,7 @@ export default function RegulatoryDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(violationsQuery.data?.data?.violations ?? []).map((v: any) => (
+                    {(violationsQuery.data?.data?.violations ?? []).map((v) => (
                       <TableRow key={v.id} data-testid={`row-violation-${v.id}`} className="border-slate-700">
                         <TableCell className="text-slate-300 text-sm">{new Date(v.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell>
@@ -756,7 +756,7 @@ export default function RegulatoryDashboard() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {(insuranceQuery.data?.data?.insuranceDocuments ?? []).map((doc: any) => (
+                        {(insuranceQuery.data?.data?.insuranceDocuments ?? []).map((doc) => (
                           <TableRow key={doc.id} className="border-slate-700">
                             <TableCell className="text-white text-sm">{doc.documentTitle ?? doc.documentType?.replace(/_/g, " ")}</TableCell>
                             <TableCell><StatusBadge status={doc.status} /></TableCell>
@@ -876,7 +876,7 @@ export default function RegulatoryDashboard() {
                       onClick={() => {
                         const shifts = shiftsQuery.data?.data?.shifts ?? [];
                         const header = ["Date", "Officer", "Site", "Client", "Hours", "GPS Status", "Status"];
-                        const rows = shifts.slice(0, 100).map((s: any) => [
+                        const rows = shifts.slice(0, 100).map((s) => [
                           s.start_time ? new Date(s.start_time).toLocaleDateString() : "",
                           s.officer_name ?? "",
                           s.site_name ?? "",
@@ -948,7 +948,7 @@ export default function RegulatoryDashboard() {
                         onClick={() => {
                           const incidents = incidentsQuery.data?.data?.incidents ?? [];
                           const header = ["Date", "Title", "Type", "Status"];
-                          const rows = incidents.map((inc: any) => [
+                          const rows = incidents.map((inc) => [
                             inc.reportedAt ? new Date(inc.reportedAt).toLocaleDateString() : "",
                             inc.title ?? "Untitled",
                             inc.incidentType?.replace(/_/g, " ") ?? "",
@@ -971,7 +971,7 @@ export default function RegulatoryDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {(incidentsQuery.data?.data?.incidents ?? []).map((inc: any) => (
+                      {(incidentsQuery.data?.data?.incidents ?? []).map((inc) => (
                         <TableRow key={inc.id} data-testid={`row-incident-${inc.id}`} className="border-slate-700">
                           <TableCell className="text-slate-300 text-sm">{inc.reportedAt ? new Date(inc.reportedAt).toLocaleDateString() : "—"}</TableCell>
                           <TableCell className="text-white text-sm">{inc.title ?? "Untitled"}</TableCell>
@@ -1017,7 +1017,7 @@ export default function RegulatoryDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {documentsQuery.data.data.documents.map((doc: any) => (
+                    {documentsQuery.data.data.documents.map((doc) => (
                       <TableRow key={doc.id} data-testid={`row-doc-${doc.id}`} className="border-slate-700">
                         <TableCell className="text-white text-sm">{doc.documentTitle ?? doc.documentType?.replace(/_/g, " ")}</TableCell>
                         <TableCell className="text-slate-400 text-xs capitalize">{doc.documentType?.replace(/_/g, " ")}</TableCell>

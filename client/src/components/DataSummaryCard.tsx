@@ -273,7 +273,7 @@ export function ResponsiveTableWrapper({
 export function columnsToDataFields<T extends Record<string, any>>(
   rowData: T,
   columns: ColumnConfig[],
-  renderFunctions?: Record<string, (value: any) => ReactNode>
+  renderFunctions?: Record<string, (value) => ReactNode>
 ): DataField[] {
   return columns.map(col => ({
     key: col.key,

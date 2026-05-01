@@ -44,7 +44,7 @@ export const auditorService = {
           activePolicies: policies.rows.length,
         },
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[AuditorService] Report failed: ${err?.message}`);
       return null;
     }

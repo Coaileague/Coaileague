@@ -74,8 +74,8 @@ function ForecastDashboard() {
   if (isLoading) return <div className="py-16 text-center text-muted-foreground text-sm">Loading forecast data...</div>;
 
   const allPoints = [
-    ...(data?.historical || []).map((h: any) => ({ ...h, type: 'historical' })),
-    ...(data?.projected || []).map((p: any) => ({ ...p, type: 'projected' })),
+    ...(data?.historical || []).map((h) => ({ ...h, type: 'historical' })),
+    ...(data?.projected || []).map((p) => ({ ...p, type: 'projected' })),
   ];
 
   const fmt = (n: number) => n >= 1000000
@@ -226,7 +226,7 @@ export default function FinancialManagement() {
       setShowCreateDialog(false);
       setNewBudget({ name: "", department: "", totalAmount: 0, period: "Q1 2025" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to create budget",

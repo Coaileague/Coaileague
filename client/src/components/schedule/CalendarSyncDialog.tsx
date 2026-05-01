@@ -119,7 +119,7 @@ export function CalendarSyncDialog({ open, onOpenChange, employeeId }: CalendarS
         description: 'Your calendar subscription URL has been generated',
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Failed to create subscription',
         description: error.message,
@@ -139,7 +139,7 @@ export function CalendarSyncDialog({ open, onOpenChange, employeeId }: CalendarS
         description: 'The subscription has been deactivated',
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Failed to revoke subscription',
         description: error.message,
@@ -160,7 +160,7 @@ export function CalendarSyncDialog({ open, onOpenChange, employeeId }: CalendarS
         description: 'Your subscription URL has been updated',
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Failed to regenerate token',
         description: error.message,
@@ -190,7 +190,7 @@ export function CalendarSyncDialog({ open, onOpenChange, employeeId }: CalendarS
       });
       setUploadedFile(null);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Import failed',
         description: error.message,

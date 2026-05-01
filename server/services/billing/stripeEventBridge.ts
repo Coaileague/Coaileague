@@ -155,7 +155,6 @@ class StripeEventBridge {
         amount: paymentIntent.amount,
         paymentIntentId: paymentIntent.id,
       },
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       visibility: 'workspace',
     });
 
@@ -210,7 +209,6 @@ class StripeEventBridge {
     });
 
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await helpaiOrchestrator.executeAction('resume_approval.request', {
         title: 'Payment Failure - Human Review Required',
         description: `Payment failed for workspace ${workspace.name}. Reason: ${failureMessage}`,
@@ -273,7 +271,6 @@ class StripeEventBridge {
         billingReason,
         creditResetTriggered: isRenewal,
       },
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       visibility: 'workspace',
     });
 
@@ -394,7 +391,6 @@ class StripeEventBridge {
     cacheManager.invalidateWorkspace(workspace.id); // Phase 26: refresh Trinity gate
 
     await db.update(subscriptions)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .set({ status: subscription.status })
       .where(eq(subscriptions.workspaceId, workspace.id));
 
@@ -427,7 +423,6 @@ class StripeEventBridge {
     cacheManager.invalidateWorkspace(workspace.id); // Phase 26: refresh Trinity gate
 
     await db.update(subscriptions)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .set({ status: 'canceled' })
       .where(eq(subscriptions.workspaceId, workspace.id));
 
@@ -558,7 +553,6 @@ class StripeEventBridge {
       description: 'Sync subscription status from Stripe',
       requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const { workspaceId } = request.payload;
         const [workspace] = await db.select()
           .from(workspaces)

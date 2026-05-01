@@ -72,7 +72,6 @@ function ContractorCard({ contractor, onView }: { contractor: { contractor: Flex
   const c = contractor.contractor;
   const u = contractor.user;
   const name = u?.firstName && u?.lastName ? `${u.firstName} ${u.lastName}` : u?.email || "Unknown";
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
 
   return (
@@ -199,7 +198,7 @@ export default function FlexStaffing() {
   });
 
   const createGigMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/flex/gigs", data),
+    mutationFn: (data) => apiRequest("POST", "/api/flex/gigs", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/flex/gigs"] });
       setShowNewGig(false);
@@ -230,12 +229,10 @@ export default function FlexStaffing() {
     },
   });
 
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const gigs: FlexGig[] = gigsData?.data || [];
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const contractors = contractorsData?.data || [];
   // @ts-expect-error — TS migration: fix in refactoring sprint
-  const applications: GigApplication[] = applicationsData?.data?.map((a: any) => ({
+  const applications: GigApplication[] = applicationsData?.data?.map((a) => ({
     ...a.application,
     contractor: a.contractor,
     user: a.user
@@ -371,7 +368,7 @@ export default function FlexStaffing() {
             <div className="flex items-center gap-2">
               <Award className="w-5 h-5 text-amber-500" />
               <div>
-                <p className="text-2xl font-bold">{contractors.filter((c: any) => c.contractor?.isPreferred).length}</p>
+                <p className="text-2xl font-bold">{contractors.filter((c) => c.contractor?.isPreferred).length}</p>
                 <p className="text-sm text-muted-foreground">Preferred</p>
               </div>
             </div>
@@ -421,7 +418,7 @@ export default function FlexStaffing() {
             <div className="text-center py-8 text-muted-foreground">No contractors found</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {contractors.map((contractor: any) => (
+              {contractors.map((contractor) => (
                 <ContractorCard 
                   key={contractor.contractor.id} 
                   contractor={contractor} 

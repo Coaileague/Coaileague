@@ -31,7 +31,6 @@ import {
   InsertClientContractSignature,
   InsertClientContractAuditLog,
   InsertClientContractAccessToken,
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   InsertClientContractPipelineUsage,
   ClientContract,
   ClientContractTemplate,
@@ -76,9 +75,7 @@ export interface ContractSigner {
 async function loadSignersFromDB(contractId: string): Promise<ContractSigner[]> {
   const rows = await db
     .select()
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     .from(clientContractSignatures)
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     .where(eq(clientContractSignatures.contractId, contractId));
   return rows.map((r: any) => ({
     id: r.id,
@@ -100,7 +97,6 @@ async function loadSignersFromDB(contractId: string): Promise<ContractSigner[]> 
 
 async function persistSignerToDB(signer: ContractSigner): Promise<void> {
   await db
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     .insert(clientContractSignatures)
     .values({
       id: signer.id,
@@ -119,7 +115,6 @@ async function persistSignerToDB(signer: ContractSigner): Promise<void> {
       accessToken: signer.accessToken || null,
     } as any)
     .onConflictDoUpdate({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       target: clientContractSignatures.id,
       set: {
         signerOrder: signer.order,
@@ -135,10 +130,8 @@ async function persistSignerToDB(signer: ContractSigner): Promise<void> {
 
 async function updateSignerInDB(signerId: string, updates: Partial<Record<string, any>>): Promise<void> {
   await db
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     .update(clientContractSignatures)
     .set(updates)
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     .where(eq(clientContractSignatures.id, signerId));
 }
 
@@ -195,7 +188,7 @@ interface AuditContext {
   actorEmail?: string;
   ipAddress?: string;
   userAgent?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // ============================================================================
@@ -366,7 +359,6 @@ class ContractPipelineService {
    */
   async createTemplate(input: InsertClientContractTemplate): Promise<ClientContractTemplate> {
     const [template] = await db
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .insert(clientContractTemplates)
       .values(input)
       .returning();
@@ -378,19 +370,15 @@ class ContractPipelineService {
    * Get all templates for a workspace
    */
   async getTemplates(workspaceId: string, category?: string): Promise<ClientContractTemplate[]> {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const conditions = [eq(clientContractTemplates.workspaceId, workspaceId)];
     if (category) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       conditions.push(eq(clientContractTemplates.category, category));
     }
     
     return db
       .select()
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .from(clientContractTemplates)
       .where(and(...conditions))
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .orderBy(desc(clientContractTemplates.createdAt));
   }
   
@@ -400,9 +388,7 @@ class ContractPipelineService {
   async getTemplate(templateId: string): Promise<ClientContractTemplate | null> {
     const [template] = await db
       .select()
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .from(clientContractTemplates)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .where(eq(clientContractTemplates.id, templateId));
     return template || null;
   }
@@ -412,10 +398,8 @@ class ContractPipelineService {
    */
   async updateTemplate(templateId: string, updates: Partial<InsertClientContractTemplate>): Promise<ClientContractTemplate | null> {
     const [template] = await db
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .update(clientContractTemplates)
       .set({ ...updates, updatedAt: new Date() })
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .where(eq(clientContractTemplates.id, templateId))
       .returning();
     return template || null;
@@ -426,10 +410,8 @@ class ContractPipelineService {
    */
   async deleteTemplate(templateId: string): Promise<boolean> {
     const [template] = await db
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .update(clientContractTemplates)
       .set({ isActive: false, updatedAt: new Date() })
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .where(eq(clientContractTemplates.id, templateId))
       .returning();
     return !!template;
@@ -489,10 +471,8 @@ class ContractPipelineService {
     // Increment template usage if using a template
     if (input.templateId) {
       await db
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .update(clientContractTemplates)
         .set({ usageCount: sql`usage_count + 1` })
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .where(eq(clientContractTemplates.id, input.templateId));
     }
     
@@ -612,7 +592,6 @@ class ContractPipelineService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30); // 30 days expiry
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(clientContractAccessTokens).values({
       contractId,
       token,
@@ -660,7 +639,7 @@ class ContractPipelineService {
           workspaceName: undefined,
         });
         await NotificationDeliveryService.send({ type: 'document_requires_signature', workspaceId: contract.workspaceId || 'system', recipientUserId: contract.clientEmail, channel: 'email', body: { to: contract.clientEmail, subject: sigEmail.subject, html: sigEmail.html } });
-      } catch (emailErr: any) {
+      } catch (emailErr: unknown) {
         log.error('[ContractPipeline] Failed to send signature email:', emailErr?.message);
       }
     }
@@ -891,7 +870,6 @@ class ContractPipelineService {
       }
 
       const [sig] = await tx
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .insert(clientContractSignatures)
         .values({
           contractId: input.contractId,
@@ -938,11 +916,8 @@ class ContractPipelineService {
   async getSignatures(contractId: string): Promise<ClientContractSignature[]> {
     return db
       .select()
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .from(clientContractSignatures)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .where(eq(clientContractSignatures.contractId, contractId))
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .orderBy(clientContractSignatures.signedAt);
   }
   
@@ -1051,7 +1026,7 @@ class ContractPipelineService {
         },
       });
       log.info(`[ContractPipeline] Executed PDF stored to GCS: ${gcsObjectPath}`);
-    } catch (pdfErr: any) {
+    } catch (pdfErr: unknown) {
       log.warn(`[ContractPipeline] Executed PDF generation/upload failed (non-fatal): ${pdfErr.message}`);
     }
 
@@ -1112,7 +1087,7 @@ class ContractPipelineService {
             body: { to: signer.signerEmail, subject: execEmail.subject, html: execEmail.html },
           }).catch((emailErr: any) => log.warn(`[ContractPipeline] Executed copy email failed for ${signer.signerEmail}: ${emailErr?.message}`));
         }
-      } catch (emailErr: any) {
+      } catch (emailErr: unknown) {
         log.warn(`[ContractPipeline] Failed to send executed copy emails: ${emailErr.message}`);
       }
     })();
@@ -1148,7 +1123,6 @@ class ContractPipelineService {
           const total = String(contract.totalValue);
           const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // net-30
 
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           const [invoice] = await db.insert(invoices).values({
             workspaceId: contract.workspaceId,
             clientId: contract.clientId,
@@ -1194,11 +1168,11 @@ class ContractPipelineService {
               const { quickbooksIntegration } = await import('../integrations/quickbooksIntegration');
               await quickbooksIntegration.syncContractToInvoice(contract.workspaceId, contractId, invoice.id);
               log.info(`[ContractPipeline] QB invoice sync completed for executed contract ${contractId}`);
-            } catch (err: any) {
+            } catch (err: unknown) {
               log.warn('[ContractPipeline] QB invoice sync failed (non-blocking):', err?.message);
             }
           }, 0);
-        } catch (invErr: any) {
+        } catch (invErr: unknown) {
           log.warn(`[ContractPipeline] Auto-invoice creation failed (non-fatal): ${invErr.message}`);
         }
       })();
@@ -1287,12 +1261,10 @@ class ContractPipelineService {
       return { valid: false, error: 'Invalid access token' };
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (accessToken.isRevoked) {
       return { valid: false, error: 'Access token has been revoked' };
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (new Date() > accessToken.expiresAt) {
       return { valid: false, error: 'Access token has expired' };
     }
@@ -1311,7 +1283,6 @@ class ContractPipelineService {
       })
       .where(eq(clientContractAccessTokens.id, accessToken.id));
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const contract = await this.getContract(accessToken.contractId);
     if (!contract) {
       return { valid: false, error: 'Contract not found' };
@@ -1328,7 +1299,6 @@ class ContractPipelineService {
     const [updated] = await db
       .update(clientContractAccessTokens)
       .set({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         isRevoked: true,
         revokedAt: new Date(),
         revokedBy,
@@ -1674,7 +1644,6 @@ export async function sendContractSigningReminders(): Promise<{ scanned: number;
 
     try {
       await NotificationDeliveryService.send({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         type: 'contract_signing_reminder',
         workspaceId: contract.workspaceId || 'system',
         recipientUserId: contract.clientEmail,
@@ -1708,7 +1677,7 @@ export async function sendContractSigningReminders(): Promise<{ scanned: number;
         workspaceId: contract.workspaceId,
         metadata: { contractId: contract.id, ageDays },
       }).catch(err => log.warn('[ContractReminder] event publish failed:', err?.message));
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[ContractReminder] Failed to send reminder for contract ${contract.id}:`, err?.message);
     }
   }

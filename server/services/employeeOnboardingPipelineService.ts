@@ -36,7 +36,7 @@ export class EmployeeOnboardingPipelineService {
     entityId: string;
     pipelineType?: string;
     assignedToUserId?: string;
-  }): Promise<any> {
+  }): Promise<unknown> {
     const steps = EMPLOYEE_ONBOARDING_STEPS.map((s, idx) => ({
       ...s,
       status: 'pending',
@@ -82,7 +82,7 @@ export class EmployeeOnboardingPipelineService {
     return result.rows[0] || null;
   }
 
-  async completeStep(pipelineId: string, stepId: string, data?: any): Promise<any> {
+  async completeStep(pipelineId: string, stepId: string, data?: any): Promise<unknown> {
     const pipeline = await this.getPipeline(pipelineId);
     if (!pipeline) throw new Error('Pipeline not found');
 

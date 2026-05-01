@@ -106,7 +106,7 @@ visitorManagementRouter.get('/logs', requireAuth, async (req: AuthenticatedReque
     const { rows: countRows } = await pool.query(`SELECT COUNT(*) FROM visitor_logs WHERE ${where}`, params);
 
     res.json({ logs: rows, total: parseInt(countRows[0].count) });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: sanitizeError(err) });
   }
 });
@@ -142,7 +142,7 @@ visitorManagementRouter.get('/active', requireAuth, async (req: AuthenticatedReq
     }
 
     res.json({ activeVisitors: enriched, bySite, total: enriched.length });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: sanitizeError(err) });
   }
 });
@@ -241,7 +241,7 @@ visitorManagementRouter.post('/checkin', requireAuth, async (req: AuthenticatedR
     }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     res.status(201).json({ log, isBanned });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(400).json({ error: sanitizeError(err) });
   }
 });
@@ -284,7 +284,7 @@ visitorManagementRouter.post('/checkout/:id', requireAuth, async (req: Authentic
     }).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
 
     res.json(log);
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: sanitizeError(err) });
   }
 });
@@ -344,7 +344,7 @@ visitorManagementRouter.get('/overstay', requireAuth, async (req: AuthenticatedR
     }
 
     res.json({ overstays, total: overstays.length });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: sanitizeError(err) });
   }
 });
@@ -381,7 +381,7 @@ visitorManagementRouter.get('/pre-registrations', requireAuth, async (req: Authe
     const { rows: countRows } = await pool.query(`SELECT COUNT(*) FROM visitor_pre_registrations WHERE ${where}`, params);
 
     res.json({ preRegistrations: rows, total: parseInt(countRows[0].count) });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: sanitizeError(err) });
   }
 });
@@ -429,7 +429,7 @@ visitorManagementRouter.post('/pre-registrations', requireAuth, async (req: Auth
     );
 
     res.status(201).json(rows[0]);
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(400).json({ error: sanitizeError(err) });
   }
 });
@@ -452,7 +452,7 @@ visitorManagementRouter.patch('/pre-registrations/:id', requireAuth, async (req:
     );
     if (!rows[0]) return res.status(404).json({ error: 'Pre-registration not found' });
     res.json(rows[0]);
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: sanitizeError(err) });
   }
 });
@@ -606,7 +606,7 @@ async function runOverstayScanner(workspaceIds?: string[]): Promise<void> {
         await pool.query(`UPDATE visitor_logs SET alert_sent=true WHERE id=$1`, [o.id]).catch((err: any) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[VisitorMgmt] Overstay scanner error (non-blocking):', err?.message);
   }
 }
@@ -666,7 +666,7 @@ export async function ensureVisitorTables(): Promise<void> {
     await pool.query(`CREATE INDEX IF NOT EXISTS visitor_pre_reg_status_idx ON visitor_pre_registrations(status)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS visitor_pre_reg_arrival_idx ON visitor_pre_registrations(expected_arrival)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS visitor_logs_active_idx ON visitor_logs(workspace_id, checked_out_at)`);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VisitorMgmt] Table ensure failed (non-blocking):', err?.message);
   }
 }

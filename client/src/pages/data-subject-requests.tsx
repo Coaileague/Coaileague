@@ -120,7 +120,7 @@ function UpdateStatusDialog({ dsr, canEdit }: { dsr: DataSubjectRequest; canEdit
       toast({ title: "DSR updated", description: `Status changed to ${status}` });
       setOpen(false);
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Update failed", description: err.message, variant: "destructive" });
     },
   });
@@ -184,13 +184,13 @@ function SubmitDSRDialog() {
   const [requestType, setRequestType] = useState("access");
 
   const mutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/privacy/requests", data),
+    mutationFn: (data) => apiRequest("POST", "/api/privacy/requests", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/privacy/requests"] });
       toast({ title: "Request submitted", description: "You will be notified within 30 days." });
       setOpen(false);
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Submission failed", description: err.message, variant: "destructive" });
     },
   });

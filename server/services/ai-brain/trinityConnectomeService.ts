@@ -120,7 +120,7 @@ const BRAIN_REGION_MAP: Map<BrainRegion, BrainRegionDescriptor> = new Map([
 interface GlobalWorkspaceMessage {
   fromRegion: BrainRegion;
   eventType: string;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   workspaceId?: string;
   confidence: number;
   timestamp: Date;
@@ -134,7 +134,7 @@ interface GlobalWorkspaceMessage {
 export function broadcastToGlobalWorkspace(
   fromRegion: BrainRegion,
   eventType: string,
-  payload: Record<string, any>,
+  payload: Record<string, unknown>,
   workspaceId?: string,
   confidence = 0.8
 ): void {
@@ -181,7 +181,7 @@ export function broadcastToGlobalWorkspace(
 export function cerebellumBroadcast(
   botName: string,
   action: string,
-  result: Record<string, any>,
+  result: Record<string, unknown>,
   workspaceId?: string
 ): void {
   broadcastToGlobalWorkspace(
@@ -286,7 +286,7 @@ export async function buildSelfModelBlock(workspaceId: string): Promise<string> 
     const block = lines.join('\n');
     SELF_MODEL_CACHE.set(cacheKey, { block, builtAt: Date.now() });
     return block;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[Connectome] Self-model build failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     return '';
   }

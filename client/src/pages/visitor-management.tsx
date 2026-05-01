@@ -123,7 +123,7 @@ function ActiveVisitorsBoard({ onCheckout }: { onCheckout: (id: string) => void 
             <Badge variant="secondary" className="text-xs">{visitors.length}</Badge>
           </div>
           <div className="space-y-2">
-            {visitors.map((v: any) => (
+            {visitors.map((v) => (
               <div
                 key={v.id}
                 className={['p-3 rounded-md border flex items-center justify-between gap-3 flex-wrap', v.isOverstay ? 'border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20' : ''].join(' ')}
@@ -217,7 +217,7 @@ function CheckInForm({ preRegistrations, onSuccess }: { preRegistrations: any[];
       setForm(emptyForm);
       onSuccess();
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: 'Check-in Failed', description: err.message, variant: 'destructive' });
     },
   });
@@ -391,7 +391,7 @@ function PreRegistrationList() {
       setForm(emptyForm);
       setShowForm(false);
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     },
   });
@@ -402,7 +402,7 @@ function PreRegistrationList() {
       toast({ title: 'Pre-Registration Cancelled' });
       qc.invalidateQueries({ queryKey: ['/api/visitor-management/pre-registrations'] });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     },
   });
@@ -711,7 +711,7 @@ export default function VisitorManagement() {
       setCheckoutId(null);
       setCheckoutNotes('');
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: 'Checkout Failed', description: err.message, variant: 'destructive' });
     },
   });

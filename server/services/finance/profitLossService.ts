@@ -207,7 +207,6 @@ class ProfitLossService {
       },
       aiInsights: [],
       alerts,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       quickbooksStatus: qbSnapshot?.connectionStatus || 'not_configured',
       lastUpdated: new Date(),
     };
@@ -231,7 +230,6 @@ class ProfitLossService {
         featureKey: 'financial_insights',
         featureName: 'Financial Intelligence Insights',
         prompt,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         model: 'gemini-3-pro',
         thinkingEnabled: true,
       });
@@ -361,7 +359,6 @@ Provide ONE specific, actionable recommendation in 1-2 sentences.`;
         featureKey: 'financial_client_profitability',
         featureName: 'Client Profitability Analysis',
         prompt,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         model: 'gemini-3-pro',
         thinkingEnabled: false,
       });
@@ -538,9 +535,7 @@ Provide ONE specific, actionable recommendation in 1-2 sentences.`;
         .innerJoin(payrollRuns, eq(payrollEntries.payrollRunId, payrollRuns.id))
         .where(and(
           eq(payrollRuns.workspaceId, workspaceId),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           gte(payrollRuns.periodStart, startDateStr),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           lte(payrollRuns.periodEnd, endDateStr),
         ));
       
@@ -576,9 +571,7 @@ Provide ONE specific, actionable recommendation in 1-2 sentences.`;
         .leftJoin(expenseCategories, eq(expenses.categoryId, expenseCategories.id))
         .where(and(
           eq(expenses.workspaceId, workspaceId),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           gte(expenses.date, startDateStr),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           lte(expenses.date, endDateStr),
         ))
         .groupBy(expenseCategories.name);

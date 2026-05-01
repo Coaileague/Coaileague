@@ -191,7 +191,7 @@ router.patch("/:id", requireManager as any, async (req: AuthenticatedRequest, re
 
     if (!existing) return res.status(404).json({ error: "Deal not found" });
 
-    const updateData: Record<string, any> = { updatedAt: new Date() };
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
     const allowedFields = [
       'prospectCompany', 'prospectContactName', 'prospectEmail', 'prospectPhone',
       'source', 'stage', 'estimatedMonthlyValue', 'coverageType', 'estimatedHoursWeekly',

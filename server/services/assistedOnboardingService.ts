@@ -66,7 +66,7 @@ export interface HandoffCompleteResult {
 export interface ExtractionResult {
   success: boolean;
   status: 'pending' | 'processing' | 'complete' | 'failed';
-  extractedData?: Record<string, any>;
+  extractedData?: Record<string, unknown>;
   error?: string;
 }
 
@@ -250,7 +250,7 @@ class AssistedOnboardingService {
    */
   async storeExtractedData(
     workspaceId: string, 
-    extractedData: Record<string, any>,
+    extractedData: Record<string, unknown>,
     processedCount: number = 1
   ): Promise<ExtractionResult> {
     try {
@@ -498,7 +498,6 @@ class AssistedOnboardingService {
         try {
           const { db: database } = await import('../db');
           const { auditLogs } = await import('@shared/schema');
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           await database.insert(auditLogs).values({
             workspaceId: workspace.id,
             entityType: 'workspace',

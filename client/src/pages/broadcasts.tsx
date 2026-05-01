@@ -21,7 +21,6 @@ const broadcastsConfig: CanvasPageConfig = {
   id: 'broadcasts',
   title: 'Broadcasts',
   category: 'communication',
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   variant: 'default',
   showHeader: true,
 };

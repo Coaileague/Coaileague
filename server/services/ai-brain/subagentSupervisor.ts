@@ -98,7 +98,7 @@ export interface SubagentExecutionContext {
   userId: string;
   workspaceId: string;
   platformRole: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   startedAt: Date;
 }
 
@@ -1234,7 +1234,6 @@ export const MAILING_INSTRUCTIONS: Record<string, MailingInstruction> = {
   // Normal priority notifications
   platform_update: {
     category: 'system',
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     priority: 'medium',
     requiredFields: ['email', 'title', 'description'],
     optionalFields: ['actionUrl', 'releaseNotes'],
@@ -1258,7 +1257,6 @@ export const MAILING_INSTRUCTIONS: Record<string, MailingInstruction> = {
 
   support_ticket_confirmation: {
     category: 'support',
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     priority: 'medium',
     requiredFields: ['email', 'name', 'ticketNumber', 'subject'],
     optionalFields: ['ticketUrl'],
@@ -1282,7 +1280,6 @@ export const MAILING_INSTRUCTIONS: Record<string, MailingInstruction> = {
 
   employee_invitation: {
     category: 'onboarding',
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     priority: 'medium',
     requiredFields: ['email', 'inviterName', 'workspaceName', 'joinUrl'],
     optionalFields: ['firstName', 'roleName', 'expiresInDays'],
@@ -1342,7 +1339,7 @@ export function getMailingInstruction(category: string): MailingInstruction | nu
  */
 export function validateEmailData(
   category: string, 
-  data: Record<string, any>
+  data: Record<string, unknown>
 ): { valid: boolean; errors: string[] } {
   const instruction = getMailingInstruction(category);
   if (!instruction) {
@@ -1482,7 +1479,7 @@ export interface WorkOrderItem {
   id: string;
   subagentDomain: SubagentDomain;
   actionId: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   status: WorkOrderStatus;
   priority: WorkOrderPriority;
   dependencies: string[];  // IDs of work orders this depends on
@@ -1546,7 +1543,7 @@ class ParallelWorkOrderDispatcher {
     workboardJobId: string,
     workspaceId: string,
     userId: string,
-    tasks: Array<{ domain: SubagentDomain; actionId: string; parameters: Record<string, any>; priority?: WorkOrderPriority; dependencies?: string[] }>,
+    tasks: Array<{ domain: SubagentDomain; actionId: string; parameters: Record<string, unknown>; priority?: WorkOrderPriority; dependencies?: string[] }>,
     options: { slaTimeoutMs?: number; parallelLimit?: number; modelPolicy?: Partial<SupervisorModelPolicy> } = {}
   ): WorkOrderBatch {
     const batchId = `batch-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
@@ -2136,11 +2133,11 @@ class SubagentSupervisor {
   async executeAction(
     domain: SubagentDomain,
     actionId: string,
-    parameters: Record<string, any>,
+    parameters: Record<string, unknown>,
     userId: string,
     workspaceId: string,
     platformRole: string,
-    actionHandler: (params: Record<string, any>) => Promise<any>
+    actionHandler: (params: Record<string, unknown>) => Promise<any>
   ): Promise<SubagentExecutionResult> {
     const executionId = `exec-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`;
     const startTime = Date.now();
@@ -2328,7 +2325,6 @@ class SubagentSupervisor {
         retriesUsed: retryCount,
         creditsUsed,
         creditBalance: finalBalance,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         creditDeductionFailed: !deductionResult.success,  // Flag for observability
       };
 
@@ -2366,8 +2362,8 @@ class SubagentSupervisor {
     actions: Array<{
       domain: SubagentDomain;
       actionId: string;
-      parameters: Record<string, any>;
-      actionHandler: (params: Record<string, any>) => Promise<any>;
+      parameters: Record<string, unknown>;
+      actionHandler: (params: Record<string, unknown>) => Promise<any>;
     }>,
     userId: string,
     workspaceId: string,
@@ -2481,7 +2477,6 @@ class SubagentSupervisor {
         .from(aiWorkboardTasks)
         .where(and(
           eq(aiWorkboardTasks.workspaceId, workspaceId),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           eq(aiWorkboardTasks.executionMode, 'trinity_fast'),
           gte(aiWorkboardTasks.createdAt, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
         ))
@@ -2547,8 +2542,8 @@ class SubagentSupervisor {
     actions: Array<{
       domain: SubagentDomain;
       actionId: string;
-      parameters: Record<string, any>;
-      actionHandler: (params: Record<string, any>) => Promise<any>;
+      parameters: Record<string, unknown>;
+      actionHandler: (params: Record<string, unknown>) => Promise<any>;
     }>,
     userId: string,
     workspaceId: string,
@@ -2680,8 +2675,8 @@ class SubagentSupervisor {
     actions: Array<{
       domain: SubagentDomain;
       actionId: string;
-      parameters: Record<string, any>;
-      actionHandler: (params: Record<string, any>) => Promise<any>;
+      parameters: Record<string, unknown>;
+      actionHandler: (params: Record<string, unknown>) => Promise<any>;
     }>,
     userId: string,
     workspaceId: string,
@@ -3552,7 +3547,6 @@ class SubagentSupervisor {
     // Query database
     const [subagent] = await db.select().from(aiSubagentDefinitions)
       .where(and(
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         eq(aiSubagentDefinitions.domain, domain),
         eq(aiSubagentDefinitions.isActive, true)
       ))
@@ -3645,7 +3639,6 @@ class SubagentSupervisor {
   async getSubagentsByDomain(domain: SubagentDomain): Promise<AiSubagentDefinition[]> {
     return db.select().from(aiSubagentDefinitions)
       .where(and(
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         eq(aiSubagentDefinitions.domain, domain),
         eq(aiSubagentDefinitions.isActive, true)
       ));
@@ -3910,7 +3903,7 @@ class SubagentSupervisor {
     content: string;
     workspaceId: string;
     userId: string;
-    context?: Record<string, any>;
+    context?: Record<string, unknown>;
   }): Promise<{
     success: boolean;
     data?: any;
@@ -4186,7 +4179,7 @@ class SubagentSupervisor {
   private async preExecutionValidation(
     domain: SubagentDomain, 
     workspaceId: string,
-    parameters: Record<string, any>
+    parameters: Record<string, unknown>
   ): Promise<{ valid: boolean; issues: string[]; recommendations: string[] }> {
     const isFinancialDomain = ['payroll', 'invoicing', 'scheduling'].includes(domain);
     
@@ -4239,8 +4232,8 @@ class SubagentSupervisor {
     content: string,
     workspaceId: string,
     userId: string,
-    context?: Record<string, any>
-  ): Promise<any> {
+    context?: Record<string, unknown>
+  ): Promise<unknown> {
     const startTime = Date.now();
     const domain = subagent.domain as SubagentDomain;
     
@@ -4436,7 +4429,7 @@ class SubagentSupervisor {
     tasks: Array<{
       domain: SubagentDomain;
       actionId: string;
-      parameters: Record<string, any>;
+      parameters: Record<string, unknown>;
       priority?: WorkOrderPriority;
       dependencies?: string[];
     }>;

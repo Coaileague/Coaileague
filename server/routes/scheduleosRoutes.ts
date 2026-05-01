@@ -475,7 +475,6 @@ router.post('/import-migrated-shifts', requireManager, async (req: any, res) => 
             aiGenerated: false,
           });
         } catch (validationError: unknown) {
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           errors.push(`Shift ${i + 1}: ${validationError.message}`);
         }
       }
@@ -694,7 +693,6 @@ router.post('/activate', requireManager, async (req: any, res) => {
           log.error('[Stripe] Error verifying payment:', stripeError);
           return res.status(400).json({
             success: false,
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             error: `Payment verification failed: ${stripeError.message}`,
           });
         }

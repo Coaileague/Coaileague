@@ -173,7 +173,6 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
   // Desktop uses full navigation, Mobile uses condensed workforce-focused navigation
   const workspaceFamilies = useMemo(() => {
     if (workspaceLoading || !isWorkspaceMode) return [];
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     return selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff, positionCapabilities);
   }, [workspaceLoading, isWorkspaceMode, workspaceRole, subscriptionTier, isPlatformStaff, positionCapabilities]);
   
@@ -181,7 +180,6 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
   // Only shows core tools: clock in/out, schedule, chat, timesheets, approvals (managers)
   const mobileWorkspaceFamilies = useMemo(() => {
     if (workspaceLoading || !isWorkspaceMode) return [];
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     return selectCondensedMobileFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
   }, [workspaceLoading, isWorkspaceMode, workspaceRole, subscriptionTier, isPlatformStaff]);
 
@@ -248,7 +246,6 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                 {HEADER_CONFIG.public.navItems.map((item) => (
                   <button
                     key={item.href}
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     onClick={item.isSpecial ? handleFeaturesClick : () => setLocation(item.href)}
                     className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors min-h-[44px] px-3"
                     data-testid={item.testid}

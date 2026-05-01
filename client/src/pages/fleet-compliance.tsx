@@ -89,7 +89,7 @@ function ExpiryUpdateDialog({
       onOpenChange(false);
       setExpiry("");
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Update failed", description: err?.message, variant: "destructive" });
     },
   });

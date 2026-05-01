@@ -46,7 +46,6 @@ import { eq } from 'drizzle-orm';
 import { tokenManager, TOKEN_COSTS } from './billing/tokenManager';
 import { aiTokenGateway } from './billing/aiTokenGateway';
 import { platformEventBus } from './platformEventBus';
-// @ts-expect-error — TS migration: fix in refactoring sprint
 import { v4 as uuidv4 } from 'uuid';
 import { createLogger } from '../lib/logger';
 const log = createLogger('executionPipeline');
@@ -91,7 +90,7 @@ export interface PipelineContext {
   };
   
   // Results and metadata
-  fetchedData?: Record<string, any>;
+  fetchedData?: Record<string, unknown>;
   validationResults?: { field: string; passed: boolean; message?: string }[];
   processResult?: any;
   mutationDetails?: { tables: string[]; recordsChanged: number };
@@ -181,7 +180,7 @@ export const PIPELINE_ERROR_CODES: Record<string, { remediation: string; retryab
 export interface EscalationConfig {
   enabled: boolean;
   maxRetries?: number;
-  retryHandler?: (ctx: PipelineContext, fetchedData: Record<string, any>, previousError: Error, tier: string) => Promise<any>;
+  retryHandler?: (ctx: PipelineContext, fetchedData: Record<string, unknown>, previousError: Error, tier: string) => Promise<any>;
   escalationChain?: Array<'ai_retry' | 'ai_architect' | 'human_review'>;
   humanReviewHandler?: (ctx: PipelineContext, error: Error, attempts: PipelineContext['escalationHistory']) => Promise<string>;
 }
@@ -192,7 +191,7 @@ export interface PipelineOptions {
   operationName: string;
   initiator: string;
   initiatorType?: InitiatorType;
-  payload?: Record<string, any>;
+  payload?: Record<string, unknown>;
   
   // Optional overrides
   skipCreditCheck?: boolean;
@@ -203,8 +202,8 @@ export interface PipelineOptions {
 
 export interface StepHandlers<T = any> {
   fetch?: (ctx: PipelineContext) => Promise<Record<string, any>>;
-  validate?: (ctx: PipelineContext, fetchedData: Record<string, any>) => Promise<{ valid: boolean; errors?: string[] }>;
-  process: (ctx: PipelineContext, fetchedData: Record<string, any>) => Promise<T>;
+  validate?: (ctx: PipelineContext, fetchedData: Record<string, unknown>) => Promise<{ valid: boolean; errors?: string[] }>;
+  process: (ctx: PipelineContext, fetchedData: Record<string, unknown>) => Promise<T>;
   mutate?: (ctx: PipelineContext, processResult: T) => Promise<{ tables: string[]; recordsChanged: number }>;
   confirm?: (ctx: PipelineContext, mutationDetails: { tables: string[]; recordsChanged: number }) => Promise<boolean>;
   notify?: (ctx: PipelineContext, result: T) => Promise<string[]>;
@@ -268,7 +267,7 @@ export class ExecutionPipeline {
       // STEP 2: FETCH
       // =====================================================================
       ctx.steps.fetch = 'processing';
-      let fetchedData: Record<string, any> = {};
+      let fetchedData: Record<string, unknown> = {};
       
       if (handlers.fetch) {
         fetchedData = await handlers.fetch(ctx);
@@ -448,7 +447,6 @@ export class ExecutionPipeline {
       let mutationDetails = { tables: [] as string[], recordsChanged: 0 };
       
       if (handlers.mutate) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         mutationDetails = await handlers.mutate(ctx, processResult);
       }
       
@@ -503,7 +501,6 @@ export class ExecutionPipeline {
         
         let notifications: string[] = [];
         if (handlers.notify) {
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           notifications = await handlers.notify(ctx, processResult);
         }
         
@@ -521,10 +518,8 @@ export class ExecutionPipeline {
       // FINALIZE
       // =====================================================================
       const totalExecutionTimeMs = Date.now() - startedAt.getTime();
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await this.finalizeExecutionLog(ctx, 'success', totalExecutionTimeMs, processResult);
       
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       return { success: true, result: processResult, context: ctx };
       
     } catch (error) {
@@ -575,7 +570,7 @@ export class ExecutionPipeline {
   /**
    * Create initial execution log
    */
-  private async createExecutionLog(ctx: PipelineContext, payload?: Record<string, any>): Promise<void> {
+  private async createExecutionLog(ctx: PipelineContext, payload?: Record<string, unknown>): Promise<void> {
     try {
       await db.insert(executionPipelineLogs).values({
         executionId: ctx.executionId,
@@ -600,10 +595,10 @@ export class ExecutionPipeline {
     ctx: PipelineContext, 
     stepField: string, 
     status: string,
-    additionalData?: Record<string, any>
+    additionalData?: Record<string, unknown>
   ): Promise<void> {
     try {
-      const updateData: Record<string, any> = {
+      const updateData: Record<string, unknown> = {
         [stepField]: status,
       };
       

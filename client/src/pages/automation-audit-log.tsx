@@ -96,7 +96,7 @@ export default function AutomationAuditLog() {
       queryClient.invalidateQueries({ queryKey: ['/api/automation-events'] });
       refetchEvents();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Retry Failed',
         description: error.message || 'Could not retry the job.',

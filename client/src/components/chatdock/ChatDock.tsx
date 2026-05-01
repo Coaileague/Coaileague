@@ -184,7 +184,7 @@ function ConversationActions({
       onClose();
       onLeaveSuccess?.();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to leave conversation", variant: "destructive" });
     },
   });
@@ -241,7 +241,7 @@ function NewConversationView({ onBack, onCreated }: { onBack: () => void; onCrea
       const data = await res.json();
       return { ...data, recipientName: recipient.name };
     },
-    onSuccess: async (data: any) => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/chat/rooms"] });
       await chatManager.loadRoomList();
       onCreated(data.conversationId, data.recipientName || "Direct Message");
@@ -257,12 +257,12 @@ function NewConversationView({ onBack, onCreated }: { onBack: () => void; onCrea
       });
       return await res.json();
     },
-    onSuccess: async (data: any) => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/chat/rooms"] });
       await chatManager.loadRoomList();
       onCreated(data.conversationId, roomName.trim());
     },
-    onError: (error: any) => {
+    onError: (error) => {
       let message = "Failed to create room";
       try {
         // ApiError.message is "{status}: {body}" — extract JSON body from the suffix
@@ -376,7 +376,7 @@ function NewConversationView({ onBack, onCreated }: { onBack: () => void; onCrea
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           </div>
         )}
-        {users.map((u: any) => {
+        {users.map((u) => {
           const isSelected = selectedUsers.find((s) => s.id === u.id);
           return (
             <button
@@ -523,7 +523,7 @@ function RoomInfoPanel({
   // fall back to DB participants for persisted group rooms.
   const useLive = liveUsers.length > 0;
   const displayCount = useLive ? liveUsers.length : dbParticipants.length;
-  const currentUserParticipant = dbParticipants.find((p: any) => p.participantId === user?.id);
+  const currentUserParticipant = dbParticipants.find((p) => p.participantId === user?.id);
   const isOwnerOrAdmin = currentUserParticipant && ["owner", "admin"].includes(currentUserParticipant.participantRole);
 
   return (
@@ -585,7 +585,7 @@ function RoomInfoPanel({
         })}
 
         {/* DB participants (group rooms with persisted membership) */}
-        {!useLive && dbParticipants.map((p: any) => (
+        {!useLive && dbParticipants.map((p) => (
           <div key={p.id} className="flex items-center gap-2 px-3 py-2">
             <Avatar className="h-8 w-8 flex-shrink-0">
               <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
@@ -803,7 +803,7 @@ function MessageActions({
       const res = await apiRequest("POST", `/api/chat/manage/messages/${messageId}/pin`);
       return res.json();
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       toast({ title: data.pinned ? "Message pinned" : "Message unpinned" });
       queryClient.invalidateQueries({ queryKey: ['/api/chat/manage/conversations', conversationId, 'pinned'] });
       onClose();
@@ -1753,7 +1753,7 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
       toast({ title: "Message edited" });
       setEditingMessage(null);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Edit failed", description: error.message, variant: "destructive" });
     },
   });
@@ -1761,7 +1761,7 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
   const reactionsMap = (reactionsData as any)?.reactions || {};
   const pinnedMessages = (pinnedData as any)?.messages || [];
   const searchHits = (searchResults as any)?.messages || [];
-  const searchHitIds = new Set(searchHits.map((m: any) => m.id));
+  const searchHitIds = new Set(searchHits.map((m) => m.id));
 
   const parentMessageCache = useMemo(() => {
     const cache: Record<string, { senderName: string; message: string }> = {};
@@ -2551,7 +2551,7 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
               { id: '@Trinity', name: 'Trinity', role: 'AI Brain', badge: 'AI', color: 'hsl(271 81% 56%)' },
               { id: '@HelpAI', name: 'HelpAI', role: 'Field Supervisor', badge: 'BOT', color: 'hsl(38 92% 50%)' },
             ];
-            const memberMentions = (members ?? []).map((m: any) => ({
+            const memberMentions = (members ?? []).map((m) => ({
               id: `@${m.firstName}${m.lastName}`,
               name: `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim(),
               role: m.workspaceRole || 'Member',
@@ -2913,7 +2913,6 @@ export function ChatFullPage({ autoOpenSupportRoom }: { autoOpenSupportRoom?: bo
     if (autoOpenSupportRoom && !activeChatRoom && rawRooms && rawRooms.length > 0) {
       // Specifically target the Help Desk room (HelpAI bot), not general support rooms
       const helpDeskRoom = rawRooms.find(r =>
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         r.type === "support" && (r.slug === 'helpdesk' || r.name === 'Help Desk')
       ) || rawRooms.find(r => r.type === "support");
       if (helpDeskRoom) {

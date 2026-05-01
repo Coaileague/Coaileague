@@ -38,7 +38,7 @@ interface WorkspaceConfig {
   orgCode: string | null;
   timezone: string | null;
   isActive: boolean; // derived from subscriptionStatus
-  settings: Record<string, any>;
+  settings: Record<string, unknown>;
 }
 
 interface RoleCheckResult {

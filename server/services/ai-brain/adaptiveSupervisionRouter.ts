@@ -38,11 +38,11 @@ export interface RoutingRequest {
   // Task details
   intent: string;
   taskType: string;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   
   // Context
   previousActions?: string[];
-  sessionContext?: Record<string, any>;
+  sessionContext?: Record<string, unknown>;
   
   // Preferences
   preferredSubagent?: string;
@@ -99,15 +99,15 @@ export interface HandoffRequest {
   targetSubagent: string;
   
   // Data to transfer
-  context: Record<string, any>;
-  request: Record<string, any>;
+  context: Record<string, unknown>;
+  request: Record<string, unknown>;
   
   // Handoff type
   type: 'sync' | 'async' | 'callback';
   
   // Return expectations
   expectsResponse: boolean;
-  responseSchema?: Record<string, any>;
+  responseSchema?: Record<string, unknown>;
   
   // Metadata
   workspaceId: string;
@@ -265,7 +265,6 @@ class AdaptiveSupervisionRouter {
     await this.logRoutingDecision(request, decision);
 
     // Publish event
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     platformEventBus.publish('ai_brain_action', {
       action: 'adaptive_routing',
       requestId,
@@ -554,19 +553,14 @@ class AdaptiveSupervisionRouter {
   } {
     switch (complexity.level) {
       case 'simple':
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return { selectedTier: 'LITE', fallbackTier: 'FLASH' };
       case 'moderate':
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return { selectedTier: 'FLASH', fallbackTier: 'PRO' };
       case 'complex':
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return { selectedTier: 'PRO', fallbackTier: 'BRAIN' };
       case 'expert':
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return { selectedTier: 'BRAIN', fallbackTier: 'PRO' };
       default:
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return { selectedTier: 'FLASH', fallbackTier: 'PRO' };
     }
   }

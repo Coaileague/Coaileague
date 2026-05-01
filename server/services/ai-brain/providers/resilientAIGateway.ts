@@ -48,7 +48,7 @@ export interface ProviderHealth {
 
 export interface AIRequest {
   prompt: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   domain?: string;
   maxTokens?: number;
   temperature?: number;
@@ -660,7 +660,7 @@ export const resilientAIGateway = new ResilientAIGateway();
 
 export async function callAIWithFallback(
   prompt: string,
-  context?: Record<string, any>,
+  context?: Record<string, unknown>,
   options?: Partial<AIRequest>
 ): Promise<AIResponse> {
   return resilientAIGateway.callWithFallback({

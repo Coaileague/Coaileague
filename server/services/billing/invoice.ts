@@ -259,9 +259,7 @@ export class InvoiceService {
         relatedEntityId: invoice.id,
         newState: {
           invoiceNumber,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           subtotal,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           totalAmount,
           lineItemCount: lineItems.length,
         },
@@ -857,7 +855,6 @@ export class InvoiceService {
     const calculatedDueDate = dueDate || new Date(billingPeriodEnd.getTime() + 30 * 24 * 60 * 60 * 1000);
     log.info('Due date set', { dueDate: calculatedDueDate.toISOString() });
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     return await db.transaction(async (tx) => {
       const [invoice] = await tx.insert(invoices)
         .values({
@@ -1271,7 +1268,7 @@ export class InvoiceService {
           metadata: { paymentMethod, payerEmail, payerName, fullyPaid },
           tx,
         });
-      } catch (ledgerErr: any) {
+      } catch (ledgerErr: unknown) {
         log.error('[InvoiceService] Ledger write failed — rolling back payment transaction:', ledgerErr.message);
         throw ledgerErr; // re-throw to abort the transaction
       }
@@ -1612,7 +1609,7 @@ export class InvoiceService {
             type: schedule.type,
             clientEmail,
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.error('Failed to send payment reminder', { invoiceId: invoice.id, error: (err instanceof Error ? err.message : String(err)) });
           await db.insert(invoiceReminders).values({
             workspaceId,
@@ -1952,7 +1949,7 @@ export class InvoiceService {
         vaultId: vaultResult.vault?.id,
         documentNumber: vaultResult.vault?.documentNumber,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[InvoiceService] Invoice PDF generation failed:', error?.message);
       return { success: false, error: error?.message };
     }

@@ -152,7 +152,6 @@ router.post('/publish', requireManager, async (req: any, res) => {
         entityType: 'schedule',
         entityId: published.id,
         userId,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         details: {
           title: published.title,
           totalShifts: published.totalShifts,
@@ -261,7 +260,7 @@ router.post('/publish', requireManager, async (req: any, res) => {
           }).catch((emailErr: any) => log.warn(`Schedule email failed for ${emp.email}:`, emailErr?.message));
         }
         log.info(`[SchedulePublish] Sent schedule emails to ${empDetails.filter(e => e.email).length} employees for week ${weekStartFormatted}`);
-      } catch (emailErr: any) {
+      } catch (emailErr: unknown) {
         log.warn('[SchedulePublish] Email dispatch failed (non-blocking):', emailErr?.message);
       }
     });
@@ -535,16 +534,12 @@ router.get('/export/csv', requireManager, async (req: AuthenticatedRequest, res)
     const csvRows = allShifts.map(s => {
       const empName = s.employeeId ? (employeeMap.get(s.employeeId) || 'Unknown') : 'Unassigned';
       const date = s.date;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const start = format(new Date(s.startTime), 'HH:mm');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const end = format(new Date(s.endTime), 'HH:mm');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       return `"${empName}","${date}","${start}","${end}","${s.title || ''}","${s.status}","${(s.notes || '').replace(/"/g, '""')}"`;
     }).join('\n');
 
     res.setHeader('Content-Type', 'text/csv');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     res.setHeader('Content-Disposition', `attachment; filename="schedule-export-${format(new Date(), 'yyyy-MM-dd')}.csv"`);
     res.send(csvHeader + csvRows);
   } catch (error) {
@@ -643,7 +638,7 @@ router.post('/auto-fill/preflight', requireManager, async (req: AuthenticatedReq
         readyToExecute: totalOpenShifts > 0,
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[Schedules] Preflight check failed:', err?.message);
     res.status(500).json({ error: 'Failed to run preflight check' });
   }

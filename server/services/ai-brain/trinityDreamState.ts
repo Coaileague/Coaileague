@@ -114,7 +114,7 @@ class TrinityDreamState {
         })
         .returning({ id: cronRunLog.id });
       cronLogId = cronStart?.id ?? null;
-    } catch (logErr: any) {
+    } catch (logErr: unknown) {
       log.warn('[DreamState] cron_run_log insert failed (non-fatal):', logErr?.message);
     }
 
@@ -133,7 +133,7 @@ class TrinityDreamState {
         try {
           const result = await this.processDreamStateForWorkspace(ws.id, ws.name, hebbianResult);
           results.push(result);
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.error(`[DreamState] Workspace ${ws.id} dream state failed: ${(err instanceof Error ? err.message : String(err))}`);
         }
       }
@@ -171,7 +171,7 @@ class TrinityDreamState {
             results.reduce((acc, r) => acc + r.learningEventsConsolidated, 0),
             cronLogId,
           ]);
-        } catch (logErr: any) {
+        } catch (logErr: unknown) {
           log.warn('[DreamState] cron_run_log update failed (non-fatal):', logErr?.message);
         }
       }
@@ -179,7 +179,7 @@ class TrinityDreamState {
       log.info(`[DreamState] === DREAM STATE CYCLE COMPLETE (${elapsed}ms, ${results.length} workspaces) ===`);
 
       return results;
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[DreamState] Dream state cycle failed: ${(err instanceof Error ? err.message : String(err))}`);
 
       // Write cron_run_log — failed
@@ -216,7 +216,7 @@ class TrinityDreamState {
         edgesStrengthened: stats.strongEdges || 0,
         totalEdges: stats.totalEdges || 0,
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[DreamState] Hebbian consolidation failed: ${(err instanceof Error ? err.message : String(err))}`);
       return { edgesDecayed: 0, edgesStrengthened: 0, totalEdges: 0 };
     }
@@ -267,7 +267,7 @@ class TrinityDreamState {
       if (expiringSoon.length > 0) {
         log.info(`[DreamState] Regulatory review alert: ${summary}`);
       }
-    } catch (regErr: any) {
+    } catch (regErr: unknown) {
       log.warn(`[DreamState] Regulatory scan failed (non-fatal): ${regErr?.message}`);
     }
 
@@ -279,7 +279,7 @@ class TrinityDreamState {
       await trinityFinancialIntelligenceEngine.computeContractHealthScores(workspaceId);
       await trinityFinancialIntelligenceEngine.generateLaborCostForecast(workspaceId);
       log.info(`[DreamState] Financial intelligence scores updated for workspace ${workspaceId}`);
-    } catch (finErr: any) {
+    } catch (finErr: unknown) {
       log.warn(`[DreamState] Financial intelligence update failed (non-fatal): ${finErr?.message}`);
     }
 
@@ -291,7 +291,7 @@ class TrinityDreamState {
       if (newTasks.length > 0) {
         log.info(`[DreamState] Autonomous queue: ${newTasks.length} new task(s) identified for workspace ${workspaceId}`);
       }
-    } catch (atqErr: any) {
+    } catch (atqErr: unknown) {
       log.warn(`[DreamState] Autonomous task scan failed (non-fatal): ${atqErr?.message}`);
     }
 
@@ -312,7 +312,7 @@ class TrinityDreamState {
       if (now.getUTCDate() === 1) {
         await trinityRecognitionEngine.nominateOfficerOfMonth(workspaceId).catch(() => null);
       }
-    } catch (msErr: any) {
+    } catch (msErr: unknown) {
       log.warn(`[DreamState] Milestone scan failed (non-fatal): ${msErr?.message}`);
     }
 
@@ -332,14 +332,11 @@ class TrinityDreamState {
       for (const emp of employees) {
         try {
           const scores = await trinityPerformanceCalculator.calculateForEmployee(
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId, emp.id, periodStart, periodEnd, 'weekly'
           );
           // Check raise suggestion eligibility
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           const raiseCheck = await trinityPerformanceCalculator.checkRaiseSuggestionEligibility(workspaceId, emp.id);
           if (raiseCheck.eligible) {
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             await trinityRecognitionEngine.generateRaiseSuggestion(workspaceId, emp.id, raiseCheck.avgScore, raiseCheck.daysAboveThreshold).catch(() => null);
           }
         } catch { /* per-employee errors are non-fatal */ }
@@ -347,7 +344,7 @@ class TrinityDreamState {
       // Check FTO eligibility for the workspace
       await trinityRecognitionEngine.checkFTOEligibility(workspaceId).catch(() => null);
       log.info(`[DreamState] Performance recalculation complete for workspace ${workspaceId}`);
-    } catch (perfErr: any) {
+    } catch (perfErr: unknown) {
       log.warn(`[DreamState] Performance recalculation failed (non-fatal): ${perfErr?.message}`);
     }
 
@@ -363,7 +360,7 @@ class TrinityDreamState {
       if (patterns.length > 0) {
         log.info(`[DreamState] Disciplinary scan: ${patterns.length} pattern(s) flagged in workspace ${workspaceId}`);
       }
-    } catch (discErr: any) {
+    } catch (discErr: unknown) {
       log.warn(`[DreamState] Disciplinary scan failed (non-fatal): ${discErr?.message}`);
     }
 
@@ -376,7 +373,7 @@ class TrinityDreamState {
       const cogState = await trinityCognitiveLoadMonitor.assessWorkspace(workspaceId);
       isOverloaded = cogState.loadStatus === 'overloaded';
       log.info(`[DreamState] Cognitive load: ${cogState.loadStatus} (${cogState.currentLoadScore}/100)`);
-    } catch (clErr: any) {
+    } catch (clErr: unknown) {
       log.warn(`[DreamState] Cognitive load monitor failed (non-fatal): ${clErr?.message}`);
     }
 
@@ -386,7 +383,7 @@ class TrinityDreamState {
       const { trinityTemporalConsciousnessEngine } = await import('./trinityTemporalConsciousnessEngine');
       await trinityTemporalConsciousnessEngine.scanWorkspace(workspaceId);
       log.info(`[DreamState] Temporal arc update complete for workspace ${workspaceId}`);
-    } catch (tacErr: any) {
+    } catch (tacErr: unknown) {
       log.warn(`[DreamState] Temporal arc update failed (non-fatal): ${tacErr?.message}`);
     }
 
@@ -401,7 +398,7 @@ class TrinityDreamState {
         if (answered.length > 0) {
           log.info(`[DreamState] Curiosity engine: ${answered.length} finding(s) discovered in workspace ${workspaceId}`);
         }
-      } catch (ceErr: any) {
+      } catch (ceErr: unknown) {
         log.warn(`[DreamState] Curiosity engine failed (non-fatal): ${ceErr?.message}`);
       }
     }
@@ -414,7 +411,7 @@ class TrinityDreamState {
       if (simCount > 0) {
         log.info(`[DreamState] Counterfactual engine: ${simCount} simulation(s) run for workspace ${workspaceId}`);
       }
-    } catch (cfErr: any) {
+    } catch (cfErr: unknown) {
       log.warn(`[DreamState] Counterfactual engine failed (non-fatal): ${cfErr?.message}`);
     }
 
@@ -427,7 +424,7 @@ class TrinityDreamState {
       if (high.length > 0) {
         log.info(`[DreamState] Social graph: ${high.length} high-severity insight(s) surfaced for workspace ${workspaceId}`);
       }
-    } catch (sgErr: any) {
+    } catch (sgErr: unknown) {
       log.warn(`[DreamState] Social graph failed (non-fatal): ${sgErr?.message}`);
     }
 
@@ -441,7 +438,7 @@ class TrinityDreamState {
         if (breakthroughs.length > 0) {
           log.info(`[DreamState] Incubation engine: ${breakthroughs.length} BREAKTHROUGH(s) in workspace ${workspaceId}`);
         }
-      } catch (inErr: any) {
+      } catch (inErr: unknown) {
         log.warn(`[DreamState] Incubation engine failed (non-fatal): ${inErr?.message}`);
       }
     }
@@ -452,7 +449,7 @@ class TrinityDreamState {
       const { trinityNarrativeIdentityEngine } = await import('./trinityNarrativeIdentityEngine');
       await trinityNarrativeIdentityEngine.initializeForWorkspace(workspaceId);
       await trinityNarrativeIdentityEngine.writeMonthlyChapter(workspaceId);
-    } catch (naErr: any) {
+    } catch (naErr: unknown) {
       log.warn(`[DreamState] Narrative identity failed (non-fatal): ${naErr?.message}`);
     }
 
@@ -544,7 +541,6 @@ class TrinityDreamState {
           eq(shifts.workspaceId, workspaceId),
           gte(shifts.startTime, sql`NOW()`),
           lte(shifts.startTime, sql`NOW() + INTERVAL '48 hours'`),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           or(eq(shifts.status, 'open'), isNull(shifts.assignedEmployeeId))
         ));
       return parseInt(String((result[0] as any)?.count || '0'));
@@ -699,7 +695,7 @@ class TrinityDreamState {
       // Invalidate the connectome self-model cache for this workspace so the next
       // chat interaction picks up the freshly consolidated overnight facts
       invalidateSelfModelCache(workspaceId);
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn(`[DreamState] Could not store morning brief: ${(err instanceof Error ? err.message : String(err))}`);
     }
   }
@@ -725,7 +721,7 @@ class TrinityDreamState {
         ))
         .limit(50);
       return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[DreamState] Failed to get workspaces: ${(err instanceof Error ? err.message : String(err))}`);
       return [];
     }

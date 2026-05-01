@@ -105,7 +105,6 @@ class ApprovalResumeOrchestrator {
       .limit(1);
 
     if (existingApproval.length === 0) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(aiWorkflowApprovals).values({
         workspaceId: 'system',
         id: approvalId,
@@ -127,7 +126,6 @@ class ApprovalResumeOrchestrator {
     for (const approver of approvers) {
       if (approver.email) {
         try {
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           await sendAutomationEmail('approval_required', approver.email, {
             userName: approver.firstName || 'Admin',
             automationType: domain,
@@ -234,7 +232,6 @@ class ApprovalResumeOrchestrator {
         metadata: {
           approvalId,
           approvedBy: userId,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           audience: 'manager',
         },
       }).catch((err: any) => log.warn('[ApprovalResumeOrchestrator] Failed to publish approval_approved:', err.message));
@@ -288,7 +285,6 @@ class ApprovalResumeOrchestrator {
         // Update status to allow retry
         await db.update(idempotencyKeys)
           .set({
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             status: 'retry_approved',
             resultMetadata: {
               ...metadata,
@@ -312,7 +308,6 @@ class ApprovalResumeOrchestrator {
             idempotencyKeyId: key.id,
             operationType: key.operationType,
             approvalId,
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             audience: 'manager',
           },
         }).catch((err: any) => log.warn('[ApprovalResumeOrchestrator] Failed to publish job_resume_approved:', err.message));
@@ -333,7 +328,6 @@ class ApprovalResumeOrchestrator {
       if (metadata?.governanceApprovalId === approvalId) {
         await db.update(idempotencyKeys)
           .set({
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             status: 'rejected',
             errorMessage: reason,
             resultMetadata: {

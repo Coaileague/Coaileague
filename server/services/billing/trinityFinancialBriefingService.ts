@@ -81,11 +81,11 @@ export async function runTrinityFinancialBriefings(): Promise<{ briefingsSent: n
         await deliverBriefing(briefing, ws.ownerId);
         briefingsSent++;
         log.info('Financial briefing delivered', { workspaceId: ws.id });
-      } catch (wsErr: any) {
+      } catch (wsErr: unknown) {
         log.warn('Briefing failed for workspace', { workspaceId: ws.id, error: wsErr.message });
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Financial briefing scan failed', { error: (err instanceof Error ? err.message : String(err)) });
   }
 
@@ -162,7 +162,6 @@ async function buildBriefing(
   let pendingDraftAmount = 0;
   for (const run of recentRuns) {
     const amt = parseFloat((run.totalGross || '0').toString());
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (run.status === 'approved' || run.status === 'processing' || run.status === 'completed') {
       lastRunAmount = Math.max(lastRunAmount, amt);
     } else if (run.status === 'draft') {

@@ -89,7 +89,7 @@ export default function BidManagementPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/bid-analytics/analytics"] });
       toast({ title: "Analytics snapshot generated" });
     },
-    onError: (err: any) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
   });
 
   const updateStageMutation = useMutation({

@@ -66,7 +66,7 @@ export default function RoleManagement() {
       setSelectedEmployee(null);
       setNewRole("");
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to update employee role", variant: "destructive" });
     },
   });
@@ -130,7 +130,7 @@ export default function RoleManagement() {
         toast({ title: "Label Saved", description: `"${role}" now displays as "${displayName}"` });
         setEditingLabels(prev => { const n = { ...prev }; delete n[role]; return n; });
       },
-      onError: (err: any) => {
+      onError: (err) => {
         toast({ title: "Error", description: err.message || "Failed to save label", variant: "destructive" });
       },
     });
@@ -142,7 +142,7 @@ export default function RoleManagement() {
         toast({ title: "Label Reset", description: `"${role}" reset to "${PLATFORM_DEFAULT_LABELS[role]}"` });
         setEditingLabels(prev => { const n = { ...prev }; delete n[role]; return n; });
       },
-      onError: (err: any) => {
+      onError: (err) => {
         toast({ title: "Error", description: err.message || "Failed to reset label", variant: "destructive" });
       },
     });

@@ -113,7 +113,6 @@ router.post("/work-orders/execute", requireAuth, async (req: AuthenticatedReques
       const result = await subagentSupervisor.executeParallelWorkOrders({
         workboardJobId,
         workspaceId: workspaceId!,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         userId,
         platformRole,
         tasks,
@@ -319,10 +318,8 @@ router.post("/actions/execute", requireAuth, workspaceTrinityLimiter, async (req
       category: category as any,
       name,
       payload: { ...payload, workspaceId },
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId,
       userRole: req.workspaceRole || 'employee',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       priority: 'medium',
     });
     res.json({ success: result.success, message: result.message, data: result.data ?? result });
@@ -372,7 +369,6 @@ router.get("/growth-log", requireManager, async (req: AuthenticatedRequest, res)
         subtype: r.subtype,
         title: `Trinity learned: ${r.action || r.subtype}`,
         description: r.outcome
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           ? `Outcome: ${r.outcome} | Confidence: ${((r.confidence_level || 0.5) * 100).toFixed(0)}%`
           : `Agent: ${r.agent_id} | Domain: ${r.domain || 'general'}`,
         outcome: r.outcome,

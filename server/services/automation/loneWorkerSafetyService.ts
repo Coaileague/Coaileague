@@ -84,7 +84,7 @@ class LoneWorkerSafetyService {
     this.intervalId = setInterval(async () => {
       try {
         await withDistributedLock(LOCK_KEYS.LONE_WORKER_SAFETY, 'LoneWorkerSafety', () => this.runCycle());
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.error('Monitoring cycle failed (will retry)', { error: error?.message });
       }
     }, SERVICE_POLL_INTERVAL_MS);
@@ -208,7 +208,7 @@ class LoneWorkerSafetyService {
       }
 
       log.info('Loaded active welfare checks from DB', { count: rows.length });
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('Failed to load active welfare checks from DB', { error: error?.message });
     }
   }
@@ -244,7 +244,7 @@ class LoneWorkerSafetyService {
             updatedAt: new Date(),
           },
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('Failed to persist welfare check', { checkId: check.id, error: error?.message });
     }
   }
@@ -320,7 +320,7 @@ class LoneWorkerSafetyService {
           this.sessions.delete(sessionKey);
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('Failed to detect lone workers', { error: error?.message });
     }
   }
@@ -421,7 +421,7 @@ class LoneWorkerSafetyService {
         };
         this.welfareChecks.set(checkId, reconstructed);
         return this.acknowledgeWelfareCheck(checkId, employeeId);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.error('DB lookup failed for welfare check', { checkId, error: err?.message });
         return false;
       }
@@ -587,7 +587,7 @@ class LoneWorkerSafetyService {
           });
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('Failed to notify for escalation', { error: error?.message });
     }
 

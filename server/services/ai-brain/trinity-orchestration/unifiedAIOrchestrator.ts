@@ -45,7 +45,7 @@ export interface OrchestratorRequest {
   dataNeeds?: string[];
   userId?: string;
   workspaceId?: string;
-  additionalContext?: Record<string, any>;
+  additionalContext?: Record<string, unknown>;
   forceAi?: 'trinity' | 'claude' | 'gpt4';
 }
 
@@ -58,7 +58,7 @@ export interface OrchestratorResponse {
   creditsUsed: number;
   latencyMs: number;
   sessionId: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ExecutionResult {
@@ -100,9 +100,7 @@ class UnifiedAIOrchestrator {
       actionType: 'orchestrator_routing_decision',
       context,
       collaboration: {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         primaryAi: routing.primaryAi,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         supportAi: routing.supportAi,
         collaborationType: routing.collaborationType,
         routingDecision: routing.reason,
@@ -136,7 +134,6 @@ class UnifiedAIOrchestrator {
       await aiActionLogger.log({
         actionType: 'orchestrator_request_failed',
         context,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         collaboration: { primaryAi: routing.primaryAi },
         success: false,
         errorMessage: (error instanceof Error ? error.message : String(error)),
@@ -334,7 +331,7 @@ class UnifiedAIOrchestrator {
     dataNeeds: string[],
     request: OrchestratorRequest
   ): Promise<Record<string, any>> {
-    const data: Record<string, any> = {};
+    const data: Record<string, unknown> = {};
 
     for (const need of dataNeeds) {
       try {
@@ -351,7 +348,7 @@ class UnifiedAIOrchestrator {
   private async fetchDataByType(
     dataType: string,
     request: OrchestratorRequest
-  ): Promise<any> {
+  ): Promise<unknown> {
     const workspaceId = request.workspaceId;
     if (!workspaceId) {
       return { type: dataType, status: 'no_workspace_context', message: 'No workspace ID available to query data' };
@@ -474,7 +471,6 @@ class UnifiedAIOrchestrator {
       { workspaceId: params.workspaceId, triggeredBy: 'summonTriad' }
     );
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await aiActionLogger.log({
       actionType: 'triad_summoned',
       context: params.context,
@@ -526,7 +522,6 @@ Please provide a clear, authoritative response. If Trinity's attempt was partial
       { workspaceId: params.context.workspaceId }
     );
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await aiActionLogger.log({
       actionType: 'confusion_escalated_to_claude',
       context: params.context,
@@ -593,7 +588,6 @@ Please provide a clear, authoritative response. If Trinity's attempt was partial
     );
 
     if (!verified) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await aiActionLogger.log({
         actionType: 'financial_math_discrepancy_blocked',
         context: params.context,
@@ -666,7 +660,7 @@ Please provide a clear, authoritative response. If Trinity's attempt was partial
             growthStrategist.getStrategySummary(workspaceId).catch(() => null),
           ]);
 
-          const executiveData: Record<string, any> = {};
+          const executiveData: Record<string, unknown> = {};
           if (healthReport) {
             executiveData.businessHealth = {
               healthScore: healthReport.healthScore,
@@ -708,7 +702,7 @@ Please provide a clear, authoritative response. If Trinity's attempt was partial
             strategicOptimizationService.generateStrategicContext(workspaceId).catch(() => null),
           ]);
 
-          const financialData: Record<string, any> = {};
+          const financialData: Record<string, unknown> = {};
           if (healthReport) {
             financialData.financialSnapshot = healthReport.financials;
             financialData.manpowerCosts = {
@@ -745,7 +739,7 @@ Please provide a clear, authoritative response. If Trinity's attempt was partial
             holisticGrowthEngine.analyzeBusinessHealth(workspaceId).catch(() => null),
           ]);
 
-          const riskData: Record<string, any> = {};
+          const riskData: Record<string, unknown> = {};
           if (strategyScan) {
             riskData.empireScore = strategyScan.empireScore;
             riskData.cashOnTable = strategyScan.cashOnTable;
@@ -787,7 +781,7 @@ Please provide a clear, authoritative response. If Trinity's attempt was partial
           const companyStats = await this.fetchDataByType('company_stats', request).catch(() => null);
           const financialMetrics = await this.fetchDataByType('financial_metrics', request).catch(() => null);
 
-          const supportContext: Record<string, any> = {};
+          const supportContext: Record<string, unknown> = {};
           if (companyStats) {
             supportContext.workspaceOverview = companyStats;
           }

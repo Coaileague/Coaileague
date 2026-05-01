@@ -146,7 +146,7 @@ export default function WorkerIncidents() {
         navigator.vibrate([100, 50, 100, 50, 100]);
       }
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to submit incident report',

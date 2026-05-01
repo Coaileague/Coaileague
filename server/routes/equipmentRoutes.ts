@@ -132,7 +132,6 @@ async function processEquipmentAssignment(req: import("express").Request, res: i
 
     tokenManager.recordUsage({
       workspaceId, userId: userId || 'system', featureKey: 'equipment_checkout',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       featureName: 'Equipment Checkout', description: `Equipment item ${validated.equipmentItemId} checked out`,
       amountOverride: 1, relatedEntityType: 'equipment_assignment', relatedEntityId: assignment.id,
     }).catch((err: Error) => { log.error('[Equipment] Checkout credit deduction failed (non-blocking):', err.message); });
@@ -209,7 +208,6 @@ async function processEquipmentReturn(
 
     tokenManager.recordUsage({
       workspaceId, userId: userId || 'system', featureKey: 'equipment_return',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       featureName: 'Equipment Return', description: `Equipment item ${assignment.equipment_item_id} returned`,
       amountOverride: 1, relatedEntityType: 'equipment_assignment', relatedEntityId: assignment.id,
     }).catch((err: Error) => { log.error('[Equipment] Return credit deduction failed (non-blocking):', err.message); });

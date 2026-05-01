@@ -59,7 +59,7 @@ export interface TrackedNotification {
   escalatedTo?: string;
   retryCount: number;
   lastRetryAt?: Date;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   sourceType?: string;
   sourceId?: string;
 }
@@ -91,7 +91,6 @@ const DEFAULT_ESCALATION_POLICIES: EscalationPolicy[] = [
     channels: ['in_app', 'email', 'push'],
   },
   {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     priority: 'medium',
     initialDeadlineMinutes: 240,
     maxEscalationLevel: 1,
@@ -134,7 +133,7 @@ class NotificationAcknowledgmentService {
     actionUrl?: string;
     actionRequired?: boolean;
     expiresInMinutes?: number;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     sourceType?: string;
     sourceId?: string;
   }): Promise<TrackedNotification> {

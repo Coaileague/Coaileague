@@ -231,7 +231,7 @@ export class AIGuardRails {
   createIsolatedContext(
     baseContext: AIRequestContext,
     allowedFields: string[]
-  ): Record<string, any> {
+  ): Record<string, unknown> {
     return {
       workspaceId: baseContext.workspaceId,
       userId: baseContext.userId,
@@ -342,7 +342,7 @@ export class AIGuardRails {
     context: AIRequestContext,
     error: Error
   ): { fallbackData: any; shouldRetry: boolean; error: string } {
-    const fallbacks: Record<string, any> = {
+    const fallbacks: Record<string, unknown> = {
       sentiment_analysis: {
         sentiment: 'neutral',
         confidence: 0,

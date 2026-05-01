@@ -127,10 +127,8 @@ async function requireAuditorOrStandardAuth(req: Request, res: Response, next: F
   if (auditorId) {
     req.auditorId = auditorId;
     // Property 1 + 2: enforce DB-level isActive and expiresAt
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     return enforceAuditorSession(req, res, next);
   }
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   requireAuth(req, res, next);
 }
 
@@ -139,7 +137,6 @@ async function requireAuditorOrManagerAuth(req: Request, res: Response, next: Fu
   if (auditorId) {
     req.auditorId = auditorId;
     // Property 1 + 2: enforce DB-level isActive and expiresAt
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     return enforceAuditorSession(req, res, next);
   }
   requireAuth(req, res, () => requireManagerRole(req, res, next));
@@ -218,7 +215,6 @@ router.post("/grievance-score-adjustment", requireAuth, requireManager, async (r
       userId
     );
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     res.json({ success: true, ...result });
   } catch (error) {
     log.error("[Compliance Enforcement] Grievance adjustment error:", error);
@@ -693,9 +689,7 @@ router.post("/cross-org-hiring-score/request", requireAuth, requireManagerRole, 
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     await setComplianceAuthToken(token, {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       requestingWorkspaceId,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       requestedBy,
       employeeId,
       purpose,

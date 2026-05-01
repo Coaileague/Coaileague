@@ -104,7 +104,7 @@ router.post("/terminations", requireAuth, async (req: any, res) => {
             overrideAvailable: false,
           });
         }
-      } catch (deliberationErr: any) {
+      } catch (deliberationErr: unknown) {
         log.warn('[Termination] Deliberation failed (non-fatal):', deliberationErr?.message);
       }
     }
@@ -198,7 +198,7 @@ router.post("/terminations", requireAuth, async (req: any, res) => {
            WHERE employee_id = $2 AND workspace_id = $3
         `, [validated.reason || 'terminated', validated.employeeId, workspace.id]);
         log.info(`[CrossTenantScore] Score persisted to global pool for ${validated.employeeId}`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[CrossTenantScore] Persist failed (non-fatal):', err?.message);
       }
     });

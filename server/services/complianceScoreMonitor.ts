@@ -44,7 +44,7 @@ async function ensureTable(): Promise<void> {
         ON compliance_score_snapshots(workspace_id, recorded_at DESC);
     `);
     bootstrapped = true;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[complianceScoreMonitor] bootstrap failed (non-fatal):', err?.message);
   }
 }
@@ -143,13 +143,13 @@ async function notifyOwners(
           idempotencyKey: `compliance-drop-${workspaceId}-${new Date().toISOString().split('T')[0]}-${userId}`,
         });
         delivered++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn(`[complianceScoreMonitor] NDS send failed for ${userId}:`, err?.message);
       }
     }
     log.info(`[complianceScoreMonitor] Alerted ${delivered}/${ownerRows.rowCount} owners for ${workspaceId}`);
     return delivered > 0;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[complianceScoreMonitor] notifyOwners failed:', err?.message);
     return false;
   }

@@ -515,7 +515,6 @@ router.patch('/:id', requireManagerOrPlatformStaff, async (req: AuthenticatedReq
       (async () => {
         try {
           const { helpaiOrchestrator } = await import('../services/helpai/platformActionHub');
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           await helpaiOrchestrator.executeAction('settings.propagate_bill_rate_change', {
             clientId: req.params.id,
             workspaceId,
@@ -799,13 +798,11 @@ router.post('/:id/deactivate', requireManagerOrPlatformStaff, async (req: Authen
     try {
       const { db: dbInner } = await import('../db');
       const { sql: drizzleSql } = await import('drizzle-orm');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const [qbRow] = await dbInner.execute(drizzleSql`
         SELECT quickbooks_realm_id FROM workspaces WHERE id = ${workspaceId} LIMIT 1
       `) as any[];
       if (qbRow?.quickbooks_realm_id) {
         import('../services/partners/quickbooksSyncService')
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           .then(({ quickbooksSyncService }) => quickbooksSyncService.syncWorkspace(workspaceId!))
           .catch(e => log.warn('[ClientOffboarding] QB final sync failed (non-blocking):', e));
       }
@@ -815,7 +812,6 @@ router.post('/:id/deactivate', requireManagerOrPlatformStaff, async (req: Authen
 
     // ── STRUCTURED OFFBOARDING AUDIT RECORD ──────────────────────────────────
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const { universalAuditService, AUDIT_ACTIONS } = await import('../services/universalAuditService');
       await universalAuditService.log({
         workspaceId: workspaceId!,

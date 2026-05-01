@@ -167,7 +167,6 @@ router.get('/pending-approval', requireManager, async (req: AuthenticatedRequest
     const pendingExpenses = await db.select().from(expenses)
       .where(and(
         eq(expenses.workspaceId, workspaceId),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         or(eq(expenses.status, 'pending'), eq(expenses.status, 'submitted'))
       ));
     res.json(pendingExpenses);
@@ -186,7 +185,6 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
       return res.status(404).json({ message: "Expense not found" });
     }
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const receipts = await storage.getExpenseReceiptsByExpense(expense.id);
     res.json({ ...expense, receipts });
   } catch (error: unknown) {
@@ -256,7 +254,6 @@ router.post('/:id/receipts', requireAuth, async (req: AuthenticatedRequest, res)
         metadata: {
           workspaceId: workspaceId,
           expenseId: expense.id,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           uploadedBy: req.user?.id,
           timestamp: new Date().toISOString(),
           originalFileName: sanitizedName,

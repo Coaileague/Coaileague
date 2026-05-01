@@ -33,7 +33,6 @@ import {
   workspaces,
   InsertPartnerConnection,
   InsertPartnerDataMapping,
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   InsertPartnerSyncLog,
 } from '@shared/schema';
 import { eq, and, desc, isNull, or, ilike } from 'drizzle-orm';
@@ -879,8 +878,8 @@ class HRISIntegrationService {
     return [];
   }
 
-  private mapRemoteToLocal(remoteRecord: any, mappings: FieldMapping[], provider: HRISProvider): Record<string, any> {
-    const result: Record<string, any> = {};
+  private mapRemoteToLocal(remoteRecord: any, mappings: FieldMapping[], provider: HRISProvider): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
 
     for (const mapping of mappings) {
       const value = this.getNestedValue(remoteRecord, mapping.remoteField);
@@ -940,7 +939,7 @@ class HRISIntegrationService {
   private async findLocalMatch(
     workspaceId: string,
     entityType: EntityType,
-    mappedData: Record<string, any>
+    mappedData: Record<string, unknown>
   ): Promise<{ id: string; confidence: number } | null> {
     if (entityType !== 'employee') return null;
 
@@ -984,7 +983,7 @@ class HRISIntegrationService {
     return null;
   }
 
-  private async createLocalEmployee(workspaceId: string, data: Record<string, any>): Promise<string> {
+  private async createLocalEmployee(workspaceId: string, data: Record<string, unknown>): Promise<string> {
     const [employee] = await db.insert(employees)
       .values({
         workspaceId,
@@ -1028,7 +1027,7 @@ class HRISIntegrationService {
       .onConflictDoNothing();
   }
 
-  private async updateLocalRecord(entityType: EntityType, localId: string, data: Record<string, any>): Promise<void> {
+  private async updateLocalRecord(entityType: EntityType, localId: string, data: Record<string, unknown>): Promise<void> {
     if (entityType === 'employee') {
       await db.update(employees)
         .set({

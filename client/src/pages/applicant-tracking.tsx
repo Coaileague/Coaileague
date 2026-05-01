@@ -96,7 +96,7 @@ export default function ApplicantTrackingPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/ats/applicants"] });
       toast({ title: "Scoring complete", description: "All applicants have been scored by Trinity." });
     },
-    onError: (err: any) => toast({ title: "Scoring failed", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Scoring failed", description: err.message, variant: "destructive" }),
   });
 
   const updateStatusMutation = useMutation({

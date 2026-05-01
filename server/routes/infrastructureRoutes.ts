@@ -82,7 +82,6 @@ router.use((req: Request, res: Response, next: Function) => {
   }
   
   // ENTERPRISE FEATURE - Check if infrastructure dashboard is enabled
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   if (!isFeatureEnabled('INFRASTRUCTURE_DASHBOARD')) {
     return res.json({
       success: true,
@@ -1006,7 +1005,6 @@ router.get('/launch/rehearsals/:rehearsalId', (req: Request, res: Response) => {
 router.post('/launch/rehearsals', async (req: Request, res: Response) => {
   try {
     const { type, name, description } = req.body;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const rehearsal = await launchRehearsalService.createRehearsal({ type, name, description });
     res.json({ success: true, data: rehearsal });
   } catch (error: unknown) {

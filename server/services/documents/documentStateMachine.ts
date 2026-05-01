@@ -73,7 +73,7 @@ export async function transitionDocumentStatus(params: {
     };
   }
 
-  const updateValues: Record<string, any> = {
+  const updateValues: Record<string, unknown> = {
     status: toStatus,
     updatedAt: new Date(),
   };

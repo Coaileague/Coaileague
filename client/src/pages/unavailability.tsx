@@ -51,7 +51,7 @@ export default function Unavailability() {
       setReason("");
       setType("vacation");
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to submit request", variant: "destructive" });
     },
   });

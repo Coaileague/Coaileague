@@ -52,7 +52,7 @@ export class KnowledgeGraphRepository {
     confidence?: number;
     sourceAgent?: string;
     sourceAction?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<KnowledgeEntityRecord | null> {
     try {
       const [result] = await db.insert(knowledgeEntities).values({
@@ -225,8 +225,8 @@ export class A2AProtocolRepository {
     capabilities?: string[];
     domains?: string[];
     trustLevel?: number;
-    metadata?: Record<string, any>;
-  }): Promise<any> {
+    metadata?: Record<string, unknown>;
+  }): Promise<unknown> {
     try {
       // ON CONFLICT (id) DO NOTHING so restarts don't error on the
       // 7 core subagent seed inserts (payroll-subagent, invoice-subagent,
@@ -236,7 +236,6 @@ export class A2AProtocolRepository {
       // a row is skipped due to conflict, `result` will be undefined and
       // the logging code below handles that cleanly.
       const [result] = await db.insert(a2aAgents).values({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: 'system',
         id: agent.id,
         name: agent.name,
@@ -260,7 +259,7 @@ export class A2AProtocolRepository {
     }
   }
 
-  async getAgent(id: string): Promise<any> {
+  async getAgent(id: string): Promise<unknown> {
     try {
       const [agent] = await db.select().from(a2aAgents).where(eq(a2aAgents.id, id));
       return agent || null;
@@ -277,7 +276,7 @@ export class A2AProtocolRepository {
     messageCount: number;
     successCount: number;
     failureCount: number;
-  }>): Promise<any> {
+  }>): Promise<unknown> {
     try {
       const updateData: any = { updatedAt: new Date() };
       if (updates.status) updateData.status = updates.status;
@@ -311,17 +310,16 @@ export class A2AProtocolRepository {
     priority?: string;
     status?: string;
     subject?: string;
-    content: Record<string, any>;
+    content: Record<string, unknown>;
     correlationId?: string;
     replyTo?: string;
     ttlSeconds?: number;
-  }): Promise<any> {
+  }): Promise<unknown> {
     try {
       const expiresAt = message.ttlSeconds
         ? new Date(Date.now() + (message.ttlSeconds * 1000))
         : new Date(Date.now() + 300000);
       const [result] = await db.insert(a2aMessages).values({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: 'system',
         id: message.id,
         fromAgent: message.senderId,
@@ -371,10 +369,9 @@ export class A2AProtocolRepository {
     memberIds?: string[];
     taskType?: string;
     status?: string;
-  }): Promise<any> {
+  }): Promise<unknown> {
     try {
       const [result] = await db.insert(a2aTeams).values({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: 'system',
         id: team.id,
         name: team.name,
@@ -401,10 +398,9 @@ export class A2AProtocolRepository {
     trustLevel?: number;
     validationRequired?: boolean;
     expiresAt?: Date;
-  }): Promise<any> {
+  }): Promise<unknown> {
     try {
       const [result] = await db.insert(a2aTrustRules).values({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: 'system',
         id: rule.id,
         sourceAgent: rule.agentId,
@@ -448,20 +444,20 @@ export class RLLoopRepository {
     id: string;
     agentId: string;
     actionType: string;
-    context: Record<string, any>;
-    parameters?: Record<string, any>;
+    context: Record<string, unknown>;
+    parameters?: Record<string, unknown>;
     outcome: string;
     reward?: number;
-    successIndicators?: Record<string, any>;
+    successIndicators?: Record<string, unknown>;
     failureReasons?: string[];
     executionTimeMs?: number;
-    resourceUsage?: Record<string, any>;
+    resourceUsage?: Record<string, unknown>;
     workspaceId?: string;
     userId?: string;
     feedbackSource?: string;
     humanValidated?: boolean;
     validationNotes?: string;
-  }): Promise<any> {
+  }): Promise<unknown> {
     try {
       const payload = JSON.stringify({
         context: exp.context,
@@ -550,7 +546,7 @@ export class RLLoopRepository {
     maxConfidenceSeen?: number;
     decayFactor?: number;
     learningRate?: number;
-  }): Promise<any> {
+  }): Promise<unknown> {
     try {
       const payload = JSON.stringify({
         current_confidence: model.currentConfidence,
@@ -592,7 +588,7 @@ export class RLLoopRepository {
     }
   }
 
-  async getConfidenceModel(agentId: string, actionType: string): Promise<any> {
+  async getConfidenceModel(agentId: string, actionType: string): Promise<unknown> {
     try {
       const [model] = await db.select().from(aiLearningEvents)
         .where(and(
@@ -622,17 +618,17 @@ export class RLLoopRepository {
     id: string;
     agentId: string;
     actionType: string;
-    oldStrategy: Record<string, any>;
-    newStrategy: Record<string, any>;
+    oldStrategy: Record<string, unknown>;
+    newStrategy: Record<string, unknown>;
     triggerReason: string;
-    triggerMetrics?: Record<string, any>;
+    triggerMetrics?: Record<string, unknown>;
     confidenceBefore?: number;
     confidenceAfter?: number;
     validated?: boolean;
     validationResult?: string;
     rollbackAvailable?: boolean;
     rolledBack?: boolean;
-  }): Promise<any> {
+  }): Promise<unknown> {
     try {
       const [result] = await db.insert(aiLearningEvents).values({
         id: adaptation.id,
@@ -715,13 +711,13 @@ export class RLLoopRepository {
     workspaceId: string;
     agentId: string;
     actionType: string;
-    originalDecision: Record<string, any>;
-    correctedDecision: Record<string, any>;
+    originalDecision: Record<string, unknown>;
+    correctedDecision: Record<string, unknown>;
     correctionReason: string;
     correctedBy: string;
     entityType?: string;
     entityId?: string;
-  }): Promise<any> {
+  }): Promise<unknown> {
     try {
       const id = `correction-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
       const [result] = await db.insert(aiLearningEvents).values({

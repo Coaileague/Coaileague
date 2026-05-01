@@ -271,7 +271,7 @@ Return ONLY the JSON object, no other text.`;
     });
 
     return result;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[TOPSVerification] Vision analysis failed:', err?.message);
     return {
       status: 'suspicious',

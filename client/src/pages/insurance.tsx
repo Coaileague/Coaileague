@@ -87,7 +87,7 @@ export default function InsurancePage() {
       toast({ title: "Policy added successfully" });
       setIsAddModalOpen(false);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Failed to add policy", description: error.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -99,19 +99,18 @@ export default function InsurancePage() {
       queryClient.invalidateQueries({ queryKey: ["/api/insurance/compliance"] });
       toast({ title: "Policy removed" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Failed to remove policy", description: error.message || "Please try again.", variant: "destructive" });
     },
   });
 
   const generateCertMutation = useMutation({
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     mutationFn: () => apiRequest("POST", "/api/insurance/certificates/generate"),
     onSuccess: (data: { letterText: string }) => {
       setCertRequestText(data.letterText);
       setIsCertModalOpen(true);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Failed to generate certificate", description: error.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -134,9 +133,9 @@ export default function InsurancePage() {
 
   const stats = {
     total: policies?.length || 0,
-    active: policies?.filter((p: any) => p.status === "active").length || 0,
-    expiring: policies?.filter((p: any) => p.status === "expiring").length || 0,
-    expired: policies?.filter((p: any) => p.status === "expired").length || 0,
+    active: policies?.filter((p) => p.status === "active").length || 0,
+    expiring: policies?.filter((p) => p.status === "expiring").length || 0,
+    expired: policies?.filter((p) => p.status === "expired").length || 0,
   };
 
   return (
@@ -337,7 +336,7 @@ export default function InsurancePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {policies?.map((policy: any) => (
+              {policies?.map((policy) => (
                 <Card key={policy.id} className="relative">
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">

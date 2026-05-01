@@ -171,7 +171,7 @@ async function createRoomEvent(
   actorRole: string,
   eventType: string,
   description: string,
-  eventPayload?: Record<string, any>,
+  eventPayload?: Record<string, unknown>,
   ipAddress?: string,
   userAgent?: string
 ) {
@@ -526,7 +526,6 @@ router.post(
       const roomTypeLabel = conversation.conversationType === 'shift_chat' ? 'shift' : 'team';
       const welcomeText = `Welcome to ${roomDisplayName}! This ${roomTypeLabel} chat was created by ${userName}. Invite your team members and start collaborating.`;
       
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await storage.createChatMessage({
         conversationId: conversation.id,
         senderId: null,
@@ -548,7 +547,6 @@ router.post(
         if (isMeetingRoom) {
           await botPool.deployBot('meetingbot', conversation.id, workspaceId);
           activeBots.push('meetingbot');
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           await storage.createChatMessage({
             conversationId: conversation.id,
             senderId: 'meetingbot',
@@ -565,7 +563,6 @@ router.post(
           activeBots.push('reportbot');
           await botPool.deployBot('clockbot', conversation.id, workspaceId);
           activeBots.push('clockbot');
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           await storage.createChatMessage({
             conversationId: conversation.id,
             senderId: 'reportbot',
@@ -581,7 +578,6 @@ router.post(
         if (activeBots.length > 0) {
           const botMetaPatch = JSON.stringify({ activeBots, botDeployedAt: new Date().toISOString() });
           await db.update(chatConversations)
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             .set({ metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${botMetaPatch}::jsonb` })
             .where(eq(chatConversations.id, conversation.id));
         }
@@ -910,7 +906,6 @@ router.get(
               supportConvIds.length > 0 ? notInArray(chatConversations.id, supportConvIds) : undefined,
               or(
                 and(
-                  // @ts-expect-error — TS migration: fix in refactoring sprint
                   eq(chatParticipants.participantId, userId),
                   eq(chatParticipants.isActive, true)
                 ),
@@ -928,7 +923,6 @@ router.get(
             chatParticipants,
             and(
               eq(chatConversations.id, chatParticipants.conversationId),
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               eq(chatParticipants.participantId, userId),
               eq(chatParticipants.isActive, true)
             )
@@ -1250,15 +1244,12 @@ router.post(
       // Add participants — batched: 2 queries total regardless of participant count
       const addedParticipants: string[] = [];
       if (participantIds.length > 0) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const [existingRows, userRows] = await Promise.all([
           db.select({ participantId: chatParticipants.participantId })
             .from(chatParticipants)
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             .where(and(eq(chatParticipants.conversationId, roomId), inArray(chatParticipants.participantId, participantIds))),
           db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName, email: users.email })
             .from(users)
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             .where(inArray(users.id, participantIds)),
         ]);
         const alreadyIn = new Set(existingRows.map((r: any) => r.participantId));
@@ -2317,11 +2308,8 @@ router.post(
         return res.status(403).json({ error: "Manager or higher role required to close rooms" });
       }
 
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const userName = user.firstName && user.lastName
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         ? `${user.firstName} ${user.lastName}`
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         : user.email || "Manager";
 
       const { closeRoom } = await import('../services/roomLifecycleService');
@@ -2404,11 +2392,8 @@ router.post(
         return res.status(403).json({ error: "Manager or higher role required to reopen rooms" });
       }
 
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const userName = user.firstName && user.lastName
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         ? `${user.firstName} ${user.lastName}`
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         : user.email || "Manager";
 
       const { reopenRoom } = await import('../services/roomLifecycleService');
@@ -2557,7 +2542,6 @@ router.get(
       const { helpAIBotService } = await import("../services/helpai/helpAIBotService");
       
       const workspaceId = authReq.workspaceId;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const ticketResult = await helpAIBotService.checkOpenTicketsForUser(userId, workspaceId);
       
       res.json({
@@ -2598,7 +2582,6 @@ router.get(
       if (!workspaceId) {
         return res.status(400).json({ success: false, error: 'workspaceId required for role verification' });
       }
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const roleResult = await helpAIBotService.verifyUserOrgRole(userId, workspaceId);
       
       res.json({
@@ -2712,7 +2695,6 @@ router.post(
 
       const { chatParityService } = await import('../services/chatParityService');
 
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const nukeResult = await chatParityService.nukeRoom(roomId, room.workspaceId, userId, reason);
 
       if (nukeResult.success) {
@@ -2759,7 +2741,6 @@ router.post(
       const [user] = await db
         .select({ firstName: users.firstName, lastName: users.lastName })
         .from(users)
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .where(eq(users.id, userId))
         .limit(1);
 
@@ -2767,7 +2748,6 @@ router.post(
 
       const { chatParityService } = await import('../services/chatParityService');
       const result = await chatParityService.closeConversationWithMute(
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         roomId, room.workspaceId, userId, actorName, reason
       );
 
@@ -2808,7 +2788,6 @@ router.post(
       const [user] = await db
         .select({ firstName: users.firstName, lastName: users.lastName })
         .from(users)
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .where(eq(users.id, userId))
         .limit(1);
 
@@ -2817,7 +2796,6 @@ router.post(
       const { chatParityService } = await import('../services/chatParityService');
       const result = await chatParityService.escalateSystemBug({
         workspaceId,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         reportedBy: userId,
         reportedByName: userName,
         description,

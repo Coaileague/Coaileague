@@ -109,7 +109,7 @@ spsPublicRouter.patch('/:token', async (req, res) => {
     }
 
     const { formData, signatures, initials, fieldUpdates } = req.body;
-    const updates: Record<string, any> = { updatedAt: new Date() };
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
 
     if (formData) updates.formData = { ...(doc.formData as any || {}), ...formData };
     if (signatures) updates.signatures = { ...(doc.signatures as any || {}), ...signatures };

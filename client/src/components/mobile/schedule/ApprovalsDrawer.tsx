@@ -50,9 +50,9 @@ export function ApprovalsDrawer({ open, onOpenChange, pendingShifts, employees }
     onMutate: async (shiftId) => {
       await queryClient.cancelQueries({ queryKey: ['/api/shifts'] });
       const prev = queryClient.getQueryData(['/api/shifts']);
-      queryClient.setQueryData(['/api/shifts'], (old: any) => {
+      queryClient.setQueryData(['/api/shifts'], (old) => {
         if (!old) return old;
-        return old.map((shift: any) => 
+        return old.map((shift) => 
           shift.id === shiftId 
             ? { ...shift, status: 'open' }  // optimistic: approve moves to open/published
             : shift
@@ -107,7 +107,7 @@ export function ApprovalsDrawer({ open, onOpenChange, pendingShifts, employees }
       });
       setBulkProgress(null);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ 
         title: 'Some shifts failed to approve',
         description: error.message,
@@ -137,7 +137,7 @@ export function ApprovalsDrawer({ open, onOpenChange, pendingShifts, employees }
       });
       setBulkProgress(null);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ 
         title: 'Some shifts failed to deny',
         description: error.message,

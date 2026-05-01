@@ -255,7 +255,6 @@ export class ScenarioSeederService {
     startDate.setHours(0, 0, 0, 0);
 
     // Create scenario record
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [scenario] = await db.insert(trainingScenarios).values({
       workspaceId,
       name: config.name,
@@ -334,7 +333,6 @@ export class ScenarioSeederService {
     }
 
     // Create training run
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [run] = await db.insert(trainingRuns).values({
       workspaceId,
       scenarioId: scenario.id,
@@ -416,7 +414,6 @@ export class ScenarioSeederService {
     }
     
     // Create training scenario record
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [scenario] = await db.insert(trainingScenarios).values({
       workspaceId,
       name: config.name,
@@ -437,7 +434,6 @@ export class ScenarioSeederService {
     }).returning();
     
     // Create training run record
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [run] = await db.insert(trainingRuns).values({
       workspaceId,
       scenarioId: scenario.id,
@@ -784,7 +780,6 @@ export class ScenarioSeederService {
       .where(and(
         eq(shifts.workspaceId, workspaceId),
         eq(shifts.isTrainingShift, true),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         eq(shifts.scenarioId, run.scenarioId)
       ));
 
@@ -805,7 +800,7 @@ export class ScenarioSeederService {
       });
       await automationExecutionTracker.startExecution(executionId);
       console.log(`[ScenarioSeeder] Registered execution ${executionId} for training run ${runId}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(`[ScenarioSeeder] Failed to register execution tracker:`, (err instanceof Error ? err.message : String(err)));
     }
     
@@ -949,7 +944,7 @@ export class ScenarioSeederService {
           await new Promise<void>(resolve => setTimeout(resolve, BATCH_PAUSE_MS));
         }
 
-      } catch (error: any) {
+      } catch (error: unknown) {
         failedCount++;
         thoughtLog.push(`[${i + 1}] ERROR ${shift.id}: ${(error instanceof Error ? error.message : String(error))}`);
         console.error(`[ScenarioSeeder] Error processing shift:`, (error instanceof Error ? error.message : String(error)));
@@ -1003,7 +998,7 @@ export class ScenarioSeederService {
           aiSummary: `Trinity evaluated ${availableEmployees.length} employees across ${shiftsToProcess.length} shifts. ${assignedCount} assigned, ${failedCount} skipped due to conflicts.`,
         });
         console.log(`[ScenarioSeeder] Completed execution ${executionId} with pending_verification`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error(`[ScenarioSeeder] Failed to complete execution tracker:`, (err instanceof Error ? err.message : String(err)));
       }
     }

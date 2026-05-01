@@ -230,7 +230,7 @@ interface IssueDiagnosisInput {
   description: string;
   symptoms: string[];
   affectedFeature?: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 export interface EnqueueJobRequest {
@@ -411,7 +411,6 @@ export class AIBrainService {
             confidenceScore = 0.95;
             break;
 
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           case 'platform_awareness':
             const awarenessResult = await this.executePlatformAwareness(job, input as PlatformAwarenessInput);
             output = awarenessResult.output;
@@ -419,7 +418,6 @@ export class AIBrainService {
             confidenceScore = awarenessResult.confidence;
             break;
 
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           case 'issue_diagnosis':
             const diagnosisResult = await this.executeIssueDiagnosis(job, input as IssueDiagnosisInput);
             output = diagnosisResult.output;
@@ -427,7 +425,6 @@ export class AIBrainService {
             confidenceScore = diagnosisResult.confidence;
             break;
 
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           case 'trinity_summarize':
             // Trinity AI conversation summarization for ticket closure
             const summarizeResult = await this.executeTrinitySum(job, input);
@@ -436,11 +433,9 @@ export class AIBrainService {
             confidenceScore = 0.95;
             break;
 
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           case 'helpai_greeting':
           case 'helpai_response':
           case 'helpai_faq_search':
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           case 'helpai_urgency':
             // HelpAI skills - delegate to help support handler
             const helpaiResult = await this.executeHelpAISupport(job, input as HelpAIInput);
@@ -946,7 +941,7 @@ ${faqs.map(f => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n')}
     options?: {
       sourceType?: 'ai_learned' | 'ticket_resolution' | 'feature_update' | 'gap_detection';
       sourceId?: string;
-      sourceContext?: Record<string, any>;
+      sourceContext?: Record<string, unknown>;
       confidence?: number;
       userId?: string;
     }
@@ -1105,7 +1100,7 @@ ${faqs.map(f => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n')}
       sourceId?: string;
       suggestedAnswer?: string;
       confidence?: number;
-      context?: Record<string, any>;
+      context?: Record<string, unknown>;
     }
   ): Promise<string | null> {
     try {
@@ -1682,7 +1677,7 @@ ${JSON.stringify(contextData, null, 2)}`;
   /**
    * Gather business context data for insights
    */
-  private async gatherBusinessContext(workspaceId: string, insightType: string, timeframe: string): Promise<any> {
+  private async gatherBusinessContext(workspaceId: string, insightType: string, timeframe: string): Promise<unknown> {
     const now = new Date();
     let startDate: Date;
     
@@ -2104,7 +2099,6 @@ Format: Write a 2-3 sentence summary that could be shown to both the user and st
       .where(eq(workspaces.id, workspaceId))
       .limit(1);
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceSettings = (workspace?.settings as Record<string, boolean>) || {};
     return platformFeatureRegistry.getFeatureStatus(workspaceSettings);
   }
@@ -2117,7 +2111,7 @@ Format: Write a 2-3 sentence summary that could be shown to both the user and st
     userId?: string;
     featureId: string;
     eventType: 'view' | 'use' | 'error' | 'help_request';
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<void> {
     const { workspaceId, userId, featureId, eventType, metadata } = event;
     
@@ -2138,7 +2132,7 @@ Format: Write a 2-3 sentence summary that could be shown to both the user and st
   /**
    * Enrich employee/org data with human-readable external IDs
    */
-  private async enrichWithExternalIds(data: any, workspaceId?: string): Promise<any> {
+  private async enrichWithExternalIds(data: any, workspaceId?: string): Promise<unknown> {
     if (!data) return data;
 
     if (workspaceId) {
@@ -2222,27 +2216,22 @@ Format: Write a 2-3 sentence summary that could be shown to both the user and st
   private async updateGlobalPatterns(fingerprint: string, eventType: string, feature: string): Promise<void> {
     const [existing] = await db
       .select()
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .from(aiGlobalPatterns)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .where(eq(aiGlobalPatterns.fingerprint, fingerprint))
       .limit(1);
 
     if (existing) {
       const currentOccurrences = existing.occurrences || 0;
       await db
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .update(aiGlobalPatterns)
         .set({
           occurrences: currentOccurrences + 1,
           lastSeenAt: new Date()
         })
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .where(eq(aiGlobalPatterns.id, existing.id));
 
       log.info(`📊 [AI Brain] Pattern ${fingerprint} seen ${currentOccurrences + 1} times across orgs`);
     } else {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(aiGlobalPatterns).values({
         workspaceId: 'system',
         patternType: eventType,
@@ -2259,9 +2248,7 @@ Format: Write a 2-3 sentence summary that could be shown to both the user and st
   /**
    * Submit feedback for AI job - Helps brain learn
    */
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   async submitFeedback(feedback: Omit<InsertAiFeedbackLoop, 'createdAt'>): Promise<void> {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(aiFeedbackLoops).values(feedback);
     log.info(`💡 [AI Brain] Feedback received for job ${feedback.jobId}`);
   }
@@ -2319,7 +2306,7 @@ Format: Write a 2-3 sentence summary that could be shown to both the user and st
   /**
    * Get AI Brain health metrics
    */
-  async getHealthMetrics(workspaceId?: string): Promise<any> {
+  async getHealthMetrics(workspaceId?: string): Promise<unknown> {
     const conditions = workspaceId ? [eq(aiBrainJobs.workspaceId, workspaceId)] : [];
 
     const stats = await db
@@ -2347,7 +2334,6 @@ Format: Write a 2-3 sentence summary that could be shown to both the user and st
   private async getGlobalPatternsCount(): Promise<number> {
     const result = await db
       .select({ count: sql<number>`count(*)` })
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .from(aiGlobalPatterns);
     return result[0]?.count || 0;
   }
@@ -2355,9 +2341,7 @@ Format: Write a 2-3 sentence summary that could be shown to both the user and st
   private async getValidatedSolutionsCount(): Promise<number> {
     const result = await db
       .select({ count: sql<number>`count(*)` })
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .from(aiSolutionLibrary)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .where(eq(aiSolutionLibrary.validated, true));
     return result[0]?.count || 0;
   }

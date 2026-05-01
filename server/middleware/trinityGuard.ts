@@ -41,7 +41,7 @@ async function logInjectionAttempt(
        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
       [eventType, severity, ip, path, method, description, JSON.stringify({ threats })]
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[TrinityGuard] security_audit_log write failed:', err?.message);
   }
 }
@@ -125,7 +125,7 @@ function isContentRoute(path: string): boolean {
  * Extracts only short identifier-like fields from a request body for threat scanning.
  * Explicitly skips long-form text fields where SQL/XSS keywords appear legitimately.
  */
-function extractScannableText(obj: Record<string, any>, depth = 0): string {
+function extractScannableText(obj: Record<string, unknown>, depth = 0): string {
   if (depth > 3) return '';
   const SKIP_CONTENT_KEYS = new Set([
     'message', 'content', 'description', 'body', 'text', 'notes', 'comments',

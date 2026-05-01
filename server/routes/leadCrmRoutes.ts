@@ -217,7 +217,7 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any, attachWork
       if (!existing) return res.status(404).json({ error: "Lead not found" });
 
       const { companyName, contactName, contactEmail, contactPhone, leadSource, source, leadStatus, estimatedValue, notes, tags, assignedTo, industry, website, address } = req.body;
-      const safeLeadUpdates: Record<string, any> = { updatedAt: new Date() };
+      const safeLeadUpdates: Record<string, unknown> = { updatedAt: new Date() };
       if (companyName !== undefined) safeLeadUpdates.companyName = companyName;
       if (contactName !== undefined) safeLeadUpdates.contactName = contactName;
       if (contactEmail !== undefined) safeLeadUpdates.contactEmail = contactEmail;
@@ -381,7 +381,7 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any, attachWork
       const { id } = req.params;
       const { name: dealName, status: dealStatus, stage, estimatedValue: dealValue, expectedCloseDate, leadId, assignedTo: dealAssignee, notes: dealNotes } = req.body;
 
-      const safeDealUpdates: Record<string, any> = { updatedAt: new Date() };
+      const safeDealUpdates: Record<string, unknown> = { updatedAt: new Date() };
       if (dealName !== undefined) safeDealUpdates.name = dealName;
       if (dealStatus !== undefined) safeDealUpdates.status = dealStatus;
       if (stage !== undefined) safeDealUpdates.stage = stage;

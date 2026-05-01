@@ -129,7 +129,7 @@ export interface IRCPrivmsgPayload extends IRCBasePayload {
   isPrivate?: boolean;
   recipientId?: string;
   replyTo?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface IRCNoticePayload extends IRCBasePayload {
@@ -317,7 +317,7 @@ export class IRCEventEmitter {
     isPrivate?: boolean;
     recipientId?: string;
     replyTo?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     commandId?: string;
   }) {
     this.emit({
@@ -354,7 +354,7 @@ export class IRCEventEmitter {
     isPrivate?: boolean;
     recipientId?: string;
     replyTo?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     commandId?: string;
   }) {
     this.emit({

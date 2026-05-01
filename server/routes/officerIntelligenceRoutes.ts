@@ -21,7 +21,7 @@ router.get('/api/officers/:officerId/dashboard', async (req: any, res) => {
   try {
     const dashboard = await officerIntelligenceService.buildDashboard(officerId, workspaceId);
     res.json(dashboard);
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err.message?.includes('Officer not found')) {
       return res.status(404).json({ error: err.message });
     }
@@ -46,7 +46,7 @@ router.get('/api/officers/dashboards/all', async (req: any, res) => {
   try {
     const dashboards = await officerIntelligenceService.getWorkspaceDashboards(workspaceId);
     res.json({ dashboards, count: dashboards.length });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(err, 'Failed to fetch officer dashboards');
     res.status(500).json({ error: sanitizeError(err) });
   }

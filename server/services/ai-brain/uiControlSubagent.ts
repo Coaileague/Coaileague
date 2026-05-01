@@ -14,7 +14,6 @@
 
 import { helpaiOrchestrator, type ActionRequest, type ActionResult } from '../helpai/platformActionHub';
 import { platformEventBus } from '../platformEventBus';
-// @ts-expect-error — TS migration: fix in refactoring sprint
 import { log } from '../../vite';
 import { createLogger } from '../../lib/logger';
 const log = createLogger('uiControlSubagent');
@@ -25,14 +24,14 @@ interface UIComponentState {
   category: 'layer' | 'effect' | 'manager' | 'handler' | 'overlay';
   isVisible: boolean;
   isEnabled: boolean;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
   lastUpdated: Date;
 }
 
 interface UIControlCommand {
   componentId: string;
   action: 'show' | 'hide' | 'enable' | 'disable' | 'configure' | 'reset';
-  config?: Record<string, any>;
+  config?: Record<string, unknown>;
   reason?: string;
 }
 
@@ -419,7 +418,7 @@ class UIControlSubagent {
       category: 'system',
       description: 'Update configuration of a UI component',
       requiredRoles: ['org_owner', 'co_owner', 'support_agent', 'sysop'],
-      handler: async (params: { componentId: string; config: Record<string, any>; reason?: string }) => {
+      handler: async (params: { componentId: string; config: Record<string, unknown>; reason?: string }) => {
         return this.executeCommand({
           componentId: params.componentId,
           action: 'configure',

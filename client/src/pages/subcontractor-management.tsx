@@ -75,7 +75,7 @@ export default function SubcontractorManagementPage() {
       setForm(EMPTY_FORM);
       toast({ title: "Subcontractor added" });
     },
-    onError: (err: any) => toast({ title: "Failed to add", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Failed to add", description: err.message, variant: "destructive" }),
   });
 
   const updateStatusMutation = useMutation({

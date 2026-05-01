@@ -22,7 +22,7 @@ const log = createLogger('GenerateAuditPacketPDF');
 
 // ─── Data loaders ─────────────────────────────────────────────────────────────
 
-async function loadWorkspaceInfo(workspaceId: string): Promise<any> {
+async function loadWorkspaceInfo(workspaceId: string): Promise<unknown> {
   const { pool } = await import('../../db');
   const r = await pool.query(
     `SELECT company_name, phone, email, address, city, state, zip,

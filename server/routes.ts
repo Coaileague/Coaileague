@@ -167,7 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await fn();
         log.info(`[Startup] ${name} succeeded on attempt ${attempt}`);
         return;
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (attempt === maxAttempts) {
           log.warn(`[Startup] ${name} failed after ${maxAttempts} attempts (non-blocking):`, err?.message);
           return;
@@ -463,9 +463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     broadcastPlatformUpdate({
       type: "platform_update",
       category: event.category as any,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       title: event.title,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       description: event.description,
       version: event.version,
       priority: event.priority,
@@ -545,7 +543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             currentWorkspaceId: effectiveWorkspaceId,
           }
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.error('[DevQuickLogin] Error:', err?.message);
         return res.status(500).json({ success: false, error: err?.message });
       }
@@ -1131,12 +1129,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           updatedAt: sqlRaw`now()`,
         });
         log.info("[EnterpriseInquiry] Lead persisted to DB for:", email);
-      } catch (dbErr: any) {
+      } catch (dbErr: unknown) {
         log.error("[EnterpriseInquiry] DB persist failed (non-fatal):", dbErr?.message);
       }
 
       return res.status(200).json({ success: true, message: "Inquiry received — we will be in touch within 24 hours." });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error("[EnterpriseInquiry] Error:", err?.message);
       return res.status(500).json({ error: "Failed to submit inquiry" });
     }

@@ -182,7 +182,7 @@ router.get('/status', async (_req: Request, res: Response) => {
         ? 'Run POST /api/bootstrap/dev-seed with X-Bootstrap-Key header'
         : 'Ready — log in with owner@acme-security.test / admin123',
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     return res.status(500).json({ error: e?.message });
   }
 });

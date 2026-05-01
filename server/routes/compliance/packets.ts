@@ -47,10 +47,8 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
       stateName: complianceStates.stateName
     })
       .from(complianceAuditPackets)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .leftJoin(complianceStates, eq(complianceAuditPackets.stateId, complianceStates.id))
       .where(eq(complianceAuditPackets.workspaceId, workspaceId))
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .orderBy(desc(complianceAuditPackets.generatedAt));
     
     res.json({ success: true, packets: packetsRows });
@@ -135,7 +133,6 @@ router.post("/generate", requireAuth, mutationLimiter, async (req: Request, res:
     
     if (hashDiscrepancies.length > 0) {
       // CATEGORY C — Raw SQL retained: ::jsonb | Tables: compliance_audit_trail | Verified: 2026-03-23
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(complianceAuditTrail).values({
         workspaceId: workspaceId,
         action: 'audit_packet_hash_warning',
@@ -169,7 +166,6 @@ router.post("/generate", requireAuth, mutationLimiter, async (req: Request, res:
     const packet = packetResult[0] as any;
     
     // CATEGORY C — Raw SQL retained: ::jsonb | Tables: compliance_audit_trail | Verified: 2026-03-23
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(complianceAuditTrail).values({
       workspaceId: workspaceId,
       action: 'audit_packet_generated',
@@ -211,7 +207,6 @@ router.post("/generate", requireAuth, mutationLimiter, async (req: Request, res:
             eq(officerTrainingCertificates.workspaceId, workspaceId),
             inArray(officerTrainingCertificates.employeeId, packetEmployeeIds),
           ))
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           .orderBy(desc(officerTrainingCertificates.createdAt));
         for (const cert of certs) {
           const list = trainingCertsByEmployee.get(cert.employeeId) || [];
@@ -346,7 +341,6 @@ router.get("/:id", requireAuth, async (req: Request, res: Response) => {
       regulatoryBody: complianceStates.regulatoryBody
     })
       .from(complianceAuditPackets)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .leftJoin(complianceStates, eq(complianceAuditPackets.stateId, complianceStates.id))
       .where(and(
         eq(complianceAuditPackets.id, id),
@@ -383,7 +377,6 @@ router.post("/:id/download", requireAuth, async (req: Request, res: Response) =>
     `);
     
     // CATEGORY C — Raw SQL retained: ::jsonb | Tables: compliance_audit_trail | Verified: 2026-03-23
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(complianceAuditTrail).values({
       workspaceId: workspaceId,
       action: 'audit_packet_downloaded',

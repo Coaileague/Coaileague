@@ -59,8 +59,8 @@ export interface AccConflictSignal {
   executionId: string;
   workspaceId?: string;
   entitiesInvolved: string[];
-  expectedState: Record<string, any>;
-  actualState: Record<string, any>;
+  expectedState: Record<string, unknown>;
+  actualState: Record<string, unknown>;
   contradictionDescription: string;
   recommendedResolution: string;
   autoBlocked: boolean;
@@ -85,13 +85,13 @@ export interface IntendedAction {
   requiredTrustTier?: string;
   entitiesInvolved?: string[];
   intendedOutput?: string;         // The text/message Trinity is about to deliver
-  actionPayload?: Record<string, any>;
+  actionPayload?: Record<string, unknown>;
   expectedDurationMs?: number;     // From RL history
   actualDurationMs?: number;       // Current elapsed
   expectedTokenCount?: number;     // From RL history
   actualTokenCount?: number;       // Current consumption
   thalamicSignalId?: string;
-  contextSnapshot?: Record<string, any>;
+  contextSnapshot?: Record<string, unknown>;
 }
 
 // ============================================================================
@@ -578,8 +578,8 @@ class TrinityACCService {
     category: ConflictCategory,
     severity: ConflictSeverity,
     details: {
-      expected: Record<string, any>;
-      actual: Record<string, any>;
+      expected: Record<string, unknown>;
+      actual: Record<string, unknown>;
       description: string;
       resolution: string;
     },

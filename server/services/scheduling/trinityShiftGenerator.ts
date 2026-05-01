@@ -321,7 +321,7 @@ export async function generateWeeklyShifts(
       log.info(
         `[TrinityShiftGenerator] Created ${shiftsToInsert.length} shifts for ${profile.clientName} (${profile.guardsPerShift} guard(s) × ${profile.shiftStartHours.length} window(s) × ${profile.daysPerWeek.length} day(s))`
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       skippedClients.push({
         clientId: client.id,
         clientName: client.companyName || client.firstName,

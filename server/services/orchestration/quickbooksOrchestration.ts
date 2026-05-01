@@ -20,14 +20,12 @@ import { platformEventBus } from '../platformEventBus';
 import { db } from '../../db';
 import {
   partnerConnections,
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   InsertPartnerSyncLog
 } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { quickbooksOAuthService } from '../oauth/quickbooks';
 import { quickbooksRateLimiter } from '../integrations/quickbooksRateLimiter';
 import { INTEGRATIONS } from '@shared/platformConfig';
-// @ts-expect-error — TS migration: fix in refactoring sprint
 import { v4 as uuidv4 } from 'uuid';
 import { createLogger } from '../../lib/logger';
 import { partnerSyncLogs } from '@shared/schema';
@@ -54,7 +52,7 @@ export interface QBOrchestrationParams {
   userId?: string;
   operationType: QBOperationType;
   operationName: string;
-  payload?: Record<string, any>;
+  payload?: Record<string, unknown>;
   triggeredBy: 'user' | 'cron' | 'event' | 'api' | 'ai_brain' | 'webhook';
   requiresApproval?: boolean;
 }
@@ -382,7 +380,7 @@ class QuickBooksOrchestrationService {
     workspaceId: string,
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     endpoint: string,
-    body?: Record<string, any>,
+    body?: Record<string, unknown>,
     options?: {
       userId?: string;
       triggeredBy?: 'user' | 'cron' | 'event' | 'api' | 'ai_brain' | 'webhook';
@@ -400,7 +398,6 @@ class QuickBooksOrchestrationService {
       async (ctx) => {
         const url = `${ctx.apiBase}/v3/company/${ctx.realmId}${endpoint}`;
         
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         quickbooksRateLimiter.recordRequest(workspaceId);
 
         const response = await fetch(url, {
@@ -491,7 +488,7 @@ class QuickBooksOrchestrationService {
       operationName: string;
       success: boolean;
       orchestrationId: string;
-      payload?: Record<string, any>;
+      payload?: Record<string, unknown>;
       result?: any;
       error?: string;
     }
@@ -588,7 +585,6 @@ class QuickBooksOrchestrationService {
   async getOrchestrationHistory(workspaceId: string, limit = 50) {
     const logs = await db.select()
       .from(partnerSyncLogs)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .where(eq(partnerSyncLogs.connectionId, workspaceId))
       .orderBy(partnerSyncLogs.startedAt)
       .limit(limit);

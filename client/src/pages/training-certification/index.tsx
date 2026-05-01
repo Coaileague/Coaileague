@@ -154,7 +154,7 @@ export default function TrainingCertificationPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/training/certification/interventions'] });
       toast({ title: 'Intervention resolved' });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: 'Failed to resolve intervention', description: error.message || 'Please try again.', variant: 'destructive' });
     },
   });

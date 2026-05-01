@@ -106,7 +106,7 @@ export async function runClientCommsMigration(): Promise<void> {
   for (const stmt of statements) {
     try {
       await pool.query(stmt);
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn("[ClientCommsMigration] Statement failed (may already exist):", err?.message?.slice(0, 100));
     }
   }

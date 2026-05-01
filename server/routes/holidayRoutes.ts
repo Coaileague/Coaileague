@@ -35,7 +35,7 @@ router.get('/', requireAuth, async (req: any, res) => {
     
     const holidays = await getWorkspaceHolidays(workspaceId, year);
     return res.json({ holidays });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[HolidayRoutes] GET /api/holidays error:', err.message);
     return res.status(500).json({ error: 'Failed to fetch holidays' });
   }
@@ -65,7 +65,7 @@ router.get('/check-date', requireAuth, async (req: any, res) => {
     );
     
     return res.json({ isHoliday, date, stateCode: state_code || null });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[HolidayRoutes] check-date error:', err.message);
     return res.status(500).json({ error: 'Failed to check holiday status' });
   }
@@ -104,7 +104,7 @@ router.post('/', requireAuth, async (req: any, res) => {
     });
     
     return res.status(201).json({ holiday });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[HolidayRoutes] POST /api/holidays error:', err.message);
     return res.status(500).json({ error: 'Failed to create holiday' });
   }
@@ -137,7 +137,7 @@ router.put('/:id', requireAuth, async (req: any, res) => {
     }
     
     return res.json({ holiday });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[HolidayRoutes] PUT error:', err.message);
     return res.status(500).json({ error: 'Failed to update holiday' });
   }
@@ -158,7 +158,7 @@ router.delete('/:id', requireAuth, async (req: any, res) => {
     }
     
     return res.json({ success: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[HolidayRoutes] DELETE error:', err.message);
     return res.status(500).json({ error: 'Failed to delete holiday' });
   }

@@ -48,7 +48,7 @@ export function useClientLookup(): UseQueryResult<Client[]> {
 
 export function useCreateClient() {
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       return await apiRequest("POST", "/api/clients", data);
     },
     onSuccess: () => {

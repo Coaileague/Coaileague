@@ -71,7 +71,6 @@ export function ModulePageShell({
   if (isMobile && onRefresh) {
     return (
       <MobilePageWrapper
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         title={title}
         enablePullToRefresh
         onRefresh={onRefresh}

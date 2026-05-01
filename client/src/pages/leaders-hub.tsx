@@ -337,7 +337,7 @@ export default function LeadersHub() {
     },
   });
 
-  const filteredEmployees = employees.filter((emp: any) =>
+  const filteredEmployees = employees.filter((emp) =>
     emp.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     emp.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     emp.email?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -815,7 +815,7 @@ export default function LeadersHub() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredEmployees.map((employee: any) => (
+                    filteredEmployees.map((employee) => (
                       <TableRow key={employee.id} data-testid={`row-employee-${employee.id}`}>
                         <TableCell className="font-medium">
                           {employee.firstName} {employee.lastName}
@@ -960,7 +960,7 @@ export default function LeadersHub() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {escalations.map((ticket: any) => (
+                    {escalations.map((ticket) => (
                       <TableRow key={ticket.id} data-testid={`row-ticket-${ticket.id}`}>
                         <TableCell className="font-mono text-sm">{ticket.ticketNumber}</TableCell>
                         <TableCell className="font-medium">{ticket.title}</TableCell>
@@ -1063,7 +1063,7 @@ export default function LeadersHub() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {employees.map((emp: any) => (
+                        {employees.map((emp) => (
                           <SelectItem key={emp.id} value={emp.id}>
                             {emp.firstName} {emp.lastName} ({emp.email})
                           </SelectItem>
@@ -1128,7 +1128,7 @@ export default function LeadersHub() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {employees.filter((emp: any) => emp.isLocked).map((emp: any) => (
+                        {employees.filter((emp) => emp.isLocked).map((emp) => (
                           <SelectItem key={emp.id} value={emp.id}>
                             {emp.firstName} {emp.lastName} ({emp.email})
                           </SelectItem>
@@ -1193,7 +1193,7 @@ export default function LeadersHub() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {employees.map((emp: any) => (
+                        {employees.map((emp) => (
                           <SelectItem key={emp.id} value={emp.id}>
                             {emp.firstName} {emp.lastName} ({emp.email})
                           </SelectItem>

@@ -64,7 +64,7 @@ export async function verifyClockInPin(
         clockinPinHash: emp.clockin_pin_hash,
       },
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[ClockInPinService] PIN verification error:', err.message);
     return { valid: false, reason: 'wrong_pin' };
   }

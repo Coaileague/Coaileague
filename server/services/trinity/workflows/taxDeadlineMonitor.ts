@@ -126,7 +126,7 @@ export async function runTaxDeadlineMonitor(): Promise<TaxDeadlineSweepResult> {
             idempotencyKey: `tax-deadline-${ws.id}-${dl.formType}-${dl.deadline}-${window.daysBefore}`,
           });
           result.notified += 1;
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn('[taxDeadlineMonitor] notification failed', { workspaceId: ws.id, err: err?.message });
           result.errors.push(`${ws.id}:${dl.formType}:${err?.message}`);
         }
@@ -153,7 +153,7 @@ export async function runTaxDeadlineMonitor(): Promise<TaxDeadlineSweepResult> {
                 ws.id,
               );
             }
-          } catch (err: any) {
+          } catch (err: unknown) {
             log.warn('[taxDeadlineMonitor] SMS failed', { workspaceId: ws.id, err: err?.message });
           }
         }
@@ -177,7 +177,7 @@ export async function runTaxDeadlineMonitor(): Promise<TaxDeadlineSweepResult> {
       },
     });
     return result;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[taxDeadlineMonitor] sweep failed', { err: err?.message });
     result.errors.push(err?.message || String(err));
     await logWorkflowComplete(record, {

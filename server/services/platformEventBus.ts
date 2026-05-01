@@ -450,7 +450,7 @@ export interface PlatformEvent {
   severity?: 'low' | 'medium' | 'high' | 'critical';
   source?: string;
   timestamp?: string | Date;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   metadata?: Record<string, any> & {
     conversationId?: string;
     roomSlug?: string;
@@ -463,7 +463,7 @@ export interface PlatformEvent {
     chatEventType?: string;
     payrollRunId?: string;
   };
-  payload?: Record<string, any>;
+  payload?: Record<string, unknown>;
   priority?: number;
   isNew?: boolean;
   learnMoreUrl?: string;
@@ -544,7 +544,7 @@ class PlatformEventBus {
       // Every platform event passes through the thalamus for classification and logging.
       try {
         const { trinityThalamus } = await import('./ai-brain/trinityThalamusService');
-        const eventPayload: Record<string, any> = {
+        const eventPayload: Record<string, unknown> = {
           type: event.type,
           event: event.type,
           category: event.category,
@@ -557,12 +557,11 @@ class PlatformEventBus {
           event.workspaceId,
           event.userId || (event as any).metadata?.userId,
         );
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[platformEventBus] Thalamus processing failed:', err.message);
       }
 
       // Internal emit for direct listeners (added for trinity orchestration)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       this.emit(event.type, { ...event.metadata, workspaceId: event.workspaceId, title: event.title, description: event.description });
 
       try {
@@ -571,14 +570,13 @@ class PlatformEventBus {
 
         // 2. Notify all subscribers
         const allSubscribers = this.subscribers.get('all') || [];
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const typeSubscribers = this.subscribers.get(event.type) || [];
         
         // Use Promise.allSettled for parallel subscriber execution without cascading failure
         await Promise.allSettled([...allSubscribers, ...typeSubscribers].map(async (subscriber) => {
           try {
             await this.executeWithRetry(subscriber, event);
-          } catch (error: any) {
+          } catch (error: unknown) {
             log.error(`[PlatformEventBus] Subscriber ${subscriber.name} failed:`, error.message);
           }
         }));
@@ -586,7 +584,7 @@ class PlatformEventBus {
         // 5. Log to audit trail
         await this.logAudit(event, timestamp);
 
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.error('Error processing event', { error: String(error), eventType: event.type });
         
         // Circular dependency protection: only log error if not already an error event
@@ -690,7 +688,6 @@ class PlatformEventBus {
 
       // Skip internal system events — these are AI/infrastructure lifecycle events
       // that are meaningless (and often alarming) to end users.
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (PlatformEventBus.SYSTEM_INTERNAL_EVENT_TYPES.has(event.type)) {
         log.verbose('Skipping internal system event (not user-facing)', { eventType: event.type, title: event.title });
         return;
@@ -704,7 +701,6 @@ class PlatformEventBus {
       // 4. Automatic WebSocket broadcast
       const result = await notificationEngine.sendPlatformUpdate({
         title: event.title,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         description: event.description,
         category: event.category as any,
         workspaceId: event.workspaceId,
@@ -746,9 +742,7 @@ class PlatformEventBus {
       // Global platform announcements (no workspaceId) - notify platform admins via unified engine
       if (!event.workspaceId && (event.category === 'announcement' || event.category === 'security')) {
         await notificationEngine.sendPlatformNotification({
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           title: event.title,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           message: event.description,
           type: 'system',
           priority: event.priority === 3 ? 'critical' : event.priority === 2 ? 'high' : 'medium',
@@ -791,12 +785,9 @@ class PlatformEventBus {
         await notificationEngine.sendNotification({
           workspaceId: event.workspaceId,
           roles: recipientRoles,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           title: event.title,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           message: event.description,
           type: 'system',
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           priority: event.priority === 3 ? 'critical' : event.priority === 2 ? 'high' : 'medium',
           actionUrl: event.learnMoreUrl || '/updates',
           metadata: { 
@@ -828,7 +819,6 @@ class PlatformEventBus {
           await new Promise(resolve => setTimeout(resolve, delayMs));
         } else {
           log.error('Subscriber failed after all retries', { subscriberName: subscriber.name, maxRetries, error: String(err) });
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           this.persistDeadLetter(event, subscriber.name, err, maxRetries);
         }
       }
@@ -929,7 +919,7 @@ export async function publishPlatformUpdate(params: {
   userId?: string;
   learnMoreUrl?: string;
   priority?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   visibility?: EventVisibility;
 }): Promise<void> {
   await platformEventBus.publish({
@@ -1001,7 +991,7 @@ export async function announceAutomationComplete(
   workspaceId: string,
   title: string,
   description: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): Promise<void> {
   await publishPlatformUpdate({
     type: 'automation_completed',
@@ -1027,7 +1017,7 @@ export interface ScheduleChangeEvent {
   changedBy: string;
   changedByRole: string;
   reason?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -1228,7 +1218,7 @@ export interface TrinityLifecycleParams {
   fixDescription?: string;
   affectedFiles?: string[];
   reason?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export async function publishTrinityScanStarted(params: TrinityLifecycleParams): Promise<void> {

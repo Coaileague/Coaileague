@@ -29,10 +29,10 @@ interface CreateNotificationParams {
   actionUrl?: string;
   relatedEntityType?: string;
   relatedEntityId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   createdBy?: string;
   priority?: 'low' | 'normal' | 'high' | 'urgent';
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   category?: string;
   targetRole?: string;
 }

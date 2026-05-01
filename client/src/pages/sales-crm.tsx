@@ -156,13 +156,13 @@ export default function SalesCRM() {
   });
 
   const createLeadMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/crm", data),
+    mutationFn: (data) => apiRequest("POST", "/api/crm", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm"] });
       setShowNewLead(false);
       toast({ title: "Lead created successfully" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error creating lead", description: error.message, variant: "destructive" });
     },
   });
@@ -183,7 +183,7 @@ export default function SalesCRM() {
   });
 
   const createDealMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/crm/deals", data),
+    mutationFn: (data) => apiRequest("POST", "/api/crm/deals", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/deals"] });
       setShowNewDeal(false);
@@ -198,11 +198,8 @@ export default function SalesCRM() {
     },
   });
 
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const leads: Lead[] = leadsData?.data || [];
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const deals: Deal[] = dealsData?.data || [];
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const stats = statsData?.data || { pipeline: [], leads: [] };
 
   const filteredLeads = filterIndustry === "all" 

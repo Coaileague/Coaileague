@@ -40,7 +40,7 @@ export interface BackupRecord {
   checksum?: string;
   storagePath?: string;
   error?: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export interface BackupConfig {
@@ -187,7 +187,6 @@ class BackupService {
     // Create backup record - cast tables array properly for PostgreSQL
     const tablesArray = `{${this.config.criticalTables.join(',')}}`;
     // CATEGORY C — Raw SQL retained: ::text | Tables: backup_records | Verified: 2026-03-23
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(backupRecords).values({
       id: backupId,
       workspaceId: 'system',

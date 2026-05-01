@@ -202,7 +202,6 @@ router.get("/compliance-reports/tax-remittance", requireAuth, async (req: any, r
       return res.status(400).json({ message: "Start and end dates required" });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const { generateTaxRemittanceProofReport } = await import('../services/complianceReports');
     const report = await generateTaxRemittanceProofReport(
       user.currentWorkspaceId,

@@ -20,7 +20,7 @@ interface PushPayload {
   badge?: string;
   image?: string;
   tag?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   actions?: { action: string; title: string; icon?: string }[];
   requireInteraction?: boolean;
   vibrate?: number[];
@@ -267,7 +267,7 @@ export async function sendUrgentAlert(
   userId: string,
   title: string,
   body: string,
-  data?: Record<string, any>
+  data?: Record<string, unknown>
 ): Promise<{ success: boolean }> {
   const result = await sendPushToUser(userId, {
     title,

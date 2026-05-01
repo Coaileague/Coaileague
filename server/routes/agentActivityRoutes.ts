@@ -12,7 +12,6 @@
  */
 
 import { Router } from 'express';
-// @ts-expect-error — TS migration: fix in refactoring sprint
 import { requireAuth, type AuthenticatedRequest } from '../auth';
 import { db } from '../db';
 import { eq, and, inArray, or, isNull, desc, asc, sql, count } from 'drizzle-orm';

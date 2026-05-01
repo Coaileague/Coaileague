@@ -63,7 +63,7 @@ function CreateWorkOrderDialog({ onCreated }: { onCreated: () => void }) {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/work-orders", data),
+    mutationFn: (data) => apiRequest("POST", "/api/work-orders", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/work-orders"] });
       setOpen(false);
@@ -199,7 +199,7 @@ function WorkOrderDetailPanel({ wo }: { wo: WorkOrder }) {
         <div>
           <p className="text-xs font-medium mb-2 text-muted-foreground">Evidence ({evidence!.length})</p>
           <div className="grid grid-cols-2 gap-2">
-            {evidence!.map((e: any) => (
+            {evidence!.map((e) => (
               <div key={e.id} className="text-xs border rounded-md p-2">
                 <Camera className="h-3 w-3 inline mr-1" />
                 {e.evidence_type} — {new Date(e.captured_at).toLocaleDateString()}

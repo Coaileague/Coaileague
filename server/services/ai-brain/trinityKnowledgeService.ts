@@ -586,7 +586,7 @@ class TrinityKnowledgeService {
           updatedAt: sql`now()`,
         }).onConflictDoNothing({ target: trinityKnowledgeBase.moduleKey });
         seeded++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         if ((err instanceof Error ? err.message : String(err))?.includes('unique') || err.code === '23505') {
           skipped++;
         } else {
@@ -742,14 +742,13 @@ class TrinityKnowledgeService {
     knowledgeType: string;
     title: string;
     summary: string;
-    knowledgeData: Record<string, any>;
+    knowledgeData: Record<string, unknown>;
     sourceDocumentId?: string;
     confidenceScore?: number;
     expiresAt?: Date;
   }): Promise<string> {
     const [row] = await db
       .insert(trinityKnowledgeBase)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .values({
         workspaceId: opts.workspaceId,
         scope: 'workspace',

@@ -439,7 +439,7 @@ function EmailListItem({
           {(email.aiCategory === 'action_required' || email.category === 'action_required') && (
             <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800">Action needed</span>
           )}
-          {(email.attachments && email.attachments.length > 0 && email.attachments.some((a: any) => a.type?.includes('pdf') || a.name?.endsWith('.pdf'))) && (
+          {(email.attachments && email.attachments.length > 0 && email.attachments.some((a) => a.type?.includes('pdf') || a.name?.endsWith('.pdf'))) && (
             <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">PDF</span>
           )}
           {email.folderType === 'calloffs' && (
@@ -682,7 +682,7 @@ function SupportInboxPanel({ onBack }: { onBack: () => void }) {
   });
 
   const tickets = ticketData?.tickets || [];
-  const openTickets = tickets.filter((t: any) => t.status === 'open' || t.status === 'pending');
+  const openTickets = tickets.filter((t) => t.status === 'open' || t.status === 'pending');
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -708,8 +708,8 @@ function SupportInboxPanel({ onBack }: { onBack: () => void }) {
         {[
           { label: 'All', icon: Layers, count: tickets.length },
           { label: 'Open', icon: AlertCircle, count: openTickets.length },
-          { label: 'Bug Reports', icon: Bug, count: tickets.filter((t: any) => t.type === 'bug').length },
-          { label: 'Resolved', icon: CheckCircle, count: tickets.filter((t: any) => t.status === 'resolved').length },
+          { label: 'Bug Reports', icon: Bug, count: tickets.filter((t) => t.type === 'bug').length },
+          { label: 'Resolved', icon: CheckCircle, count: tickets.filter((t) => t.status === 'resolved').length },
         ].map(({ label, icon: Icon, count }) => (
           <Button key={label} variant="outline" size="sm" className="shrink-0 gap-1.5 text-xs rounded-full" data-testid={`button-support-filter-${label.toLowerCase()}`}>
             <Icon className="w-3 h-3" />
@@ -743,7 +743,7 @@ function SupportInboxPanel({ onBack }: { onBack: () => void }) {
           </div>
         ) : (
           <div className="divide-y">
-            {tickets.map((ticket: any) => (
+            {tickets.map((ticket) => (
               <div
                 key={ticket.id}
                 className="flex items-start gap-3 p-3 hover-elevate cursor-pointer"
@@ -898,7 +898,7 @@ function TrinityInboxPanel({ onBack }: { onBack: () => void }) {
           </div>
         ) : (
           <div className="divide-y">
-            {emails.map((email: any) => (
+            {emails.map((email) => (
               <div
                 key={email.id}
                 className="flex items-start gap-3 p-3 hover-elevate cursor-pointer"
@@ -1009,7 +1009,6 @@ function EmailHub({
 
   const unreadCount = emails.filter(e => !e.isRead).length;
   const hasBulkSelection = (selectedIds?.size ?? 0) > 0;
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const folderCfg = FOLDER_CONFIG[selectedFolder] || FOLDER_CONFIG.unread;
   const FolderIcon = folderCfg.icon;
 
@@ -2488,7 +2487,7 @@ function ComposeCanvas({
   isMobile,
 }: {
   onClose: () => void;
-  onSend: (data: any) => void;
+  onSend: (data) => void;
   replyTo?: UnifiedEmail | null;
   forwardFrom?: UnifiedEmail | null;
   isSending?: boolean;
@@ -2594,7 +2593,7 @@ function ComposeCanvas({
         setAttachments(prev => [...prev, ...data.attachments]);
         toast({ title: `Attached ${data.attachments.length} file${data.attachments.length === 1 ? '' : 's'}` });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: 'Attachment upload failed', description: err?.message || 'Unknown error', variant: 'destructive' });
     } finally {
       setIsUploading(false);
@@ -3356,7 +3355,6 @@ function WorkflowPipeline({
   };
 
   const toggleWorkflowStatus = (id: string) => {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     setWorkflows(prev => prev.map(w => w.id === id ? { ...w, status: w.status === 'active' ? 'pending' as const : 'active' as const } : w));
   };
 
@@ -3585,7 +3583,6 @@ export function EmailHubCanvas() {
   
   const [viewState, setViewState] = useState<ViewState>('hub');
   const [selectedEmail, setSelectedEmail] = useState<UnifiedEmail | null>(null);
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const [selectedFolder, setSelectedFolder] = useState<FolderType>('inbox');
   const [searchQuery, setSearchQuery] = useState('');
   const [replyTo, setReplyTo] = useState<UnifiedEmail | null>(null);
@@ -3605,7 +3602,6 @@ export function EmailHubCanvas() {
   const { data: internalEmailsData, isLoading: internalLoading, refetch: refetchInternal } = useQuery<{ emails?: any[] }>({
     queryKey: ['/api/internal-email/inbox', selectedFolder],
     queryFn: () => fetch(`/api/internal-email/inbox?folder=${selectedFolder}`, { credentials: 'include' }).then(r => r.json()),
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     enabled: !!mailboxData?.mailbox && selectedFolder !== 'support' && selectedFolder !== 'trinity',
   });
 
@@ -3616,12 +3612,12 @@ export function EmailHubCanvas() {
   });
 
   const allEmails: UnifiedEmail[] = useMemo(() => {
-    const internal = (internalEmailsData?.emails || []).map((e: any) => ({
+    const internal = (internalEmailsData?.emails || []).map((e) => ({
       ...e,
       type: 'internal' as const,
     }));
     
-    const external = (externalEmailsData?.data || []).map((item: any) => ({
+    const external = (externalEmailsData?.data || []).map((item) => ({
       id: item.email?.id || item.id,
       type: 'external' as const,
       fromAddress: item.email?.fromEmail || 'you@company.com',
@@ -3696,7 +3692,6 @@ export function EmailHubCanvas() {
     setSelectedEmail(null);
     if (folder === 'support') {
       setViewState('support');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     } else if (folder === 'trinity') {
       setViewState('trinity');
     } else {
@@ -3942,7 +3937,6 @@ export function EmailHubCanvas() {
 
   if (isMobile) {
     const mobileFolderTabs: { folder: FolderType; icon: typeof Inbox; label: string; badge?: number }[] = [
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       { folder: 'inbox', icon: Inbox, label: 'All' },
       { folder: 'calloffs', icon: PhoneOff, label: 'Calloffs', badge: folders.find(f => f.folderType === 'calloffs')?.unreadCount },
       { folder: 'incidents', icon: AlertOctagon, label: 'Incidents', badge: folders.find(f => f.folderType === 'incidents')?.unreadCount },
@@ -3989,12 +3983,10 @@ export function EmailHubCanvas() {
         )}
 
         {viewState === 'support' && (
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           <SupportInboxPanel onBack={() => { setSelectedFolder('inbox'); setViewState('hub'); }} />
         )}
 
         {viewState === 'trinity' && (
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           <TrinityInboxPanel onBack={() => { setSelectedFolder('inbox'); setViewState('hub'); }} />
         )}
         
@@ -4095,10 +4087,8 @@ export function EmailHubCanvas() {
             onBack={() => setViewState('hub')}
           />
         ) : viewState === 'support' ? (
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           <SupportInboxPanel onBack={() => { setSelectedFolder('inbox'); setViewState('hub'); }} />
         ) : viewState === 'trinity' ? (
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           <TrinityInboxPanel onBack={() => { setSelectedFolder('inbox'); setViewState('hub'); }} />
         ) : (
           <EmailCanvas

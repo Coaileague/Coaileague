@@ -103,7 +103,6 @@ class BriefingChannelService {
           roles: ['org_owner', 'co_owner', 'manager', 'department_manager'],
         },
         actionType: post.deepLink ? 'link' : 'none',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         actionConfig: post.deepLink
           ? { type: 'link', url: post.deepLink }
           : { type: 'none' },
@@ -149,7 +148,6 @@ class BriefingChannelService {
         category: 'DAILY BRIEFING',
         title: 'Daily Ops Briefing — All Clear',
         summary: 'No critical issues found. Shifts covered, all officers accounted for.',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         priority: 'medium',
         deepLink: '/manager-dashboard',
       });

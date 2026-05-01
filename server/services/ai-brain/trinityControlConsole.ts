@@ -40,7 +40,7 @@ export interface ThoughtSignaturePayload {
   runId?: string;
   thoughtType: ThoughtType;
   content: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   confidence?: number;
   timestamp: string;
 }
@@ -54,8 +54,8 @@ export interface ActionLogPayload {
   thoughtId?: string;
   actionType: ActionType;
   actionName: string;
-  parameters?: Record<string, any>;
-  result?: Record<string, any>;
+  parameters?: Record<string, unknown>;
+  result?: Record<string, unknown>;
   status: ActionStatus;
   durationMs?: number;
   errorMessage?: string;
@@ -84,7 +84,7 @@ export interface PlatformAwarenessEvent {
   resourceId?: string;
   operation: 'create' | 'update' | 'delete' | 'read';
   timestamp: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   routedThroughTrinity: boolean;
 }
 
@@ -111,7 +111,7 @@ function sanitizeValue(value: any): any {
     return value.map(item => sanitizeValue(item));
   }
   if (typeof value === 'object') {
-    const result: Record<string, any> = {};
+    const result: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(value)) {
       result[key] = sanitizeValue(val);
     }
@@ -241,7 +241,7 @@ class TrinityControlConsoleService {
       workspaceId?: string;
       userId?: string;
       runId?: string;
-      context?: Record<string, any>;
+      context?: Record<string, unknown>;
       confidence?: number;
     }
   ): Promise<string> {
@@ -304,7 +304,7 @@ class TrinityControlConsoleService {
       userId?: string;
       runId?: string;
       thoughtId?: string;
-      parameters?: Record<string, any>;
+      parameters?: Record<string, unknown>;
     }
   ): Promise<T> {
     const startTime = Date.now();
@@ -466,7 +466,7 @@ class TrinityControlConsoleService {
     operation: 'create' | 'update' | 'delete',
     recordId: string,
     source: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): void {
     setImmediate(() => {
       try {

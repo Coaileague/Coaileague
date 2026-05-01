@@ -379,7 +379,6 @@ ${ctx.fallbackToManualVerification ? '\n⚠ MANUAL VERIFICATION REQUIRED: This s
   }
 
   getAllSupportedStateCodes(): string[] {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     return (STATE_REGULATORY_KNOWLEDGE as StateRegulatoryConfig[]).map(s => s.stateCode);
   }
 }

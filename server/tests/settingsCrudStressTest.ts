@@ -282,7 +282,7 @@ async function phase4_notification_prefs() {
         VALUES (gen_random_uuid(), ${user.id}, ${ws.id}, 'general', true, 'in_app', 'realtime')
       `);
       hasExistingRow = true;
-    } catch (e: any) {
+    } catch (e: unknown) {
       record({
         name: 'Notification Prefs Seed Row',
         phase: 'NOTIFICATIONS',

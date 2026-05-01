@@ -76,7 +76,6 @@ Classification rules:
 - shouldEscalate: true if sentiment is negative or urgency >= 3`;
 
     const aiResult = await meteredGemini.generate({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       workspaceId: workspaceId,
       featureKey: 'ai_chat_sentiment',
       prompt,

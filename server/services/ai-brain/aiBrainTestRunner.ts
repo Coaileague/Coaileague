@@ -47,7 +47,7 @@ export interface TestResult {
   completedAt: Date;
   duration: number;
   message?: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   error?: string;
   stackTrace?: string;
 }

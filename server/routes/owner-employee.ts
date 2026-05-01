@@ -324,7 +324,6 @@ router.post('/certification', requireAnyAuth, async (req: Request, res: Response
     }
 
     const [certification] = await db.insert(employeeCertifications)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .values({
         workspaceId,
         employeeId: employee.id,

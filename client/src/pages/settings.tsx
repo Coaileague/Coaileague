@@ -306,7 +306,7 @@ function ProfileTabContent() {
         description: "Check your new inbox and click the link to confirm the change.",
       });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({
         variant: "destructive",
         title: "Request Failed",
@@ -953,7 +953,6 @@ function ChangePasswordCard() {
   );
 }
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 function WorkspaceSettingsForm({ workspace }: { workspace: Workspace }) {
   const [workspaceSaveSuccess, setWorkspaceSaveSuccess] = useState(false);
   const { toast } = useToast();
@@ -1014,7 +1013,7 @@ function WorkspaceSettingsForm({ workspace }: { workspace: Workspace }) {
   }, [isDirty]);
 
   const updateWorkspaceMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       const res = await apiRequest('PATCH', `/api/workspace`, data);
       return res.json();
     },
@@ -1027,7 +1026,7 @@ function WorkspaceSettingsForm({ workspace }: { workspace: Workspace }) {
         description: "Your workspace settings have been saved successfully.",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Failed to save settings",
         description: error?.message || "An error occurred while saving your settings.",
@@ -1823,7 +1822,7 @@ function StorageTabContent() {
       </Card>
 
       {/* Overage info */}
-      {Object.values(data.overageBytes ?? {}).some((v: any) => v > 0) && (
+      {Object.values(data.overageBytes ?? {}).some((v) => v > 0) && (
         <Card data-testid="card-storage-overage" className="border-amber-500/40">
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -2080,7 +2079,7 @@ export default function Settings() {
         description: `Your org code is now: ${data.orgCode}. Email addresses provisioned.`,
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to update org code",
@@ -2109,7 +2108,7 @@ export default function Settings() {
         description: `Emails to staffing@${DOMAINS.root} will now route to your organization`,
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to claim generic staffing email",
@@ -2138,7 +2137,7 @@ export default function Settings() {
         description: "Generic staffing email is now available for other organizations",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to release generic staffing email",
@@ -2228,7 +2227,7 @@ export default function Settings() {
       refetchInvites();
       toast({ title: "Invitation sent!", description: `Invite sent to ${inv.inviteeEmail || data.inviteeEmail || 'recipient'}.` });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Failed to send invite", description: err.message, variant: "destructive" });
     },
   });
@@ -2260,7 +2259,7 @@ export default function Settings() {
         description: "Break compliance settings updated successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to update break compliance settings",
@@ -2271,7 +2270,7 @@ export default function Settings() {
 
   // Update notification preferences mutation
   const updateNotificationPrefsMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       const response = await secureFetch('/api/notifications/preferences', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -2288,7 +2287,7 @@ export default function Settings() {
         description: "Notification preferences updated successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to update notification preferences",
@@ -2318,7 +2317,7 @@ export default function Settings() {
         description: "Test SMS sent successfully! Check your phone.",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to send test SMS",
@@ -2432,7 +2431,6 @@ export default function Settings() {
       autoArchiveRead,
     }, {
       onSuccess: () => {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         setHasUnsavedChanges(false);
       }
     });
@@ -2487,7 +2485,7 @@ export default function Settings() {
 
   // Update workspace mutation
   const updateWorkspaceMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       const response = await secureFetch('/api/workspace', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -2499,14 +2497,13 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setHasUnsavedChanges(false); // Clear unsaved changes flag after successful save
       toast({
         title: "Success",
         description: "Workspace updated successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to update workspace",
@@ -2526,13 +2523,13 @@ export default function Settings() {
       if (!response.ok) throw new Error('Failed to seed templates');
       return response.json();
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       toast({
         title: "Success",
         description: data.message || "Form templates seeded successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to seed form templates",
@@ -2543,7 +2540,7 @@ export default function Settings() {
 
   // Update invoicing automation mutation
   const updateInvoicingMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       const response = await secureFetch('/api/workspace/automation/invoicing', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -2563,7 +2560,7 @@ export default function Settings() {
         description: "Invoicing automation updated successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to update invoicing automation",
@@ -2574,7 +2571,7 @@ export default function Settings() {
 
   // Update payroll automation mutation
   const updatePayrollMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       const response = await secureFetch('/api/workspace/automation/payroll', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -2594,7 +2591,7 @@ export default function Settings() {
         description: "Payroll automation updated successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to update payroll automation",
@@ -2605,7 +2602,7 @@ export default function Settings() {
 
   // Update scheduling automation mutation
   const updateSchedulingMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       const response = await secureFetch('/api/workspace/automation/scheduling', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -2625,7 +2622,7 @@ export default function Settings() {
         description: "Scheduling automation updated successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to update scheduling automation",
@@ -2638,99 +2635,58 @@ export default function Settings() {
   useEffect(() => {
     if (workspace) {
       const ws = workspace;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setAutoInvoicingEnabled(ws.autoInvoicingEnabled ?? true);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setInvoiceSchedule(ws.invoiceSchedule || "monthly");
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setInvoiceCustomDays(ws.invoiceCustomDays || undefined);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setInvoiceGenerationDay(ws.invoiceGenerationDay || 1);
       
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setAutoPayrollEnabled(ws.autoPayrollEnabled ?? true);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setPayrollSchedule(ws.payrollSchedule || "biweekly");
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setPayrollCustomDays(ws.payrollCustomDays || undefined);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setPayrollProcessDay(ws.payrollProcessDay || 1);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setPayrollCutoffDay(ws.payrollCutoffDay || 15);
       
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setAutoSchedulingEnabled(ws.autoSchedulingEnabled ?? true);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setScheduleGenerationInterval(ws.scheduleGenerationInterval || "weekly");
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setScheduleCustomDays(ws.scheduleCustomDays || undefined);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setScheduleAdvanceNoticeDays(ws.scheduleAdvanceNoticeDays || 7);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setScheduleGenerationDay(ws.scheduleGenerationDay ?? 0);
 
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setLaborLawJurisdiction(ws.laborLawJurisdiction || "US-FEDERAL");
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setAutoBreakSchedulingEnabled(ws.autoBreakSchedulingEnabled ?? true);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setBreakComplianceAlerts(ws.breakComplianceAlerts ?? true);
 
       // Financials tab workspace fields
       setWorkspaceName(ws.name || '');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setCompanyName(ws.companyName || '');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setTaxId(ws.taxId || '');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setPhone(ws.phone || '');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setAddress(ws.address || '');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setWebsite(ws.website || '');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setCompanyCity(ws.companyCity || '');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setCompanyState(ws.companyState || '');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setCompanyZip(ws.companyZip || '');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setStateLicenseNumber(ws.stateLicenseNumber || '');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setStateLicenseState(ws.stateLicenseState || '');
       setStateLicenseExpiry(ws.stateLicenseExpiry ? String(ws.stateLicenseExpiry).split('T')[0] : '');
       setLogoUrl(ws.logoUrl || '');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setBrandColor(ws.brandColor || '#1a1a2e');
 
       // Invoice financials
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setBillingEmail(ws.billingEmail || '');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setInvoicePrefix(ws.invoicePrefix || 'INV');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setInvoiceNextNumber(ws.invoiceNextNumber || 1000);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setLateFeePercentage(ws.lateFeePercentage ? parseFloat(ws.lateFeePercentage) : 0);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setLateFeeDays(ws.lateFeeDays || 30);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setPaymentTermsDays(ws.paymentTermsDays || 30);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setDefaultTaxRate(ws.defaultTaxRate ? parseFloat(ws.defaultTaxRate) * 100 : 8.875);
 
       // Payroll financials
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setStateUnemploymentRate(ws.stateUnemploymentRate ? parseFloat(ws.stateUnemploymentRate) * 100 : 0);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setWorkerCompRate(ws.workerCompRate ? parseFloat(ws.workerCompRate) * 100 : 0);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setPayrollBankName(ws.payrollBankName || '');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setPayrollBankRouting(ws.payrollBankRouting || '');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setPayrollBankAccount(ws.payrollBankAccount || '');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setPayrollMemo(ws.payrollMemo || '');
     }
   }, [workspace]);
@@ -3240,7 +3196,6 @@ export default function Settings() {
                     onCheckedChange={(checked) => {
                       setBreakComplianceAlerts(checked);
                       updateBreakComplianceMutation.mutate({
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         jurisdiction: laborLawJurisdiction,
                         enableBreakAlerts: checked,
                       });
@@ -3296,7 +3251,7 @@ export default function Settings() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__placeholder__" disabled>Select…</SelectItem>
-                    {businessCategories?.map((category: any) => (
+                    {businessCategories?.map((category) => (
                       <SelectItem key={category.value} value={category.value}>
                         <div className="flex flex-col">
                           <span className="font-medium">{category.label}</span>
@@ -3316,7 +3271,7 @@ export default function Settings() {
                   <div className="flex items-start gap-3">
                     <FileText className="h-5 w-5 text-primary mt-0.5" />
                     <div className="flex-1 space-y-2">
-                      <h4 className="text-sm font-semibold">Available Forms for {businessCategories?.find((c: any) => c.value === selectedCategory)?.label}</h4>
+                      <h4 className="text-sm font-semibold">Available Forms for {businessCategories?.find((c) => c.value === selectedCategory)?.label}</h4>
                       <p className="text-xs text-muted-foreground">
                         {selectedCategory === 'general' && "Standard forms: Disciplinary Action, Incident Reports"}
                         {selectedCategory === 'security' && "Security forms: Daily Activity Reports (DAR), Incident Reports, Vehicle Logs"}
@@ -3851,7 +3806,7 @@ export default function Settings() {
                     Recent Invitations
                   </p>
                   <div className="space-y-1.5">
-                    {workspaceInvites.slice(0, 8).map((inv: any) => (
+                    {workspaceInvites.slice(0, 8).map((inv) => (
                       <div key={inv.id} className="flex items-center justify-between py-1.5 px-2 rounded-md bg-muted/50 text-xs" data-testid={`invite-row-${inv.id}`}>
                         <span className="text-foreground font-medium truncate max-w-[200px]">{inv.inviteeEmail || 'Unknown'}</span>
                         <div className="flex items-center gap-2 shrink-0">
@@ -4114,7 +4069,7 @@ export default function Settings() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__placeholder__" disabled>Select…</SelectItem>
-                        {reminderOptions?.timingOptions?.map((option: any) => (
+                        {reminderOptions?.timingOptions?.map((option) => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>
@@ -4211,7 +4166,6 @@ export default function Settings() {
                     value={digestFrequency} 
                     onValueChange={(value) => {
                       setDigestFrequency(value);
-                      // @ts-expect-error — TS migration: fix in refactoring sprint
                       setHasUnsavedChanges(true);
                     }}
                   >
@@ -4247,7 +4201,6 @@ export default function Settings() {
                       checked={enableAiSummarization} 
                       onCheckedChange={(checked) => {
                         setEnableAiSummarization(checked);
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         setHasUnsavedChanges(true);
                       }}
                       data-testid="switch-ai-summarization"
@@ -4273,7 +4226,6 @@ export default function Settings() {
                   checked={quietHoursEnabled} 
                   onCheckedChange={(checked) => {
                     setQuietHoursEnabled(checked);
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     setHasUnsavedChanges(true);
                   }}
                   data-testid="switch-quiet-hours-enabled"
@@ -4289,7 +4241,6 @@ export default function Settings() {
                       onValueChange={(v) => {
                         const hour = Math.min(23, Math.max(0, Number(v)));
                         setQuietHoursStart(hour);
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         setHasUnsavedChanges(true);
                       }}
                     >
@@ -4312,7 +4263,6 @@ export default function Settings() {
                       onValueChange={(v) => {
                         const hour = Math.min(23, Math.max(0, Number(v)));
                         setQuietHoursEnd(hour);
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         setHasUnsavedChanges(true);
                       }}
                     >
@@ -4361,7 +4311,6 @@ export default function Settings() {
                   checked={autoCleanupEnabled} 
                   onCheckedChange={(checked) => {
                     setAutoCleanupEnabled(checked);
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     setHasUnsavedChanges(true);
                   }}
                   data-testid="switch-auto-cleanup"
@@ -4376,7 +4325,6 @@ export default function Settings() {
                       value={String(retentionDays)} 
                       onValueChange={(v) => {
                         setRetentionDays(Number(v));
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         setHasUnsavedChanges(true);
                       }}
                     >
@@ -4408,7 +4356,6 @@ export default function Settings() {
                       checked={autoArchiveRead} 
                       onCheckedChange={(checked) => {
                         setAutoArchiveRead(checked);
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         setHasUnsavedChanges(true);
                       }}
                       data-testid="switch-auto-archive-read"
@@ -4544,7 +4491,7 @@ export default function Settings() {
                         </Badge>
                       </div>
                       <div className="space-y-2">
-                        {section.checks.map((check: any) => (
+                        {section.checks.map((check) => (
                           <div key={check.id} className="flex items-start gap-3 p-2 rounded-md bg-muted/30" data-testid={`readiness-check-${check.id}`}>
                             {check.ok ? (
                               <CircleCheck className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
@@ -5263,7 +5210,7 @@ export default function Settings() {
                         <span className="text-xs text-muted-foreground">Federal minimum standards</span>
                       </div>
                     </SelectItem>
-                    {laborLawRules.filter((rule: any) => rule.jurisdiction !== 'US-FEDERAL').map((rule: any) => (
+                    {laborLawRules.filter((rule) => rule.jurisdiction !== 'US-FEDERAL').map((rule) => (
                       <SelectItem key={rule.jurisdiction} value={rule.jurisdiction}>
                         <div className="flex flex-col">
                           <span className="font-medium">{rule.jurisdictionName}</span>
@@ -5460,7 +5407,7 @@ function CalendarIntegrationCard() {
         description: "Calendar subscription created successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to create subscription",
@@ -5480,7 +5427,7 @@ function CalendarIntegrationCard() {
         description: "Subscription revoked successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to revoke subscription",
@@ -5500,7 +5447,7 @@ function CalendarIntegrationCard() {
         description: "Subscription URL regenerated",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to regenerate token",

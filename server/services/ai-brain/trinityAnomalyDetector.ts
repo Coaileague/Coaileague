@@ -30,7 +30,7 @@ interface DetectedAnomaly {
   title: string;
   description: string;
   confidence: number;
-  dataSnapshot: Record<string, any>;
+  dataSnapshot: Record<string, unknown>;
   reasoningChain: string[];
   recommendedActions: string[];
 }
@@ -660,7 +660,6 @@ export class TrinityAnomalyDetector {
         workspaceId,
         metadata: {
           anomalyType: anomaly.type,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           severity: anomaly.severity,
           confidence: anomaly.confidence,
           recommendedActions: anomaly.recommendedActions,

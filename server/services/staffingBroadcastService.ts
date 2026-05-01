@@ -338,7 +338,7 @@ export async function fireCallOffSequence(params: CallOffParams): Promise<{
       await db.update(shifts)
         .set({ employeeId: null, status: 'draft' })
         .where(and(eq(shifts.id, params.shiftId), eq(shifts.workspaceId, workspaceId)));
-    } catch (vacateErr: any) {
+    } catch (vacateErr: unknown) {
       log.warn('[StaffingBroadcast] Failed to vacate shift (continuing):', vacateErr.message);
     }
   }
@@ -368,7 +368,7 @@ export async function fireCallOffSequence(params: CallOffParams): Promise<{
     }).returning({ id: shiftCoverageRequests.id });
 
     coverageRequestId = coverageRecord?.id;
-  } catch (coverageErr: any) {
+  } catch (coverageErr: unknown) {
     log.warn('[StaffingBroadcast] Failed to create coverage request record:', coverageErr.message);
   }
 
@@ -380,7 +380,6 @@ export async function fireCallOffSequence(params: CallOffParams): Promise<{
       entityType: 'shift',
       entityId: params.shiftId,
       userId: officerEmployeeId,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       details: {
         originalEmployeeId: officerEmployeeId,
         reason: reason || null,
@@ -390,7 +389,7 @@ export async function fireCallOffSequence(params: CallOffParams): Promise<{
         shiftDate,
       },
     });
-  } catch (auditErr: any) {
+  } catch (auditErr: unknown) {
     log.warn('[StaffingBroadcast] Calloff audit log failed (non-blocking):', auditErr.message);
   }
 
@@ -439,7 +438,7 @@ export async function fireCallOffSequence(params: CallOffParams): Promise<{
         return tierA - tierB;
       });
     }
-  } catch (sortErr: any) {
+  } catch (sortErr: unknown) {
     log.warn('[StaffingBroadcast] Candidate tier-sort failed, using original order:', sortErr.message);
     sortedCandidates = [...replacementCandidateEmployeeIds];
   }
@@ -472,7 +471,7 @@ export async function fireCallOffSequence(params: CallOffParams): Promise<{
         orgName,
       }, workspaceId);
       officerEmailSent = true;
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[StaffingBroadcast] Officer call-off email failed:', (err instanceof Error ? err.message : String(err)));
     }
   }
@@ -493,7 +492,7 @@ export async function fireCallOffSequence(params: CallOffParams): Promise<{
         reason,
       }, workspaceId);
       managerEmailSent = true;
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[StaffingBroadcast] Manager call-off alert email failed:', (err instanceof Error ? err.message : String(err)));
     }
   }
@@ -517,7 +516,7 @@ export async function fireCallOffSequence(params: CallOffParams): Promise<{
         baseUrl,
       });
       broadcastId = result.broadcastId;
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[StaffingBroadcast] Replacement broadcast creation failed:', (err instanceof Error ? err.message : String(err)));
     }
   }
@@ -600,7 +599,7 @@ export async function sendReplacementAssignmentEmail(params: {
         orgName,
       },
     });
-  } catch (storeErr: any) {
+  } catch (storeErr: unknown) {
     log.warn('[StaffingBroadcast] Failed to persist replacement tokens (email will still send):', storeErr.message);
   }
 
@@ -621,7 +620,7 @@ export async function sendReplacementAssignmentEmail(params: {
       orgName,
     }, workspaceId);
     return true;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[StaffingBroadcast] Replacement assignment email failed:', (err instanceof Error ? err.message : String(err)));
     return false;
   }
@@ -697,7 +696,7 @@ export async function resolveReplacementToken(
         responseData: { ...rd, status: actualAction === 'confirm' ? 'confirmed' : 'declined', resolvedAt: new Date().toISOString() },
       })
       .where(eq(broadcastRecipients.id, match.id));
-  } catch (updateErr: any) {
+  } catch (updateErr: unknown) {
     log.warn('[StaffingBroadcast] Failed to mark replacement token resolved:', updateErr.message);
   }
 

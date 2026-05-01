@@ -265,7 +265,7 @@ export default function ContractSigningPortal({ token }: { token: string }) {
   });
 
   const signMutation = useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload) => {
       const res = await fetch(`/api/contracts/portal/${token}/sign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -580,7 +580,6 @@ export default function ContractSigningPortal({ token }: { token: string }) {
               </p>
               // @ts-ignore — TS migration: fix in refactoring sprint
               {(contract as any).changesRequested && (
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 <p className="text-sm bg-muted p-3 rounded-md text-left mt-2">{contract.changesRequested}</p>
               )}
             </CardContent>

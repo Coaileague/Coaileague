@@ -79,11 +79,11 @@ export default function TrainingCompliancePage() {
 
   const refreshMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/training-compliance/refresh-statuses", {}),
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/training-compliance"] });
       toast({ title: "Statuses refreshed", description: `${data?.updated || 0} records updated.` });
     },
-    onError: (err: any) => toast({ title: "Refresh failed", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Refresh failed", description: err.message, variant: "destructive" }),
   });
 
   const filtered = statusFilter === "all"

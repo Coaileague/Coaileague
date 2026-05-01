@@ -34,7 +34,7 @@ export interface ToolExecutionRequest {
   toolId: string;
   toolName: string;
   action: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   callerContext: {
     userId: string;
     workspaceId: string;
@@ -403,7 +403,6 @@ class SecureToolExecutor {
       await this.logToolCallSuccess(request, callId, Date.now() - startTime);
 
       // Publish event
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       platformEventBus.publish('ai_brain_action', {
         action: 'tool_executed',
         toolId: request.toolId,
@@ -441,12 +440,11 @@ class SecureToolExecutor {
   /**
    * Delegate to tool capability registry for actual execution
    */
-  private async delegateToToolRegistry(request: ToolExecutionRequest): Promise<any> {
+  private async delegateToToolRegistry(request: ToolExecutionRequest): Promise<unknown> {
     const { toolId, action, parameters, callerContext } = request;
 
     // Try to find and execute through registry
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const tool = await toolCapabilityRegistry.getTool(callerContext.workspaceId, toolId);
       
       if (tool && typeof (tool as any).execute === 'function') {
@@ -752,7 +750,7 @@ class SecureToolExecutor {
   /**
    * Generate a human-readable diff preview
    */
-  private generateDiffPreview(changeType: DryRunChange['changeType'], params: Record<string, any>): string {
+  private generateDiffPreview(changeType: DryRunChange['changeType'], params: Record<string, unknown>): string {
     switch (changeType) {
       case 'create':
         return `+ CREATE new record with: ${JSON.stringify(params, null, 2).slice(0, 200)}...`;

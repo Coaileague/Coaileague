@@ -372,7 +372,7 @@ export default function AICommandCenter() {
                     </div>
                   ) : approvals && approvals.length > 0 ? (
                     <div className="space-y-3">
-                      {approvals.map((approval: any) => (
+                      {approvals.map((approval) => (
                         <ApprovalCard key={approval.id} approval={approval} />
                       ))}
                     </div>
@@ -406,7 +406,7 @@ export default function AICommandCenter() {
                     </div>
                   ) : patterns && patterns.length > 0 ? (
                     <div className="space-y-3">
-                      {patterns.map((pattern: any) => (
+                      {patterns.map((pattern) => (
                         <PatternCard key={pattern.id} pattern={pattern} />
                       ))}
                     </div>
@@ -437,7 +437,7 @@ export default function AICommandCenter() {
                     </div>
                   ) : recentJobs && recentJobs.length > 0 ? (
                     <div className="space-y-2">
-                      {recentJobs.map((job: any) => (
+                      {recentJobs.map((job) => (
                         <JobCard key={job.id} job={job} />
                       ))}
                     </div>

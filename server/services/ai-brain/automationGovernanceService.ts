@@ -77,7 +77,7 @@ export interface ActionContext {
   executorType?: 'user' | 'trinity' | 'helpai' | 'subagent' | 'automation_job';
   trinitySessionId?: string;
   conversationTurnId?: string;
-  payload?: Record<string, any>;
+  payload?: Record<string, unknown>;
 }
 
 export interface ConsentRequest {
@@ -715,7 +715,7 @@ class AutomationGovernanceService {
       approvedBy: string;
       approvalNotes: string;
       executionStatus: string;
-      outputResult: Record<string, any>;
+      outputResult: Record<string, unknown>;
       errorDetails: string;
       executionTimeMs: number;
       auditLogId: string;

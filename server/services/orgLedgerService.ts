@@ -20,7 +20,7 @@ interface LedgerWriteParams {
   invoiceId?: string;
   payrollRunId?: string;
   description: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   tx?: any;
 }
 
@@ -95,7 +95,7 @@ export async function writeLedgerEntry(params: LedgerWriteParams) {
 
       log.info(`[OrgLedger] ${params.entryType} | ${params.direction} $${params.amount.toFixed(2)} | balance: $${newBalance.toFixed(2)} | ${params.description}`);
       return entry;
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[OrgLedger] Write failed:`, (err instanceof Error ? err.message : String(err)));
       throw err;
     }

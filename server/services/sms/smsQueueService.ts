@@ -60,7 +60,7 @@ export async function queueSMS(messages: QueuedMessage[]): Promise<{ queued: num
         ],
       );
       queued++;
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[SMSQueue] Insert failed:', err?.message);
       failed++;
     }
@@ -99,7 +99,7 @@ export async function processSMSOutbox(): Promise<void> {
           [BATCH_SIZE],
         );
         rows = res.rows;
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[SMSQueue] Claim batch error:', err?.message);
         break;
       }
@@ -136,7 +136,7 @@ export async function processSMSOutbox(): Promise<void> {
                 [(result.error || 'unknown').slice(0, 200), row.id],
               );
             }
-          } catch (err: any) {
+          } catch (err: unknown) {
             await pool.query(
               `UPDATE sms_outbox
                   SET status = CASE WHEN retry_count + 1 >= max_retries THEN 'failed' ELSE 'queued' END,

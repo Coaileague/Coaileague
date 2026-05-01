@@ -89,7 +89,7 @@ async function safeNumber(query: string, params: unknown[] = []): Promise<number
     const r = await pool.query(query, params);
     const v = r.rows[0]?.v;
     return Number(v ?? 0) || 0;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[telemetry] query failed: ${err?.message}`);
     return 0;
   }
@@ -476,7 +476,7 @@ export async function runAllChaosTests(workspaceId: string): Promise<{
       });
       webhookChecks.push(settled);
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[chaos] plaid sandbox check skipped: ${err?.message}`);
   }
 

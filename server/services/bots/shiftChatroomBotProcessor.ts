@@ -58,7 +58,7 @@ async function saveFlowToDB(chatroomId: string, flow: IncidentFlow): Promise<voi
           updated_at = NOW()
       WHERE id = ${chatroomId}
     `);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[BotProcessor] Failed to persist incident flow to DB:', (err instanceof Error ? err.message : String(err))?.slice(0, 120));
   }
 }
@@ -139,7 +139,7 @@ async function sendBotResponse(
   workspaceId: string,
   content: string,
   botEvent: string,
-  extraMeta: Record<string, any> = {}
+  extraMeta: Record<string, unknown> = {}
 ): Promise<void> {
   try {
     await db.insert(shiftChatroomMessages).values({
@@ -462,7 +462,7 @@ async function compileAndFileIncidentReport(
         reportedBy: reporterName,
         occurredAt: new Date(),
       } as any);
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[ShiftChatroomBot] Incident DB save failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
     }
   }
@@ -578,7 +578,7 @@ async function handleEndShift(
             'endshift_error'
           );
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.error('[ShiftChatroomBot] endShift failed:', (err instanceof Error ? err.message : String(err)));
         await sendBotResponse(
           chatroomId, workspaceId,
@@ -587,7 +587,7 @@ async function handleEndShift(
         );
       }
     })();
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[ShiftChatroomBot] handleEndShift error:', (err instanceof Error ? err.message : String(err)));
     await sendBotResponse(chatroomId, workspaceId, 'End shift processing error. Contact supervisor.', 'endshift_error');
   }

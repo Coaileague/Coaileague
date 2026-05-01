@@ -72,7 +72,7 @@ export const goalExecutionService = {
       `, [JSON.stringify({ actionsExecuted, details }), taskId]);
 
       return { goalType, success: true, actionsExecuted, details };
-    } catch (err: any) {
+    } catch (err: unknown) {
       await pool.query(`UPDATE agent_tasks SET status='failed', error_message=$1 WHERE id=$2`, [err?.message, taskId]).catch(() => {});
       log.error(`[GoalExecution] ${goalType} failed: ${err?.message}`);
       return { goalType, success: false, actionsExecuted: 0, details: err?.message };

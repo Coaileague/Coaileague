@@ -139,7 +139,7 @@ async function pollPendingTransfers(): Promise<void> {
             },
           }).catch((err) => log.warn('[payrollTransferMonitor] Fire-and-forget failed:', err));
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         // G19 FIX: Count consecutive Plaid API failures per transfer.
         // Silent swallowing left pay stubs stuck in 'pending' with no alert.
         const current = (consecutiveFailures.get(stub.plaidTransferId!) ?? 0) + 1;
@@ -178,7 +178,7 @@ async function pollPendingTransfers(): Promise<void> {
               .update(payStubs)
               .set({ plaidTransferStatus: 'poll_failed' as any, updatedAt: new Date() })
               .where(eq(payStubs.id, stub.id));
-          } catch (updateErr: any) {
+          } catch (updateErr: unknown) {
             log.error('[PayrollTransferMonitor] Failed to mark poll_failed:', updateErr.message);
           }
 
@@ -229,7 +229,7 @@ async function pollPendingTransfers(): Promise<void> {
         }
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[PayrollTransferMonitor] Poll cycle error:', (err instanceof Error ? err.message : String(err)));
   } finally {
     isPolling = false;

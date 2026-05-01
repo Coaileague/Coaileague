@@ -98,7 +98,7 @@ export const ensureWorkspaceAccess: RequestHandler = async (req: Request, res: R
     if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
       try {
         await assertWorkspaceActive(req.session.workspaceId);
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (err.name === 'WorkspaceNotFoundError') {
           log.warn('[ensureWorkspaceAccess] Workspace not found on suspension check', {
             workspaceId: req.session.workspaceId,
@@ -148,7 +148,7 @@ export const ensureWorkspaceAccess: RequestHandler = async (req: Request, res: R
   if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
     try {
       await assertWorkspaceActive(resolved.workspaceId);
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (err.name === 'WorkspaceNotFoundError') {
         return res.status(403).json({ error: err.message, code: 'WORKSPACE_NOT_FOUND' });
       }

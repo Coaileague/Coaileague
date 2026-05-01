@@ -129,7 +129,7 @@ class ChatConnectionManager {
       const rooms = data.rooms || data || [];
 
       const serverMap = new Map<string, ChatRoomSummary>();
-      rooms.forEach((room: any) => {
+      rooms.forEach((room) => {
         const roomId = room.roomId || room.id;
         if (!roomId) return;
         serverMap.set(roomId, {
@@ -425,7 +425,7 @@ class ChatConnectionManager {
 
       this.roomSummaries.clear();
 
-      rooms.forEach((room: any) => {
+      rooms.forEach((room) => {
         const roomId = room.roomId || room.id;
         if (!roomId) return;
         const unreadCount = room.unreadCount || 0;

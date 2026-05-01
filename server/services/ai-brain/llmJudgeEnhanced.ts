@@ -30,7 +30,7 @@ export interface RiskEvaluationRequest {
   subjectId: string;
   subjectType: 'action' | 'hotpatch' | 'response' | 'output' | 'workflow';
   content: any;
-  context: Record<string, any>;
+  context: Record<string, unknown>;
   workspaceId?: string;
   userId?: string;
   
@@ -525,7 +525,6 @@ Respond with JSON:
       } else {
         // Insert new pattern
         await db.insert(llmJudgeRegressions).values({
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           workspaceId: 'system',
           patternHash,
           actionType: request.actionType || 'unknown',

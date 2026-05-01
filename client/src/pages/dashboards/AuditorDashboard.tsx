@@ -83,7 +83,7 @@ export default function AuditorDashboard() {
               </div>
             </div>
             <div className="space-y-2 mb-3">
-              {docs.slice(0, 4).map((doc: any) => (
+              {docs.slice(0, 4).map((doc) => (
                 <div key={doc.id} className="flex items-center justify-between text-sm">
                   <span className="text-foreground truncate max-w-[160px]">{doc.name || doc.title || "Document"}</span>
                   <Badge variant="secondary" className="text-xs capitalize">{doc.status ?? "active"}</Badge>

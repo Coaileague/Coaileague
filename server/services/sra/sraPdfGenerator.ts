@@ -116,7 +116,6 @@ export async function generateSRAReportPDF(data: SRAReportData): Promise<{ pdfBu
   doc.fontSize(10).font('Helvetica');
   for (const [label, value] of metaFields) {
     doc.fillColor('#555555').text(`${label}:`, 60, doc.y, { continued: true, width: 180 })
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .fillColor('#000000').font('Helvetica-Bold').text(` ${value}`, { font: 'Helvetica-Bold' }).font('Helvetica').moveDown(0.25);
   }
   doc.moveDown(0.5);

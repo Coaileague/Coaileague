@@ -51,7 +51,7 @@ export interface SkillResult<T = any> {
   success: boolean;
   data?: T;
   error?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   logs?: string[];
 }
 
@@ -71,5 +71,5 @@ export interface SkillEvent {
  */
 export interface SkillConfig {
   enabled: boolean;
-  settings?: Record<string, any>;
+  settings?: Record<string, unknown>;
 }

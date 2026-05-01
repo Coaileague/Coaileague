@@ -38,7 +38,7 @@ export interface ConscienceContext {
   workspaceId?: string;
   userId?: string;
   userRole?: string;
-  payload?: Record<string, any>;
+  payload?: Record<string, unknown>;
   callerType?: 'user' | 'bot' | 'automation';
   botName?: string;
 }

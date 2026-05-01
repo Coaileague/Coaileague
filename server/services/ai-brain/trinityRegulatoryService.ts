@@ -292,7 +292,6 @@ class TrinityRegulatoryService {
           'regulatory_kb',
           undefined,
           undefined,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           'PLATFORM',
         ).catch(() => null);
       } catch {

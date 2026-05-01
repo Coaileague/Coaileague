@@ -63,7 +63,7 @@ function TrainingAnalyticsDashboard() {
             <CardTitle className="text-base">Completion by Category</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {categories.map((cat: any) => (
+            {categories.map((cat) => (
               <div key={cat.category} data-testid={`analytics-category-${cat.category}`}>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm capitalize">{cat.category}</span>
@@ -82,7 +82,7 @@ function TrainingAnalyticsDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {courses.map((course: any) => (
+            {courses.map((course) => (
               <div key={course.id} className="rounded-md border p-3" data-testid={`analytics-course-${course.id}`}>
                 <div className="flex items-start justify-between gap-2 mb-2 flex-wrap">
                   <div className="flex-1 min-w-0">
@@ -695,7 +695,7 @@ export default function LearningManagement() {
                 <Label htmlFor="course-difficulty">Difficulty *</Label>
                 <Select
                   value={newCourse.difficulty}
-                  onValueChange={(value: any) => setNewCourse({ ...newCourse, difficulty: value })}
+                  onValueChange={(value) => setNewCourse({ ...newCourse, difficulty: value })}
                 >
                   <SelectTrigger id="course-difficulty" data-testid="select-course-difficulty">
                     <SelectValue />

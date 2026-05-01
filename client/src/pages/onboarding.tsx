@@ -308,7 +308,7 @@ export default function OnboardingPage() {
         description: 'Great progress - keep going!',
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to complete task',
@@ -328,7 +328,7 @@ export default function OnboardingPage() {
         description: 'Your 10% discount has been activated.',
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to apply reward',
@@ -407,7 +407,6 @@ export default function OnboardingPage() {
     id: 'onboarding',
     title: 'Welcome to CoAIleague',
     subtitle: 'Complete these tasks to get the most out of your platform',
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     category: 'workspace',
     headerActions: trialBadge,
   };

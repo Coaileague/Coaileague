@@ -677,7 +677,6 @@ export async function migrateEmployeeIdsToNewOrgCode(
         );
       
       // Build a map of employee ID to external identifier record
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const extIdMap = new Map(existingIds.map(e => [e.entityId, e]));
       
       // Check for potential conflicts with new IDs first
@@ -709,7 +708,6 @@ export async function migrateEmployeeIdsToNewOrgCode(
             const newExternalId = `EMP-${normalizedCode}-${seqNumber}`;
             
             // Skip if already has the new format
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             if (extRecord.externalId === newExternalId) {
               continue;
             }
@@ -1034,7 +1032,6 @@ export async function supportLookupFull(query: string): Promise<FullIdentityReco
           .limit(1);
         return { workspaceId: m.workspaceId, workspaceName: w?.name || m.workspaceId, role: m.role };
       }));
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       record.allWorkspaces = wsNames;
 
       results.push(record);

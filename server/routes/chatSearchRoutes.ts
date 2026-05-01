@@ -58,7 +58,7 @@ router.get('/search', requireAuth, async (req: AuthenticatedRequest, res) => {
       results: results.rows ?? [],
       count: results.rows?.length ?? 0,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     // If chat_messages table doesn't have full-text index yet, fall back to ILIKE
     try {
       const fallback = await db.execute(sql`
@@ -75,7 +75,7 @@ router.get('/search', requireAuth, async (req: AuthenticatedRequest, res) => {
         LIMIT ${limit}
       `);
       return res.json({ query: q, results: fallback.rows ?? [], count: fallback.rows?.length ?? 0 });
-    } catch (fallbackErr: any) {
+    } catch (fallbackErr: unknown) {
       log.error('[ChatSearch] Search error:', fallbackErr?.message);
       return res.json({ query: q, results: [], count: 0 });
     }

@@ -33,7 +33,7 @@ coverageRouter.get('/', requireAuth as any, async (req: AuthenticatedRequest, re
     // Return shifts array for marketplace UI
     const shifts = (status as any)?.pendingOffers ?? (status as any)?.activeRequests ?? [];
     res.json({ shifts, status });
-  } catch (e: any) {
+  } catch (e: unknown) {
     log.error('[CoverageRoutes] GET / failed:', e.message);
     res.status(500).json({ error: e.message });
   }
@@ -68,7 +68,6 @@ coverageRouter.post('/accept/:offerId', async (req: AuthenticatedRequest, res: R
           const { broadcastToWorkspace } = await import('../websocket');
           broadcastToWorkspace(wsWorkspaceId, { type: 'schedules_updated' });
         }
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       } catch (e: unknown) { log.warn('[Coverage] Broadcast failed:', e.message); }
 
       res.json({ 

@@ -135,7 +135,6 @@ class TrinityProactiveScannerService {
   async runDailyScan(workspaceId: string): Promise<DailyScanResult> {
     if (isCoolingDown('daily', workspaceId, DAILY_COOLDOWN_MS)) {
       log.warn(`[TrinityProactiveScanner] Daily scan for ${workspaceId} skipped — cooldown active`);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       return { workspaceId, scannedAt: new Date().toISOString(), openShifts: 0, missedPunches: 0, expiringCerts: 0, pendingApprovals: 0, overdueInvoices: 0, alerts: [], escalations: [] };
     }
     await assertWorkspaceActive(workspaceId, { bypassForSystemActor: true });
@@ -704,11 +703,10 @@ class TrinityProactiveScannerService {
 
     // STEP 1: Trigger autonomous scheduling for next month (full 5-week window)
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await autonomousSchedulingDaemon.triggerManualRun(workspaceId, 'next_month');
       schedulingCycleTriggered = true;
       alerts.push('Next month scheduling cycle triggered');
-    } catch (e: any) {
+    } catch (e: unknown) {
       errors.push(`Scheduling cycle error: ${e.message}`);
     }
 
@@ -724,7 +722,7 @@ class TrinityProactiveScannerService {
       });
       payrollCycleTriggered = true;
       alerts.push('Payroll cycle triggered for current period');
-    } catch (e: any) {
+    } catch (e: unknown) {
       errors.push(`Payroll cycle error: ${e.message}`);
     }
 
@@ -736,7 +734,7 @@ class TrinityProactiveScannerService {
       if (qbPayrollResult.failed > 0) {
         errors.push(`QB payroll sync: ${qbPayrollResult.failed} run(s) failed to sync — review QuickBooks connection`);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       errors.push(`QB payroll sync error: ${e.message}`);
     }
 
@@ -745,7 +743,7 @@ class TrinityProactiveScannerService {
       await runWeeklyBillingCycle(workspaceId);
       invoiceCycleTriggered = true;
       alerts.push('Invoice cycle triggered for all clients');
-    } catch (e: any) {
+    } catch (e: unknown) {
       errors.push(`Invoice cycle error: ${e.message}`);
     }
 
@@ -758,7 +756,7 @@ class TrinityProactiveScannerService {
       await runDocumentExpiryCheck();
       complianceAuditRun = true;
       alerts.push('Compliance audit complete');
-    } catch (e: any) {
+    } catch (e: unknown) {
       errors.push(`Compliance audit error: ${e.message}`);
     }
 
@@ -821,7 +819,7 @@ class TrinityProactiveScannerService {
       }
       executiveSummaryGenerated = true;
       alerts.push('Executive summary sent to workspace owner(s)');
-    } catch (e: any) {
+    } catch (e: unknown) {
       errors.push(`Executive summary error: ${e.message}`);
     }
 
@@ -841,7 +839,7 @@ class TrinityProactiveScannerService {
     };
   }
 
-  async processEvent(eventType: string, payload: any): Promise<any> {
+  async processEvent(eventType: string, payload: any): Promise<unknown> {
     const { workspaceId, officerId, shiftId, invoiceId, employeeId } = payload;
 
     switch (eventType) {
@@ -1015,7 +1013,6 @@ class TrinityProactiveScannerService {
         if (payload.shiftId && workspaceId) {
           try {
             const { coveragePipeline } = await import('../automation/coveragePipeline');
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             await coveragePipeline.triggerCoverage({ workspaceId, shiftId: payload.shiftId, reason: 'shift_cancelled' }).catch(() => null);
           } catch { /* non-blocking */ }
           const managers = await db.select({ userId: workspaceMembers.userId }).from(workspaceMembers)
@@ -1568,7 +1565,6 @@ class TrinityProactiveScannerService {
       .from(financialSnapshots)
       .where(and(
         eq(financialSnapshots.workspaceId, workspaceId),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         gte(financialSnapshots.periodStart, monthStart)
       ))
       .orderBy(desc(financialSnapshots.periodStart))
@@ -1634,12 +1630,11 @@ class TrinityProactiveScannerService {
     log.info(`[TrinityProactiveScanner] Running night-before confirmation sweep for ${activeWorkspaces.length} workspaces...`);
     for (const ws of activeWorkspaces) {
       try {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const { trinityShiftConfirmationActions } = await import('./trinityShiftConfirmationActions').catch(() => ({ trinityShiftConfirmationActions: null }));
         // @ts-expect-error — TS migration: fix in refactoring sprint
         const scanResult = await helpaiOrchestrator.executeAction('shift.scan_tomorrows_shifts', { workspaceId: ws.id } as any).catch(() => null);
         log.info(`[TrinityProactiveScanner] Night-before confirmation: ws=${ws.id}, result=${JSON.stringify(scanResult?.data || {})}`);
-      } catch (e: any) {
+      } catch (e: unknown) {
         log.error(`[TrinityProactiveScanner] Night-before confirmation failed for ${ws.id}: ${e.message}`);
       }
     }

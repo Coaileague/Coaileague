@@ -84,13 +84,10 @@ export class PartnerApiUsageService {
       
       // Check for duplicate event (deduplication)
       const existingEvent = await db.select()
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .from(partnerApiUsageEvents)
         .where(
           and(
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             eq(partnerApiUsageEvents.workspaceId, input.workspaceId),
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             sql`${partnerApiUsageEvents.metadata}->>'idempotencyKey' = ${idempotencyKey}`
           )
         )
@@ -108,7 +105,6 @@ export class PartnerApiUsageService {
       const totalCost = unitPrice * usageAmount;
       
       // Create usage event (only if not duplicate)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const [event] = await db.insert(partnerApiUsageEvents).values({
         workspaceId: input.workspaceId,
         userId: input.userId,
@@ -178,7 +174,6 @@ export class PartnerApiUsageService {
       await tokenManager.recordUsage({
         workspaceId,
         featureKey: 'partner_api_call',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         featureName: 'Partner API',
         amountOverride: amount,
         description,
@@ -364,19 +359,14 @@ export class PartnerApiUsageService {
     endDate: Date
   ): Promise<PartnerApiMetrics> {
     const events = await db.select()
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .from(partnerApiUsageEvents)
       .where(
         and(
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           eq(partnerApiUsageEvents.workspaceId, workspaceId),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           gte(partnerApiUsageEvents.createdAt, startDate),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           lte(partnerApiUsageEvents.createdAt, endDate)
         )
       )
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .orderBy(desc(partnerApiUsageEvents.createdAt));
     
     // Calculate metrics
@@ -452,21 +442,15 @@ export class PartnerApiUsageService {
     endDate: Date
   ): Promise<PartnerApiUsageEvent[]> {
     return db.select()
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .from(partnerApiUsageEvents)
       .where(
         and(
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           eq(partnerApiUsageEvents.workspaceId, workspaceId),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           sql`${partnerApiUsageEvents.partnerType} = ${partnerType}`,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           gte(partnerApiUsageEvents.createdAt, startDate),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           lte(partnerApiUsageEvents.createdAt, endDate)
         )
       )
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .orderBy(desc(partnerApiUsageEvents.createdAt));
   }
   
@@ -478,11 +462,8 @@ export class PartnerApiUsageService {
     limit: number = 100
   ): Promise<PartnerApiUsageEvent[]> {
     return db.select()
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .from(partnerApiUsageEvents)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .where(eq(partnerApiUsageEvents.workspaceId, workspaceId))
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .orderBy(desc(partnerApiUsageEvents.createdAt))
       .limit(limit);
   }
@@ -496,21 +477,15 @@ export class PartnerApiUsageService {
     endDate: Date
   ): Promise<PartnerApiUsageEvent[]> {
     return db.select()
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .from(partnerApiUsageEvents)
       .where(
         and(
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           eq(partnerApiUsageEvents.workspaceId, workspaceId),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           eq(partnerApiUsageEvents.success, false),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           gte(partnerApiUsageEvents.createdAt, startDate),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           lte(partnerApiUsageEvents.createdAt, endDate)
         )
       )
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .orderBy(desc(partnerApiUsageEvents.createdAt));
   }
 }

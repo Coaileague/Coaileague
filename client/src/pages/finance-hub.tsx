@@ -116,7 +116,7 @@ export default function FinanceHub() {
 
   const onboardingMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/stripe/onboarding-link"),
-    onSuccess: async (res: any) => {
+    onSuccess: async (res) => {
       const data = await res.json();
       if (data.url) {
         window.open(data.url, "_blank");
@@ -129,7 +129,7 @@ export default function FinanceHub() {
 
   const dashboardMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/stripe/connect-dashboard"),
-    onSuccess: async (res: any) => {
+    onSuccess: async (res) => {
       const data = await res.json();
       if (data.url) {
         window.open(data.url, "_blank");

@@ -195,7 +195,7 @@ export default function AlertSettings() {
       queryClient.invalidateQueries({ queryKey: ['/api/alerts/config'] });
       toast({ title: 'Alert configuration updated' });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: 'Error updating alert', description: error.message, variant: 'destructive' });
     },
   });
@@ -209,7 +209,7 @@ export default function AlertSettings() {
       setSelectedConfig(null);
       toast({ title: 'Alert configuration saved' });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: 'Error saving configuration', description: error.message, variant: 'destructive' });
     },
   });
@@ -226,7 +226,7 @@ export default function AlertSettings() {
       setAcknowledgeNotes('');
       toast({ title: 'Alert acknowledged' });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: 'Error acknowledging alert', description: error.message, variant: 'destructive' });
     },
   });
@@ -239,7 +239,7 @@ export default function AlertSettings() {
       queryClient.invalidateQueries({ queryKey: ['/api/alerts/history'] });
       toast({ title: 'Test alert sent', description: 'Check your notification channels' });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: 'Error sending test alert', description: error.message, variant: 'destructive' });
     },
   });

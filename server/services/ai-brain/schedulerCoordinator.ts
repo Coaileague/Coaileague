@@ -26,7 +26,7 @@ export interface AgentTask {
   actionId: string;
   priority: 'low' | 'normal' | 'high' | 'urgent';
   context: ResolvedContext;
-  params: Record<string, any>;
+  params: Record<string, unknown>;
   scheduledFor?: Date;
   maxWaitMs?: number;
 }
@@ -273,7 +273,7 @@ class SchedulerCoordinatorService {
     fromAgent: AgentType,
     toAgent: AgentType,
     actionId: string,
-    params: Record<string, any>,
+    params: Record<string, unknown>,
     context: ResolvedContext,
     options?: { priority?: AgentTask['priority']; waitForResult?: boolean }
   ): Promise<string> {

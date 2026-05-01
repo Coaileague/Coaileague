@@ -919,7 +919,6 @@ class EmployeeDocumentOnboardingService {
     const now = new Date();
 
     const documentStatuses: DocumentRequirementStatus[] = requirements.map(req => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const doc = docsByType.get(req.documentType);
       
       if (!doc) {

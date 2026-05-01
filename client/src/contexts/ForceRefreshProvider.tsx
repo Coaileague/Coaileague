@@ -102,7 +102,7 @@ export function ForceRefreshProvider({ children }: { children: React.ReactNode }
     }
   }, [queryClient, toast]);
 
-  const handleMascotDirective = useCallback((payload: any) => {
+  const handleMascotDirective = useCallback((payload) => {
     queryClient.setQueryData(['/api/mascot/holiday/directives'], {
       success: true,
       seasonId: payload?.seasonId || 'christmas',
@@ -130,7 +130,7 @@ export function ForceRefreshProvider({ children }: { children: React.ReactNode }
       }),
       bus.subscribe('platform_update', (data) => {
         if (data.update) {
-          queryClient.setQueryData(["/api/notifications/combined"], (oldData: any) => {
+          queryClient.setQueryData(["/api/notifications/combined"], (oldData) => {
             if (!oldData) return oldData;
             const newUpdate = {
               id: `live-${Date.now()}`,

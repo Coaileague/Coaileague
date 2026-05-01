@@ -1093,7 +1093,6 @@ function NotificationDetailModal({
             const showApprove = t.includes('approval') || t.includes('timesheet') || title.includes('approval') || title.includes('approve');
             const showDeny = showApprove;
             const showReview = !showApprove && (notification.metadata?.requiresAction || title.includes('action required') || title.includes('review'));
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             const navTarget = notification.metadata?.actionUrl || '/';
             return (
               <>
@@ -1226,14 +1225,12 @@ function getNotificationBadgeInfo(notification: UNSNotification): {
   type: NotificationBadgeType;
   className: string;
 } {
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const t = (notification.type || '').toLowerCase();
   const title = (notification.title || '').toLowerCase();
   const meta = notification.metadata || {};
 
   // TRINITY ADVISORY — AI decisions requiring human verification
   if (
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     meta.aiBrainDecisionId ||
     t === 'ai_decision' ||
     t === 'trinity_autonomous_alert' ||
@@ -2018,8 +2015,8 @@ function NotificationsPopoverInner({ user }: { user: any }) {
       const cachedData = queryClient.getQueryData(["/api/notifications/combined"]) as NotificationsData | undefined;
       
       // Check each source array to determine which API endpoint to call
-      const isPlatformUpdate = cachedData?.platformUpdates?.some((u: any) => u.id === id);
-      const isMaintenanceAlert = cachedData?.maintenanceAlerts?.some((a: any) => a.id === id);
+      const isPlatformUpdate = cachedData?.platformUpdates?.some((u) => u.id === id);
+      const isMaintenanceAlert = cachedData?.maintenanceAlerts?.some((a) => a.id === id);
       
       let response: Response;
       if (isMaintenanceAlert) {
@@ -2043,7 +2040,7 @@ function NotificationsPopoverInner({ user }: { user: any }) {
       
       // Optimistic cache update for immediate UI feedback
       const now = new Date().toISOString();
-      queryClient.setQueryData(["/api/notifications/combined"], (old: any) => {
+      queryClient.setQueryData(["/api/notifications/combined"], (old) => {
         if (!old) return old;
         
         // Find which type the item belongs to and decrement appropriate counter
@@ -2053,10 +2050,10 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         let unreadGapFindings = old.unreadGapFindings || 0;
         
         // Check each array and decrement the right counter
-        const inNotifications = old.notifications?.some((n: any) => n.id === id && !n.clearedAt);
-        const inPlatformUpdates = old.platformUpdates?.some((u: any) => u.id === id && !u.isViewed);
-        const inAlerts = old.maintenanceAlerts?.some((a: any) => a.id === id && !a.isAcknowledged);
-        const inGapFindings = old.gapFindings?.some((f: any) => f.id === id && !f.clearedAt);
+        const inNotifications = old.notifications?.some((n) => n.id === id && !n.clearedAt);
+        const inPlatformUpdates = old.platformUpdates?.some((u) => u.id === id && !u.isViewed);
+        const inAlerts = old.maintenanceAlerts?.some((a) => a.id === id && !a.isAcknowledged);
+        const inGapFindings = old.gapFindings?.some((f) => f.id === id && !f.clearedAt);
         
         if (inNotifications) unreadNotifications = Math.max(0, unreadNotifications - 1);
         if (inPlatformUpdates) unreadPlatformUpdates = Math.max(0, unreadPlatformUpdates - 1);
@@ -2065,16 +2062,16 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         
         return {
           ...old,
-          notifications: old.notifications?.map((n: any) => 
+          notifications: old.notifications?.map((n) => 
             n.id === id ? { ...n, clearedAt: now, isRead: true, metadata: { ...(n.metadata || {}), wasCleared: true } } : n
           ),
-          platformUpdates: old.platformUpdates?.map((u: any) => 
+          platformUpdates: old.platformUpdates?.map((u) => 
             u.id === id ? { ...u, isViewed: true, metadata: { ...(u.metadata || {}), wasCleared: true } } : u
           ),
-          maintenanceAlerts: old.maintenanceAlerts?.map((a: any) => 
+          maintenanceAlerts: old.maintenanceAlerts?.map((a) => 
             a.id === id ? { ...a, isAcknowledged: true, metadata: { ...(a.metadata || {}), wasCleared: true } } : a
           ),
-          gapFindings: old.gapFindings?.map((f: any) => 
+          gapFindings: old.gapFindings?.map((f) => 
             f.id === id ? { ...f, clearedAt: now, isRead: true, metadata: { ...(f.metadata || {}), wasCleared: true } } : f
           ),
           totalUnread: unreadNotifications + unreadPlatformUpdates + unreadAlerts,
@@ -2153,14 +2150,14 @@ function NotificationsPopoverInner({ user }: { user: any }) {
       
       // Optimistic cache update for immediate UI feedback + pending set for protection
       // NOTE: Protected categories (hotpatch, system_fix, admin_action) are NOT cleared
-      queryClient.setQueryData(["/api/notifications/combined"], (old: any) => {
+      queryClient.setQueryData(["/api/notifications/combined"], (old) => {
         // Count how many protected notifications remain unread (not yet cleared)
-        const protectedUnreadCount = old?.notifications?.filter((n: any) => 
+        const protectedUnreadCount = old?.notifications?.filter((n) => 
           PROTECTED_CATEGORIES.includes(n.category) && !n.clearedAt && !n.isRead
         )?.length || 0;
         
         // Map notifications - mark all as cleared EXCEPT protected categories
-        const updatedNotifications = old?.notifications?.map((n: any) => {
+        const updatedNotifications = old?.notifications?.map((n) => {
           // Preserve protected notifications (hotpatch, system_fix, admin_action)
           if (PROTECTED_CATEGORIES.includes(n.category)) {
             return n; // Don't modify - these require explicit action
@@ -2176,17 +2173,17 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         return {
           ...old,
           notifications: updatedNotifications,
-          platformUpdates: old?.platformUpdates?.map((u: any) => ({ 
+          platformUpdates: old?.platformUpdates?.map((u) => ({ 
             ...u, 
             isViewed: true,
             metadata: { ...(u.metadata || {}), wasCleared: true }
           })) || [],
-          maintenanceAlerts: old?.maintenanceAlerts?.map((a: any) => ({ 
+          maintenanceAlerts: old?.maintenanceAlerts?.map((a) => ({ 
             ...a, 
             isAcknowledged: true,
             metadata: { ...(a.metadata || {}), wasCleared: true }
           })) || [],
-          gapFindings: old?.gapFindings?.map((f: any) => ({
+          gapFindings: old?.gapFindings?.map((f) => ({
             ...f,
             isRead: true,
             clearedAt: now,

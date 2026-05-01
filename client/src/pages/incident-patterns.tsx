@@ -72,11 +72,11 @@ export default function IncidentPatternsPage() {
 
   const detectMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/incident-patterns/detect", {}),
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/incident-patterns"] });
       toast({ title: "Detection complete", description: `${data?.patternsFound || 0} new patterns identified.` });
     },
-    onError: (err: any) => toast({ title: "Detection failed", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Detection failed", description: err.message, variant: "destructive" }),
   });
 
   const resolveMutation = useMutation({

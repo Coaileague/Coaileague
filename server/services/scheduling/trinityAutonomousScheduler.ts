@@ -671,7 +671,7 @@ class TrinityAutonomousSchedulerService {
         },
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       session.status = 'failed';
       session.thoughtLog.push(`[Trinity] ERROR: ${(error instanceof Error ? error.message : String(error))}`);
       
@@ -763,7 +763,7 @@ class TrinityAutonomousSchedulerService {
   /**
    * Load historical scheduling patterns
    */
-  private async loadHistoricalPatterns(workspaceId: string): Promise<any> {
+  private async loadHistoricalPatterns(workspaceId: string): Promise<unknown> {
     const threeMonthsAgo = new Date();
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
@@ -1683,7 +1683,7 @@ class TrinityAutonomousSchedulerService {
           if (!certCheck.eligible) {
             certWarnings = certCheck.reasons.slice(0, 2);
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn(`[Trinity] certCheck failed for ${employee.id}: ${(err instanceof Error ? err.message : String(err))}`);
         }
       }
@@ -1989,7 +1989,7 @@ class TrinityAutonomousSchedulerService {
           workspaceId,
         });
         outreachSent++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         outreachErrors.push(`${contractor.email}: ${(err instanceof Error ? err.message : String(err))}`);
       }
     }
@@ -2633,7 +2633,7 @@ export class SchedulingComplianceService {
     splitShiftPremium: boolean;
   } {
     // State-specific labor law rules (simplified for key states)
-    const stateRules: Record<string, any> = {
+    const stateRules: Record<string, unknown> = {
       CA: { weeklyOvertimeThreshold: 40, maxWeeklyHours: 72, dailyOvertimeThreshold: 8, minRestBetweenShifts: 8, splitShiftPremium: true },
       NY: { weeklyOvertimeThreshold: 40, maxWeeklyHours: 60, dailyOvertimeThreshold: null, minRestBetweenShifts: 8, splitShiftPremium: false },
       TX: { weeklyOvertimeThreshold: 40, maxWeeklyHours: 60, dailyOvertimeThreshold: null, minRestBetweenShifts: 8, splitShiftPremium: false },
@@ -2790,7 +2790,7 @@ export class TrinitySchedulingAI {
         const { workspaceContextService } = await import('../ai-brain/workspaceContextService');
         const wsCtx = await workspaceContextService.getFullContext(context.workspaceId);
         orgContext = `\nORGANIZATION CONTEXT:\n${wsCtx.summary}\n`;
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn(`[TrinityScheduler] Failed to load org context for workspace ${context.workspaceId}:`, err?.message);
       }
 
@@ -2832,7 +2832,6 @@ Respond in JSON format:
 
       const response = await unifiedGeminiClient.generateContent(prompt, { // withGemini
         temperature: 0.3,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         maxOutputTokens: 500,
         workspaceId: context.workspaceId,
         featureKey: 'trinity_shift_placement',
@@ -2910,7 +2909,6 @@ Provide scheduling insights in JSON:
 
       const response = await unifiedGeminiClient.generateContent(prompt, { // withGemini
         temperature: 0.4,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         maxOutputTokens: 400,
         workspaceId,
         featureKey: 'trinity_schedule_insights',
@@ -3098,7 +3096,6 @@ export class HumanOverrideController {
     log.info(`[HumanOverride] Scheduling paused for workspace ${workspaceId} by ${userId}: ${reason}`);
     
     // Emit event for real-time UI update
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     platformEventBus.emit('scheduling_paused', {
       workspaceId,
       userId,
@@ -3114,7 +3111,6 @@ export class HumanOverrideController {
     this.pausedWorkspaces.delete(workspaceId);
     log.info(`[HumanOverride] Scheduling resumed for workspace ${workspaceId} by ${userId}`);
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     platformEventBus.emit('scheduling_resumed', {
       workspaceId,
       userId,
@@ -3147,7 +3143,6 @@ export class HumanOverrideController {
     
     log.info(`[HumanOverride] Override queued for shift ${override.shiftId}: ${override.action}`);
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     platformEventBus.emit('scheduling_override_queued', override);
   }
   

@@ -221,12 +221,10 @@ export class GustoService {
     const gustoEmployee: GustoEmployee = {
       first_name: employee.firstName,
       last_name: employee.lastName,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       email: employee.email,
       jobs: (employee as any).payRate ? [
         {
           title: employee.position || 'Employee',
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           rate: Number(employee.payRate),
           payment_unit: employee.payType === 'salary' ? 'Year' : 'Hour',
         },
@@ -289,7 +287,6 @@ export class GustoService {
         })
         .where(eq(partnerDataMappings.id, existingMapping.id));
     } else {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(partnerDataMappings).values({
         workspaceId,
         partnerConnectionId: connection.id,
@@ -380,7 +377,6 @@ export class GustoService {
     const result = await createGustoPayroll();
 
     // Create mapping
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(partnerDataMappings).values({
       workspaceId,
       partnerConnectionId: connection.id,
@@ -447,7 +443,6 @@ export class GustoService {
       }
 
       timeActivities.push({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         employee_id: employeeMapping.partnerEntityId,
         date: (entry as any).periodEnd.toISOString().split('T')[0],
         hours_worked: Number(entry.regularHours || 0) + Number(entry.overtimeHours || 0),
@@ -459,7 +454,6 @@ export class GustoService {
     }
 
     // Submit time activities using batch tracking
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const submitActivities = withBatchUsageTracking(
       async (batchId: string) => {
         // Gusto typically batches time activities
@@ -488,7 +482,6 @@ export class GustoService {
       }
     );
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await submitActivities();
   }
 

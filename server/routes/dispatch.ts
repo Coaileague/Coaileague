@@ -35,7 +35,7 @@ router.get('/incidents', requireAuth, ensureWorkspaceAccess, async (req: Authent
         emergency: rows.filter((r: any) => r.priority === 'emergency').length,
       }
     });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/dispatch/units — unit status board (all active officers)
@@ -55,7 +55,7 @@ router.get('/units', requireAuth, ensureWorkspaceAccess, async (req: Authenticat
       ORDER BY us.updated_at DESC
     `, [req.workspaceId]);
     res.json({ units: rows });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // POST /api/dispatch/incidents — create new dispatch incident
@@ -73,7 +73,7 @@ router.post('/incidents', requireAuth, ensureWorkspaceAccess, async (req: Authen
     `, [req.workspaceId, incidentNumber, priority || 'routine', type || 'patrol',
         locationAddress, description, clientId, callerName, callerPhone, req.user?.id]);
     res.status(201).json({ incident: rows[0] });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // PATCH /api/dispatch/incidents/:id/status — update incident status
@@ -91,7 +91,7 @@ router.patch('/incidents/:id/status', requireAuth, ensureWorkspaceAccess, async 
     );
     if (!rows[0]) return res.status(404).json({ error: 'Incident not found' });
     res.json({ incident: rows[0] });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 export default router;

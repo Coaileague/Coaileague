@@ -62,7 +62,6 @@ billingRouter.use(async (req, res, next) => {
     });
 
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (req.requireAuth && req.requireAuth()) {
       if (authReq.user?.currentWorkspaceId) {
         authReq.currentWorkspaceId = authReq.user.currentWorkspaceId;
@@ -373,7 +372,6 @@ billingRouter.get('/credits/balance', async (req: AuthenticatedRequest, res: Res
       totalUsed: (account as any)?.totalUsed || 0,
       monthlyIncludedCredits: (account as any)?.monthlyIncludedCredits || 0,
       monthlyCreditsUsed: (account as any)?.monthlyCreditsUsed || 0,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       monthlyCreditsRemaining: Math.max(0, (account?.monthlyIncludedCredits || 0) - (account?.monthlyCreditsUsed || 0)),
     });
   } catch (error: unknown) {
@@ -1007,7 +1005,6 @@ billingRouter.get('/pricing', async (req, res) => {
  */
 billingRouter.get('/trial', async (req, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user).workspaceId || (req.user).currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -1028,7 +1025,6 @@ billingRouter.get('/trial', async (req, res) => {
  */
 billingRouter.post('/trial/start', async (req, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user).workspaceId || (req.user).currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -1053,7 +1049,6 @@ billingRouter.post('/trial/start', async (req, res) => {
  */
 billingRouter.post('/trial/extend', async (req, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const workspaceId = req.workspaceId || (req.user).workspaceId || (req.user).currentWorkspaceId;
     if (!workspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -1533,7 +1528,7 @@ billingRouter.get('/invoice-preview', requireAuth, async (req: AuthenticatedRequ
       upcoming = await (stripe as any).invoices.retrieveUpcoming({
         customer: workspace.stripeCustomerId,
       });
-    } catch (stripeErr: any) {
+    } catch (stripeErr: unknown) {
       // invoice_upcoming_none → no pending invoice; return empty preview gracefully.
       if (stripeErr?.code === 'invoice_upcoming_none') {
         return res.json({
@@ -1580,7 +1575,7 @@ billingRouter.get('/invoice-preview', requireAuth, async (req: AuthenticatedRequ
         : null,
       currency: upcoming.currency,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[BillingApi] invoice-preview failed: ${err?.message}`);
     res.status(500).json({ error: 'Failed to fetch invoice preview' });
   }

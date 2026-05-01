@@ -36,11 +36,11 @@ export interface ToolExecutionResult {
  */
 function transformArgsForAction(
   actionId: string,
-  args: Record<string, any>,
+  args: Record<string, unknown>,
   context: ToolExecutionContext
-): Record<string, any> {
+): Record<string, unknown> {
   // Inject standard context fields that actions expect
-  const transformedArgs: Record<string, any> = {
+  const transformedArgs: Record<string, unknown> = {
     ...args,
     workspaceId: args.workspaceId || context.workspaceId,
     userId: context.userId,
@@ -100,7 +100,7 @@ function transformArgsForAction(
  */
 export async function executeGeminiToolCall(
   toolName: string,
-  args: Record<string, any>,
+  args: Record<string, unknown>,
   context: ToolExecutionContext
 ): Promise<ToolExecutionResult> {
   const startTime = Date.now();

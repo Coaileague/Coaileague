@@ -56,7 +56,7 @@ export async function getMaskedEmailForEmployee(employeeId: string): Promise<str
     const email = r.rows[0]?.email;
     if (!email || !email.includes('@')) return null;
     return maskEmail(email);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[VoiceVerifyCode] Email lookup failed:', err?.message);
     return null;
   }
@@ -138,7 +138,7 @@ export async function sendVerificationCode(params: {
 
     log.info(`[VoiceVerifyCode] Code sent to employee ${employeeId} (workspace ${workspaceId})`);
     return { sent: true };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[VoiceVerifyCode] sendVerificationCode failed:', err?.message);
     return { sent: false, reason: 'exception' };
   }
@@ -186,7 +186,7 @@ export async function verifyCode(employeeId: string, submitted: string): Promise
       [newAttempts, row.id],
     );
     return false;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[VoiceVerifyCode] verifyCode failed:', err?.message);
     return false;
   }

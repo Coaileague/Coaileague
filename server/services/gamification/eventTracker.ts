@@ -28,7 +28,7 @@ export async function trackEvent(event: TrackedEvent): Promise<void> {
       case 'cert_renewed':    await gamificationService.award(workspaceId, employeeId, 'CERT_RENEWED'); break;
       default: log.debug(`[EventTracker] No points for event: ${eventType}`);
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[EventTracker] Failed to track ${eventType} for ${employeeId}: ${err?.message}`);
   }
 }

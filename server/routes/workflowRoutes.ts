@@ -25,7 +25,7 @@ router.get('/runs', requireAuth, ensureWorkspaceAccess, async (req: Authenticate
       LIMIT 50
     `, [req.workspaceId]);
     res.json({ runs: rows });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/workflows/runs/:taskId/logs — logs for a specific workflow run
@@ -37,7 +37,7 @@ router.get('/runs/:taskId/logs', requireAuth, ensureWorkspaceAccess, async (req:
       ORDER BY created_at ASC
     `, [req.params.taskId]);
     res.json({ logs: rows });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/workflows/artifacts — workflow output artifacts
@@ -52,7 +52,7 @@ router.get('/artifacts', requireAuth, ensureWorkspaceAccess, async (req: Authent
       LIMIT 50
     `, [req.workspaceId]);
     res.json({ artifacts: rows });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/workflows/stats — workflow execution summary
@@ -68,7 +68,7 @@ router.get('/stats', requireAuth, ensureWorkspaceAccess, async (req: Authenticat
       FROM agent_tasks WHERE workspace_id=$1
     `, [req.workspaceId]);
     res.json(rows[0]);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 export default router;

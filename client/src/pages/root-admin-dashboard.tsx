@@ -206,7 +206,7 @@ export default function RootAdminDashboard() {
       toast({ title: "Success", description: "Account suspended successfully" });
       refetchWorkspaces();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to suspend account", variant: "destructive" });
     },
   });
@@ -218,7 +218,7 @@ export default function RootAdminDashboard() {
       toast({ title: "Success", description: "Account unsuspended successfully" });
       refetchWorkspaces();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to unsuspend account", variant: "destructive" });
     },
   });
@@ -230,7 +230,7 @@ export default function RootAdminDashboard() {
       toast({ title: "Success", description: "Account locked successfully" });
       refetchWorkspaces();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to lock account", variant: "destructive" });
     },
   });
@@ -242,7 +242,7 @@ export default function RootAdminDashboard() {
       toast({ title: "Success", description: "Account unlocked successfully" });
       refetchWorkspaces();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to unlock account", variant: "destructive" });
     },
   });
@@ -254,7 +254,7 @@ export default function RootAdminDashboard() {
       toast({ title: "Success", description: "User role changed successfully" });
       refetchUsers();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to change user role", variant: "destructive" });
     },
   });
@@ -591,7 +591,7 @@ export default function RootAdminDashboard() {
                 {userSearchResults && (userSearchResults as any[]).length > 0 && (
                   <ScrollArea className="h-[160px] border-2 border-border dark:border-gray-700 rounded-lg bg-muted/30 dark:bg-gray-800/50 p-2 shadow-sm">
                     <div className="space-y-1.5">
-                      {(userSearchResults as any[]).map((user: any) => (
+                      {(userSearchResults as any[]).map((user) => (
                         <div
                           key={user.id}
                           className="flex items-center justify-between gap-2 p-2 rounded-lg hover-elevate border-2 border-border bg-card shadow-sm"
@@ -687,7 +687,7 @@ export default function RootAdminDashboard() {
                 {workspaceSearchResults && (workspaceSearchResults as any[]).length > 0 && (
                   <ScrollArea className="h-[160px] border-2 border-border dark:border-gray-700 rounded-lg bg-muted/30 dark:bg-gray-800/50 p-2 shadow-sm">
                     <div className="space-y-1.5">
-                      {(workspaceSearchResults as any[]).map((workspace: any) => (
+                      {(workspaceSearchResults as any[]).map((workspace) => (
                         <div
                           key={workspace.id}
                           className="flex items-center justify-between gap-2 p-2 rounded-lg hover-elevate border-2 border-border bg-card shadow-sm"

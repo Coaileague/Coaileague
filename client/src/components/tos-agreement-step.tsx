@@ -75,7 +75,7 @@ export function TOSAgreementStep({
       setAgreementId(data.agreementId);
       setSigned(true);
       onComplete(data.agreementId);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({
         title: "Signature failed",
         description: "Unable to record your agreement. Please try again.",

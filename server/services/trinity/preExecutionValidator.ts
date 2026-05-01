@@ -56,7 +56,7 @@ async function logValidationDecision(
       },
       createdAt: new Date(),
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[PreExecutionValidator] Audit log write failed (non-blocking):', err?.message);
   }
 }
@@ -302,7 +302,7 @@ export async function validateBeforeExecution(
 
     await logValidationDecision(actionId, workspaceId, PASSED);
     return PASSED;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[PreExecutionValidator] Check threw unexpectedly:', err?.message);
     // Fail CLOSED for high-risk action categories — cannot allow mutation on validator error
     const HIGH_RISK_CATEGORIES = ['payroll', 'invoicing', 'billing', 'scheduling', 'admin', 'compliance', 'tax'];
@@ -313,7 +313,7 @@ export async function validateBeforeExecution(
       : { ...PASSED, checkName: 'error_fallthrough_read_only' };
     try {
       await logValidationDecision(actionId, workspaceId, result);
-    } catch (auditErr: any) {
+    } catch (auditErr: unknown) {
       log.warn('[PreExecutionValidator] Audit log write failed (non-fatal):', auditErr?.message);
     }
     return result;

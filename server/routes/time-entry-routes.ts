@@ -2,7 +2,6 @@
 // Comprehensive time tracking with clock in/out, break management, and approval workflow
 
 import { Router } from 'express';
-// @ts-expect-error — TS migration: fix in refactoring sprint
 import { db } from "../db";
 import { aiBrainService } from "../services/ai-brain/aiBrainService";
 import { isFeatureEnabled } from '@shared/platformConfig';
@@ -36,7 +35,6 @@ import { requireAuth } from "../auth";
 import { requireWorkspaceRole, type AuthenticatedRequest } from "../rbac";
 import { readLimiter, mutationLimiter } from "../middleware/rateLimiter";
 import { universalNotificationEngine } from "../services/universalNotificationEngine";
-// @ts-expect-error — TS migration: fix in refactoring sprint
 import { db, pool } from '../db';
 import { checkSchedulingEligibility } from '../services/compliance/trinityComplianceEngine';
 import { storage } from '../storage';
@@ -498,7 +496,6 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
             for (const supUserId of supervisorIds) {
               await storage.createNotification({
                 workspaceId,
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 userId: supUserId,
                 type: 'compliance_alert',
                 title: 'License Expired — Clock-In Blocked',
@@ -1112,9 +1109,7 @@ timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Aut
     // AI Brain: Emit clock-out telemetry for anomaly detection (overtime alerts)
     try {
       const shiftDurationMinutes = differenceInMinutes(clockOutTime, new Date(activeEntry.clockIn));
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const isOvertime = totalHours > 8;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const isExtendedShift = totalHours > 10;
       
       await aiBrainService.enqueueJob({
@@ -1128,7 +1123,6 @@ timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Aut
           timeEntryId: activeEntry.id,
           clockInTime: new Date(activeEntry.clockIn).toISOString(),
           clockOutTime: clockOutTime.toISOString(),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           totalHours,
           shiftDurationMinutes,
           isOvertime,
@@ -1280,7 +1274,6 @@ timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Aut
     res.json({ 
       message: 'Clocked out successfully',
       timeEntry: updatedEntry,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       totalHours,
       ...(geofenceWarning ? { geofenceWarning } : {}),
     });
@@ -1294,7 +1287,6 @@ timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Aut
  * PATCH /api/time-entries/geofence-override/:timeEntryId
  * Supervisor approves or denies an outside-geofence clock-out
  */
-// @ts-expect-error — TS migration: fix in refactoring sprint
 timeEntryRouter.patch('/geofence-override/:timeEntryId', requireWorkspaceRole('manager'), async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user!;
@@ -1789,7 +1781,7 @@ timeEntryRouter.patch('/entries/:id', requireWorkspaceRole(['department_manager'
       snapshotAt: new Date().toISOString(),
     };
 
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       manuallyEdited: true,
       manualEditedAt: new Date(),
       manualEditedBy: user.id,
@@ -2448,7 +2440,6 @@ timeEntryRouter.get('/reports/compliance', requireWorkspaceRole(['department_man
  * GET /api/time-entries/workspace/all - Admin/support: Search all time entries in workspace
  * Searchable by employee, date range, status - for payroll/billing/compliance
  */
-// @ts-expect-error — TS migration: fix in refactoring sprint
 timeEntryRouter.get('/workspace/all', requireWorkspaceRole(['org_owner', 'co_owner', 'support_manager']), async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user!;

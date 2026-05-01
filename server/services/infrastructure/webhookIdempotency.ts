@@ -139,7 +139,7 @@ export async function tryClaimWebhookEvent(
     memoryCache.set(cacheKey, Date.now());
     if (memoryCache.size > MEMORY_CACHE_MAX) evictMemoryCache();
     return claimed;
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Fail open — DB outage should not silently drop webhooks.
     // Log loudly so operators can see when this happens.
     log.error(
@@ -165,7 +165,7 @@ export async function cleanupOldWebhookClaims(retentionDays: number = 30): Promi
     log.info(
       `[webhookIdempotency] Cleanup removed ${result.rowCount || 0} claims older than ${retentionDays} days`,
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[webhookIdempotency] cleanup failed', { error: err?.message });
   }
 }

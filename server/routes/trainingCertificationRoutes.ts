@@ -88,7 +88,7 @@ platformActionHub.registerAction({
         ? `Found ${result.rows.length} training deficiencies.`
         : 'All officers are currently compliant with training requirements.';
       return { success: true, actionId: 'training.audit', message: msg, data: { deficiencies: result.rows }, executionTimeMs: Date.now() - start };
-    } catch (err: any) {
+    } catch (err: unknown) {
       return { success: false, actionId: 'training.audit', message: err?.message || 'Audit failed', executionTimeMs: Date.now() - start };
     }
   }

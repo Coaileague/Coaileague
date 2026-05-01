@@ -37,7 +37,7 @@ interface EventHandlerConfig {
 async function autoExecute(
   workspaceId: string,
   actionId: string,
-  payload: Record<string, any>,
+  payload: Record<string, unknown>,
   note: string,
 ): Promise<void> {
   try {
@@ -57,7 +57,7 @@ async function autoExecute(
         result.success ? 'OK' : (result.error || result.message)
       }`,
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[EventBrain] Auto-execute failed ${actionId}:`, err?.message);
   }
 }
@@ -66,7 +66,7 @@ async function autoExecute(
 async function queueWithEscalation(
   workspaceId: string,
   actionId: string,
-  payload: Record<string, any>,
+  payload: Record<string, unknown>,
   reason: string,
   risk: RiskLevel,
 ): Promise<void> {
@@ -78,7 +78,7 @@ async function queueWithEscalation(
       reason,
       risk,
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[EventBrain] queueForApproval failed ${actionId}:`, err?.message);
   }
 }
@@ -519,7 +519,7 @@ const EVENT_HANDLERS: Record<string, EventHandlerConfig> = {
             },
           } as any).catch(() => {});
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[EventBrain] member_joined welcome failed (non-fatal):', err?.message);
       }
     },
@@ -541,7 +541,7 @@ export const trinityEventBrain = {
     scheduleNonBlocking(`event-brain.${event.type}`, async () => {
       try {
         await handler.handler(event);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn(`[EventBrain] Handler failed for ${event.type}:`, err?.message);
       }
     });

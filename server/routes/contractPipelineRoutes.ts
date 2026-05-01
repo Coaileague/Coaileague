@@ -27,7 +27,6 @@ router.use(requirePlan('professional'));
 export const publicPortalRouter = Router();
 
 // Middleware types
-// @ts-expect-error — TS migration: fix in refactoring sprint
 interface AuthenticatedRequest extends Request {
   session: {
     userId?: string;
@@ -52,7 +51,6 @@ function getAuditContext(req: AuthenticatedRequest, actorType: 'user' | 'client'
   return {
     actorId: req.session?.userId,
     actorType,
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     ipAddress: getClientIP(req),
     userAgent: req.headers['user-agent'],
   };
@@ -274,7 +272,6 @@ router.post('/:id/sign', async (req: AuthenticatedRequest, res: Response) => {
       {
         contractId: req.params.id,
         ...input,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         ipAddress: getClientIP(req),
         userAgent: req.headers['user-agent'] || 'unknown',
       },

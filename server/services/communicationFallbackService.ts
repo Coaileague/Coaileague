@@ -94,7 +94,7 @@ export async function sendWithFallback(
         channelsFailed.push('sms');
         log.warn(`[CommunicationFallback] SMS failed — user=${payload.recipientUserId} error=${smsResult.error} — trying push`);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       channelsFailed.push('sms');
       log.error(`[CommunicationFallback] SMS exception — user=${payload.recipientUserId}:`, err?.message);
     }
@@ -128,7 +128,7 @@ export async function sendWithFallback(
       } else {
         log.info(`[CommunicationFallback] Push skipped (no active subscriptions) — user=${payload.recipientUserId}`);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       channelsFailed.push('push');
       log.error(`[CommunicationFallback] Push exception — user=${payload.recipientUserId}:`, err?.message);
     }
@@ -156,7 +156,7 @@ export async function sendWithFallback(
       channelsSucceeded.push('nds_inapp');
       log.info(`[CommunicationFallback] NDS in-app queued — user=${payload.recipientUserId} deliveryId=${ndsId}`);
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     channelsFailed.push('nds_inapp');
     log.error(`[CommunicationFallback] NDS in-app exception — user=${payload.recipientUserId}:`, err?.message);
   }
@@ -180,7 +180,7 @@ export async function sendWithFallback(
     if (!wsId.startsWith('skipped:')) {
       channelsSucceeded.push('nds_websocket');
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     channelsFailed.push('nds_websocket');
     log.error(`[CommunicationFallback] NDS websocket exception — user=${payload.recipientUserId}:`, err?.message);
   }
@@ -207,7 +207,7 @@ export async function sendWithFallback(
       channelsSucceeded.push('nds_email');
       log.info(`[CommunicationFallback] NDS internal email queued — user=${payload.recipientUserId} deliveryId=${emailNdsId}`);
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     channelsFailed.push('nds_email');
     log.error(`[CommunicationFallback] NDS email exception — user=${payload.recipientUserId}:`, err?.message);
   }
@@ -231,7 +231,7 @@ export async function sendWithFallback(
         channelsFailed.push('email_external');
         log.error(`[CommunicationFallback] External email failed — to=${payload.externalEmail} error=${emailResult.error}`);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       channelsFailed.push('email_external');
       log.error(`[CommunicationFallback] External email exception — to=${payload.externalEmail}:`, err?.message);
     }

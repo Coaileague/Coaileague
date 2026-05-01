@@ -103,11 +103,11 @@ export default function ContractRenewalsPage() {
 
   const sweepMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/contract-renewals/sweep", {}),
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/contract-renewals"] });
       toast({ title: "Renewal sweep complete", description: `${data?.tasksCreated || 0} renewal tasks created.` });
     },
-    onError: (err: any) => toast({ title: "Sweep failed", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Sweep failed", description: err.message, variant: "destructive" }),
   });
 
   const updateStatusMutation = useMutation({

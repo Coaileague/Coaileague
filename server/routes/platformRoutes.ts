@@ -112,7 +112,6 @@ router.get('/personal-data', async (req: AuthenticatedRequest, res) => {
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userName = (req.user)?.fullName || (req.user)?.email || 'Admin';
 
     // Count open escalation tickets assigned to this staff member
@@ -198,7 +197,6 @@ router.get('/master-keys/organizations', async (req: AuthenticatedRequest, res) 
     // Combine conditions with AND
     let query = db.select().from(workspaces);
     if (conditions.length > 0) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       query = query.where(and(...conditions));
     }
 
@@ -930,7 +928,6 @@ router.post('/users/:userId/grant-role', async (req: AuthenticatedRequest, res) 
         action: 'platform_role_removed',
         entityType: 'platform_role',
         entityId: userId,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         details: {
           targetUserId: userId,
           targetEmail: user.email,
@@ -947,7 +944,6 @@ router.post('/users/:userId/grant-role', async (req: AuthenticatedRequest, res) 
     const [newRole] = await db
       .insert(platformRoles)
       .values({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: PLATFORM_WORKSPACE_ID,
         userId,
         role,
@@ -962,7 +958,6 @@ router.post('/users/:userId/grant-role', async (req: AuthenticatedRequest, res) 
       action: 'platform_role_assigned',
       entityType: 'platform_role',
       entityId: newRole.id,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       details: {
         targetUserId: userId,
         targetEmail: user.email,
@@ -1011,7 +1006,6 @@ router.post('/users/:userId/revoke-role', async (req: AuthenticatedRequest, res)
       action: 'platform_role_revoked',
       entityType: 'platform_role',
       entityId: userId,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       details: {
         targetUserId: userId,
         revokedRole: targetPlatformRole,
@@ -1169,7 +1163,6 @@ router.post('/staff/grant-role', async (req: AuthenticatedRequest, res) => {
     const PLATFORM_ROLE_LEVELS: Record<string, number> = {
       root_admin: 5, deputy_admin: 4, sysop: 3, support_manager: 3, compliance_officer: 3, support_agent: 2,
     };
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const grantorRole = (req.user)?.platformRole as string | undefined;
     const grantorLevel = grantorRole ? (PLATFORM_ROLE_LEVELS[grantorRole] ?? 0) : 0;
     const targetLevel = PLATFORM_ROLE_LEVELS[role] ?? 0;
@@ -1196,7 +1189,6 @@ router.post('/staff/grant-role', async (req: AuthenticatedRequest, res) => {
     const [newRole] = await db
       .insert(platformRoles)
       .values({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: PLATFORM_WORKSPACE_ID,
         userId: user.id,
         role,
@@ -1337,7 +1329,6 @@ router.post('/staff/:userId/change-role', async (req: AuthenticatedRequest, res)
     const [newRoleRecord] = await db
       .insert(platformRoles)
       .values({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: PLATFORM_WORKSPACE_ID,
         userId,
         role: newRole,
@@ -1382,7 +1373,6 @@ router.get('/team', async (req: AuthenticatedRequest, res) => {
       .from(platformRoles)
       .innerJoin(users, eq(users.id, platformRoles.userId))
       .where(isNull(platformRoles.revokedAt))
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .orderBy(desc(platformRoles.grantedAt));
 
     res.json({ bots, agents: humanAgents });
@@ -1505,7 +1495,6 @@ router.post('/team/agents/:userId/action', async (req: AuthenticatedRequest, res
 
     const [targetRole] = await db.select().from(platformRoles)
       .where(and(eq(platformRoles.userId, userId), isNull(platformRoles.revokedAt)))
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .orderBy(desc(platformRoles.grantedAt)).limit(1);
 
     const { getPlatformRoleLevel } = await import('../rbac');
@@ -1541,7 +1530,6 @@ router.post('/team/agents/:userId/action', async (req: AuthenticatedRequest, res
           revokedReason: reason || 'Demoted',
         }).where(and(eq(platformRoles.userId, userId), isNull(platformRoles.revokedAt)));
         await tx.insert(platformRoles).values({
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           workspaceId: PLATFORM_WORKSPACE_ID,
           userId,
           role: demotedRole,
@@ -1566,7 +1554,6 @@ router.post('/team/agents/:userId/action', async (req: AuthenticatedRequest, res
           }).where(and(eq(platformRoles.userId, userId), isNull(platformRoles.revokedAt)));
         }
         await tx.insert(platformRoles).values({
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           workspaceId: PLATFORM_WORKSPACE_ID,
           userId,
           role: newRole,
@@ -1645,7 +1632,6 @@ router.post('/team/agents', async (req: AuthenticatedRequest, res) => {
     if (existing) return res.status(409).json({ error: `User already has platform role: ${existing.role}` });
 
     const [newRole] = await db.insert(platformRoles).values({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       workspaceId: PLATFORM_WORKSPACE_ID,
       userId: targetUser.id,
       role,
@@ -1671,7 +1657,6 @@ router.post('/team/agents', async (req: AuthenticatedRequest, res) => {
 // Returns platform pool balance and deposit history from forfeited tenant credits
 router.get('/credits/recycled', async (req: AuthenticatedRequest, res) => {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     // Legacy credit pipeline removed — use tokenManager for usage stats
     const getRecycledCreditsStats = async () => ({ recycled: 0, pending: 0 });
     const stats = await getRecycledCreditsStats();

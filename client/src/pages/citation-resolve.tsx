@@ -58,7 +58,7 @@ export default function CitationResolve() {
       // The citation route is /audits/:auditId/citation — fetch via workspace ledger
       const r = await apiRequest('GET', `/${workspaceId}/ledger`);
       const data = await r.json();
-      const entry = (data.ledger ?? []).find((l: any) => l.citation_id === citationId);
+      const entry = (data.ledger ?? []).find((l) => l.citation_id === citationId);
       return entry;
     },
     enabled: !!citationId && !!workspaceId,
@@ -84,7 +84,7 @@ export default function CitationResolve() {
         toast({ title: 'Verification needed', description: data.message, variant: 'destructive', duration: 8000 });
       }
     },
-    onError: (err: any) => toast({ title: 'Upload failed', description: err?.message, variant: 'destructive' }),
+    onError: (err) => toast({ title: 'Upload failed', description: err?.message, variant: 'destructive' }),
   });
 
   if (isLoading) {

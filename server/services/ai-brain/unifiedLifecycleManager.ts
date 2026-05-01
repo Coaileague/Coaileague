@@ -55,7 +55,7 @@ export interface LifecycleEvent {
   sessionId?: string;
   executionId?: string;
   context: LifecycleContext;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface LifecycleContext {
@@ -716,7 +716,7 @@ class UnifiedLifecycleManager {
   /**
    * Get lifecycle manager diagnostics
    */
-  getDiagnostics(): Record<string, any> {
+  getDiagnostics(): Record<string, unknown> {
     const hookCounts: Record<string, number> = {};
     for (const [key, hooks] of this.hooks.entries()) {
       hookCounts[key] = hooks.length;

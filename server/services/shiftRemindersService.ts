@@ -170,7 +170,6 @@ export async function sendShiftReminder(
         {
           employeeEmail: employee.email,
           employeeName: `${employee.firstName} ${employee.lastName}`,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           shiftTitle: shift.title,
           shiftDate,
           startTime: shiftTime,

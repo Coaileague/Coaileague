@@ -57,7 +57,7 @@ export async function notifyManagers(
         log.warn('[ShiftChatroomBotNotifier] Bulk manager notification failed:', (err instanceof Error ? err.message : String(err)))
       );
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[ShiftChatroomBotNotifier] Manager notification failed:', (err instanceof Error ? err.message : String(err)));
   }
 }

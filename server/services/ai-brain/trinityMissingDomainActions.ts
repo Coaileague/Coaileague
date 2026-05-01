@@ -50,7 +50,7 @@ const voiceGetCallLog: ActionHandler = {
         LIMIT $2
       `, [workspaceId, limit]);
       return ok(request.actionId, `Retrieved ${result.rows.length} recent call sessions`, result.rows, start);
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Failed to fetch call log: ${err.message}`, start);
     }
   },
@@ -73,7 +73,7 @@ const voiceGetActiveSessions: ActionHandler = {
         ORDER BY created_at ASC
       `, [request.workspaceId]);
       return ok(request.actionId, `${result.rows.length} active call(s) in progress`, result.rows, start);
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Failed: ${err.message}`, start);
     }
   },
@@ -97,7 +97,7 @@ const voiceGetSupportCases: ActionHandler = {
         LIMIT $2
       `, [request.workspaceId, request.payload?.limit || 20]);
       return ok(request.actionId, `${result.rows.length} voice support case(s) found`, result.rows, start);
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Failed: ${err.message}`, start);
     }
   },
@@ -132,7 +132,7 @@ const formsListSubmissions: ActionHandler = {
       query += ` ORDER BY fs.created_at DESC LIMIT $${params.length}`;
       const result = await pool.query(query, params);
       return ok(request.actionId, `${result.rows.length} submission(s) found`, result.rows, start);
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Failed: ${err.message}`, start);
     }
   },
@@ -155,7 +155,7 @@ const formsGetPendingReview: ActionHandler = {
         ORDER BY created_at ASC
       `, [request.workspaceId]);
       return ok(request.actionId, `${result.rows.length} form submission(s) pending review`, result.rows, start);
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Failed: ${err.message}`, start);
     }
   },
@@ -193,7 +193,7 @@ const formsGetOnboardingStatus: ActionHandler = {
         submittedAt: sub.submitted_at,
         signerName: sub.signer_name,
       }, start);
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Failed: ${err.message}`, start);
     }
   },
@@ -225,7 +225,7 @@ const esignatureListPending: ActionHandler = {
         LIMIT 50
       `, [request.workspaceId]);
       return ok(request.actionId, `${result.rows.length} signature(s) still pending`, result.rows, start);
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Failed: ${err.message}`, start);
     }
   },
@@ -265,7 +265,7 @@ const esignatureGetStatus: ActionHandler = {
         completedCount: doc.signatures_completed,
         signers: { signed, pending },
       }, start);
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Failed: ${err.message}`, start);
     }
   },
@@ -315,7 +315,7 @@ const esignatureRemind: ActionHandler = {
       }
 
       return ok(request.actionId, `Reminder sent to ${reminded} pending signer(s)`, { reminded, documentId }, start);
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Failed: ${err.message}`, start);
     }
   },
@@ -347,7 +347,7 @@ const proposalList: ActionHandler = {
       query += ` ORDER BY created_at DESC LIMIT $${params.length}`;
       const result = await pool.query(query, params);
       return ok(request.actionId, `${result.rows.length} proposal(s) found`, result.rows, start);
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Failed: ${err.message}`, start);
     }
   },
@@ -381,7 +381,7 @@ const proposalGetStatus: ActionHandler = {
       return ok(request.actionId, `Pipeline: ${row.total_count} proposals, ${winRate}% win rate`, {
         ...row, winRate,
       }, start);
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Failed: ${err.message}`, start);
     }
   },
@@ -414,7 +414,7 @@ const hrDocsListPendingSignatures: ActionHandler = {
         LIMIT 50
       `, [request.workspaceId]);
       return ok(request.actionId, `${result.rows.length} HR document(s) awaiting signature`, result.rows, start);
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Failed: ${err.message}`, start);
     }
   },
@@ -442,7 +442,7 @@ const hrDocsGetEmployeeFileCabinet: ActionHandler = {
         ORDER BY ed.created_at DESC
       `, [employeeId, request.workspaceId]);
       return ok(request.actionId, `${result.rows.length} document(s) on file for employee ${employeeId}`, result.rows, start);
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Failed: ${err.message}`, start);
     }
   },

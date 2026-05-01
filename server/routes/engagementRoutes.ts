@@ -90,7 +90,6 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
       
       const [template] = await db
         .insert(pulseSurveyTemplates)
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .values(validatedData)
         .returning();
       
@@ -288,14 +287,11 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
       
       const [response] = await db
         .insert(pulseSurveyResponses)
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .values(validatedData)
         .returning();
       
       // Validate responseText from request body
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const pulseResponseBodySchema = z.object({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         responseText: z.string().optional(),
       });
       const pulseResponseParsed = pulseResponseBodySchema.safeParse(req.body);
@@ -305,7 +301,6 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
 
       // Trigger AI sentiment analysis for engagement insights
       try {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const sentiment = await sentimentAnalyzer.analyzeSentiment(pulseResponseParsed.data.responseText || '', 'pulse_survey');
       } catch (err) {
         log.error('[SentimentAnalysis] Pulse survey analysis failed (non-blocking):', err);
@@ -354,7 +349,6 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
   router.get('/pulse-surveys/distribution/summary', async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const summary = await getSurveyDistributionSummary(workspaceId);
       res.json(summary);
     } catch (error: unknown) {
@@ -366,7 +360,6 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
   router.get('/pulse-surveys/distribution', async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const distributions = await getEmployeesDueForSurveys(workspaceId);
       res.json(distributions);
     } catch (error: unknown) {
@@ -380,7 +373,6 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
       const workspaceId = req.workspaceId!;
       const { employeeId } = req.params;
       
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const pendingSurveys = await getEmployeePendingSurveys(workspaceId, employeeId);
       res.json(pendingSurveys);
     } catch (error: unknown) {
@@ -395,7 +387,6 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
       const { surveyId } = req.params;
       const { periodDays } = req.query;
       
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const analytics = await calculateSurveyResponseRate(
         workspaceId,
         surveyId,
@@ -435,11 +426,8 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
       }
       
       // Validate isAnonymous from request body
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const employerRatingBodySchema = z.object({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         isAnonymous: z.boolean().optional(),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         comment: z.string().optional(),
       });
       const employerRatingParsed = employerRatingBodySchema.safeParse(req.body);
@@ -456,13 +444,11 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
       
       const [rating] = await db
         .insert(employerRatings)
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .values(validatedData)
         .returning();
       
       // Trigger AI sentiment analysis and risk flagging for employer ratings
       try {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const sentiment = await sentimentAnalyzer.analyzeSentiment(employerRatingParsed.data.comment || '', 'employer_rating');
         if (sentiment === 'negative') {
           log.warn(`[SentimentAnalysis] High-risk employer rating detected - workspace: ${workspaceId}`);
@@ -549,7 +535,6 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
       
       // Trigger AI sentiment analysis and urgency detection for suggestions
       try {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const sentiment = await sentimentAnalyzer.analyzeSentiment(req.body.suggestionText || '', 'suggestion');
         const urgencyLevel = sentiment === 'negative' ? 'high' : 'normal';
         await db.update(anonymousSuggestions)
@@ -678,7 +663,6 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
       // Check if user is manager
       const isManager = ['org_owner', 'co_owner', 'org_manager', 'manager', 'department_manager'].includes(employee[0]?.workspaceRole || '');
       
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const validatedData = insertEmployeeRecognitionSchema.parse({
         ...req.body,
         workspaceId,
@@ -694,7 +678,6 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
       // Process monetary rewards through Billing Platform with tax calculations
       if (req.body.hasMonetaryReward && req.body.bonusAmount > 0) {
         try {
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           const bonusCalculation = await calculateBonusTaxation(
             employee[0].id,
             req.body.bonusAmount,
@@ -905,27 +888,23 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
       const engEmployeeIds = workspaceEmployees.map(e => e.id);
 
       // Batch pre-fetch: 3 queries total instead of 3×N (N+1 fix)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const [existingScores, allTeTimeEntries, allTeShifts] = await Promise.all([
         db.select({ employeeId: employeeHealthScores.employeeId })
           .from(employeeHealthScores)
           .where(and(
             eq(employeeHealthScores.workspaceId, workspaceId),
             gte(employeeHealthScores.periodStart, periodStart),
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             inArray(employeeHealthScores.employeeId, engEmployeeIds),
           )),
         db.select({ employeeId: timeEntriesTable.employeeId })
           .from(timeEntriesTable)
           .where(and(
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             inArray(timeEntriesTable.employeeId, engEmployeeIds),
             gte(timeEntriesTable.clockIn, periodStart),
           )),
         db.select({ employeeId: shifts.employeeId })
           .from(shifts)
           .where(and(
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             inArray(shifts.employeeId, engEmployeeIds),
             gte(shifts.startTime, periodStart),
           )),
@@ -980,7 +959,6 @@ const employeeBehaviorScoring = EmployeeBehaviorScoringService.getInstance();
           });
         }
 
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(employeeHealthScores).values({
           id: `ehs-${emp.id}-${periodStart.toISOString().slice(0,7)}`,
           employeeId: emp.id,

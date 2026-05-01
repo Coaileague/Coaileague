@@ -261,7 +261,6 @@ class PanicAlertService {
     query += ` ORDER BY triggered_at DESC LIMIT $${params.length + 1}`;
     params.push(clampedLimit);
     const rows = await typedPool(query, params);
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     return rows.rows;
   }
 
@@ -320,7 +319,7 @@ class PanicAlertService {
           idempotencyKey: `panic_sms_${alert.id}_${recipient.id}`,
         });
         reachableCount++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn(
           `[PanicAlert] SMS dispatch failed for ${recipient.firstName} ${recipient.lastName} (non-fatal):`,
           err?.message,
@@ -352,7 +351,7 @@ class PanicAlertService {
           alert.longitude,
         ]
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('Auto CAD call creation failed (non-critical)', { error: (err instanceof Error ? err.message : String(err)) });
     }
   }

@@ -440,7 +440,6 @@ class CoveragePipelineService {
               : candidate.tier === 1
               ? `You may be eligible to stay late and cover a ${shiftTimeStr} shift. First to accept gets it!`
               : `We need someone to fill a shift at ${shiftTimeStr}. First to accept gets the shift!`,
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             severity: isEmergency ? 'critical' : 'high',
             metadata: {
               coverageRequestId: request.id,
@@ -474,7 +473,7 @@ class CoveragePipelineService {
     }
 
     // Update request tier tracking fields
-    const tierUpdates: Record<string, any> = { updatedAt: new Date() };
+    const tierUpdates: Record<string, unknown> = { updatedAt: new Date() };
 
     if (isEmergency) {
       // Emergency: all tiers notified simultaneously
@@ -583,7 +582,6 @@ class CoveragePipelineService {
           type: 'coverage_offer',
                 title: `${tierLabel} — shift on ${shiftDateStr}`,
                 message: `Can you cover a shift at ${shiftTimeStr}? We still need someone. First to accept gets it!`,
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 severity: 'high',
                 metadata: {
                   coverageRequestId: request.id,

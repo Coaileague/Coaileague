@@ -127,7 +127,7 @@ const FORM_TABLES: Record<number, any> = {
 // ── Step validators ───────────────────────────────────────────────────────────
 type ValidationError = { field: string; message: string };
 
-function validateStep(step: number, data: Record<string, any>): ValidationError[] {
+function validateStep(step: number, data: Record<string, unknown>): ValidationError[] {
   const errors: ValidationError[] = [];
   const req = (field: string, label: string) => {
     if (!data[field] || String(data[field]).trim() === '') {
@@ -210,7 +210,7 @@ function validateStep(step: number, data: Record<string, any>): ValidationError[
 }
 
 // ── Map raw request body to Drizzle column names ──────────────────────────────
-function mapFormData(step: number, data: Record<string, any>): Record<string, any> {
+function mapFormData(step: number, data: Record<string, unknown>): Record<string, unknown> {
   switch (step) {
     case 1:
       return {
@@ -313,7 +313,7 @@ function mapFormData(step: number, data: Record<string, any>): Record<string, an
 }
 
 // ── Upsert form row helper ────────────────────────────────────────────────────
-async function upsertFormRow(step: number, onboardingId: string, workspaceId: string, data: Record<string, any>) {
+async function upsertFormRow(step: number, onboardingId: string, workspaceId: string, data: Record<string, unknown>) {
   const table = FORM_TABLES[step];
   if (!table) return;
   const mapped = { ...mapFormData(step, data), updatedAt: new Date() };

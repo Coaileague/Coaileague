@@ -94,7 +94,7 @@ export default function SafetyCheck() {
       setChecks({});
       setNotes('');
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: 'Submission failed', description: error.message, variant: 'destructive' });
     },
     onSettled: () => setSubmitting(false),

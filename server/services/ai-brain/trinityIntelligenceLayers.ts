@@ -55,12 +55,9 @@ function mkLayer(layer: string, actionId: string, fn: (params: any) => Promise<a
     inputSchema: { type: 'object' as const, properties: {} },
     handler: async (req: ActionRequest): Promise<ActionResult> => {
       try {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const data = await fn(req.params || {});
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return { success: true, actionId, data };
-      } catch (err: any) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
+      } catch (err: unknown) {
         return { success: false, actionId, error: err?.message || 'Unknown error' };
       }
     },
@@ -155,7 +152,7 @@ export function registerSchedulingCognitionActions() {
 
     const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
-    const siteSummaries: Record<string, any> = {};
+    const siteSummaries: Record<string, unknown> = {};
     for (const row of historical) {
       const site = row.clientId || 'unassigned';
       if (!siteSummaries[site]) siteSummaries[site] = { peakDays: {}, peakHours: [], totalShifts: 0 };
@@ -2149,7 +2146,6 @@ export function registerExternalIntegrationIntelligenceActions() {
     if (!workspaceId) return { error: 'workspaceId required' };
     // Delegate to the payroll.year_end_package action (single source)
     const { helpaiOrchestrator: hub } = await import('../helpai/platformActionHub');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     return hub.executeAction({ actionId: 'payroll.year_end_package', params: { workspaceId, year }, userId: 'system', workspaceId });
   }));
 

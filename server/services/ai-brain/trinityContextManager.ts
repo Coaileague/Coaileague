@@ -65,7 +65,7 @@ export interface ConversationTurn {
 export interface ToolCall {
   id: string;
   name: string;
-  arguments: Record<string, any>;
+  arguments: Record<string, unknown>;
 }
 
 export interface ToolResult {
@@ -77,7 +77,7 @@ export interface ToolResult {
 }
 
 export interface ContextMemory {
-  userPreferences: Record<string, any>;
+  userPreferences: Record<string, unknown>;
   recentEntities: EntityMention[];
   topicsDiscussed: string[];
   actionsTaken: ActionSummary[];
@@ -192,7 +192,7 @@ class TrinityContextManager {
     if (Array.isArray(data)) {
       return data.slice(0, 50).map(item => this.sanitizeForStorage(item, depth + 1));
     }
-    const sanitized: Record<string, any> = {};
+    const sanitized: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(data)) {
       const lowerKey = key.toLowerCase();
       if (SENSITIVE_FIELDS.some(f => lowerKey.includes(f.toLowerCase()))) {
@@ -813,7 +813,6 @@ class TrinityContextManager {
         description: `I expressed uncertainty in response to: "${userQuery.slice(0, 100)}..."`,
         userQuery,
         suggestedActions: this.generateSuggestedActions(userQuery),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         priority: 'medium',
       };
     }

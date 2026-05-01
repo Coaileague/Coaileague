@@ -2,7 +2,6 @@
  * SHARED TYPES FOR AI BRAIN MONITORING SYSTEM
  */
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 import type { AiContext, AiMonitoringTask, AiProactiveAlert } from '@shared/schema';
 
 // ============================================================================
@@ -17,8 +16,8 @@ export interface MonitoringContext {
   contextKey: string;
   entityType: string;
   entityId: string;
-  contextData: Record<string, any>;
-  metadata?: Record<string, any>;
+  contextData: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
   refreshIntervalMinutes: number;
   lastRefreshedAt: Date | null;
   nextRefreshAt: Date | null;
@@ -40,8 +39,8 @@ export interface UpsertContextParams {
   contextKey: string;
   entityType: string;
   entityId?: string;
-  contextData: Record<string, any>;
-  metadata?: Record<string, any>;
+  contextData: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
   refreshIntervalMinutes?: number;
 }
 
@@ -56,20 +55,20 @@ export interface MonitorDefinition {
   scope: 'global' | 'workspace';
   targetEntityType: string;
   runIntervalMinutes: number;
-  configuration: Record<string, any>;
+  configuration: Record<string, unknown>;
   evaluator: MonitorEvaluator;
   escalationPolicy?: EscalationPolicy;
 }
 
 export interface MonitorEvaluator {
-  (context: MonitoringContext, config: Record<string, any>): Promise<MonitorEvaluationResult>;
+  (context: MonitoringContext, config: Record<string, unknown>): Promise<MonitorEvaluationResult>;
 }
 
 export interface MonitorEvaluationResult {
   status: 'pass' | 'fail' | 'warning';
   findings: MonitorFinding[];
   recommendedActions?: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface MonitorFinding {
@@ -78,7 +77,7 @@ export interface MonitorFinding {
   message: string;
   entityType?: string;
   entityId?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }
 
 export interface EscalationPolicy {
@@ -99,8 +98,8 @@ export interface CreateAlertPayload {
   taskId?: string | null;
   alertType: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
-  payload: Record<string, any>;
-  contextSnapshot?: Record<string, any>;
+  payload: Record<string, unknown>;
+  contextSnapshot?: Record<string, unknown>;
   dedupeKey?: string; // For custom deduplication logic
 }
 
@@ -137,7 +136,7 @@ export interface ScheduledMonitor {
   scope: 'global' | 'workspace';
   targetEntityType: string;
   targetEntityId: string | null;
-  configuration: Record<string, any>;
+  configuration: Record<string, unknown>;
   nextRunAt: Date | null;
 }
 
@@ -146,6 +145,6 @@ export interface MonitorExecutionContext {
   monitoringType: string;
   workspaceId: string | null;
   scope: 'global' | 'workspace';
-  configuration: Record<string, any>;
+  configuration: Record<string, unknown>;
   context?: MonitoringContext;
 }

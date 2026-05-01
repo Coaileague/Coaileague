@@ -50,7 +50,6 @@ async function getQuickBooksClient(workspaceId: string): Promise<any | null> {
   const credentials = await db.query.integrationConnections.findFirst({
     where: and(
       eq(integrationConnections.workspaceId, workspaceId),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       eq(integrationConnections.provider, 'quickbooks')
     ),
   });
@@ -76,7 +75,7 @@ async function qbRequest(
   method: string,
   endpoint: string,
   body?: any
-): Promise<any> {
+): Promise<unknown> {
   const baseUrl = `${INTEGRATIONS.quickbooks.getCompanyApiBase()}/${client.realmId}`;
   
   const response = await fetch(`${baseUrl}${endpoint}`, {
@@ -265,7 +264,6 @@ export async function runWeeklyBillingCycle(workspaceId: string): Promise<void> 
     where: eq(workspaces.id, workspaceId),
   });
 
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   if (workspace?.ownerEmail) {
     await platformEventBus.publish({
       type: 'automation_completed',
@@ -374,7 +372,6 @@ export async function syncPayrollToQuickBooks(payrollRunId: string): Promise<Syn
   try {
     await db.update(payrollRuns)
       .set({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         status: syncStatus === 'synced' ? 'completed' : 'processing',
       })
       .where(eq(payrollRuns.id, payrollRunId));

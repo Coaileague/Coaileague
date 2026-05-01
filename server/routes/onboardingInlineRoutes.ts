@@ -187,7 +187,6 @@ router.post('/invite', mutationLimiter, idempotencyMiddleware, requireManager, a
 
     if (OWNER_TIER_ROLES.includes(requestedRole)) {
       // Fetch the inviter's actual workspace role to enforce the ownership gate
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const inviterEmployee = await storage.getEmployeeByUserId(userId, workspaceId);
       const inviterRole = inviterEmployee?.workspaceRole as string;
       const isOwner = ['org_owner', 'co_owner'].includes(inviterRole);
@@ -229,7 +228,6 @@ router.post('/invite', mutationLimiter, idempotencyMiddleware, requireManager, a
     await sendOnboardingInviteEmail(email, {
       employeeName: `${firstName} ${lastName}`,
       workspaceName: workspace?.name || 'Our Team',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       onboardingUrl,
       expiresIn: '7 days',
     });
@@ -296,7 +294,6 @@ router.get('/progress', async (req: any, res) => {
 
     if (progress.length === 0) {
       const newProgress = await db.insert(userOnboarding)
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .values({ userId, workspaceId })
         .returning();
       return res.json(newProgress[0]);
@@ -333,7 +330,6 @@ router.post('/skip', async (req: any, res) => {
     if (updated.length === 0) {
       const created = await db.insert(userOnboarding)
         .values({
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           workspaceId: workspaceId,
           userId,
           hasSkipped: true,
@@ -390,7 +386,6 @@ router.post('/complete', async (req: any, res) => {
     if (updated.length === 0) {
       const created = await db.insert(userOnboarding)
         .values({
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           workspaceId: workspaceId,
           userId,
           completedSteps: completedSteps || [],

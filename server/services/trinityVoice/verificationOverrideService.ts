@@ -49,7 +49,7 @@ async function ensureTables(): Promise<void> {
         ON verification_overrides(workspace_id);
     `);
     bootstrapped = true;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[VerificationOverride] Bootstrap failed:', err?.message);
   }
 }
@@ -117,7 +117,7 @@ export async function grantOverride(params: {
 
     log.info(`[VerificationOverride] Granted ${hours}h override for employee=${params.employeeId} phone=${params.fromPhone}`);
     return { success: true, expiresAt };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VerificationOverride] grant failed:', err?.message);
     return { success: false, reason: err?.message };
   }
@@ -151,7 +151,7 @@ export async function isPhoneOverridden(fromPhone: string, workspaceId?: string)
       workspaceId: r.rows[0].workspace_id,
       expiresAt: r.rows[0].expires_at,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[VerificationOverride] check failed:', err?.message);
     return { overridden: false };
   }

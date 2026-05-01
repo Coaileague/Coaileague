@@ -1,12 +1,12 @@
 import { createContext, useContext, useEffect, useRef, useCallback, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 
-type MessageHandler = (data: any) => void;
+type MessageHandler = (data) => void;
 
 export interface WebSocketBus {
   subscribe: (type: string, handler: MessageHandler) => () => void;
   subscribeAll: (handler: MessageHandler) => () => void;
-  send: (message: any) => void;
+  send: (message) => void;
   sendChatMessage: (message: Omit<any, 'clientId'>) => string;
   isConnected: () => boolean;
   getSocket: () => WebSocket | null;
@@ -77,7 +77,7 @@ class WebSocketBusImpl implements WebSocketBus {
         // GET is used: token issuance has no side effects and avoids 415 content-type checks.
         fetch('/api/auth/ws-token', { method: 'GET', credentials: 'include' })
           .then(r => (r.ok ? r.json() : null))
-          .then((data: any) => {
+          .then((data) => {
             if (!data?.token || ws.readyState !== WebSocket.OPEN) {
               // Not authenticated or WS closed — proceed immediately without auth
               flushAndSignal();
@@ -123,7 +123,7 @@ class WebSocketBusImpl implements WebSocketBus {
           if (data.type === 'ws_auth_required') {
             fetch('/api/auth/ws-token', { method: 'GET', credentials: 'include' })
               .then(r => (r.ok ? r.json() : null))
-              .then((tokenData: any) => {
+              .then((tokenData) => {
                 if (tokenData?.token && ws.readyState === WebSocket.OPEN) {
                   ws.send(JSON.stringify({ type: 'ws_authenticate', token: tokenData.token }));
                 }
@@ -303,7 +303,7 @@ export function useWsSubscription(type: string | string[], handler: MessageHandl
   const handlerRef = useRef(handler);
   handlerRef.current = handler;
 
-  const stableHandler = useCallback((data: any) => {
+  const stableHandler = useCallback((data) => {
     handlerRef.current(data);
   }, []);
 
@@ -316,7 +316,7 @@ export function useWsSubscription(type: string | string[], handler: MessageHandl
 
 export function useWsSend() {
   const bus = useWebSocketBus();
-  return useCallback((message: any) => bus.send(message), [bus]);
+  return useCallback((message) => bus.send(message), [bus]);
 }
 
 export function useWsConnected(): boolean {

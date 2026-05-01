@@ -158,14 +158,12 @@ router.post('/', async (req: any, res) => {
         .from(employees)
         .where(and(
           eq(employees.workspaceId, workspaceId),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           inArray(employees.workspaceRole, [...MANAGER_ROLES])
         ));
 
       for (const manager of managerEmployees) {
         await createNotification({
           workspaceId: workspaceId,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           userId: manager.userId,
           type: 'dispute_filed' as any,
           title: '🚨 New Dispute Filed',
@@ -188,7 +186,6 @@ router.post('/', async (req: any, res) => {
         entityType: 'dispute',
         entityId: dispute.id,
         userId,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         details: {
           title: data.title,
           type: data.disputeType,
@@ -301,7 +298,6 @@ router.get('/pending-review', async (req: any, res) => {
           await storage.updateDispute(dispute.id, workspaceId, {
             aiSummary: aiAnalysis.summary,
             aiRecommendation: aiAnalysis.recommendation,
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             aiConfidenceScore: aiAnalysis.confidenceScore,
             aiAnalysisFactors: aiAnalysis.analysisFactors,
             aiProcessedAt: new Date(),
@@ -521,17 +517,13 @@ router.post('/:id/apply-changes', async (req: any, res) => {
     const resolution = dispute.resolutionAction;
     
     if (targetType === 'timeEntry' && resolution === 'approve') {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const entry = await storage.getTimeEntry(targetId);
       if (entry) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await storage.updateTimeEntry(targetId, { status: 'approved' });
       }
     } else if (targetType === 'shift' && resolution === 'reschedule') {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await storage.updateShift(targetId, { status: 'rescheduled', updatedAt: new Date() });
     } else if (targetType === 'payroll' && resolution === 'adjust_payment') {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await storage.updatePayrollEntry(targetId, { status: 'adjusting', updatedAt: new Date() });
     }
     
@@ -574,7 +566,6 @@ router.post('/:id/review', async (req: any, res) => {
       reviewerRecommendation: decision,
       reviewerNotes,
       reviewStartedAt: new Date(),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       status: statusMap[decision],
       resolvedAt: decision !== 'escalate' ? new Date() : null,
       resolvedBy: decision !== 'escalate' ? userId : null,
@@ -639,7 +630,6 @@ router.get('/:id/investigation-context', async (req: any, res) => {
       .where(
         and(
           eq(reportSubmissions.employeeId, employeeData.id),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           eq(reportTemplates.isDisciplinary, true)
         )
       );
@@ -747,7 +737,6 @@ router.post('/:id/ai-analysis', async (req: any, res) => {
     await storage.updateDispute(id, dispute.workspaceId, {
       aiSummary: aiAnalysis.summary,
       aiRecommendation: aiAnalysis.recommendation,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       aiConfidenceScore: aiAnalysis.confidenceScore,
       aiAnalysisFactors: aiAnalysis.analysisFactors,
       aiProcessedAt: new Date(),

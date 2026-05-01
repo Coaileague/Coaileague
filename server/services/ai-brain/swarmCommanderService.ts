@@ -111,8 +111,8 @@ export interface StateSnapshot {
   timestamp: string;
   actor: string;
   action: string;
-  inputState: Record<string, any>;
-  outputState: Record<string, any>;
+  inputState: Record<string, unknown>;
+  outputState: Record<string, unknown>;
   costTokens: number;
   trinityAudit: {
     status: 'ok' | 'warning' | 'error';

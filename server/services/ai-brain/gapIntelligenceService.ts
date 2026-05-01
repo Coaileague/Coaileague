@@ -471,7 +471,7 @@ class GapIntelligenceService {
       target: string;
       variant: 'primary' | 'secondary' | 'ghost';
     }>;
-    metadata: Record<string, any>;
+    metadata: Record<string, unknown>;
   }>> {
     const openFindings = await this.getOpenFindings(limit);
     

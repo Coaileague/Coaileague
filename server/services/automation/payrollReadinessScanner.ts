@@ -228,7 +228,6 @@ export async function runPayrollReadinessScanForWorkspace(workspaceId: string): 
     title: 'Payroll Readiness Scan Complete',
     description: report.summary,
     workspaceId,
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     visibility: 'workspace',
     metadata: {
       scanType: 'payroll_readiness_48h',
@@ -253,7 +252,6 @@ export async function runPayrollReadinessScanForWorkspace(workspaceId: string): 
         .limit(1);
 
       if (ws?.ownerId) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const { notificationService } = await import('../notificationService');
         const priorityIssues = report.flags
           .filter(f => f.severity === 'critical')
@@ -283,7 +281,7 @@ export async function runPayrollReadinessScanForWorkspace(workspaceId: string): 
           idempotencyKey: `payroll_readiness_alert-${ws.id}-${new Date().toISOString().slice(0, 10)}`
         });
       }
-    } catch (notifErr: any) {
+    } catch (notifErr: unknown) {
       log.warn('Owner notification failed (non-blocking)', { error: notifErr.message });
     }
   }
@@ -320,7 +318,7 @@ export async function runPayrollReadinessScanAllWorkspaces(): Promise<{
       reports.push(report);
       totalFlagged += report.flaggedCount;
       totalCritical += report.criticalCount;
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`Scan failed for workspace ${ws.id}`, { error: err instanceof Error ? err.message : String(err) });
     }
   }

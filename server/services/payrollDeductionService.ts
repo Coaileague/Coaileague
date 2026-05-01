@@ -210,7 +210,6 @@ export async function validateDeductionAmount(
   
   if (requestedAmount > remainingLimit) {
     warning = `Requested ${deductionType} contribution of $${requestedAmount.toFixed(2)} exceeds remaining annual limit. Adjusted to $${allowedAmount.toFixed(2)}. YTD: $${ytdContributions.toFixed(2)}, Annual limit: $${limitInfo.limit}`;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     log.info(`[PAYROLL DEDUCTION] ${warning}`);
   }
   
@@ -340,7 +339,7 @@ export async function addDeduction(
   amount: string | number,
   isPreTax: boolean = true,
   description?: string
-): Promise<any> {
+): Promise<unknown> {
   const result = await db
     .insert(payrollDeductions)
     .values({
@@ -354,7 +353,6 @@ export async function addDeduction(
     })
     .returning();
 
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   log.info(`[PAYROLL DEDUCTION] Added ${deductionType} deduction of $${amount} to entry ${payrollEntryId}`);
   return result[0];
 }
@@ -371,7 +369,7 @@ export async function addGarnishment(
   priority: number = 1,
   caseNumber?: string,
   description?: string
-): Promise<any> {
+): Promise<unknown> {
   const result = await db
     .insert(payrollGarnishments)
     .values({
@@ -386,7 +384,6 @@ export async function addGarnishment(
     })
     .returning();
 
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   log.info(`[PAYROLL GARNISHMENT] Added ${garnishmentType} garnishment of $${amount} (priority ${priority}) to entry ${payrollEntryId}`);
   return result[0];
 }

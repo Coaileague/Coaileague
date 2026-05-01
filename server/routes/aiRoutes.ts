@@ -47,7 +47,6 @@ router.post('/responses/:id/feedback', requireAuth, async (req: AuthenticatedReq
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const ratedResponse = await storage.rateAiResponse(id, ratingNum, feedback);
     if (!ratedResponse) {
       return res.status(500).json({ message: 'Failed to save feedback' });

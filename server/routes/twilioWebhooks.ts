@@ -319,7 +319,7 @@ router.post('/api/webhooks/twilio/sms', validateTwilioSignature, async (req: Req
           }).catch(() => null);
 
           log.info(`[TwilioSMS] Employee ${matchedEmpDecline.id} DECLINED offer ${offerNotif.relatedEntityId} via SMS`);
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn('[TwilioSMS] Decline handler error:', err?.message);
         }
       });
@@ -341,7 +341,7 @@ router.post('/api/webhooks/twilio/sms', validateTwilioSignature, async (req: Req
           // Send the reply back to the sender
           await sendSMS({ to: from, body: result.reply, workspaceId: result.workspaceId, type: 'system_alert' });
           log.info(`[TrinitySmsTriage] ${result.method} resolution for ${from} — resolved=${result.resolved}`);
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn(`[TrinitySmsTriage] Auto-resolver error for ${from}:`, err?.message);
           // Fallback reply so caller isn't left hanging
           await sendSMS({

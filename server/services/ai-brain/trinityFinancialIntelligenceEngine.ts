@@ -415,7 +415,6 @@ class TrinityFinancialIntelligenceEngine {
             'financial_intelligence',
             undefined,
             workspaceId,
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             'PLATFORM',
           ).catch(() => null);
         }

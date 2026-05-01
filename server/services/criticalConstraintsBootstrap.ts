@@ -483,7 +483,7 @@ const constraints: CriticalConstraint[] = [
           await pool.query(
             `ALTER TYPE audit_action ADD VALUE IF NOT EXISTS '${value.replace(/'/g, "''")}'`,
           );
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn(`[auditAction] Failed to add enum value ${value}: ${err?.message?.slice(0, 120)}`);
         }
       }
@@ -569,7 +569,7 @@ const constraints: CriticalConstraint[] = [
         await pool.query(
           `ALTER TABLE somatic_pattern_library ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY`,
         );
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Already an identity column or not possible — either way, nothing to do.
         log.warn(`[somatic_pattern_library] identity alter skipped: ${err?.message?.slice(0, 120)}`);
       }
@@ -946,7 +946,7 @@ const constraints: CriticalConstraint[] = [
             `ALTER TABLE audit_logs ALTER COLUMN "${r.column_name}" DROP NOT NULL`
           );
           log.info(`[criticalConstraints] dropped NOT NULL on audit_logs.${r.column_name}`);
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn(`[criticalConstraints] failed to drop NOT NULL on audit_logs.${r.column_name}: ${err?.message?.slice(0, 120)}`);
         }
       }
@@ -1237,7 +1237,7 @@ const constraints: CriticalConstraint[] = [
           );
           log.info(`[phaseU] ensured ${a.table}.${a.column} (${a.type})`);
           added++;
-        } catch (err: any) {
+        } catch (err: unknown) {
           failed++;
           log.warn(
             `[phaseU] Failed on ${a.table}.${a.column}: ${err?.message?.slice(0, 160)}`,
@@ -1334,7 +1334,7 @@ const constraints: CriticalConstraint[] = [
           await pool.query(
             `ALTER TABLE workspace_ai_periods ADD COLUMN IF NOT EXISTS "${col.name}" ${col.type}`,
           );
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn(`[workspace_ai_periods] Failed to add ${col.name}: ${err?.message?.slice(0, 120)}`);
         }
       }
@@ -1398,7 +1398,7 @@ const constraints: CriticalConstraint[] = [
           await pool.query(
             `ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS "${col.name}" ${col.type}`,
           );
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn(`[ai_call_log] Failed to add ${col.name}: ${err?.message?.slice(0, 120)}`);
         }
       }
@@ -1495,12 +1495,12 @@ async function backfillGenRandomUuidDefaults(): Promise<{ scanned: number; patch
           `ALTER TABLE "${r.table_name}" ALTER COLUMN id SET DEFAULT gen_random_uuid()::text`
         );
         patched++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         failed++;
         log.warn(`[idDefaultBackfill] Failed on ${r.table_name}.id: ${err?.message?.slice(0, 120)}`);
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[idDefaultBackfill] Scan failed: ${err?.message}`);
   }
   return { scanned, patched, failed };
@@ -1608,7 +1608,7 @@ async function scanTimestampDefaultDrift(schemaTables: Record<string, unknown>):
         [tableCfg.name, candidateColumnNames]
       );
       driftRows = rows;
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn(`[timestampDefaultDrift] Failed to scan ${tableCfg.name}: ${err?.message?.slice(0, 120)}`);
       continue;
     }
@@ -1620,7 +1620,7 @@ async function scanTimestampDefaultDrift(schemaTables: Record<string, unknown>):
         );
         result.columnsPatched++;
         log.info(`[timestampDefaultDrift] set DEFAULT NOW() on ${tableCfg.name}.${r.column_name}`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         result.columnsFailed++;
         log.warn(`[timestampDefaultDrift] Failed on ${tableCfg.name}.${r.column_name}: ${err?.message?.slice(0, 120)}`);
       }
@@ -1707,7 +1707,7 @@ async function scanMissingColumns(schemaTables: Record<string, unknown>): Promis
         [tableCfg.name, declaredNames]
       );
       liveRows = rows;
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn(`[missingColumnDrift] Failed to scan ${tableCfg.name}: ${err?.message?.slice(0, 120)}`);
       continue;
     }
@@ -1724,7 +1724,7 @@ async function scanMissingColumns(schemaTables: Record<string, unknown>): Promis
         // (varchar, text, integer, timestamp, jsonb, etc.) and returns
         // the exact SQL type string we need for ADD COLUMN.
         sqlType = (col as any).getSQLType();
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn(
           `[missingColumnDrift] ${tableCfg.name}.${col.name}: could not resolve SQL type (${err?.message?.slice(0, 80)}), skipping`
         );
@@ -1779,7 +1779,7 @@ async function scanMissingColumns(schemaTables: Record<string, unknown>): Promis
         log.info(
           `[missingColumnDrift] added column ${tableCfg.name}.${col.name} (${sqlType}${defaultClause ? ' w/ default' : ''})`
         );
-      } catch (err: any) {
+      } catch (err: unknown) {
         result.columnsFailed++;
         log.warn(
           `[missingColumnDrift] Failed on ${tableCfg.name}.${col.name}: ${err?.message?.slice(0, 160)}`
@@ -1799,7 +1799,7 @@ async function scanMissingColumns(schemaTables: Record<string, unknown>): Promis
           log.info(
             `[missingColumnDrift] tightened ${tableCfg.name}.${col.name} to NOT NULL`
           );
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn(
             `[missingColumnDrift] Could not tighten ${tableCfg.name}.${col.name} to NOT NULL (existing NULL rows?): ${err?.message?.slice(0, 120)}`
           );
@@ -1871,7 +1871,7 @@ async function scanNotNullDrift(schemaTables: Record<string, unknown>): Promise<
         [tableCfg.name, nullableColumnNames]
       );
       driftRows = rows;
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn(`[notNullDrift] Failed to scan ${tableCfg.name}: ${err?.message?.slice(0, 120)}`);
       continue;
     }
@@ -1889,7 +1889,7 @@ async function scanNotNullDrift(schemaTables: Record<string, unknown>): Promise<
         );
         result.columnsPatched++;
         log.info(`[notNullDrift] dropped NOT NULL on ${tableCfg.name}.${r.column_name} (schema says nullable, live DB had NOT NULL)`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         result.columnsFailed++;
         log.warn(`[notNullDrift] Failed on ${tableCfg.name}.${r.column_name}: ${err?.message?.slice(0, 120)}`);
       }
@@ -1915,7 +1915,7 @@ export async function ensureCriticalConstraints(): Promise<void> {
       await c.apply();
       installed++;
       log.info(`[criticalConstraints] Installed: ${c.name}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       failed++;
       log.error(`[criticalConstraints] Failed to install ${c.name}: ${err?.message}`, { error: err });
     }
@@ -1986,7 +1986,7 @@ export async function ensureCriticalConstraints(): Promise<void> {
         `[timestampDefaultDrift] Scanned ${tsDrift.tablesScanned} tables, ${tsDrift.columnsChecked} candidate columns — no drift detected`
       );
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[schemaDrift] Scan failed: ${err?.message}`, { error: err });
   }
 }

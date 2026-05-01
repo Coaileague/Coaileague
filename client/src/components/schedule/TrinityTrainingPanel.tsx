@@ -111,7 +111,7 @@ export function TrinityTrainingPanel({ workspaceId }: TrinityTrainingPanelProps)
       queryClient.invalidateQueries({ queryKey: ["/api/schedules/week/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Failed to Clear Schedule", description: error.message || "An error occurred", variant: "destructive" });
     },
   });
@@ -132,7 +132,7 @@ export function TrinityTrainingPanel({ workspaceId }: TrinityTrainingPanelProps)
       queryClient.invalidateQueries({ queryKey: ["/api/shifts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Training Failed", description: error.message || "An error occurred", variant: "destructive" });
     },
   });

@@ -142,7 +142,7 @@ export function useTrinityState(options: UseTrinityStateOptions): UseTrinityStat
         setState(prev => ({
           ...prev,
           reversibleActions: Array.isArray(event.data) 
-            ? event.data.map((action: any) => ({
+            ? event.data.map((action) => ({
                 ...action,
                 timestamp: new Date(action.timestamp).getTime()
               }))
@@ -224,7 +224,6 @@ export function useTrinityState(options: UseTrinityStateOptions): UseTrinityStat
   }, []);
 
   useEffect(() => {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (state.progress?.completed === state.progress?.total && state.progress?.total > 0) {
       stopExecution();
       onExecutionComplete?.(true);

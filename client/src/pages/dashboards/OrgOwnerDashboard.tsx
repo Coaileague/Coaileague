@@ -116,7 +116,7 @@ export default function OrgOwnerDashboard() {
       setPinInput("");
       queryClient.invalidateQueries({ queryKey: ["/api/identity/pin/owner/status"] });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({
         title: "Could not save PIN",
         description: err?.message || "Please try again",
@@ -134,7 +134,7 @@ export default function OrgOwnerDashboard() {
       toast({ title: "Owner PIN cleared" });
       queryClient.invalidateQueries({ queryKey: ["/api/identity/pin/owner/status"] });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({
         title: "Could not clear PIN",
         description: err?.message || "Please try again",
@@ -195,18 +195,18 @@ export default function OrgOwnerDashboard() {
   const orgCode = workspace?.orgId || workspace?.organizationId || null;
   const clientList = Array.isArray(clients) ? clients : (clients as any)?.data ?? [];
   const activeClients = clientList.filter(
-    (client: any) => client.status === "active" || !client.status,
+    (client) => client.status === "active" || !client.status,
   ).length;
   const totalEmployees = employeesRes?.data?.length ?? 0;
   const invoiceList = Array.isArray(invoices) ? invoices : [];
   const outstandingInvoices = invoiceList.filter(
-    (invoice: any) => invoice.status === "sent" || invoice.status === "overdue",
+    (invoice) => invoice.status === "sent" || invoice.status === "overdue",
   );
   const outstandingTotal = outstandingInvoices.reduce(
     (sum: number, invoice: any) => sum + (Number(invoice.totalAmount) || Number(invoice.subtotal) || Number(invoice.amount) || 0),
     0,
   );
-  const draftInvoices = invoiceList.filter((invoice: any) => invoice.status === "draft").length;
+  const draftInvoices = invoiceList.filter((invoice) => invoice.status === "draft").length;
   const orgName = workspace?.name ?? "Your Organization";
   const needsAttentionCount = [
     !pinStatus?.hasPin,
@@ -599,7 +599,7 @@ export default function OrgOwnerDashboard() {
                 </div>
               ) : (
                 (["draft", "sent", "overdue"] as const).map((status) => {
-                  const count = invoiceList.filter((invoice: any) => invoice.status === status).length;
+                  const count = invoiceList.filter((invoice) => invoice.status === status).length;
                   return (
                     <div key={status} className="flex items-center justify-between text-sm">
                       <span className="capitalize text-muted-foreground">{status}</span>
@@ -637,7 +637,7 @@ export default function OrgOwnerDashboard() {
               </Button>
             </div>
             <div className="space-y-2">
-              {clientList.slice(0, 4).map((client: any) => (
+              {clientList.slice(0, 4).map((client) => (
                 <div key={client.id} className="flex items-center justify-between text-sm">
                   <span className="max-w-[160px] truncate text-foreground">
                     {client.name || client.companyName}

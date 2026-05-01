@@ -213,7 +213,6 @@ router.post('/hotfixes/:id/approve', requireHotfixApprover, async (req: Request,
     const hotfixId = req.params.id;
 
     // User already verified via requireHotfixApprover middleware
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const hotfix = platformHealthMonitor.approveHotfix(hotfixId, user.id);
 
     if (!hotfix) {
@@ -241,7 +240,6 @@ router.post('/hotfixes/:id/reject', requirePlatformStaff, async (req: Request, r
     const user = req.user;
     const hotfixId = req.params.id;
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const hotfix = platformHealthMonitor.rejectHotfix(hotfixId, user.id);
 
     if (!hotfix) {
@@ -427,7 +425,6 @@ router.post('/command', requirePlatformStaff, async (req: Request, res: Response
         },
         'help': async () => {
           const actions = (helpaiOrchestrator as any).listActions();
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           const categories = [...new Set(actions.map(a => a.category))];
           return {
             response: `Available command categories: ${categories.join(', ')}. Try /list <category> for specific commands.`,
@@ -440,12 +437,10 @@ router.post('/command', requirePlatformStaff, async (req: Request, res: Response
           const category = args || 'all';
           const filtered = category === 'all' 
             ? actions 
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             : actions.filter(a => a.category === category);
           return {
             response: `Found ${filtered.length} actions${category !== 'all' ? ` in ${category}` : ''}.`,
             success: true,
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             data: { actions: filtered.map(a => ({ id: a.actionId, name: a.name, description: a.description })) }
           };
         },
@@ -550,7 +545,6 @@ Respond helpfully and concisely.`;
 
       const response = await unifiedGeminiClient.generateContent({ // withGemini
         prompt: message,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         systemInstruction: systemPrompt,
         modelTier: ModelTier.FLASH,
         maxTokens: 1000,

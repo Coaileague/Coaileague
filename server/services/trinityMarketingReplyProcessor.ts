@@ -161,7 +161,7 @@ export async function processTrinityMarketingReply(
     });
     log.info(`[TrinityMarketing] Replied to ${payload.from} | lane=${lane}`);
     return { lane, replied: true };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[TrinityMarketing] Failed to send reply to ${payload.from}: ${err.message}`);
     return { lane, replied: false };
   }

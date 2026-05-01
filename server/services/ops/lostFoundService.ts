@@ -68,7 +68,7 @@ class LostFoundService {
     category?: string | null;
     storedLocation?: string | null;
     notes?: string | null;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<LostFoundItem> {
     const id = randomUUID();
     const itemNumber = `LF-${Date.now().toString(36).toUpperCase()}`;
@@ -208,7 +208,6 @@ class LostFoundService {
     platformActionHub.registerAction({
       actionId: 'external.lost_found.unclaimed_report',
       name: 'Unclaimed Items Report',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       category: 'external',
       description: 'Get all lost and found items that remain unclaimed after a specified number of days.',
       requiredRoles: ['manager', 'supervisor', 'owner'],

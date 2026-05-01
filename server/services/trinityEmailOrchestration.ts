@@ -180,7 +180,7 @@ export class TrinityEmailOrchestration {
   /**
    * Step 2: FETCH - Retrieve email data
    */
-  private async executeFetch(emailId: string, steps: OrchestrationStep[]): Promise<any> {
+  private async executeFetch(emailId: string, steps: OrchestrationStep[]): Promise<unknown> {
     const step: OrchestrationStep = {
       step: 'FETCH',
       status: 'in_progress',

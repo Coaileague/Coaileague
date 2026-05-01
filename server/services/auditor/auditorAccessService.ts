@@ -73,7 +73,7 @@ export async function isAuditorEmailAllowed(email: string, workspaceId: string):
       [workspaceId, email]
     );
     return r.rows.length > 0;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[AuditorAccess] allowlist check failed (deny-fallback):', err?.message);
     return false;
   }
@@ -103,7 +103,7 @@ export async function addAuditorAllowlist(params: {
       [params.workspaceId, params.email, params.fullName || null, params.agencyName || null, params.notes || null, params.addedBy || null]
     );
     return { success: true };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[AuditorAccess] addAllowlist failed:', err?.message);
     return { success: false };
   }
@@ -342,7 +342,7 @@ async function ensureTables(): Promise<void> {
     `);
     bootstrapped = true;
     log.info('[AuditorAccess] Bootstrap complete');
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[AuditorAccess] Bootstrap failed (non-fatal):', err?.message);
   }
 }
@@ -461,7 +461,7 @@ export async function processAuditorIntake(params: IntakeParams): Promise<{
         workspaceId,
       });
       inviteSent = !!sendResult.success;
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.warn('[AuditorAccess] Invite email failed (non-fatal):', e?.message);
     }
 
@@ -472,7 +472,7 @@ export async function processAuditorIntake(params: IntakeParams): Promise<{
     );
 
     return { success: true, auditorId, auditId, inviteSent };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[AuditorAccess] Intake failed:', err?.message);
     return { success: false, reason: err?.message };
   }
@@ -518,7 +518,7 @@ export async function claimInvite(params: {
     );
 
     return { success: true, auditorId: row.id };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[AuditorAccess] Claim invite failed:', err?.message);
     return { success: false, reason: err?.message };
   }
@@ -557,7 +557,7 @@ export async function authenticateAuditor(email: string): Promise<{
     }
 
     return { ok: true, auditorId: row.id, passwordHash: row.password_hash };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[AuditorAccess] Authenticate failed:', err?.message);
     return { ok: false, reason: 'not_found' };
   }
@@ -572,7 +572,7 @@ export async function recordSuccessfulAuth(auditorId: string, ip?: string, ua?: 
       `INSERT INTO auditor_session_log (auditor_id, action, ip_address, user_agent) VALUES ($1, 'login', $2, $3)`,
       [auditorId, ip || null, ua || null]
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[AuditorAccess] recordSuccessfulAuth failed (non-fatal):', err?.message);
   }
 }
@@ -589,7 +589,7 @@ export async function listAuditsForAuditor(auditorId: string): Promise<any[]> {
       [auditorId]
     );
     return r.rows;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[AuditorAccess] listAuditsForAuditor failed:', err?.message);
     return [];
   }
@@ -612,7 +612,7 @@ export async function requestNewAudit(params: {
       [params.auditorId, params.workspaceId, params.licenseNumber || null, params.orderDocUrl || null, params.notes || null]
     );
     return { success: true, auditId: r.rows[0].id };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[AuditorAccess] requestNewAudit failed:', err?.message);
     return { success: false, reason: err?.message };
   }
@@ -629,7 +629,7 @@ export async function closeAudit(auditId: string, closedBy?: string): Promise<{ 
       [closedBy || 'auditor', auditId]
     );
     return { success: true };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[AuditorAccess] closeAudit failed:', err?.message);
     return { success: false };
   }
@@ -648,7 +648,7 @@ export async function extendAudit(auditId: string, days = 30): Promise<{ success
       [days, auditId]
     );
     return { success: true };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[AuditorAccess] extendAudit failed:', err?.message);
     return { success: false };
   }
@@ -701,7 +701,7 @@ export async function recordNdaAcceptance(params: {
       [params.auditorId, version, params.ip || null, params.userAgent || null, params.signatureName || null],
     );
     return { success: true, version };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[AuditorAccess] recordNdaAcceptance failed:', err?.message);
     return { success: false, version };
   }
@@ -956,7 +956,7 @@ async function ensureRegulatorNotificationTable(): Promise<void> {
       CREATE INDEX IF NOT EXISTS arn_auditor_idx   ON auditor_regulator_notifications(auditor_id);
     `);
     regNotifBootstrapped = true;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[AuditorAccess] regulator-notif bootstrap failed:', err?.message);
   }
 }
@@ -967,7 +967,7 @@ export async function logRegulatorNotification(params: {
   severity: 'info' | 'warning' | 'violation' | 'critical';
   subject: string;
   body: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }): Promise<{ id: string | null; success: boolean }> {
   await ensureRegulatorNotificationTable();
   const { pool } = await import('../../db');
@@ -987,7 +987,7 @@ export async function logRegulatorNotification(params: {
       ],
     );
     return { id: r.rows[0]?.id ?? null, success: true };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[AuditorAccess] logRegulatorNotification failed:', err?.message);
     return { id: null, success: false };
   }
@@ -1024,7 +1024,7 @@ export async function expireOldAudits(): Promise<{ closed: number }> {
         RETURNING id`
     );
     return { closed: r.rowCount ?? 0 };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[AuditorAccess] expireOldAudits failed:', err?.message);
     return { closed: 0 };
   }

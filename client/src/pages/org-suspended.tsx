@@ -45,7 +45,7 @@ export default function OrgSuspendedPage() {
       });
       return await res.json();
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       if (data?.url) {
         window.location.href = data.url;
       } else {

@@ -89,7 +89,7 @@ async function ensureStripeCustomer(
 
     log.info(`Created Stripe customer ${customer.id} for workspace ${workspaceId}`);
     return customer.id;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`Failed to create Stripe customer for workspace ${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
     return null;
   }
@@ -185,7 +185,7 @@ export async function chargePayrollMiddlewareFee(params: {
       stripeInvoiceItemId: invoiceItem.id,
       description: `Payroll processing: ${employeeCount} employees × $${(fees.payrollMiddleware.perEmployeeCents / 100).toFixed(2)} = $${(totalCents / 100).toFixed(2)}`,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[PayrollFee] Stripe charge failed for workspace ${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
     return {
       success: false,
@@ -301,7 +301,7 @@ export async function chargeInvoiceMiddlewareFee(params: {
       stripeInvoiceItemId: invoiceItem.id,
       description: `Invoice ${invoiceNumber}: ${feeDescription} = $${(totalCents / 100).toFixed(2)}`,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[InvoiceFee] Stripe charge failed for workspace ${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
     return {
       success: false,
@@ -396,7 +396,7 @@ export async function chargePayoutMiddlewareFee(params: {
       stripeInvoiceItemId: invoiceItem.id,
       description: desc,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[PayoutFee] Stripe charge failed: ${(err instanceof Error ? err.message : String(err))}`);
     return {
       success: false,
@@ -501,7 +501,7 @@ export async function chargeAiCreditOverageFee(params: {
       stripeInvoiceItemId: invoiceItem.id,
       description,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[CreditOverage] Stripe charge failed for workspace ${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
     return {
       success: false,
@@ -574,7 +574,7 @@ export async function chargeEmploymentVerificationFee(params: {
       stripeInvoiceItemId: invoiceItem.id,
       description: `Employment Verification — ${referenceId}`,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[EmploymentVerifyFee] Stripe charge failed for workspace ${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
     return {
       success: false,
@@ -649,7 +649,7 @@ export async function chargeTacDocumentFee(params: {
       stripeInvoiceItemId: invoiceItem.id,
       description: `TAC Document — ${documentType}`,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[TacDocumentFee] Stripe charge failed for workspace ${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
     return {
       success: false,
@@ -723,7 +723,7 @@ export async function chargeTopsVerificationFee(params: {
 
     log.info(`[TopsVerifyFee] Charged $${(feeCents / 100).toFixed(2)} — workspace ${workspaceId} result=${result}`);
     return { success: true, amountCents: feeCents, stripeInvoiceItemId: invoiceItem.id, description: 'TOPS Verification' };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[TopsVerifyFee] Stripe charge failed for workspace ${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
     return {
       success: false,
@@ -797,7 +797,7 @@ export async function chargeTaxFormFee(params: {
 
     log.info(`[TaxFormFee] Charged $${(feeCents / 100).toFixed(2)} for ${formLabel} ${taxYear} — workspace ${workspaceId}`);
     return { success: true, amountCents: feeCents, stripeInvoiceItemId: invoiceItem.id, description: `${formLabel} ${taxYear}` };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[TaxFormFee] Stripe charge failed for workspace ${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
     return {
       success: false,
@@ -976,7 +976,7 @@ export async function chargeSeatOverageFee(params: {
       stripeInvoiceItemId: invoiceItem.id,
       description,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[SeatOverage] Stripe charge failed for workspace ${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
     return {
       success: false,
@@ -1079,7 +1079,7 @@ export async function chargeStorageOverageFee(params: {
       stripeInvoiceItemId: invoiceItem.id,
       description,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[StorageOverage] Stripe charge failed for workspace ${workspaceId}: ${err?.message}`);
     return {
       success: false,
@@ -1211,7 +1211,7 @@ export async function chargeVoiceSmsOverageFee(params: {
       stripeInvoiceItemId: invoiceItem.id,
       description,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[VoiceSmsOverage] Stripe charge failed for workspace ${workspaceId}: ${err?.message}`);
     return {
       success: false,

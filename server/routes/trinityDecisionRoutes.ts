@@ -7,7 +7,7 @@ const log = createLogger('TrinityDecisionRoutes');
 
 const router = Router();
 
-function sanitizeDecision(d: Record<string, any>): Record<string, any> {
+function sanitizeDecision(d: Record<string, unknown>): Record<string, unknown> {
   const { claudeVerdict, claudeReasoning, claudeSuggestedAlternative, judgeModel, primaryModel, ...rest } = d;
   return {
     ...rest,

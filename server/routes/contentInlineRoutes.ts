@@ -87,7 +87,6 @@ router.get("/client-reports", requireAuth, async (req: any, res) => {
     const reports = await Promise.all(reportsForClient.map(async (report) => {
       let employeeName = 'Employee';
       if (report.employeeId) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const employee = await storage.getEmployee(report.employeeId);
         if (employee) {
           employeeName = `${employee.firstName} ${employee.lastName}`.trim() || 'Employee';
@@ -289,7 +288,6 @@ router.post("/contract-documents", requireOwner, async (req: AuthenticatedReques
       workspaceId,
     });
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const { employeeId, documentType, signedAt, fileUrl, metadata } = validated;
 
     if (!['i9', 'w9', 'w4'].includes(documentType)) {
@@ -421,7 +419,7 @@ router.patch("/custom-rules/:id", requireOwner, async (req: AuthenticatedRequest
     }
     
     const { name, description, category, severity, conditions, actions, isActive, priority } = req.body;
-    const safeRuleUpdates: Record<string, any> = { updatedBy: userId, updatedAt: new Date() };
+    const safeRuleUpdates: Record<string, unknown> = { updatedBy: userId, updatedAt: new Date() };
     if (name !== undefined) safeRuleUpdates.name = name;
     if (description !== undefined) safeRuleUpdates.description = description;
     if (category !== undefined) safeRuleUpdates.category = category;

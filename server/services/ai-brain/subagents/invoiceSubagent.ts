@@ -79,7 +79,7 @@ interface AuditEntry {
   traceId: string;
   action: string;
   status: 'started' | 'completed' | 'failed';
-  details: Record<string, any>;
+  details: Record<string, unknown>;
   durationMs?: number;
 }
 
@@ -266,13 +266,11 @@ class InvoiceSubagentService {
         });
 
         // Check for rate discrepancies
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         if (Math.abs(rate - parseFloat(clientData.defaultHourlyRate?.toString() || '0')) > 5) {
           issues.push({
             severity: 'warning',
             type: 'rate',
             description: `Rate variance detected: $${rate}/hr vs contract rate $${(clientData as any).defaultHourlyRate}/hr`,
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             potentialRevenue: Math.abs(amount - hours * parseFloat(clientData.defaultHourlyRate?.toString() || '0')),
           });
         }
@@ -374,7 +372,6 @@ class InvoiceSubagentService {
         }).returning();
 
         for (const item of lineItems) {
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           await tx.insert(invoiceLineItems).values({
             workspaceId,
             invoiceId: inv.id,
@@ -487,14 +484,12 @@ class InvoiceSubagentService {
         workspaceId,
         userId: 'invoice-subagent',
         featureKey: 'invoicing_session_fee',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         featureName: 'Invoicing Processing Fee',
         description: `Invoice batch ${traceId.substring(0, 16)} — processing fee (line item calculation, gap analysis, formatting)`,
       });
       log.info(`[InvoiceSubagent] Session fee charged: ${sessionFee} credits for workspace ${workspaceId}`);
     } catch (feeErr: any) {
       log.error(`[InvoiceSubagent] Session fee deduction failed for workspace ${workspaceId}:`, feeErr.message);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       this.logAudit(traceId, 'invoice.batch_generate', 'billing_failed', { error: feeErr.message });
       return {
         totalGenerated: 0,
@@ -544,7 +539,6 @@ class InvoiceSubagentService {
             await tokenManager.recordUsage({
               workspaceId,
               featureKey: 'ai_invoice_generation',
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               featureName: 'Per-Invoice AI Generation',
               description: `Invoice ${result.invoiceId || 'unknown'} — per-occurrence fee (${perInvoiceFee}cr) for client ${clientId.substring(0, 12)}`,
               quantity: 1,
@@ -772,7 +766,6 @@ class InvoiceSubagentService {
     try {
       const [existing] = await db.select()
         .from(idempotencyKeys)
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .where(eq(idempotencyKeys.key, key))
         .limit(1);
 
@@ -787,7 +780,6 @@ class InvoiceSubagentService {
 
   private async storeIdempotencyResult(key: string, result: any): Promise<void> {
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(idempotencyKeys).values({
         workspaceId: 'system',
         key,
@@ -795,7 +787,6 @@ class InvoiceSubagentService {
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
       }).onConflictDoUpdate({
         target: (idempotencyKeys as any).key,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         set: { result, updatedAt: new Date() },
       });
     } catch (error) {
@@ -895,7 +886,7 @@ Provide 2-3 sentences of executive-level recommendations to recover this revenue
     }
   }
 
-  private logAudit(traceId: string, action: string, status: 'started' | 'completed' | 'failed', details: Record<string, any>): void {
+  private logAudit(traceId: string, action: string, status: 'started' | 'completed' | 'failed', details: Record<string, unknown>): void {
     this.auditLog.push({
       timestamp: new Date(),
       traceId,

@@ -55,7 +55,7 @@ export default function DisputesPage() {
     enabled: !!user,
   });
   
-  const currentEmployee = allEmployees?.find((emp: any) => emp.userId === user?.id);
+  const currentEmployee = allEmployees?.find((emp) => emp.userId === user?.id);
   const isHROrManager = currentEmployee && isManagerOrAbove(currentEmployee?.workspaceRole);
 
   const { data: myDisputes, isLoading: loadingMyDisputes } = useQuery<Dispute[]>({
@@ -117,7 +117,7 @@ export default function DisputesPage() {
       setCreateDialogOpen(false);
       form.reset();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         variant: "destructive",
         title: "Error",

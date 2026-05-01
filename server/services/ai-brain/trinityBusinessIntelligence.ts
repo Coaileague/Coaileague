@@ -874,7 +874,6 @@ For agency/subcontract clients, pay special attention to external reference numb
             domain: domain === 'all' ? 'invoicing' : domain as KnowledgeDomain,
             action: `deep_analysis_${domain}`,
             outcome: 'success',
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             reward: 1.0,
             context: { domain, questionProvided: !!question, dataPointsAnalyzed: contextParts.length },
             workspaceId,
@@ -893,7 +892,7 @@ For agency/subcontract clients, pay special attention to external reference numb
       }
 
       knowledgeGaps.push('Gemini analysis returned empty — falling back to pattern-based insights');
-    } catch (err: any) {
+    } catch (err: unknown) {
       knowledgeGaps.push(`Gemini analysis failed: ${(err instanceof Error ? err.message : String(err))} — using pattern-based insights only`);
     }
 
@@ -1057,7 +1056,7 @@ export function registerBusinessIntelligenceActions(): void {
           message: `Deep analysis complete. ${result.recommendations.length} recommendations generated. Confidence: ${(result.metacognition.confidence * 100).toFixed(0)}%`,
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error: unknown) {
         return { success: false, actionId: request.actionId, message: sanitizeError(error), executionTimeMs: Date.now() - startTime };
       }
     },

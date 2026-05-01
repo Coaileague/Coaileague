@@ -213,7 +213,7 @@ export async function seedMonthlyShifts(): Promise<{ seeded: number; message: st
       message: `Seeded ${seeded} shifts across ${SITES.length} sites for the current month. Open shifts ready for Trinity fill-shift scanner.`,
     };
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[ShiftSeed] Failed:', err?.message);
     return { seeded: 0, message: `Failed: ${err?.message}` };
   }

@@ -70,7 +70,7 @@ export function GuardTourScanner({
     try {
       await onScan(code);
       setStatus({ ok: true, text: `Checkpoint ${code.slice(0, 12)} logged.` });
-    } catch (err: any) {
+    } catch (err: unknown) {
       setStatus({ ok: false, text: err?.message || "Scan rejected. Try again or enter code manually." });
     } finally {
       setSubmitting(false);
@@ -114,7 +114,7 @@ export function GuardTourScanner({
         loopRef.current = requestAnimationFrame(tick);
       };
       loopRef.current = requestAnimationFrame(tick);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setStatus({
         ok: false,
         text:

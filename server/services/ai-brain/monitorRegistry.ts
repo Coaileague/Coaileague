@@ -5,7 +5,6 @@
  */
 
 import { db } from '../../db';
-// @ts-expect-error — TS migration: fix in refactoring sprint
 import { aiMonitoringTasks, type AiMonitoringTask } from '@shared/schema';
 import { eq, and, lte, isNull, or } from 'drizzle-orm';
 import type { MonitorDefinition, ScheduledMonitor } from './types';
@@ -90,7 +89,7 @@ export class MonitorRegistry {
     monitoringType: string;
     targetEntityType: string;
     targetEntityId?: string;
-    configuration?: Record<string, any>;
+    configuration?: Record<string, unknown>;
     runIntervalMinutes?: number;
     createdBy?: string;
   }): Promise<ScheduledMonitor> {

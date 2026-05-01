@@ -129,7 +129,6 @@ export async function getShiftWithDetails(shiftId: string): Promise<(Shift & { e
     return {
       ...shift,
       employeeName: employee ? `${employee.firstName} ${employee.lastName}` : undefined,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       email: employee?.email,
     };
   }

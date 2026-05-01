@@ -329,7 +329,7 @@ router.get("/compliance-matrix", requireAuth, async (req: AuthenticatedRequest, 
       [wid]
     )).rows;
 
-    const byEmployee: Record<string, any> = {};
+    const byEmployee: Record<string, unknown> = {};
     for (const off of officers) {
       byEmployee[off.id] = {
         employee_id: off.id,

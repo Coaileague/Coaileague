@@ -46,7 +46,7 @@ router.get("/availability", requireAuth, async (req: AuthenticatedRequest, res) 
     q += ` ORDER BY officer_id, day_of_week, start_time`;
     const { rows } = await pool.query(q, params);
     res.json(rows);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 router.post("/availability", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -78,7 +78,7 @@ router.post("/availability", requireAuth, async (req: AuthenticatedRequest, res)
        effectiveFrom || null, effectiveUntil || null]
     );
     res.status(201).json(rows[0]);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 router.put("/availability/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -106,7 +106,7 @@ router.put("/availability/:id", requireAuth, async (req: AuthenticatedRequest, r
     );
     if (!rows[0]) return res.status(404).json({ error: "Availability record not found" });
     res.json(rows[0]);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 router.delete("/availability/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -118,7 +118,7 @@ router.delete("/availability/:id", requireAuth, async (req: AuthenticatedRequest
     );
     if (!rowCount) return res.status(404).json({ error: "Availability record not found" });
     res.json({ success: true });
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 // ── SHIFT TRADE REQUESTS ────────────────────────────────────────────────────
@@ -148,7 +148,7 @@ router.get("/trades", requireAuth, async (req: AuthenticatedRequest, res) => {
     q += ` ORDER BY t.created_at DESC LIMIT 100`;
     const { rows } = await pool.query(q, params);
     res.json(rows);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 router.post("/trades", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -218,7 +218,7 @@ router.post("/trades", requireAuth, async (req: AuthenticatedRequest, res) => {
               ],
             },
           });
-        } catch (ndsErr: any) {
+        } catch (ndsErr: unknown) {
           console.warn('[ShiftTrade] NDS shift_trade_request failed (non-fatal):', ndsErr?.message);
         }
       }
@@ -251,13 +251,13 @@ router.post("/trades", requireAuth, async (req: AuthenticatedRequest, res) => {
               tradeId,
             },
           });
-        } catch (ndsErr: any) {
+        } catch (ndsErr: unknown) {
           console.warn('[ShiftTrade] NDS manager notify failed (non-fatal):', ndsErr?.message);
         }
       }
     }
     res.status(201).json(rows[0]);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 router.post("/trades/:id/accept", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -311,12 +311,12 @@ router.post("/trades/:id/accept", requireAuth, async (req: AuthenticatedRequest,
             tradeId: rows[0].id,
           },
         });
-      } catch (ndsErr: any) {
+      } catch (ndsErr: unknown) {
         console.warn('[ShiftTrade] NDS shift_trade_accepted failed (non-fatal):', ndsErr?.message);
       }
     }
     res.json(rows[0]);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 router.post("/trades/:id/reject", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -357,11 +357,11 @@ router.post("/trades/:id/reject", requireAuth, async (req: AuthenticatedRequest,
           },
         });
       }
-    } catch (ndsErr: any) {
+    } catch (ndsErr: unknown) {
       console.warn('[ShiftTrade] NDS shift_trade_declined failed (non-fatal):', ndsErr?.message);
     }
     res.json(rows[0]);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 router.post("/trades/:id/manager-approve", requireManager, async (req: AuthenticatedRequest, res) => {
@@ -472,7 +472,7 @@ router.post("/trades/:id/manager-approve", requireManager, async (req: Authentic
           reason: 'trade_approval'
         });
       }
-    } catch (webhookErr: any) {
+    } catch (webhookErr: unknown) {
       log.warn('[ShiftTrading] Failed to log webhook error to audit log', { error: webhookErr.message });
     }
 
@@ -505,7 +505,7 @@ router.post("/trades/:id/manager-approve", requireManager, async (req: Authentic
       }
     }
     res.json(rows[0]);
-  } catch (err: any) {
+  } catch (err: unknown) {
     await client.query('ROLLBACK');
     res.status(500).json({ error: sanitizeError(err) });
   } finally {
@@ -527,7 +527,7 @@ router.post("/trades/:id/manager-reject", requireManager, async (req: Authentica
     );
     if (!rows[0]) return res.status(404).json({ error: "Trade request not found" });
     res.json(rows[0]);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 // ── MARKETPLACE ─────────────────────────────────────────────────────────────
@@ -550,7 +550,7 @@ router.get("/marketplace", requireAuth, async (req: AuthenticatedRequest, res) =
       [wid]
     );
     res.json(rows);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 // ── TRINITY ACTIONS ─────────────────────────────────────────────────────────

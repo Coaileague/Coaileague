@@ -105,7 +105,7 @@ async function runScenario1(): Promise<ScenarioResult> {
         : `Scenario 1 failed — check that the compliance seed data set Diana Johnson (${S1_EMPLOYEE_ID}) guard card to expire in ~25 days.`,
       data: { alertTier: licenseStatus.alertTier, daysRemaining, licenseNumber: licenseStatus.licenseNumber },
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     return { scenarioId: 1, title: 'License Expiring in 25 Days', description: '', status: 'FAIL', checks, summary: `Error: ${(err instanceof Error ? err.message : String(err))}` };
   }
 }
@@ -169,7 +169,7 @@ async function runScenario2(): Promise<ScenarioResult> {
         : `Scenario 2 failed — verify Robert Williams (${S2_EMPLOYEE_ID}) guard card is seeded with expiry = yesterday.`,
       data: { alertTier: licenseStatus.alertTier, daysExpired, blockReason: eligibility.blockReason },
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     return { scenarioId: 2, title: 'License Expired Yesterday', description: '', status: 'FAIL', checks, summary: `Error: ${(err instanceof Error ? err.message : String(err))}` };
   }
 }
@@ -258,7 +258,7 @@ async function runScenario3(): Promise<ScenarioResult> {
         : `Scenario 3 failed — renewal update or re-read failed.`,
       data: { renewedDays, newLicenseNumber: 'TXG-2026-RENEWED' },
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     return { scenarioId: 3, title: 'Guard Card Renewal', description: '', status: 'FAIL', checks, summary: `Error: ${(err instanceof Error ? err.message : String(err))}` };
   }
 }
@@ -315,7 +315,7 @@ async function runScenario4(): Promise<ScenarioResult> {
         hasFAEmployee: { id: S4_HAS_CERT_EMP, eligible: hasFACheck.eligible, present: hasFACheck.present },
       },
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     return { scenarioId: 4, title: 'First Aid Required Post', description: '', status: 'FAIL', checks, summary: `Error: ${(err instanceof Error ? err.message : String(err))}` };
   }
 }
@@ -388,7 +388,7 @@ async function runScenario5(): Promise<ScenarioResult> {
         : `Scenario 5 failed — verify insurance cert seeded at ~45 days remaining.`,
       data: { daysRemaining, alertTier, policyNumber: insuranceCert.certificationNumber },
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     return { scenarioId: 5, title: 'Company Insurance Expiring', description: '', status: 'FAIL', checks, summary: `Error: ${(err instanceof Error ? err.message : String(err))}` };
   }
 }
@@ -459,7 +459,7 @@ async function runScenario6(): Promise<ScenarioResult> {
         : `Scenario 6 failed — verify James Fontenot (${S6_EMPLOYEE_ID}) seeded with Louisiana issuing authority.`,
       data: { issuingState: oos.issuingState, licenseNumber: oos.licenseNumber, note: oos.note },
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     return { scenarioId: 6, title: 'Out-of-State License', description: '', status: 'FAIL', checks, summary: `Error: ${(err instanceof Error ? err.message : String(err))}` };
   }
 }

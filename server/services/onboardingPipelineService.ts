@@ -338,7 +338,6 @@ class OnboardingPipelineService {
   /**
    * Update pipeline status
    */
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   async updatePipelineStatus(workspaceId: string, status: PipelineStatus, reason?: string): Promise<Workspace> {
     const updates: any = {
       pipelineStatus: status,
@@ -430,7 +429,7 @@ class OnboardingPipelineService {
 
         stripePromotionCode = promoCode.code;
         log.info(`[Onboarding] Created Stripe promo code: ${stripePromotionCode}`);
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.error('[Onboarding] Failed to create Stripe coupon:', (error instanceof Error ? error.message : String(error)));
       }
     }
@@ -438,7 +437,6 @@ class OnboardingPipelineService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + ONBOARDING.REWARD.EXPIRY_DAYS);
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [reward] = await db.insert(orgRewards).values({
       workspaceId,
       type: 'onboarding_discount_10',
@@ -525,7 +523,6 @@ class OnboardingPipelineService {
   /**
    * Start trial for a workspace
    */
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   async startTrial(workspaceId: string): Promise<Workspace> {
     await this.initializeOnboarding(workspaceId);
     return this.updatePipelineStatus(workspaceId, 'trial_started');
@@ -706,7 +703,7 @@ Generate personalized onboarding tasks for this organization.`;
       log.info(`[Onboarding] AI Brain generated ${insertedTasks.length} personalized tasks for workspace ${workspaceId}`);
       return insertedTasks;
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[Onboarding] AI Brain task generation failed:', (error instanceof Error ? error.message : String(error)));
       return [];
     }
@@ -828,9 +825,7 @@ Generate personalized onboarding tasks for this organization.`;
       });
 
       const [billingSettings] = await db.select()
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .from(workspaceBillingSettings)
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .where(eq(workspaceBillingSettings.workspaceId, workspaceId))
         .limit(1);
 
@@ -959,7 +954,7 @@ Generate personalized onboarding tasks for this organization.`;
         : `${missingCritical.length} critical item(s) remaining: ${missingCritical.join(', ')}. Complete these to operate without external tools.`;
 
       return { score, totalChecks, passedChecks, checklist, readyForOperation, summary };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[OnboardingPipeline] Readiness score error:', (err instanceof Error ? err.message : String(err)));
       return { score: 0, totalChecks: 0, passedChecks: 0, checklist: [], readyForOperation: false, summary: 'Error calculating readiness score' };
     }

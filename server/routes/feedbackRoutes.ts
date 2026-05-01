@@ -25,11 +25,8 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
     }
 
     const ticket = await storage.createSupportTicket({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       workspaceId: req.workspaceId || (req.user)?.workspaceId || (req.user).currentWorkspaceId || '',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       requestorId: userId,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       requestorEmail: req.user.email || '',
       category: type === 'bug' ? 'bug_report' : type === 'feature' ? 'feature_request' : 'feedback',
       subject: `User Feedback: ${type}`,
@@ -65,7 +62,6 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
     
     const feedbackWithUserVotes = await Promise.all(
       feedbackList.map(async (fb) => {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const userVote = await storage.getUserFeedbackVote(fb.id, req.user!);
         return { ...fb, userVote: userVote?.voteType || null };
       })
@@ -91,7 +87,6 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     }
     
     const comments = await storage.getFeedbackComments(id);
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userVote = await storage.getUserFeedbackVote(id, req.user!);
     
     res.json({ 
@@ -122,7 +117,6 @@ router.patch('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
       return res.status(403).json({ success: false, error: "Access denied" });
     }
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (feedback.userId !== req.user) {
       return res.status(403).json({ success: false, error: "Only the author can edit this feedback" });
     }
@@ -134,7 +128,6 @@ router.patch('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     if (priority) updateData.priority = priority;
     if (category !== undefined) updateData.category = category;
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const updated = await storage.updateFeedback(id, updateData);
     res.json({ success: true, data: updated });
   } catch (error: unknown) {
@@ -167,7 +160,6 @@ router.patch('/:id/status', requireAuth, async (req: AuthenticatedRequest, res) 
       return res.status(403).json({ success: false, error: "Access denied" });
     }
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const updated = await storage.updateFeedbackStatus(id, status, req.user!, note);
     res.json({ success: true, data: updated });
   } catch (error: unknown) {
@@ -194,7 +186,6 @@ router.post('/:id/vote', requireAuth, async (req: AuthenticatedRequest, res) => 
       return res.status(403).json({ success: false, error: "Access denied" });
     }
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const result = await storage.voteFeedback(id, req.user!, voteType);
     res.json({ success: true, data: result });
   } catch (error: unknown) {
@@ -223,7 +214,6 @@ router.post('/:id/comments', requireAuth, async (req: AuthenticatedRequest, res)
     
     const comment = await storage.createFeedbackComment({
       feedbackId: id,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user!,
       content: content.trim(),
       parentId: parentId || null,
@@ -270,7 +260,6 @@ router.delete('/:id/comments/:commentId', requireAuth, async (req: Authenticated
       return res.status(403).json({ success: false, error: "Access denied" });
     }
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await storage.deleteFeedbackComment(commentId);
     res.json({ success: true, message: "Comment deleted" });
   } catch (error: unknown) {
@@ -292,12 +281,10 @@ router.delete('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
       return res.status(403).json({ success: false, error: "Access denied" });
     }
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (feedback.userId !== req.user) {
       return res.status(403).json({ success: false, error: "Only the author can delete this feedback" });
     }
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await storage.deleteFeedback(id);
     res.json({ success: true, message: "Feedback deleted" });
   } catch (error: unknown) {

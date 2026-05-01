@@ -152,7 +152,7 @@ export default function SRAReportBuilder() {
         `SRA-Audit-Report-${Date.now()}.pdf`
       );
       setPdfSuccess(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setPdfError(err.message || "Failed to generate PDF.");
     } finally {
       setIsGeneratingPdf(false);

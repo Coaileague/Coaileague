@@ -134,7 +134,7 @@ export async function executePayrollAnomalyWorkflow(
       `detected ${anomalies.length} anomalies`,
       { count: anomalies.length, severities: anomalies.map((a) => a.severity) },
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     await logWorkflowStep(record, 'process', false, `detection failed: ${err?.message}`);
     await logWorkflowComplete(record, {
       success: false,
@@ -183,7 +183,7 @@ export async function executePayrollAnomalyWorkflow(
         );
       blocked = true;
       await logWorkflowStep(record, 'mutate', true, 'payroll run blocked pending review');
-    } catch (err: any) {
+    } catch (err: unknown) {
       await logWorkflowStep(record, 'mutate', false, `flag failed: ${err?.message}`);
     }
   } else {
@@ -221,7 +221,7 @@ export async function executePayrollAnomalyWorkflow(
         blocked,
       },
     } as any);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[payroll-anomaly] event publish failed:', err?.message);
   }
 
@@ -284,11 +284,11 @@ export async function runPayrollAnomalyScan(): Promise<{
           triggerSource: 'cron_scan',
         });
         if (wfResult.blocked) result.blocked++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         result.errors.push(`${run.id}:${err?.message}`);
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     result.errors.push(`scan:${err?.message}`);
   }
   return result;
@@ -362,7 +362,7 @@ async function notifyStakeholders(params: {
           ),
         ),
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[payroll-anomaly] manager SMS failed:', err?.message);
     }
   }

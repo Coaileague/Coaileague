@@ -115,7 +115,7 @@ async function seedOne(seed: StateSeed): Promise<boolean> {
       ON CONFLICT (state_code) DO NOTHING
     `);
     return true;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[multiStateSeed] ${seed.stateCode} seed failed:`, err?.message);
     return false;
   }

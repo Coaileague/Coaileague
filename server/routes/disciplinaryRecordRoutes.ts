@@ -259,7 +259,7 @@ router.post('/finalize', requireAuth, async (req: AuthenticatedRequest, res) => 
           message: firstSigner.message,
         });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[Disciplinary] send-for-signature failed (non-fatal):', err?.message);
     }
 
@@ -280,7 +280,7 @@ router.post('/finalize', requireAuth, async (req: AuthenticatedRequest, res) => 
         log.info(
           `[DisciplinaryScore] Deducted ${points}pts from ${subjectId} for ${documentType}`,
         );
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[DisciplinaryScore] Deduction failed (non-fatal):', err?.message);
       }
     });
@@ -306,7 +306,7 @@ router.post('/finalize', requireAuth, async (req: AuthenticatedRequest, res) => 
             }),
           ],
         );
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[Disciplinary] event-log insert failed (non-fatal):', err?.message);
       }
     });

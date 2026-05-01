@@ -122,14 +122,14 @@ export default function HRISManagementPage() {
 
   const providers = providersQuery.data?.providers || [];
   const connections = connectionsQuery.data?.connections || [];
-  const connectedProviderIds = new Set(connections.map((c: any) => c.provider || c.id));
+  const connectedProviderIds = new Set(connections.map((c) => c.provider || c.id));
   const isLoading = providersQuery.isLoading || connectionsQuery.isLoading;
 
   const summaryCards = [
     { label: "Connected", value: connections.length.toString(), icon: Link2, color: "text-green-500" },
     { label: "Last Sync", value: connections.length > 0 && connections[0]?.lastSync ? new Date(connections[0].lastSync).toLocaleDateString() : "Never", icon: Clock, color: "text-blue-500" },
     { label: "Synced", value: connections.reduce((sum: number, c: any) => sum + (c.employeeCount || 0), 0).toString(), icon: Users, color: "text-purple-500" },
-    { label: "Health", value: connections.every((c: any) => c.status === "healthy" || c.status === "connected") ? "Healthy" : connections.length === 0 ? "--" : "Issues", icon: ShieldCheck, color: "text-orange-500" },
+    { label: "Health", value: connections.every((c) => c.status === "healthy" || c.status === "connected") ? "Healthy" : connections.length === 0 ? "--" : "Issues", icon: ShieldCheck, color: "text-orange-500" },
   ];
 
   return (
@@ -219,10 +219,10 @@ export default function HRISManagementPage() {
             </Card>
           ) : (
             <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {providers.map((provider: any) => {
+              {providers.map((provider) => {
                 const providerId = provider.id || provider.name?.toLowerCase();
                 const isConnected = connectedProviderIds.has(providerId);
-                const connection = connections.find((c: any) => (c.provider || c.id) === providerId);
+                const connection = connections.find((c) => (c.provider || c.id) === providerId);
 
                 return (
                   <Card key={providerId} className="hover-elevate" data-testid={`card-provider-${providerId}`}>

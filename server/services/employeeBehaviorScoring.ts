@@ -222,7 +222,6 @@ export class EmployeeBehaviorScoringService {
       shiftCompletionRate: newCompletionRate.toString(),
       dataPointsCount: (current.dataPointsCount || 0) + 1,
       lastModelUpdate: new Date(),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       updatedAt: new Date(),
     };
     
@@ -241,7 +240,6 @@ export class EmployeeBehaviorScoringService {
     }
     
     await db.update(employeeBehaviorScores)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .set(updates)
       .where(eq(employeeBehaviorScores.employeeId, employeeId));
   }

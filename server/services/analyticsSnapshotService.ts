@@ -508,7 +508,6 @@ export function registerAnalyticsBIActions(): void {
   platformActionHub.registerAction({
     actionId: 'search.query',
     name: 'Global Search',
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     category: 'search',
     description: 'Search across officers, clients, shifts, invoices, incidents and documents. Returns grouped results with deep links.',
     requiredRoles: ['owner', 'co_owner', 'manager', 'supervisor', 'officer'],
@@ -559,7 +558,6 @@ export function registerAnalyticsBIActions(): void {
   platformActionHub.registerAction({
     actionId: 'privacy.dsr_create',
     name: 'Submit Data Subject Request',
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     category: 'privacy',
     description: 'Submit a GDPR/CCPA data subject request (access, portability, erasure, correction, restriction, objection).',
     requiredRoles: ['owner', 'co_owner', 'manager', 'supervisor', 'officer'],
@@ -581,7 +579,6 @@ export function registerAnalyticsBIActions(): void {
   platformActionHub.registerAction({
     actionId: 'privacy.data_export',
     name: 'Request Personal Data Export',
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     category: 'privacy',
     description: 'Generate a 48-hour download link for an officer personal data export (all 10 data categories).',
     requiredRoles: ['owner', 'co_owner', 'manager'],
@@ -598,7 +595,6 @@ export function registerAnalyticsBIActions(): void {
   platformActionHub.registerAction({
     actionId: 'privacy.anonymize',
     name: 'Anonymize Officer PII',
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     category: 'privacy',
     description: 'Irreversibly anonymize all PII for a former officer (GDPR erasure). Payroll, time, and compliance records are retained. Requires platform_staff role.',
     requiredRoles: ['owner'],

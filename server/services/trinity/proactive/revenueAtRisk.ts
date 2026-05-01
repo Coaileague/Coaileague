@@ -63,7 +63,7 @@ export async function runRevenueAtRiskSweep(): Promise<RevenueAtRiskResult> {
   let workspaces: string[];
   try {
     workspaces = await listActiveWorkspaces();
-  } catch (err: any) {
+  } catch (err: unknown) {
     result.errors.push(`workspaces:${err?.message}`);
     return result;
   }
@@ -83,7 +83,7 @@ export async function runRevenueAtRiskSweep(): Promise<RevenueAtRiskResult> {
       result.churnClientsFlagged += per.churnClientsFlagged;
       result.unfilledShiftsFlagged += per.unfilledShiftsFlagged;
       result.totalAtRiskDollars += per.totalAtRiskDollars;
-    } catch (err: any) {
+    } catch (err: unknown) {
       result.errors.push(`${workspaceId}:${err?.message}`);
       log.warn(`[revenueAtRisk] workspace ${workspaceId} failed:`, err?.message);
     }
@@ -226,7 +226,7 @@ export async function runRevenueAtRiskForWorkspace(workspaceId: string): Promise
       severity: tally.totalAtRiskDollars > 10000 ? 'high' : 'medium',
       metadata: { workflow: WORKFLOW_NAME, ...tally },
     } as any);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[revenueAtRisk] event publish failed (non-fatal):', err?.message);
   }
 
@@ -316,7 +316,7 @@ async function findExpiringContracts(workspaceId: string): Promise<ExpiringContr
       daysUntilExpiry: Number(row.days_until_expiry || 0),
       clientName: row.client_name,
     }));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[revenueAtRisk] contract lookup failed:', err?.message);
     return [];
   }
@@ -359,7 +359,7 @@ async function findChurnRiskClients(workspaceId: string): Promise<ChurnClient[]>
       name: row.name,
       daysInactive: Number(row.days_inactive || 0),
     }));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[revenueAtRisk] churn lookup failed:', err?.message);
     return [];
   }
@@ -395,7 +395,7 @@ async function findUnfilledShifts(workspaceId: string): Promise<UnfilledShift[]>
       startTime: new Date(row.start_time),
       ageHours: Math.floor(Number(row.age_hours || 0)),
     }));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[revenueAtRisk] unfilled shift lookup failed:', err?.message);
     return [];
   }
@@ -474,7 +474,7 @@ interface FanoutPayload {
   entityType: string;
   entityId: string;
   severity: 'low' | 'medium' | 'high';
-  details: Record<string, any>;
+  details: Record<string, unknown>;
 }
 
 async function fanoutInApp(
@@ -547,7 +547,7 @@ async function recordFlag(
         dedupKey,
       ],
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[revenueAtRisk] audit write failed (non-fatal):', err?.message);
   }
 }

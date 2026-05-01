@@ -457,7 +457,6 @@ router.post('/fixes/propose', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'findingId is required' });
     }
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const spec = await autonomousFixPipeline.generateFixSpecification(parseInt(findingId));
     
     if (!spec) {
@@ -1196,13 +1195,9 @@ router.get('/ai-usage/summary', async (req: any, res: Response) => {
       success: true,
       period: { days },
       summary: {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         totalCalls: parseInt(totals.total_calls),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         totalTokens: parseInt(totals.total_tokens),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         totalCredits: parseInt(totals.total_credits),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         avgResponseMs: Math.round(parseFloat(totals.avg_response_ms)),
       },
       byCallType: byTypeResult.rows.map((r: any) => ({

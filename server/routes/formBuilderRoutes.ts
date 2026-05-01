@@ -193,7 +193,7 @@ router.patch("/forms/:id", async (req: AuthenticatedRequest, res) => {
       return res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
     }
 
-    const updateData: Record<string, any> = { updatedAt: new Date() };
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
     for (const [key, value] of Object.entries(parsed.data)) {
       if (value !== undefined) updateData[key] = value;
     }
@@ -446,7 +446,7 @@ router.patch("/submissions/:id", async (req: AuthenticatedRequest, res) => {
       return res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
     }
 
-    const updateData: Record<string, any> = { updatedAt: new Date() };
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
     const { data } = parsed;
     if (data.status !== undefined) updateData.status = data.status;
     if (data.formData !== undefined) updateData.formData = data.formData;
@@ -662,7 +662,7 @@ router.post("/forms/:formId/submissions/:submissionId/approve", async (req: Auth
     const now = new Date();
     const newStatus = approved ? "approved" : "rejected";
 
-    const updateFields: Record<string, any> = {
+    const updateFields: Record<string, unknown> = {
       status: newStatus,
       approvalNotes: notes || null,
       updatedAt: now,

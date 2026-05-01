@@ -111,7 +111,7 @@ export function useCreateBroadcast() {
         description: 'Your broadcast has been sent to recipients.',
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         variant: 'destructive',
         title: 'Failed to Create Broadcast',
@@ -139,7 +139,7 @@ export function useCreatePlatformBroadcast() {
         description: 'Your broadcast has been sent platform-wide.',
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         variant: 'destructive',
         title: 'Failed to Create Broadcast',
@@ -182,7 +182,7 @@ export function useAcknowledgeBroadcast() {
         description: 'Your acknowledgment has been recorded.',
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         variant: 'destructive',
         title: 'Failed to Acknowledge',
@@ -204,7 +204,7 @@ export function useDismissBroadcast() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/broadcasts/my'] });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       // Don't show error for expected "can't dismiss critical" error
       console.error('Dismiss error:', error);
     },
@@ -232,7 +232,7 @@ export function useSubmitBroadcastFeedback() {
         description: 'Thank you for your feedback!',
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         variant: 'destructive',
         title: 'Failed to Submit Feedback',
@@ -260,7 +260,7 @@ export function useUpdateBroadcast() {
         description: 'Changes have been saved.',
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         variant: 'destructive',
         title: 'Failed to Update',
@@ -288,7 +288,7 @@ export function useDeleteBroadcast() {
         description: 'The broadcast has been removed.',
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         variant: 'destructive',
         title: 'Failed to Delete',

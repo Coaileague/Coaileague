@@ -157,12 +157,12 @@ export default function SupportAIConsole() {
       const response = await apiRequest('POST', '/api/ai-brain/console/chat', data);
       return response.json();
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       setConversationId(data.conversationId);
       setMessages(data.conversation || []);
       queryClient.invalidateQueries({ queryKey: ['/api/ai-brain/console/history'] });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to send message",
@@ -176,11 +176,11 @@ export default function SupportAIConsole() {
       const response = await apiRequest('POST', '/api/ai-brain/console/files/read', { filePath });
       return response.json();
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       setFileContent(data.content || '');
       setSelectedFile(data.path);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error reading file",
         description: error.message || "Failed to read file",
@@ -202,7 +202,7 @@ export default function SupportAIConsole() {
       });
       refetchFiles();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error saving file",
         description: error.message || "Failed to save file",
@@ -216,7 +216,7 @@ export default function SupportAIConsole() {
       const response = await apiRequest('POST', '/api/ai-brain/console/files/search', data);
       return response.json();
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       toast({
         title: "Search complete",
         description: `Found ${data.matches?.length || 0} matches`,
@@ -229,14 +229,14 @@ export default function SupportAIConsole() {
       const response = await apiRequest('POST', '/api/ai-brain/console/tests/run', data);
       return response.json();
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       toast({
         title: "Tests completed",
         description: `${data.passed}/${data.total} tests passed`,
         variant: data.passed === data.total ? "default" : "destructive",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Test error",
         description: error.message || "Failed to run tests",

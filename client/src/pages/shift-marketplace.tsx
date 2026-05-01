@@ -185,7 +185,7 @@ function OpenShiftsTab({ shifts, clients, employees, isLoading }: {
       toast({ title: 'Shift claimed!', description: 'You have been assigned to this shift.' });
       queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: 'Unable to claim shift', description: error.message, variant: 'destructive' });
     },
   });
@@ -315,7 +315,7 @@ function SwapBoardTab({ isLoading: shiftsLoading }: { isLoading: boolean }) {
       queryClient.invalidateQueries({ queryKey: ['/api/scheduling/swap-requests'] });
       queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: 'Failed to approve', description: error.message, variant: 'destructive' });
     },
   });
@@ -329,7 +329,7 @@ function SwapBoardTab({ isLoading: shiftsLoading }: { isLoading: boolean }) {
       toast({ title: 'Swap request rejected' });
       queryClient.invalidateQueries({ queryKey: ['/api/scheduling/swap-requests'] });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: 'Failed to reject', description: error.message, variant: 'destructive' });
     },
   });
@@ -458,7 +458,7 @@ function MyRequestsTab() {
       toast({ title: 'Request cancelled' });
       queryClient.invalidateQueries({ queryKey: ['/api/scheduling/swap-requests'] });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: 'Failed to cancel request', description: error.message, variant: 'destructive' });
     },
   });
@@ -569,7 +569,7 @@ function CoveragePoolTab() {
   }
 
   const postShift = useMutation({
-    mutationFn: (data: any) =>
+    mutationFn: (data) =>
       apiRequest("POST", "/api/coverage/trigger", { ...data, workspaceId }),
     onSuccess: () => {
       invalidate();
@@ -577,7 +577,7 @@ function CoveragePoolTab() {
       setForm({ siteName: "", shiftDate: "", shiftStart: "", shiftEnd: "", payRate: "", notes: "" });
       toast({ title: "Shift posted to coverage pool" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const claimShift = useMutation({
@@ -588,7 +588,7 @@ function CoveragePoolTab() {
         claimedByName: user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.email,
       }),
     onSuccess: () => { invalidate(); toast({ title: "Shift claimed successfully" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const approveShift = useMutation({
@@ -598,7 +598,7 @@ function CoveragePoolTab() {
         approvedBy: user?.id,
       }),
     onSuccess: () => { invalidate(); toast({ title: "Claim approved" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const list: any[] = coverageData?.shifts || [];
@@ -664,7 +664,7 @@ function CoveragePoolTab() {
         />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {list.map((shift: any) => (
+          {list.map((shift) => (
             <Card key={shift.id} data-testid={`card-coverage-${shift.id}`}>
               <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2 flex-wrap">
                 <div className="min-w-0 flex-1">

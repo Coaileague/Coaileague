@@ -65,7 +65,7 @@ async function runHealthChecks(): Promise<ServiceHealth[]> {
       responseTimeMs: Date.now() - start,
       lastChecked: new Date().toISOString(),
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     checks.push({
       name: 'Database',
       status: 'outage',
@@ -152,7 +152,7 @@ async function runHealthChecks(): Promise<ServiceHealth[]> {
       lastChecked: new Date().toISOString(),
       details: `${report.healthy_domains}/${report.total_domains} domains healthy`,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     checks.push({
       name: 'Trinity Domain Health',
       status: 'degraded',
@@ -203,7 +203,7 @@ statusRouter.get('/', async (req, res) => {
       incidents: recentIncidents,
       lastUpdated: new Date().toISOString(),
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[StatusRoutes] GET /status error:', err.message);
     return res.status(500).json({ error: 'Status check failed' });
   }
@@ -224,7 +224,7 @@ statusRouter.post('/subscribe', async (req, res) => {
     );
 
     return res.json({ success: true, message: 'Subscribed to platform status updates' });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[StatusRoutes] subscribe error:', err.message);
     return res.status(500).json({ error: 'Failed to subscribe' });
   }
@@ -239,7 +239,7 @@ statusRouter.get('/unsubscribe/:token', async (req, res) => {
       [token]
     );
     return res.json({ success: true, message: 'Unsubscribed from status updates' });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[StatusRoutes] unsubscribe error:', err.message);
     return res.status(500).json({ error: 'Failed to unsubscribe' });
   }
@@ -280,7 +280,7 @@ statusRouter.get('/admin', requireAuth, async (req: any, res) => {
       lastUpdated: new Date().toISOString(),
       checkIntervalSeconds: 60,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[StatusRoutes] admin status error:', err.message);
     return res.status(500).json({ error: 'Status check failed' });
   }
@@ -296,7 +296,7 @@ platformFlagRouter.get('/', requireAuth, async (req: any, res) => {
     }
     const flags = await listPlatformFlags();
     return res.json({ flags });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to fetch flags' });
   }
 });
@@ -328,7 +328,7 @@ platformFlagRouter.post('/', requireAuth, async (req: any, res) => {
     });
 
     return res.json({ flag });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to save flag. Please try again.' });
   }
 });
@@ -345,7 +345,7 @@ platformFlagRouter.delete('/:key', requireAuth, async (req: any, res) => {
     invalidateFlagCache(key);
 
     return res.json({ success: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to delete flag' });
   }
 });
@@ -376,7 +376,7 @@ export function registerBackupVerificationCron(): void {
           changeType: 'read',
           metadata: { responseMs: ms, workspaceCount: rows[0]?.workspace_count, status: 'verified' },
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.error('[BackupVerification] Verification FAILED:', err.message);
         // Alert platform staff
         log.error('[BackupVerification] ALERT: Backup verification failure — manual check required');

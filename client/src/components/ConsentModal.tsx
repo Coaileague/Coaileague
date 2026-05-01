@@ -86,7 +86,7 @@ export function ConsentModal({ open, onAccepted }: ConsentModalProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/legal/pending-agreements"] });
       onAccepted();
     },
-    onError: (err: any) => {
+    onError: (err) => {
       setError(err?.message || "Failed to record acceptance. Please try again.");
     },
   });

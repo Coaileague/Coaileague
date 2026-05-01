@@ -8,7 +8,6 @@ const termsConfig: CanvasPageConfig = {
   id: 'terms-of-service',
   title: 'Terms of Service',
   category: 'legal',
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   variant: 'default',
   showHeader: false,
 };

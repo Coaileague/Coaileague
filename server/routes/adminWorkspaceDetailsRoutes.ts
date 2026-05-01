@@ -14,7 +14,6 @@ import { createLogger } from '../lib/logger';
 const log = createLogger('AdminWorkspaceDetails');
 const router = Router();
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 const requirePlatformStaff = requirePlatformRole(['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'platform_staff', 'compliance_officer']);
 
 // ============================================================================

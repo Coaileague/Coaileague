@@ -66,7 +66,7 @@ export interface BotAIRequest {
   userId?: string;
   action: string;
   prompt: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   maxTokens?: number;
 }
 

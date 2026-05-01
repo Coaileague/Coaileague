@@ -138,7 +138,7 @@ class PresenceMonitorService {
             departureId: depId
           }
         }).catch((err) => log.warn('[presenceMonitorService] Fire-and-forget failed:', err));
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.error('[Presence] Failed to trigger CAD geofence departure:', (err instanceof Error ? err.message : String(err)));
       }
     }

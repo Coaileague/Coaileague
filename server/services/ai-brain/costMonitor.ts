@@ -119,7 +119,6 @@ class AICostMonitorService {
     inputTokens: number,
     outputTokens: number
   ): number {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const pricing = API_PRICING[ai] || API_PRICING.gemini;
     const inputCost = (inputTokens / 1_000_000) * pricing.inputPer1M;
     const outputCost = (outputTokens / 1_000_000) * pricing.outputPer1M;

@@ -975,7 +975,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
               startDate: createdInvoice.issueDate ? new Date(createdInvoice.issueDate) : new Date(),
               createdBy: userId,
             });
-          } catch (revErr: any) {
+          } catch (revErr: unknown) {
             log.warn('[InvoiceRoutes] Revenue schedule creation failed', { error: revErr?.message });
               // Non-fatal: invoice is created but revenue ledger may need manual reconciliation
               // This is surfaced in the API response as a warning flag
@@ -1190,7 +1190,6 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
       // Only reverse open AR (statuses that had an invoice_created debit recorded)
       if (status && ['void', 'cancelled'].includes(status) && currentInvoiceState) {
         const arOpenStatuses = ['sent', 'partial', 'overdue', 'draft'];
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         if (arOpenStatuses.includes(currentInvoiceState.status)) {
           // RC4 (Phase 2): AR reversal uses Decimal.js subtraction to avoid floating-point drift.
           const fullTotalStr = toFinancialString(String(currentInvoiceState.total || updated.total || 0));
@@ -1518,7 +1517,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
           parseFloat(String(updated.total || 0)),
           userId,
         );
-      } catch (revErr: any) {
+      } catch (revErr: unknown) {
         log.warn('[InvoiceRoutes] Cash revenue recognition failed', { error: revErr?.message });
               // Revenue ledger needs manual reconciliation — check universalAuditTrail
       }
@@ -1715,14 +1714,14 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
               try {
                 const { financialProcessingFeeService } = await import('../services/billing/financialProcessingFeeService');
                 await financialProcessingFeeService.recordInvoiceFee({ workspaceId: workspace.id, referenceId: id });
-              } catch (err: any) {
+              } catch (err: unknown) {
                 log.warn('[MarkPaid] Fee ledger record failed (non-fatal):', err?.message);
               }
               // Platform revenue tracking: write to platform_revenue table
               try {
                 const { recordMiddlewareFeeCharge } = await import('../services/finance/middlewareFeeService');
                 await recordMiddlewareFeeCharge(workspace.id, 'invoice_payment', feeResult.amountCents, id);
-              } catch (err: any) {
+              } catch (err: unknown) {
                 log.warn('[MarkPaid] Platform revenue record failed (non-fatal):', err?.message);
               }
             }
@@ -2889,7 +2888,6 @@ router.post('/portal/:accessToken/invoice/:invoiceId/create-payment-intent', asy
 // functional without duplicating the service logic.
 router.post(
   '/generate-from-hours',
-  // @ts-expect-error — TS migration: requireWorkspaceRole type
   requireWorkspaceRole(['org_owner', 'co_owner']),
   async (req: Request, res: Response) => {
     try {

@@ -66,7 +66,7 @@ export interface ManagedKey {
   lastRotatedAt?: Date;
   rotationCount: number;
   workspaceId?: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export interface RotationPolicy {
@@ -214,7 +214,7 @@ class ApiKeyRotationService {
     keyType: KeyType;
     workspaceId?: string;
     expiresInDays?: number;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<{ keyId: string; keyValue: string }> {
     const keyId = crypto.randomUUID();
     const policy = this.policies.get(params.keyType);
@@ -230,7 +230,6 @@ class ApiKeyRotationService {
 
     try {
       // CATEGORY C — Raw SQL retained: ::jsonb | Tables: managed_api_keys | Verified: 2026-03-23
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(managedApiKeys).values({
         id: keyId,
         name: params.name,
@@ -490,7 +489,6 @@ class ApiKeyRotationService {
     reason?: string,
     performedBy?: string
   ): Promise<void> {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(keyRotationHistory).values({
       keyId: keyId,
       action: action,

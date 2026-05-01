@@ -148,7 +148,7 @@ export async function seedDemoTenant(): Promise<DemoSeedResult> {
       message: 'Demo tenant created.',
       counts: { clients: 5, employees: 6, shifts: 5, invoices: 2 },
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[demoTenantSeed] failed:', err?.message);
     return {
       success: false,

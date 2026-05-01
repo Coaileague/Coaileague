@@ -107,7 +107,6 @@ async function setupCertificationsForEmployee(employeeId: string, role: string):
     for (const certType of certsToCreate) {
       const dueDate = addDays(new Date(), 30);
       
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(employeeCertifications).values({
         employeeId,
         certificationType: certType.id,

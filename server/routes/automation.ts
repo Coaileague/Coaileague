@@ -167,7 +167,6 @@ automationRouter.post('/schedule/generate', requireAuth, async (req: any, res: R
 
     // Handle insufficient credits
     if (!creditResult.success) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (creditResult.insufficientCredits) {
         return res.status(402).json({
           error: 'Insufficient credits',
@@ -186,7 +185,6 @@ automationRouter.post('/schedule/generate', requireAuth, async (req: any, res: R
     try {
       const { broadcastToWorkspace } = await import('../websocket');
       broadcastToWorkspace(req.workspaceId, { type: 'schedules_updated' });
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     } catch (e: unknown) { log.warn('[Automation] Broadcast failed:', e.message); }
 
     const _wsId1 = req.workspaceId || req.user?.currentWorkspaceId;
@@ -359,7 +357,6 @@ automationRouter.post('/invoice/generate', requireAuth, async (req: any, res: Re
 
     // Handle insufficient credits
     if (!creditResult.success) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (creditResult.insufficientCredits) {
         return res.status(402).json({
           error: 'Insufficient credits',
@@ -378,7 +375,6 @@ automationRouter.post('/invoice/generate', requireAuth, async (req: any, res: Re
     try {
       const { broadcastToWorkspace } = await import('../websocket');
       broadcastToWorkspace(req.workspaceId, { type: 'invoices_updated' });
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     } catch (e: unknown) { log.warn('[Automation] Broadcast failed:', e.message); }
 
     const _wsId2 = req.workspaceId || req.user?.currentWorkspaceId;
@@ -498,7 +494,6 @@ automationRouter.post('/invoice/anchor-close', requireAuth, async (req: any, res
     try {
       const { broadcastToWorkspace } = await import('../websocket');
       broadcastToWorkspace(req.workspaceId, { type: 'invoices_updated' });
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     } catch (e: unknown) { log.warn('[Automation] Broadcast failed:', e.message); }
 
     const _wsId3 = req.workspaceId || req.user?.currentWorkspaceId;
@@ -612,7 +607,6 @@ automationRouter.post('/payroll/generate', requireAuth, async (req: any, res: Re
 
     // Handle insufficient credits
     if (!creditResult.success) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (creditResult.insufficientCredits) {
         return res.status(402).json({
           error: 'Insufficient credits',
@@ -631,7 +625,6 @@ automationRouter.post('/payroll/generate', requireAuth, async (req: any, res: Re
     try {
       const { broadcastToWorkspace } = await import('../websocket');
       broadcastToWorkspace(req.workspaceId, { type: 'payroll_updated' });
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     } catch (e: unknown) { log.warn('[Automation] Broadcast failed:', e.message); }
 
     const _wsId4 = req.workspaceId || req.user?.currentWorkspaceId;
@@ -751,7 +744,6 @@ automationRouter.post('/payroll/anchor-close', requireAuth, async (req: any, res
     try {
       const { broadcastToWorkspace } = await import('../websocket');
       broadcastToWorkspace(req.workspaceId, { type: 'payroll_updated' });
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     } catch (e: unknown) { log.warn('[Automation] Broadcast failed:', e.message); }
 
     const _wsId5 = req.workspaceId || req.user?.currentWorkspaceId;
@@ -963,7 +955,6 @@ automationRouter.post('/compliance/scan', requireAuth, async (req: any, res: Res
 
     // Handle insufficient credits - MUST return error response
     if (!creditResult.success) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (creditResult.insufficientCredits) {
         return res.status(402).json({
           error: 'Insufficient credits',
@@ -985,7 +976,6 @@ automationRouter.post('/compliance/scan', requireAuth, async (req: any, res: Res
     // Create audit event for compliance scan
     await storage.createAuditEvent({
       workspaceId: req.workspaceId,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       actorId: req.user?.id,
       actorType: 'AI_AGENT',
       actorName: req.user?.firstName ? `${req.user.firstName} ${req.user.lastName || ''}`.trim() : 'AI Brain',

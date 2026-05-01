@@ -73,7 +73,6 @@ class ForceClockPdfService {
     const allWorkspaces = await db
       .select({ id: workspaces.id, companyName: workspaces.companyName, name: workspaces.name })
       .from(workspaces)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .where(eq(workspaces.isActive, true));
 
     log.info(`[ForceClockPdf] Running weekly report for ${allWorkspaces.length} workspaces`);
@@ -255,7 +254,6 @@ class ForceClockPdfService {
               title: 'Force Clock Audit Report Ready',
               message: `Weekly force clock audit complete: ${entries.length} force clocks, ${flaggedCount} flagged patterns detected. Review the report in Documents.`,
               metadata: { documentId: docId, category: 'force_clock_reports', flaggedCount },
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               priority: flaggedCount >= 3 ? 'critical' : 'high',
               idempotencyKey: `compliance_alert-${Date.now()}-${o.userId}`
             });
@@ -267,7 +265,7 @@ class ForceClockPdfService {
 
       log.info(`[ForceClockPdf] Report saved for workspace ${workspaceId}: ${fileName}`);
       return { success: true, documentId: docId };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[ForceClockPdf] Error generating report for workspace ${workspaceId}:`, err);
       return { success: false, error: err?.message || String(err) };
     }

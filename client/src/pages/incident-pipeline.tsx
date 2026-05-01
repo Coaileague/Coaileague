@@ -135,7 +135,7 @@ export default function IncidentPipeline() {
       toast({ title: "Status Updated", description: "Incident status has been updated." });
       setManagerNotes("");
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Error", description: err.message || "Failed to update status", variant: "destructive" });
     },
   });
@@ -149,7 +149,7 @@ export default function IncidentPipeline() {
       qc.invalidateQueries({ queryKey: ["/api/incident-reports"] });
       toast({ title: "Trinity Analysis Complete", description: "The report has been polished by Trinity AI." });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Error", description: err.message || "Failed to process with Trinity", variant: "destructive" });
     },
   });

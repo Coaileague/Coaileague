@@ -442,7 +442,7 @@ async function applyAutomationUpdate(params: {
         .where(eq(workspaces.id, wsId))
         .limit(1);
       const current = ((existing?.brandingBlob || {}) as Record<string, any>);
-      const updatedBlob: Record<string, any> = { ...current, updatedAt: new Date().toISOString() };
+      const updatedBlob: Record<string, unknown> = { ...current, updatedAt: new Date().toISOString() };
       if (logoUrl !== undefined) updatedBlob.logoUrl = logoUrl;
       if (primaryColor !== undefined) updatedBlob.primaryColor = primaryColor;
       if (brandColor !== undefined) updatedBlob.primaryColor = brandColor;
@@ -451,7 +451,7 @@ async function applyAutomationUpdate(params: {
       if (hidePoweredBy !== undefined) updatedBlob.hidePoweredBy = hidePoweredBy;
       if (customDomain !== undefined) updatedBlob.customDomain = customDomain;
 
-      const directUpdates: Record<string, any> = { brandingBlob: updatedBlob };
+      const directUpdates: Record<string, unknown> = { brandingBlob: updatedBlob };
       if (logoUrl !== undefined) directUpdates.logoUrl = logoUrl || null;
       if (brandColor !== undefined) directUpdates.brandColor = brandColor || null;
       if (primaryColor !== undefined) directUpdates.brandColor = primaryColor || null;
@@ -678,7 +678,6 @@ async function applyAutomationUpdate(params: {
         });
       } catch (_) { /* audit is best-effort */ }
       
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const safeWorkspace = redactSensitiveWorkspaceFields(updated, (req.user)?.platformRole);
       
       res.json(safeWorkspace);
@@ -940,7 +939,6 @@ async function applyAutomationUpdate(params: {
 
       const updated = await storage.updateWorkspace(workspace.id, {
         subscriptionTier: tier,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         platformFeePercentage: config.fee,
         subscriptionStatus: "active",
       });
@@ -949,7 +947,6 @@ async function applyAutomationUpdate(params: {
         workspaceId: workspace.id,
         revenueType: "subscription",
         amount: config.price.toString(),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         platformFee: "0",
         description: `Upgraded to ${config.name} tier - $${config.price}/mo`,
       });
@@ -1374,7 +1371,7 @@ async function applyAutomationUpdate(params: {
       }
 
       const allowedFields = ['name', 'subOrgLabel', 'primaryOperatingState', 'operatingStates'];
-      const updates: Record<string, any> = { updatedAt: new Date() };
+      const updates: Record<string, unknown> = { updatedAt: new Date() };
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) {
           updates[field] = req.body[field];
@@ -1910,7 +1907,7 @@ router.post('/branding/logo', requireAuth, logoUpload.single('logo'), async (req
     }).where(eq(workspaces.id, wsId));
 
     res.json({ logoUrl: publicUrl });
-  } catch (error: any) {
+  } catch (error: unknown) {
     log.error('Logo upload error:', error?.message);
     res.status(500).json({ message: error?.message || 'Failed to upload logo' });
   }
@@ -1929,7 +1926,7 @@ router.get('/storage-usage', requireAuth, async (req: any, res) => {
     const { getStorageUsage } = await import('../services/storage/storageQuotaService');
     const usage = await getStorageUsage(workspaceId);
     res.json(usage);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[StorageUsage] GET /storage-usage failed:', err?.message);
     res.status(500).json({ message: 'Failed to retrieve storage usage' });
   }

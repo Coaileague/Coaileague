@@ -145,7 +145,7 @@ export function registerTrinityFrontierActions(orchestrator: any): void {
           status: 'operational',
           result: frustrationCheck.predictedOutcome
         });
-      } catch (e: any) {
+      } catch (e: unknown) {
         diagnostics.checks.push({ name: 'Chain-of-Action Reasoning', status: 'error', error: e.message });
       }
 
@@ -162,7 +162,7 @@ export function registerTrinityFrontierActions(orchestrator: any): void {
           status: 'operational',
           bottlenecksFound: simulation.results.filter(r => r.bottleneckDetected).length
         });
-      } catch (e: any) {
+      } catch (e: unknown) {
         diagnostics.checks.push({ name: 'Digital Twin Simulation', status: 'error', error: e.message });
       }
 

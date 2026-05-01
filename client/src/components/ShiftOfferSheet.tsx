@@ -47,7 +47,7 @@ export function ShiftOfferSheet({ offerId, open, onOpenChange }: ShiftOfferSheet
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
       onOpenChange(false);
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Could not accept", description: err.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -59,7 +59,7 @@ export function ShiftOfferSheet({ offerId, open, onOpenChange }: ShiftOfferSheet
       queryClient.invalidateQueries({ queryKey: ["/api/shifts/offers", offerId] });
       onOpenChange(false);
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Error", description: err.message || "Please try again.", variant: "destructive" });
     },
   });

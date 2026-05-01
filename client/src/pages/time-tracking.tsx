@@ -256,7 +256,7 @@ export default function TimeTracking() {
       }
       return result.response ? await result.response.json() : {};
     },
-    onSuccess: (result: any) => {
+    onSuccess: (result) => {
       markCoreActionPerformed();
       if (result?.queued) {
         trinity.info("You're offline. Your clock-in has been saved and will sync when connected.", "Queued Offline");
@@ -280,7 +280,7 @@ export default function TimeTracking() {
       setCameraSupported(true);
       stopCamera();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       trinity.error(error.message || "Failed to clock in. Please try again.", "Clock In Failed");
     },
   });
@@ -306,7 +306,7 @@ export default function TimeTracking() {
       }
       return result.response ? await result.response.json() : {};
     },
-    onSuccess: (result: any) => {
+    onSuccess: (result) => {
       if (result?.queued) {
         trinity.info("You're offline. Your clock-out has been saved and will sync when connected.", "Queued Offline");
       } else {
@@ -322,7 +322,7 @@ export default function TimeTracking() {
       setCameraSupported(true);
       stopCamera();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       trinity.error(error.message || "Failed to clock out. Please try again.", "Clock Out Failed");
     },
   });
@@ -336,7 +336,7 @@ export default function TimeTracking() {
       queryClient.invalidateQueries({ queryKey: queryKeys.timeEntries.all });
       trinity.info(`Enjoy your ${variables.breakType === 'meal' ? 'meal' : 'rest'} break! Take your time.`, "Break Started");
     },
-    onError: (error: any) => {
+    onError: (error) => {
       trinity.error(error.message || "Failed to start break. Please try again.", "Break Start Failed");
     },
   });
@@ -350,7 +350,7 @@ export default function TimeTracking() {
       queryClient.invalidateQueries({ queryKey: queryKeys.timeEntries.all });
       trinity.info("Welcome back! You're now on the clock again.", "Break Ended");
     },
-    onError: (error: any) => {
+    onError: (error) => {
       trinity.error(error.message || "Failed to end break. Please try again.", "Break End Failed");
     },
   });
@@ -361,7 +361,7 @@ export default function TimeTracking() {
       queryClient.invalidateQueries({ queryKey: queryKeys.timeEntries.all });
       trinity.success("Time entry approved successfully!", "Entry Approved");
     },
-    onError: (error: any) => {
+    onError: (error) => {
       trinity.error(error.message || "Failed to approve entry. Please try again.", "Approval Failed");
     },
   });
@@ -375,7 +375,7 @@ export default function TimeTracking() {
       setRejectingEntryId(null);
       setRejectReason("");
     },
-    onError: (error: any) => {
+    onError: (error) => {
       trinity.error(error.message || "Failed to reject entry. Please try again.", "Rejection Failed");
     },
   });
@@ -889,7 +889,7 @@ export default function TimeTracking() {
       trinity.success(`Successfully approved ${count} time entries!`, "Bulk Approval Complete");
       setBulkSelectedEmployees(new Set());
     },
-    onError: (error: any) => {
+    onError: (error) => {
       trinity.error(error.message || "Failed to approve entries", "Bulk Approval Failed");
     },
   });

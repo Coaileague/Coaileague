@@ -129,7 +129,7 @@ async function hasAuthoritativeSupportRole(
 }
 
 // Helper to log audit entries — writes to canonical audit_logs table
-async function logEmailAudit(data: Record<string, any>) {
+async function logEmailAudit(data: Record<string, unknown>) {
   try {
     await db.insert(auditLogs).values({
       workspaceId: data.workspaceId || 'system',
@@ -158,7 +158,7 @@ async function logEmailAudit(data: Record<string, any>) {
 }
 
 // Helper to emit Trinity event (for AI Brain awareness)
-async function emitTrinityEmailEvent(eventType: string, data: Record<string, any>) {
+async function emitTrinityEmailEvent(eventType: string, data: Record<string, unknown>) {
   try {
     // Import dynamically to avoid circular dependencies
     const { emitTrinityEvent } = await import('../services/trinity/eventBus');
@@ -269,7 +269,6 @@ router.post("/mailbox", requireAuth, async (req: Request, res: Response) => {
 
     const mailbox = await db.transaction(async (tx) => {
       const [mb] = await tx.insert(internalMailboxes).values({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         userId: user.id,
         workspaceId: user.currentWorkspaceId || null,
         emailAddress: validated.emailAddress,
@@ -333,7 +332,6 @@ router.get("/mailbox/auto-create", requireAuth, async (req: Request, res: Respon
         }).returning();
       } catch (insertError: unknown) {
         // Handle race condition - mailbox may have been created by another request
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         if (insertError?.code === '23505') {
           mailbox = await db.query.internalMailboxes.findFirst({
             where: and(
@@ -522,7 +520,6 @@ router.get("/inbox", requireAuth, async (req: Request, res: Response) => {
     let folderRecord = await db.query.internalEmailFolders.findFirst({
       where: and(
         eq(internalEmailFolders.mailboxId, mailbox.id),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         eq(internalEmailFolders.folderType, folder as string)
       ),
     });
@@ -928,7 +925,6 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
               .from(internalEmailFolders)
               .where(and(
                 eq(internalEmailFolders.mailboxId, recipientMailbox.id),
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 eq(internalEmailFolders.folderType, targetFolderType)
               ))
               .limit(1);
@@ -1086,7 +1082,6 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
             folder: 'support',
             channel: 'email',
           },
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           conversation_id: email.threadId,
         }).catch(() => {});
         log.info(`[SupportEmailGap] HelpAI notified of support email: ${email.id}`);

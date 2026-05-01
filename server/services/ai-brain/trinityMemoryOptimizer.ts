@@ -145,7 +145,7 @@ class TrinityMemoryOptimizer {
         const consolidateResult = await this.consolidateDuplicateKnowledge(false).catch(() => null);
         if (consolidateResult) consolidated = consolidateResult.recordsConsolidated;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn(`[MemoryOptimizer] Nightly consolidation for ${workspaceId} failed (non-fatal):`, err?.message);
     }
 
@@ -204,7 +204,7 @@ class TrinityMemoryOptimizer {
       });
 
       log.info(`[MemoryOptimizer] Full optimization complete: ${totalDeleted} deleted, ${totalDecayed} decayed, ${totalConsolidated} consolidated`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[MemoryOptimizer] Full optimization failed:', error);
     } finally {
       this.isOptimizing = false;
@@ -245,7 +245,7 @@ class TrinityMemoryOptimizer {
       const totalDeleted = turnsResult.length + sessionsResult.length;
       log.info(`[MemoryOptimizer] Cleaned ${sessionsResult.length} sessions + ${turnsResult.length} turns older than 60 days`);
       return this.makeResult('conversation_sessions', staleCount, 0, totalDeleted, 0, 0, Date.now() - startTime, true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[MemoryOptimizer] Conversation cleanup failed:', error);
       return this.makeResult('conversation_sessions', 0, 0, 0, 0, 0, Date.now() - startTime, false, (error instanceof Error ? error.message : String(error)));
     }
@@ -273,7 +273,7 @@ class TrinityMemoryOptimizer {
 
       log.info(`[MemoryOptimizer] Cleaned ${result.length} knowledge gap logs older than 90 days`);
       return this.makeResult('knowledge_gap_logs', staleCount, 0, result.length, 0, 0, Date.now() - startTime, true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[MemoryOptimizer] Knowledge gap cleanup failed:', error);
       return this.makeResult('knowledge_gap_logs', 0, 0, 0, 0, 0, Date.now() - startTime, false, (error instanceof Error ? error.message : String(error)));
     }
@@ -301,7 +301,7 @@ class TrinityMemoryOptimizer {
 
       log.info(`[MemoryOptimizer] Cleaned ${result.length} automation ledger entries older than 180 days`);
       return this.makeResult('automation_action_ledger', staleCount, 0, result.length, 0, 0, Date.now() - startTime, true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[MemoryOptimizer] Automation ledger cleanup failed:', error);
       return this.makeResult('automation_action_ledger', 0, 0, 0, 0, 0, Date.now() - startTime, false, (error instanceof Error ? error.message : String(error)));
     }
@@ -347,7 +347,7 @@ class TrinityMemoryOptimizer {
 
       log.info(`[MemoryOptimizer] Pruned ${result.length} low-value AI learning events older than 120 days`);
       return this.makeResult('ai_learning_events', staleCount, 0, result.length, 0, 0, Date.now() - startTime, true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[MemoryOptimizer] AI learning event pruning failed:', error);
       return this.makeResult('ai_learning_events', 0, 0, 0, 0, 0, Date.now() - startTime, false, (error instanceof Error ? error.message : String(error)));
     }
@@ -385,7 +385,7 @@ class TrinityMemoryOptimizer {
 
       log.info(`[MemoryOptimizer] Cleaned ${result.length} strategy adaptations older than 180 days`);
       return this.makeResult('ai_learning_events', staleCount, 0, result.length, 0, 0, Date.now() - startTime, true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[MemoryOptimizer] Strategy adaptation cleanup failed:', error);
       return this.makeResult('ai_learning_events', 0, 0, 0, 0, 0, Date.now() - startTime, false, (error instanceof Error ? error.message : String(error)));
     }
@@ -429,7 +429,7 @@ class TrinityMemoryOptimizer {
 
       log.info(`[MemoryOptimizer] Cleaned ${result.length} A2A messages older than 30 days`);
       return this.makeResult('a2a_messages', staleCount, 0, result.length, 0, 0, Date.now() - startTime, true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[MemoryOptimizer] A2A message cleanup failed:', error);
       return this.makeResult('a2a_messages', 0, 0, 0, 0, 0, Date.now() - startTime, false, (error instanceof Error ? error.message : String(error)));
     }
@@ -442,18 +442,13 @@ class TrinityMemoryOptimizer {
     try {
       const countResult = await db
         .select({ count: sql<number>`count(*)::int` })
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .from(aiBrainJobQueue)
         .where(
           and(
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             lt(aiBrainJobQueue.createdAt, cutoff),
             or(
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               eq(aiBrainJobQueue.status, 'completed'),
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               eq(aiBrainJobQueue.status, 'failed'),
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               eq(aiBrainJobQueue.status, 'cancelled')
             )
           )
@@ -465,28 +460,22 @@ class TrinityMemoryOptimizer {
       }
 
       const result = await db
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .delete(aiBrainJobQueue)
         .where(
           and(
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             lt(aiBrainJobQueue.createdAt, cutoff),
             or(
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               eq(aiBrainJobQueue.status, 'completed'),
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               eq(aiBrainJobQueue.status, 'failed'),
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               eq(aiBrainJobQueue.status, 'cancelled')
             )
           )
         )
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .returning({ id: aiBrainJobQueue.id });
 
       log.info(`[MemoryOptimizer] Cleaned ${result.length} completed/failed AI brain jobs older than 14 days`);
       return this.makeResult('ai_brain_job_queue', staleCount, 0, result.length, 0, 0, Date.now() - startTime, true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[MemoryOptimizer] AI brain job cleanup failed:', error);
       return this.makeResult('ai_brain_job_queue', 0, 0, 0, 0, 0, Date.now() - startTime, false, (error instanceof Error ? error.message : String(error)));
     }
@@ -514,7 +503,7 @@ class TrinityMemoryOptimizer {
 
       log.info(`[MemoryOptimizer] Cleaned ${result.length} knowledge learning entries older than 180 days`);
       return this.makeResult('knowledge_learning_entries', staleCount, 0, result.length, 0, 0, Date.now() - startTime, true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[MemoryOptimizer] Knowledge learning cleanup failed:', error);
       return this.makeResult('knowledge_learning_entries', 0, 0, 0, 0, 0, Date.now() - startTime, false, (error instanceof Error ? error.message : String(error)));
     }
@@ -561,7 +550,7 @@ class TrinityMemoryOptimizer {
 
       log.info(`[MemoryOptimizer] Decayed confidence on ${staleCount} unused knowledge entities (15% decay)`);
       return this.makeResult('knowledge_confidence_decay', staleCount, 0, 0, staleCount, 0, Date.now() - startTime, true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[MemoryOptimizer] Knowledge confidence decay failed:', error);
       return this.makeResult('knowledge_confidence_decay', 0, 0, 0, 0, 0, Date.now() - startTime, false, (error instanceof Error ? error.message : String(error)));
     }
@@ -611,7 +600,7 @@ class TrinityMemoryOptimizer {
 
       log.info(`[MemoryOptimizer] Pruned ${result.length} dead knowledge entities (confidence <= 0.1, usage <= 1)`);
       return this.makeResult('knowledge_entity_prune', deadCount, 0, result.length, 0, 0, Date.now() - startTime, true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[MemoryOptimizer] Knowledge entity pruning failed:', error);
       return this.makeResult('knowledge_entity_prune', 0, 0, 0, 0, 0, Date.now() - startTime, false, (error instanceof Error ? error.message : String(error)));
     }
@@ -671,7 +660,7 @@ class TrinityMemoryOptimizer {
 
       log.info(`[MemoryOptimizer] Consolidated ${consolidated} duplicate knowledge entities from ${duplicateGroups.length} groups`);
       return this.makeResult('knowledge_consolidation', duplicateGroups.length, 0, consolidated, 0, duplicateGroups.length, Date.now() - startTime, true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[MemoryOptimizer] Knowledge consolidation failed:', error);
       return this.makeResult('knowledge_consolidation', 0, 0, 0, 0, 0, Date.now() - startTime, false, (error instanceof Error ? error.message : String(error)));
     }
@@ -735,7 +724,7 @@ class TrinityMemoryOptimizer {
         });
 
         totalRecords += rowCount;
-      } catch (error: any) {
+      } catch (error: unknown) {
         tables.push({
           tableName: tq.name,
           rowCount: 0,

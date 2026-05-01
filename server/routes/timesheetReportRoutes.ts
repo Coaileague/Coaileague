@@ -285,7 +285,6 @@ timesheetReportRouter.get('/export/pdf', requireManager, async (req: Request, re
     doc.text(`Total Hours: ${report.summary.totalHours.toFixed(2)}`);
     doc.text(`Regular Hours: ${report.summary.regularHours.toFixed(2)}`);
     doc.text(`Overtime Hours: ${report.summary.overtimeHours.toFixed(2)}`);
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (report.summary.breakDeductions) {
       doc.text(`Break Deductions: ${(report as any).summary.breakDeductions.toFixed(2)} hours`);
     }

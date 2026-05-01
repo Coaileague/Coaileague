@@ -22,7 +22,7 @@ router.get('/incidents', requireAuth, ensureWorkspaceAccess, async (req: Authent
       LIMIT 50
     `, [req.workspaceId]);
     res.json({ incidents: rows, total: rows.length });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/compliance/policies — company policies
@@ -38,7 +38,7 @@ router.get('/policies', requireAuth, ensureWorkspaceAccess, async (req: Authenti
       ORDER BY cp.created_at DESC
     `, [req.workspaceId]);
     res.json({ policies: rows });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/compliance/signatures — document signatures
@@ -53,7 +53,7 @@ router.get('/signatures', requireAuth, ensureWorkspaceAccess, async (req: Authen
       LIMIT 100
     `, [req.workspaceId]);
     res.json({ signatures: rows });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/compliance/approvals — governance approvals pending/recent
@@ -68,7 +68,7 @@ router.get('/approvals', requireAuth, ensureWorkspaceAccess, async (req: Authent
       LIMIT 50
     `, [req.workspaceId]);
     res.json({ approvals: rows, pending: rows.filter((r: any) => r.status === 'pending').length });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/compliance/summary — aggregate compliance health
@@ -82,7 +82,7 @@ router.get('/summary', requireAuth, ensureWorkspaceAccess, async (req: Authentic
         (SELECT COUNT(*) FROM employees WHERE workspace_id=$1 AND license_expiry < NOW() + INTERVAL '30 days' AND license_expiry > NOW()) as expiring_licenses
     `, [req.workspaceId]);
     res.json(rows[0]);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 export default router;

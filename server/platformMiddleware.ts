@@ -3,7 +3,6 @@ import { db } from "./db";
 import { platformRoles } from "@shared/schema";
 import { eq, isNull, and } from "drizzle-orm";
 
-// @ts-expect-error — TS migration: fix in refactoring sprint
 export interface PlatformRequest extends Request {
   user?: {
     id: string;

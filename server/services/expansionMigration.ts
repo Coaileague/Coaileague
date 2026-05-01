@@ -383,7 +383,7 @@ export async function runExpansionMigration(): Promise<void> {
       // CATEGORY C — Raw SQL retained: DDL expansion migration via db.$client | Tables: dynamic | Verified: 2026-03-23
       await db.$client.query(stmt);
       created++;
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Log but don't crash — best-effort
       log.warn(`[ExpansionMigration] Statement warning: ${(err instanceof Error ? err.message : String(err))?.substring(0, 120)}`);
       failed++;
@@ -413,7 +413,7 @@ export async function runEquipmentExpansionMigration(): Promise<void> {
     try {
       await db.$client.query(stmt);
       created++;
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn(`[EquipmentMigration] Statement warning: ${(err instanceof Error ? err.message : String(err))?.substring(0, 120)}`);
       failed++;
     }
@@ -543,7 +543,7 @@ export async function runTCOLESessionMigration(): Promise<void> {
     try {
       await db.$client.query(stmt);
       created++;
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn(`[TCOLEMigration] Statement warning: ${(err instanceof Error ? err.message : String(err))?.substring(0, 120)}`);
       failed++;
     }

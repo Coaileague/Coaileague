@@ -50,7 +50,7 @@ export interface HealthDataPoint {
   isHealthy: boolean;
   responseTime: number;
   errorOccurred: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface SLAMetrics {
@@ -227,7 +227,7 @@ class SLAMonitoringService {
     isHealthy: boolean,
     responseTime: number,
     errorOccurred: boolean = false,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): void {
     const points = this.dataPoints.get(serviceId);
     if (!points) return;
@@ -380,7 +380,6 @@ class SLAMonitoringService {
           targetValue,
           actualValue,
           severity: severity as any,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           audience: 'manager',
         },
       }).catch((err: any) => log.warn('[SLAMonitoring] Failed to publish sla_breach:', err.message));
@@ -637,7 +636,6 @@ class SLAMonitoringService {
    */
   async generateReport(): Promise<{
     generatedAt: number;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     summary: ReturnType<typeof this.getComplianceSummary>;
     metrics: SLAMetrics[];
     activeBreaches: SLABreach[];

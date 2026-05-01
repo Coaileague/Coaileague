@@ -98,7 +98,7 @@ async function getQBConnection(workspaceId: string): Promise<QBConnection | null
   let accessToken: string;
   try {
     accessToken = await quickbooksOAuthService.getValidAccessToken(connection.id);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[QBLazySync] Token refresh failed for connection ${connection.id}:`, (err instanceof Error ? err.message : String(err)));
     return null;
   }
@@ -160,7 +160,7 @@ async function qbQuery(apiBase: string, realmId: string, accessToken: string, qu
   return [];
 }
 
-async function qbCreate(apiBase: string, realmId: string, accessToken: string, entity: string, payload: any): Promise<any> {
+async function qbCreate(apiBase: string, realmId: string, accessToken: string, entity: string, payload: any): Promise<unknown> {
   const url = `${apiBase}/v3/company/${realmId}/${entity}?minorversion=${API_MINOR_VERSION}`;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -247,7 +247,7 @@ async function findByEmail(
     const results = await qbQuery(conn.apiBase, conn.realmId, conn.accessToken,
       `SELECT * FROM ${qbEntityName} WHERE PrimaryEmailAddr = '${escapeQBString(email)}'`);
     return results.length > 0 ? results[0] : null;
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err instanceof QBApiError && !err.retryable) throw err;
     log.warn(`[QBLazySync] findByEmail(${email}) non-fatal error:`, (err instanceof Error ? err.message : String(err)));
     return null;
@@ -264,7 +264,7 @@ async function findByDisplayName(
     const results = await qbQuery(conn.apiBase, conn.realmId, conn.accessToken,
       `SELECT * FROM ${qbEntityName} WHERE DisplayName = '${escapeQBString(displayName)}'`);
     return results.length > 0 ? results[0] : null;
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err instanceof QBApiError && !err.retryable) throw err;
     log.warn(`[QBLazySync] findByDisplayName("${displayName}") non-fatal error:`, (err instanceof Error ? err.message : String(err)));
     return null;
@@ -330,7 +330,7 @@ async function saveQBId(
         .where(eq(employees.id, entityId));
     }
     return true;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[QBLazySync] DB save failed for ${entityType} ${entityId} → QB ${qbId}:`, (err instanceof Error ? err.message : String(err)));
     return false;
   }
@@ -416,7 +416,7 @@ async function ensureCustomer(clientId: string, workspaceId: string): Promise<La
     }
     log.info(`[QBLazySync] Created client "${displayName}" → QB Customer ${qbId}`);
     return { success: true, qbId, created: true, matched: false };
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err instanceof QBApiError && err.qbErrorCode === '6240') {
       const recovered = await recoverOrphanedQBRecord(conn, 'customer', clientId, displayName, client.email);
       if (recovered) return recovered;
@@ -485,7 +485,7 @@ async function ensureEmployee(employeeId: string, workspaceId: string): Promise<
     }
     log.info(`[QBLazySync] Created employee "${displayName}" → QB Employee ${qbId}`);
     return { success: true, qbId, created: true, matched: false };
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err instanceof QBApiError && err.qbErrorCode === '6240') {
       const recovered = await recoverOrphanedQBRecord(conn, 'employee', employeeId, displayName, emp.email);
       if (recovered) return recovered;
@@ -554,7 +554,7 @@ async function ensureVendor(employeeId: string, workspaceId: string): Promise<La
     }
     log.info(`[QBLazySync] Created contractor "${displayName}" → QB Vendor ${qbId}`);
     return { success: true, qbId, created: true, matched: false };
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err instanceof QBApiError && err.qbErrorCode === '6240') {
       const recovered = await recoverOrphanedQBRecord(conn, 'vendor', employeeId, displayName, emp.email);
       if (recovered) return recovered;

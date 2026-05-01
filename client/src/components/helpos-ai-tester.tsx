@@ -47,7 +47,7 @@ export function CoAIleagueAiTester() {
         description: "Trinity is ready",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "❌ Failed to Switch Workspace",
         description: error.message || "Please try again",
@@ -67,7 +67,6 @@ export function CoAIleagueAiTester() {
       !switchWorkspaceMutation.isPending
     ) {
       const soleWorkspace = workspaces[0];
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       switchWorkspaceMutation.mutate(soleWorkspace.id);
     }
   }, [open, user?.currentWorkspaceId, workspaces]);
@@ -89,14 +88,14 @@ export function CoAIleagueAiTester() {
       });
       return response;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       setAiResponse(data.message || "No response from AI");
       toast({
         title: "Trinity Active",
         description: "Intelligent automation system responding",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "❌ Trinity™ Error",
         description: error.message || "Failed to get AI response",
@@ -156,7 +155,7 @@ export function CoAIleagueAiTester() {
                       <SelectValue placeholder="Choose a workspace..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {workspaces.map((ws: any) => (
+                      {workspaces.map((ws) => (
                         <SelectItem key={ws.id} value={ws.id}>
                           {ws.name || ws.id}
                         </SelectItem>

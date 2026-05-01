@@ -31,7 +31,7 @@ interface ResearchFinding {
 interface ResearchResult {
   query: string;
   findings: ResearchFinding[];
-  dataSummary: Record<string, any>;
+  dataSummary: Record<string, unknown>;
   recommendations: string[];
   methodology: string[];
   totalDataPointsAnalyzed: number;
@@ -73,7 +73,7 @@ class DataResearchSkill extends BaseSkill {
       logs.push(`Research initiated: "${params.query}" [depth: ${params.researchDepth}]`);
 
       const sources = params.dataSources || ['employees', 'clients', 'sites', 'shifts', 'invoices'];
-      const dataSummary: Record<string, any> = {};
+      const dataSummary: Record<string, unknown> = {};
 
       for (const source of sources) {
         const sourceData = await this.querySource(source, params, logs);
@@ -146,7 +146,6 @@ class DataResearchSkill extends BaseSkill {
         case 'employees': {
           const data = await db.select().from(employees).where(eq(employees.workspaceId, wsId)).limit(500);
           const active = data.filter(e => e.isActive).length;
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           const rates = data.map(e => parseFloat(e.payRate?.toString() || '0')).filter(r => r > 0);
           const avgRate = rates.length > 0 ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;
           const summary = {
@@ -287,7 +286,7 @@ class DataResearchSkill extends BaseSkill {
   }
 
   private async crossSourceAnalysis(
-    dataSummary: Record<string, any>,
+    dataSummary: Record<string, unknown>,
     params: ResearchParams,
     logs: string[]
   ): Promise<ResearchFinding[]> {
@@ -328,7 +327,7 @@ class DataResearchSkill extends BaseSkill {
   }
 
   private async detectAnomalies(
-    dataSummary: Record<string, any>,
+    dataSummary: Record<string, unknown>,
     params: ResearchParams,
     logs: string[]
   ): Promise<ResearchFinding[]> {

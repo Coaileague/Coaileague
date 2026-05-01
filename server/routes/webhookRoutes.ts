@@ -48,7 +48,7 @@ router.get('/', requireAuth, async (req: any, res) => {
     );
 
     return res.json({ webhooks: rows });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[WebhookRoutes] GET error:', err.message);
     return res.status(500).json({ error: 'Failed to fetch webhooks' });
   }
@@ -108,7 +108,7 @@ router.post('/', requireAuth, async (req: any, res) => {
 
     // Return plaintext secret only on creation (never stored in plaintext)
     return res.status(201).json({ webhook: { ...rows[0], secret: plaintextSecret } });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[WebhookRoutes] POST error:', err.message);
     return res.status(500).json({ error: 'Failed to create webhook' });
   }
@@ -161,7 +161,7 @@ router.put('/:id', requireAuth, async (req: any, res) => {
 
     if (!rows[0]) return res.status(404).json({ error: 'Webhook not found' });
     return res.json({ webhook: rows[0] });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[WebhookRoutes] PUT error:', err.message);
     return res.status(500).json({ error: 'Failed to update webhook' });
   }
@@ -183,7 +183,7 @@ router.delete('/:id', requireAuth, async (req: any, res) => {
 
     if (!rowCount) return res.status(404).json({ error: 'Webhook not found' });
     return res.json({ success: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[WebhookRoutes] DELETE error:', err.message);
     return res.status(500).json({ error: 'Failed to delete webhook' });
   }
@@ -195,7 +195,7 @@ router.post('/:id/test', requireAuth, async (req: any, res) => {
     const { workspaceId } = req.user;
     const result = await sendTestWebhook(req.params.id, workspaceId);
     return res.json(result);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[WebhookRoutes] test error:', err.message);
     return res.status(500).json({ error: 'Failed to send test webhook. Please try again.' });
   }
@@ -223,7 +223,7 @@ router.get('/:id/deliveries', requireAuth, async (req: any, res) => {
     );
 
     return res.json({ deliveries: rows });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[WebhookRoutes] deliveries error:', err.message);
     return res.status(500).json({ error: 'Failed to fetch deliveries' });
   }
@@ -249,7 +249,7 @@ router.post('/:id/retry', requireAuth, async (req: any, res) => {
     if (!rows[0]) return res.status(404).json({ error: 'Webhook not found' });
 
     return res.json({ success: true, message: 'Webhook re-activated — will deliver on next event' });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[WebhookRoutes] retry error:', err.message);
     return res.status(500).json({ error: 'Failed to retry webhook' });
   }

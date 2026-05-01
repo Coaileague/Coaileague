@@ -47,7 +47,7 @@ export interface TrinityAlert {
   autoFixRisk: 'low' | 'medium' | 'high';
   workspaceId?: string;
   detectedAt: Date;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface SupportStaffConnection {
@@ -183,7 +183,6 @@ class TrinityAutonomousNotifierService {
 
   private async persistAlert(alert: TrinityAlert): Promise<void> {
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(aiProactiveAlerts).values({
         workspaceId: alert.workspaceId || PLATFORM_WORKSPACE_ID,
         alertType: alert.category as any,
@@ -345,7 +344,7 @@ ${alert.autoFixAvailable ? `**Auto-fix Available:** Yes (Risk: ${alert.autoFixRi
           // Still create the alert but don't apply the fix
           return null;
         }
-      } catch (govError: any) {
+      } catch (govError: unknown) {
         // If governance service unavailable, default to conservative (no auto-fix)
         log.warn(`[TrinityNotifier] Governance check failed, skipping auto-fix:`, govError.message);
         log.info(`[AUDIT] Hotpatch SKIPPED due to governance error - Alert: ${alert.id}`);
@@ -381,7 +380,7 @@ ${alert.autoFixAvailable ? `**Auto-fix Available:** Yes (Risk: ${alert.autoFixRi
 
       log.info(`✅ [TrinityNotifier] Hotpatch ${patchId} applied successfully (governance approved)`);
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       const result: HotpatchResult = {
         success: false,
         patchId,
@@ -445,7 +444,7 @@ ${alert.autoFixAvailable ? `**Auto-fix Available:** Yes (Risk: ${alert.autoFixRi
       }
       
       return null;
-    } catch (error: any) {
+    } catch (error: unknown) {
       return this.createAlert({
         severity: 'critical',
         category: check.category,
@@ -623,13 +622,13 @@ ${alert.autoFixAvailable ? `**Auto-fix Available:** Yes (Risk: ${alert.autoFixRi
               });
             }
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.error(`[TrinityNotifier] Cross-org scan failed for parent ${parent.id}:`, (err instanceof Error ? err.message : String(err)));
         }
       }
 
       log.info(`[TrinityNotifier] Cross-org scan complete: ${scannedParents} parents scanned, ${alertsSent} consolidated alerts sent`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[TrinityNotifier] Cross-org notification scan failed:', (err instanceof Error ? err.message : String(err)));
     }
 

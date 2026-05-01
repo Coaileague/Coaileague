@@ -347,7 +347,7 @@ function TrinityPanel({ workspaceId }: { workspaceId: string }) {
       actionId: "mileage.recommend",
       payload: { workspaceId, lookbackDays: 30 },
     }),
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       if (data?.data?.recommendations) {
         setResult(data.data);
       } else {

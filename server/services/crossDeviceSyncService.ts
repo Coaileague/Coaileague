@@ -244,7 +244,6 @@ class CrossDeviceSyncService {
 
     try {
       const sent = sessionSyncService.broadcastToWorkspace(workspaceId, {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         type: 'sync_update',
         action: 'update',
         resource: 'cross_device_sync',
@@ -330,7 +329,7 @@ class CrossDeviceSyncService {
         } else if (result.conflict) {
           conflicts.push(result.conflict);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         errors.push(`Failed to apply change: ${(error instanceof Error ? error.message : String(error))}`);
       }
     }
@@ -344,7 +343,7 @@ class CrossDeviceSyncService {
     workspaceId: string,
     change: { entity: string; action: 'create' | 'update' | 'delete'; data: any; timestamp: Date }
   ): Promise<{ success: boolean; conflict?: ConflictResolution }> {
-    const tables: Record<string, any> = {
+    const tables: Record<string, unknown> = {
       employees,
       shifts,
       timeEntries,
@@ -440,7 +439,7 @@ class CrossDeviceSyncService {
       }
 
       log.info(`[CrossDeviceSync] Batch flush for workspace ${workspaceId}: ${Object.keys(changes).join(', ')} (${workspaceUsers.length} users)`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn(`[CrossDeviceSync] Batch flush failed for workspace ${workspaceId}:`, (err instanceof Error ? err.message : String(err)));
     }
   }

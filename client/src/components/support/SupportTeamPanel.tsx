@@ -224,7 +224,7 @@ function BotQueryDialog({ bot, open, onClose }: { bot: SystemBot | null; open: b
     onSuccess: (data) => {
       setConversation(prev => [...prev, { role: "bot", text: data.answer, time: new Date().toLocaleTimeString() }]);
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Query failed", description: err.message, variant: "destructive" });
     },
   });
@@ -334,7 +334,7 @@ function AddAgentDialog({ open, onClose, onSuccess }: { open: boolean; onClose: 
       onSuccess();
       onClose();
     },
-    onError: (err: any) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
   });
 
   return (
@@ -392,7 +392,7 @@ function RegisterBotDialog({ open, onClose, onSuccess }: { open: boolean; onClos
       onSuccess();
       onClose();
     },
-    onError: (err: any) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
   });
 
   return (
@@ -451,7 +451,7 @@ function ChangeRoleDialog({ agent, open, onClose, onSuccess }: {
       onSuccess();
       onClose();
     },
-    onError: (err: any) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
   });
 
   if (!agent) return null;
@@ -543,7 +543,7 @@ export function SupportTeamPanel() {
       toast({ title: "Bot action applied", description: `${vars.action} applied successfully` });
       refetch();
     },
-    onError: (err: any) => toast({ title: "Action failed", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Action failed", description: err.message, variant: "destructive" }),
   });
 
   const agentActionMut = useMutation({
@@ -553,7 +553,7 @@ export function SupportTeamPanel() {
       toast({ title: "Done", description: `${data.targetName}: ${data.action} applied` });
       refetch();
     },
-    onError: (err: any) => toast({ title: "Action failed", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Action failed", description: err.message, variant: "destructive" }),
   });
 
   const handleBotAction = (bot: SystemBot, action: string) => {

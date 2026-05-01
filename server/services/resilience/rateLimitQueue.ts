@@ -302,7 +302,7 @@ class RateLimitQueueService extends EventEmitter {
   }
 
   getAllStatuses(): Record<string, { queueLength: number; requestsInWindow: number; state: string }> {
-    const statuses: Record<string, any> = {};
+    const statuses: Record<string, unknown> = {};
     for (const [name] of this.configs) {
       const metrics = this.metrics.get(name);
       const queue = this.queues.get(name) || [];

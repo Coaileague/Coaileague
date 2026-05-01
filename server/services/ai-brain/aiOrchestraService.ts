@@ -50,8 +50,8 @@ export interface TaskRequest {
   workspaceId: string;
   userId?: string;
   taskType: string;
-  input: Record<string, any>;
-  context?: Record<string, any>;
+  input: Record<string, unknown>;
+  context?: Record<string, unknown>;
   priority?: number;
   forceProvider?: AIProvider;
   forceModelId?: string;
@@ -60,7 +60,7 @@ export interface TaskRequest {
 export interface TaskResult {
   success: boolean;
   taskId: string;
-  output?: Record<string, any>;
+  output?: Record<string, unknown>;
   content?: string;
   confidenceScore?: number;
   modelUsed: string;
@@ -127,7 +127,6 @@ class AIOrchestrationService {
     for (const model of models) {
       try {
         await db.insert(aiModels)
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           .values({
             workspaceId: PLATFORM_WORKSPACE_ID,
             ...model,
@@ -161,7 +160,6 @@ class AIOrchestrationService {
     for (const taskType of taskTypes) {
       try {
         await db.insert(aiTaskTypes)
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           .values({
             workspaceId: PLATFORM_WORKSPACE_ID,
             ...taskType,
@@ -294,7 +292,6 @@ class AIOrchestrationService {
       } catch (error: any) {
         log.error(`[AIOrchestra] Model ${model.modelName} failed:`, (error instanceof Error ? error.message : String(error)));
         
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(aiExecutionLog).values({
           taskId: queueEntry.id,
           workspaceId: request.workspaceId,
@@ -394,7 +391,6 @@ class AIOrchestrationService {
       const latencyMs = Date.now() - startTime;
       const confidenceScore = this.calculateConfidence(response.content, request);
 
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(aiExecutionLog).values({
         taskId,
         workspaceId: request.workspaceId,
@@ -454,15 +450,11 @@ class AIOrchestrationService {
     }
 
     const chains = await db.select()
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .from(aiFallbackChains)
       .where(and(
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         eq(aiFallbackChains.taskTypeId, taskType.id),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         eq(aiFallbackChains.isActive, true)
       ))
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .orderBy(asc(aiFallbackChains.sequenceOrder));
 
     if (chains.length > 0) {
@@ -624,7 +616,6 @@ class AIOrchestrationService {
           .where(eq(aiModelHealth.modelId, modelId));
       } else {
         await db.insert(aiModelHealth).values({
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           workspaceId: 'system',
           modelId,
           isHealthy: success,

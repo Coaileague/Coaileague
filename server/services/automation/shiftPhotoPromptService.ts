@@ -104,7 +104,7 @@ export async function promptOverdueShiftPhotos(): Promise<{
         },
       });
       prompted++;
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[PhotoPrompt] chatroom system message failed (non-fatal):', err?.message);
     }
 
@@ -137,7 +137,7 @@ export async function promptOverdueShiftPhotos(): Promise<{
           },
         });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[PhotoPrompt] NDS push failed (non-fatal):', err?.message);
     }
 
@@ -153,7 +153,7 @@ export async function promptOverdueShiftPhotos(): Promise<{
           overdueMinutes,
         });
         supervisorAlerts++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[PhotoPrompt] supervisor alert failed (non-fatal):', err?.message);
       }
     }
@@ -211,7 +211,7 @@ async function notifySupervisorOfMissingPhotos(params: {
           chatroomId: params.chatroomId,
         },
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[PhotoPrompt] supervisor alert per-user failed:', err?.message);
     }
   }

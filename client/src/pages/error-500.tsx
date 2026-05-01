@@ -4,7 +4,6 @@ import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 const error500Config: CanvasPageConfig = {
   id: 'error-500',
   title: 'Server Error',
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   category: 'system',
   variant: 'centered',
   showHeader: false,

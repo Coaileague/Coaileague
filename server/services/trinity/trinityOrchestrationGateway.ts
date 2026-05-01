@@ -32,7 +32,6 @@ import {
 } from '@shared/schema';
 import { eq, and, desc, gte, sql, count } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
-// @ts-expect-error — TS migration: fix in refactoring sprint
 import { featureRegistryService, FeatureDefinition } from '../featureRegistryService';
 import { universalAudit } from '../universalAuditService';
 import { notifyTrinity, type EventSource } from '../ai-brain/platformAwarenessHelper';
@@ -78,7 +77,7 @@ export interface RequestTrackingParams {
   sessionId?: string;
   userAgent?: string;
   ipAddress?: string;
-  requestPayload?: Record<string, any>;
+  requestPayload?: Record<string, unknown>;
   responseStatus?: number;
   responseTimeMs?: number;
   wasBlocked?: boolean;
@@ -92,7 +91,7 @@ export interface UpsellSignal {
   painPointCategory: string;
   triggerEvent: string;
   triggerCount: number;
-  evidenceData: Record<string, any>;
+  evidenceData: Record<string, unknown>;
 }
 
 export interface PlatformAuditResult {
@@ -239,7 +238,7 @@ class TrinityOrchestrationGateway {
     }
   }
 
-  private sanitizePayload(payload?: Record<string, any>): Record<string, any> | null {
+  private sanitizePayload(payload?: Record<string, unknown>): Record<string, any> | null {
     if (!payload) return null;
 
     const sensitiveKeys = ['password', 'token', 'secret', 'key', 'auth', 'credit_card', 'ssn'];
@@ -283,11 +282,11 @@ class TrinityOrchestrationGateway {
             },
             sourceRoute: r.endpoint || undefined,
           })));
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn('[trinityOrchestrationGateway] Audit batch write failed (non-fatal):', err?.message ?? err);
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Detailed error logging — Postgres errors carry code/detail/
       // column/constraint/table fields that explain WHAT actually
       // failed. The previous one-liner only logged .message which
@@ -410,7 +409,7 @@ class TrinityOrchestrationGateway {
 
       await db.insert(trinityRecommendations).values(recommendation);
       log.info(`[TrinityOrchestrationGateway] Created upsell recommendation: ${signal.painPointId}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[TrinityOrchestrationGateway] Upsell detection error:', (error instanceof Error ? error.message : String(error)));
     }
   }
@@ -573,7 +572,7 @@ class TrinityOrchestrationGateway {
         });
 
       log.info(`[TrinityOrchestrationGateway] Aggregated ${periodType} analytics for ${workspaceId}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[TrinityOrchestrationGateway] Analytics aggregation error:', (error instanceof Error ? error.message : String(error)));
     }
   }
@@ -614,7 +613,7 @@ class TrinityOrchestrationGateway {
     status: 'shown' | 'clicked' | 'dismissed' | 'converted',
     dismissReason?: string
   ): Promise<void> {
-    const updates: Record<string, any> = {
+    const updates: Record<string, unknown> = {
       status,
       updatedAt: new Date(),
     };
@@ -773,7 +772,6 @@ class TrinityOrchestrationGateway {
     let status: PlatformAuditResult['status'] = 'NOT_BUILT';
 
     // Check feature registry for related features
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const allFeatures = featureRegistryService.getFeature();
     // @ts-expect-error — TS migration: fix in refactoring sprint
     const matchedFeatures = (allFeatures as any).filter(f => 
@@ -785,27 +783,21 @@ class TrinityOrchestrationGateway {
     );
 
     if (matchedFeatures.length > 0) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const activeFeatures = matchedFeatures.filter(f => f.lifecycle === 'active');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const betaFeatures = matchedFeatures.filter(f => f.lifecycle === 'beta');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const plannedFeatures = matchedFeatures.filter(f => f.lifecycle === 'planned');
 
       if (activeFeatures.length > 0) {
         status = 'ALREADY_BUILT';
         completeness = Math.min(100, 60 + (activeFeatures.length * 10));
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         evidence.push(`Active features: ${activeFeatures.map(f => f.key).join(', ')}`);
       } else if (betaFeatures.length > 0) {
         status = 'PARTIALLY_BUILT';
         completeness = Math.min(80, 30 + (betaFeatures.length * 15));
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         evidence.push(`Beta features: ${betaFeatures.map(f => f.key).join(', ')}`);
       } else if (plannedFeatures.length > 0) {
         status = 'NEEDS_WORK';
         completeness = 10;
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         evidence.push(`Planned features: ${plannedFeatures.map(f => f.key).join(', ')}`);
       }
     }
@@ -873,7 +865,6 @@ class TrinityOrchestrationGateway {
    */
   async shutdown(): Promise<void> {
     if (this.flushInterval) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       clearInterval(this.flushInterval);
       this.flushInterval = null;
     }

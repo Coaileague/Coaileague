@@ -142,7 +142,7 @@ export async function executeInvoiceLifecycleWorkflow(
       .limit(1);
 
     await logWorkflowStep(record, 'fetch', true, 'entry + client + finance settings loaded');
-  } catch (err: any) {
+  } catch (err: unknown) {
     await logWorkflowStep(record, 'fetch', false, err?.message);
     await logWorkflowComplete(record, {
       success: false,
@@ -204,7 +204,7 @@ export async function executeInvoiceLifecycleWorkflow(
         hours: result.summary.totalHours,
       },
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     // No approved entries for the day is a benign no-op — every other error is a failure.
     const msg = err?.message ?? String(err);
     const benign = /no approved time entries/i.test(msg);
@@ -244,7 +244,7 @@ export async function executeInvoiceLifecycleWorkflow(
         emailed,
         emailed ? `invoice emailed to ${clientRow.email ?? 'client'}` : sendResult?.message,
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       await logWorkflowStep(record, 'notify', false, `email failed: ${err?.message}`);
     }
   } else {
@@ -353,7 +353,7 @@ export async function sweepStuckInvoiceLifecycleEntries(): Promise<InvoiceLifecy
         if (r.success && r.invoiceId) result.succeeded++;
         else if (r.skipped) result.skipped++;
         else result.failed++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         result.failed++;
         log.warn(`[invoice-lifecycle-sweep] Retry failed for entry ${entry.id}: ${err?.message}`);
       }
@@ -362,7 +362,7 @@ export async function sweepStuckInvoiceLifecycleEntries(): Promise<InvoiceLifecy
     if (result.scanned > 0) {
       log.info('[invoice-lifecycle-sweep] complete', result);
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[invoice-lifecycle-sweep] catastrophic failure:', err?.message);
   }
 

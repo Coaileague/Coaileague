@@ -70,7 +70,6 @@ router.post('/seed', requireAuth, async (req: AuthenticatedRequest, res) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (!hasManagerAccess((req.user)?.workspaceRole || req.user?.role)) {
       return res.status(403).json({ message: "Manager access required to seed training scenarios" });
     }
@@ -118,7 +117,6 @@ router.post('/seed-org', requireAuth, async (req: AuthenticatedRequest, res) => 
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (!hasManagerAccess((req.user)?.workspaceRole || req.user?.role)) {
       return res.status(403).json({ message: "Manager access required to seed org training scenarios" });
     }
@@ -151,7 +149,6 @@ router.post('/clear', requireAuth, async (req: AuthenticatedRequest, res) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (!hasManagerAccess((req.user)?.workspaceRole || req.user?.role)) {
       return res.status(403).json({ message: "Manager access required to clear training assignments" });
     }
@@ -184,7 +181,6 @@ router.post('/reset', requireAuth, async (req: AuthenticatedRequest, res) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (!hasManagerAccess((req.user)?.workspaceRole || req.user?.role)) {
       return res.status(403).json({ message: "Manager access required to reset training" });
     }
@@ -247,7 +243,6 @@ router.post('/clear-all-schedule', requireAuth, async (req: AuthenticatedRequest
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (!hasManagerAccess((req.user)?.workspaceRole || req.user?.role)) {
       return res.status(403).json({ message: "Manager access required to clear all schedule data" });
     }
@@ -298,7 +293,6 @@ router.post('/clear-all-schedule', requireAuth, async (req: AuthenticatedRequest
       let deletedTrainingAttempts: any[] = [];
       if (workspaceRunIds.length > 0) {
         deletedTrainingAttempts = await tx.delete(trainingAttempts)
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           .where(inArray(trainingAttempts.runId, workspaceRunIds.map(r => r.id)))
           .returning();
       }

@@ -296,7 +296,7 @@ class RecurringScheduleTemplateService {
     templateId: string,
     updates: Partial<Pick<ScheduleTemplate, 'name' | 'description'>>
   ): Promise<ScheduleTemplate | null> {
-    const dbUpdates: Record<string, any> = { updatedAt: new Date() };
+    const dbUpdates: Record<string, unknown> = { updatedAt: new Date() };
     if (updates.name !== undefined) dbUpdates.name = updates.name;
     if (updates.description !== undefined) dbUpdates.description = updates.description;
     const [updated] = await db.update(templatesTable)

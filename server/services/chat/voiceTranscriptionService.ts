@@ -62,7 +62,7 @@ export async function transcribeVoiceMessage(audioUrl: string): Promise<string |
       : ((transcription as any)?.text || null);
 
     return text && text.trim().length > 0 ? text.trim() : null;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[Transcription] Error:', err?.message);
     return null;
   } finally {

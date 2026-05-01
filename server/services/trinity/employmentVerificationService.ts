@@ -86,7 +86,7 @@ async function resolveManagementEmail(workspaceId: string, slug: string): Promis
       [workspaceId]
     );
     if (rows[0]?.email) return rows[0].email as string;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[EmploymentVerification] Management email lookup failed: ${err?.message}`);
   }
   return `management@${slug}.coaileague.com`;
@@ -134,7 +134,7 @@ Return ONLY a JSON object with these keys. No prose.`,
     const parsed = JSON.parse(cleaned || '{}') as ParsedVerificationRequest;
     if (!parsed.requester_email) parsed.requester_email = fromEmail;
     return parsed;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[EmploymentVerification] Gemini parse failed (non-fatal): ${err?.message}`);
     return {
       requester_email: fromEmail,
@@ -189,7 +189,7 @@ async function lookupEmployee(
         };
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[EmploymentVerification] Employee lookup failed: ${err?.message}`);
   }
   return null;
@@ -255,7 +255,7 @@ export async function handleEmploymentVerificationEmail(
           fromName ? `${fromName} <${fromEmail}>` : fromEmail,
         ]
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn(`[EmploymentVerification] Ticket insert failed (non-fatal): ${err?.message}`);
     }
 
@@ -296,7 +296,7 @@ export async function handleEmploymentVerificationEmail(
         workspaceId,
         skipUnsubscribeCheck: true,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn(`[EmploymentVerification] Management alert send failed (non-fatal): ${err?.message}`);
     }
 
@@ -319,13 +319,13 @@ export async function handleEmploymentVerificationEmail(
           workspaceId,
           skipUnsubscribeCheck: true,
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn(`[EmploymentVerification] Requester ack send failed (non-fatal): ${err?.message}`);
       }
     }
 
     log.info(`[EmploymentVerification] Ticket ${refNum} created for workspace ${workspaceId} (employee found: ${!!employee}, auth: ${!!parsed.has_authorization})`);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[EmploymentVerification] Workflow failed: ${err?.message}`);
   }
 }

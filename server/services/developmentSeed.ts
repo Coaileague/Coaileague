@@ -696,7 +696,7 @@ export async function runDevelopmentSeed(): Promise<{ success: boolean; message:
       }
 
       console.log('[DevSeed] Phase 0 data seeded: Marcus Rodriguez + Downtown Mall + today\'s shift + 15 messages');
-    } catch (phaseErr: any) {
+    } catch (phaseErr: unknown) {
       console.log('[DevSeed] Phase 0 seed skipped:', phaseErr.message?.slice(0, 150));
     }
 
@@ -939,7 +939,7 @@ export async function ensurePhase0Seed(): Promise<void> {
     }
 
     console.log('[Phase0Seed] Done — Marcus Rodriguez + Downtown Mall + chatroom + 15 messages seeded');
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[Phase0Seed] Error:', (err instanceof Error ? err.message : String(err))?.slice(0, 200));
   }
 }
@@ -1317,7 +1317,7 @@ export async function ensurePhase0ExtendedSeed(): Promise<void> {
     }
 
     console.log('[Phase0ExtSeed] Done — routine + photo-only + abandoned shift variants seeded');
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[Phase0ExtSeed] Error:', (err instanceof Error ? err.message : String(err))?.slice(0, 200));
   }
 }

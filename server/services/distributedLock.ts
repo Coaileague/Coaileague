@@ -7,7 +7,6 @@ const log = createLogger('DistributedLock');
 export async function tryAcquireAdvisoryLock(lockKey: number): Promise<boolean> {
   try {
     const res = await typedPool<{ pg_try_advisory_lock: boolean }>('SELECT pg_try_advisory_lock($1)', [lockKey]);
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     return res[0]?.pg_try_advisory_lock === true;
   } catch (err) {
     log.error('Advisory lock error', { lockKey, error: String(err) });

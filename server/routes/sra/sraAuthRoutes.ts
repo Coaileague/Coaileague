@@ -152,7 +152,7 @@ router.post('/login', async (req: Request, res: Response) => {
     const passwordValid = await bcrypt.compare(password, account.credentialHash || '');
     if (!passwordValid) {
       const attempts = (account.failedLoginAttempts || 0) + 1;
-      const updates: Record<string, any> = { failedLoginAttempts: attempts, updatedAt: new Date() };
+      const updates: Record<string, unknown> = { failedLoginAttempts: attempts, updatedAt: new Date() };
       if (attempts >= LOCKOUT_ATTEMPTS) {
         updates.lockedUntil = new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000);
       }

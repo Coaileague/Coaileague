@@ -407,7 +407,7 @@ export async function handleInbound(params: {
         });
         log.info(`[VoiceOrchestrator] Recording started for call ${callSid}`);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Non-fatal — call proceeds even if recording fails (e.g. dev env with no Twilio creds)
       log.warn(`[VoiceOrchestrator] Could not start recording for ${callSid}: ${err.message}`);
     }

@@ -89,7 +89,7 @@ export async function getUserSupportHistory(
     const history = buildHistory(sessions, userId, workspaceId);
     memoryCache.set(cacheKey, { data: history, expiresAt: Date.now() + CACHE_TTL_MS });
     return history;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[HelpAIMemory] Failed to load user history:', (err instanceof Error ? err.message : String(err)));
     return createEmptyHistory(userId, workspaceId);
   }

@@ -107,7 +107,7 @@ export default function BackgroundChecks() {
       setProviderName("");
       setApiEndpoint("");
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to add provider", variant: "destructive" });
     },
   });
@@ -124,7 +124,7 @@ export default function BackgroundChecks() {
       setNewCheckType("criminal");
       setNewNotes("");
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to request background check", variant: "destructive" });
     },
   });
@@ -137,7 +137,7 @@ export default function BackgroundChecks() {
       queryClient.invalidateQueries({ queryKey: ['/api/enterprise-features/background-checks'] });
       toast({ title: "Check Cancelled", description: "Background check request has been cancelled." });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to cancel background check", variant: "destructive" });
     },
   });
@@ -364,7 +364,6 @@ export default function BackgroundChecks() {
                   <Skeleton key={i} className="h-16 w-full rounded-md" />
                 ))}
               </div>
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             ) : checks.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed rounded-lg">
                 <FileSearch className="h-12 w-12 text-muted-foreground mb-4" />

@@ -94,7 +94,6 @@ router.post('/', requirePlatformStaff, async (req: AuthenticatedRequest, res) =>
     const [banner] = await db
       .insert(promotionalBanners)
       .values({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: PLATFORM_WORKSPACE_ID,
         message,
         ctaText,

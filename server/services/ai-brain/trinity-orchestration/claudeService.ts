@@ -23,7 +23,7 @@ export const claudeService = {
       const text = response.content.find(b => b.type === 'text')?.text ?? '';
       log.debug(`[ClaudeService] ${MODEL} responded (${response.usage.output_tokens} tokens)`);
       return text;
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[ClaudeService] API call failed: ${err?.message}`);
       throw err;
     }
@@ -38,7 +38,7 @@ export const claudeService = {
         messages,
       });
       return response.content.find(b => b.type === 'text')?.text ?? '';
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[ClaudeService] Context call failed: ${err?.message}`);
       throw err;
     }

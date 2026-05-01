@@ -292,7 +292,7 @@ export default function DockChatPage() {
   // Subscribe to trinity_intake_widget WebSocket events
   useEffect(() => {
     if (!bus) return;
-    const unsub = bus.subscribe('trinity_intake_widget', (data: any) => {
+    const unsub = bus.subscribe('trinity_intake_widget', (data) => {
       const { messageType, step, stepIndex, totalSteps, greeting,
               flowTitle, completionMessage, sessionId, chatRoomId } = data;
 

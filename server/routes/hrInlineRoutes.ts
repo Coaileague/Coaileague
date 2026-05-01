@@ -239,7 +239,6 @@ router.get("/manager/command-center", requireManager, async (req: AuthenticatedR
     const todayEnd = new Date(now);
     todayEnd.setHours(23, 59, 59, 999);
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const { notifications, documentSignatures, incidents } = await import('@shared/schema');
     const { gte: gteOp, lte: lteOp, ne: neOp } = await import('drizzle-orm');
 
@@ -253,9 +252,7 @@ router.get("/manager/command-center", requireManager, async (req: AuthenticatedR
     }).from(shifts)
       .where(and(
         eq(shifts.workspaceId, workspaceId),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         gte(shifts.startTime, todayStart.toISOString()),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         lteOp(shifts.startTime, todayEnd.toISOString()),
         neOp(shifts.status, 'cancelled' as any),
       ))
@@ -299,7 +296,7 @@ router.get("/manager/command-center", requireManager, async (req: AuthenticatedR
         ))
         .limit(20);
       pendingDocCount = pendingDocs.length;
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[HRInline] Failed to update onboarding status', { error: err.message });
     }
 
@@ -317,7 +314,7 @@ router.get("/manager/command-center", requireManager, async (req: AuthenticatedR
         ))
         .orderBy(desc(incidents.createdAt))
         .limit(10);
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[HRInline] Failed to update onboarding status', { error: err.message });
     }
 
@@ -705,7 +702,6 @@ router.post("/invites/create", requireAuth, async (req: AuthenticatedRequest, re
       try {
         const { auditLogs } = await import('@shared/schema');
         const inviteeLabel = [inviteeFirstName, inviteeLastName].filter(Boolean).join(' ') || inviteeEmail || 'recipient';
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId: activeWorkspaceId,
           entityType: 'invite',
@@ -833,7 +829,6 @@ router.post("/invites/accept", requireAuth, async (req: AuthenticatedRequest, re
         .set({ currentWorkspaceId: invite.workspaceId })
         .where(eq(users.id, userId));
 
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const [createdEmployee] = await tx.insert(employees).values({
         workspaceId: invite.workspaceId,
         userId: userId,
@@ -928,7 +923,7 @@ router.post("/invites/accept", requireAuth, async (req: AuthenticatedRequest, re
           },
           invite.workspaceId
         );
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[InviteAccept] Post-accept onboarding setup failed (non-blocking):', err?.message);
       }
     })();

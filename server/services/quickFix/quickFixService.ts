@@ -297,7 +297,7 @@ class QuickFixService {
   async requestQuickFix(
     context: QuickFixContext,
     actionCode: string,
-    payload?: Record<string, any>,
+    payload?: Record<string, unknown>,
     aiRecommendation?: { id: string; confidence: number; reasoning: string }
   ): Promise<{ success: boolean; requestId?: string; status: string; message: string }> {
     // Find the action
@@ -576,7 +576,7 @@ class QuickFixService {
   }
 
   // Action executors
-  private async executeClearCache(payload: any): Promise<any> {
+  private async executeClearCache(payload: any): Promise<unknown> {
     const cacheType = payload?.cacheType || 'all';
     log.info(`[QuickFix] Clearing cache: ${cacheType}`);
     try {
@@ -589,13 +589,13 @@ class QuickFixService {
     }
   }
 
-  private async executeRestartService(payload: any): Promise<any> {
+  private async executeRestartService(payload: any): Promise<unknown> {
     const serviceName = payload?.serviceName;
     log.info(`[QuickFix] Service restart requested: ${serviceName}`);
     return { service: serviceName, restarted: false, note: 'Service restart requires manual deployment action', timestamp: new Date().toISOString() };
   }
 
-  private async executeRefreshConnections(): Promise<any> {
+  private async executeRefreshConnections(): Promise<unknown> {
     log.info('[QuickFix] Verifying database connections');
     try {
       const { pool } = await import('../../db');
@@ -608,7 +608,7 @@ class QuickFixService {
     }
   }
 
-  private async executeForceLogout(payload: any): Promise<any> {
+  private async executeForceLogout(payload: any): Promise<unknown> {
     const targetUserId = payload?.targetUserId;
     log.info(`[QuickFix] Force logout user: ${targetUserId}`);
     if (!targetUserId) {

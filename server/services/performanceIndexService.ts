@@ -139,7 +139,7 @@ export async function ensurePerformanceIndexes(): Promise<void> {
         `CREATE ${uniqueKeyword}INDEX CONCURRENTLY IF NOT EXISTS ${idx.name} ON ${idx.table} (${idx.columns})${whereClause}`
       );
       created++;
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Silently skip errors — column may not exist in older schema versions
       if (!err.message?.includes('column') && !err.message?.includes('does not exist')) {
         log.warn(`[PerformanceIndex] ${idx.name}: ${err.message?.substring(0, 80)}`);

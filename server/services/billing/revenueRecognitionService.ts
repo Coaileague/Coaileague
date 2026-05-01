@@ -163,7 +163,7 @@ export async function createScheduleForInvoice(
     }
 
     return schedule.id;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[RevenueRecognitionService] createScheduleForInvoice error', { error: err?.message });
     return null;
   }
@@ -238,7 +238,7 @@ export async function recognizeCashRevenueOnPayment(
       description: `Cash revenue recognized: $${paidAmount.toFixed(2)} for invoice`,
       metadata: { invoiceId, scheduleId: schedule.id, method: 'cash' },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[RevenueRecognitionService] Ledger write failed (non-fatal)', { error: err?.message });
   }
 
@@ -254,7 +254,7 @@ export async function recognizeCashRevenueOnPayment(
       changes: { invoiceId, amount: paidAmount, method: 'cash' },
       source: 'system',
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[RevenueRecognitionService] Audit log write failed (non-fatal)', { error: err?.message });
   }
 }
@@ -402,13 +402,13 @@ export async function runMonthlyRecognitionForWorkspace(
           description: `Accrual revenue recognized: $${recognizeAmount.toFixed(2)} for ${year}-${String(month).padStart(2, '0')}`,
           metadata: { scheduleId: schedule.id, invoiceId: schedule.invoiceId, period: periodDate, method: 'accrual' },
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[RevenueRecognitionService] Ledger write failed', { error: err?.message, scheduleId: schedule.id });
       }
 
       result.schedulesProcessed++;
       result.amountRecognized += recognizeAmount;
-    } catch (err: any) {
+    } catch (err: unknown) {
       result.errors.push(`Schedule ${schedule.id}: ${err?.message}`);
       log.error('[RevenueRecognitionService] Error processing schedule', {
         scheduleId: schedule.id,
@@ -428,7 +428,7 @@ export async function runMonthlyRecognitionForWorkspace(
         schedulesProcessed: result.schedulesProcessed,
         amountRecognized: result.amountRecognized.toFixed(2),
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       // If idempotency key already exists due to race condition, ignore
       log.warn('[RevenueRecognitionService] Idempotency insert failed (race?)', { error: err?.message });
     }
@@ -447,7 +447,7 @@ export async function runMonthlyRecognitionForWorkspace(
         changes: { year, month, schedulesProcessed: result.schedulesProcessed, amountRecognized: result.amountRecognized },
         source: 'system',
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[RevenueRecognitionService] Audit batch write failed (non-fatal)', { error: err?.message });
     }
   }
@@ -483,7 +483,7 @@ export async function runMonthlyRecognitionAllWorkspaces(
     try {
       const result = await runMonthlyRecognitionForWorkspace(ws.id, targetYear, targetMonth);
       results.push(result);
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[RevenueRecognitionService] Workspace job failed', { workspaceId: ws.id, error: err?.message });
       results.push({
         workspaceId: ws.id,

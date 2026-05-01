@@ -50,7 +50,7 @@ export interface SentinelAlert {
   resolvedAt?: Date;
   autoRemediated: boolean;
   remediationAction?: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export interface HealthCheck {
@@ -93,7 +93,7 @@ export interface RemediationAction {
   order: number;
   type: 'restart' | 'retry' | 'fallback' | 'notify' | 'escalate' | 'self_heal';
   target: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   executed: boolean;
   result?: string;
 }
@@ -458,7 +458,7 @@ class TrinitySentinel {
     message: string;
     affectedComponent: string;
     workspaceId?: string;
-    metadata: Record<string, any>;
+    metadata: Record<string, unknown>;
   }): SentinelAlert {
     // Check for duplicate alerts
     const existingAlert = Array.from(this.alerts.values()).find(

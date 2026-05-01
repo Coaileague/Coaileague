@@ -292,7 +292,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
 
           return { proposal: locked, approvedProposal: approved };
         }));
-      } catch (txErr: any) {
+      } catch (txErr: unknown) {
         const status = txErr?.status || 500;
         if (status === 404) return res.status(404).json({ message: "Proposal not found" });
         if (status === 409 && txErr?.message === 'ALREADY_PROCESSED') return res.status(409).json({ message: "Proposal was already processed by another user" });
@@ -342,7 +342,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
           totalGross: (proposal as any).data?.totalGross,
           approvedAt: new Date().toISOString()
         });
-      } catch (webhookErr: any) {
+      } catch (webhookErr: unknown) {
         log.warn('[Payroll] Failed to log webhook error to audit log', { error: webhookErr.message });
       }
 
@@ -873,7 +873,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       try {
         // broadcastToWorkspace imported statically
         broadcastToWorkspace(workspaceId, { type: 'payroll_updated', action: 'approved', runId: run.id });
-      } catch (_wsErr: any) {
+      } catch (_wsErr: unknown) {
         log.warn('[Payroll] Failed to broadcast WebSocket update', { error: _wsErr.message });
       }
 
@@ -1055,7 +1055,6 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
 
           const empUserMap = new Map(empRows.map(e => [e.id, e.userId]));
 
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           const { une } = await import('../services/universalNotificationEngine');
           await Promise.allSettled(stubs.map(stub => {
             const targetUserId = empUserMap.get(stub.employeeId);
@@ -1125,7 +1124,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
       try {
         // broadcastToWorkspace imported statically
         broadcastToWorkspace(workspaceId, { type: 'payroll_updated', action: 'processed', runId: id });
-      } catch (_wsErr: any) {
+      } catch (_wsErr: unknown) {
         log.warn('[Payroll] Failed to broadcast WebSocket update', { error: _wsErr.message });
       }
 
@@ -1154,12 +1153,10 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
         actorType: 'user',
         actorId: userId,
         actorEmail: req.user?.email || null,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         description: `Payroll run processed - ${stubs.length} pay stubs generated`,
         relatedEntityType: 'payroll_run',
         relatedEntityId: id,
         previousState: { status: 'approved' },
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         newState: { status: 'processed', payStubsGenerated: stubs.length, totalNet: run.totalNetPay },
         ipAddress: req.ip || null,
         userAgent: req.get('user-agent') || null,
@@ -1295,7 +1292,7 @@ router.patch('/my-payroll-info', async (req: AuthenticatedRequest, res) => {
       ),
     });
 
-    const updateFields: Record<string, any> = {};
+    const updateFields: Record<string, unknown> = {};
     if (bankAccountType !== undefined) updateFields.bankAccountType = bankAccountType;
     if (directDepositEnabled !== undefined) updateFields.directDepositEnabled = directDepositEnabled;
     if (preferredPayoutMethod !== undefined) updateFields.preferredPayoutMethod = preferredPayoutMethod;
@@ -1808,7 +1805,7 @@ router.post("/garnishments/:payrollEntryId", async (req: AuthenticatedRequest, r
           complianceTag: 'soc2',
         }).catch(err => log.error('[FinancialAudit] Garnishment audit log failed:', err?.message));
       }
-    } catch (garnishNetPayErr: any) {
+    } catch (garnishNetPayErr: unknown) {
       log.error('[Payroll] WARNING: Failed to recalculate netPay after garnishment add:', garnishNetPayErr?.message);
     }
 
@@ -2301,7 +2298,6 @@ router.post('/:runId/void', async (req: AuthenticatedRequest, res) => {
       complianceTag: 'soc2',
     }).catch(err => log.error('[FinancialAudit] CRITICAL: SOC2 audit log write failed for payroll void', { error: err?.message }));
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     // broadcastToWorkspace already imported at top
     broadcastToWorkspace(workspaceId, { type: 'payroll_updated', action: 'voided', runId });
     platformEventBus.publish({
@@ -2435,7 +2431,7 @@ router.post('/runs/:id/mark-paid', async (req: AuthenticatedRequest, res) => {
         runId,
         disbursementMethod,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[Payroll] Failed to process batch completion', { error: err.message });
     }
 
@@ -2668,7 +2664,6 @@ router.post('/:entryId/amend', async (req: AuthenticatedRequest, res) => {
     // ─────────────────────────────────────────────────────────────────────────────
 
     const { amendPayrollEntry } = await import('../services/payrollAutomation');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const result = await amendPayrollEntry(entryId, workspaceId, userId, { ...amendments, reason: reason.trim() });
 
     if (!result.success) {
@@ -2974,7 +2969,6 @@ router.get('/runs/:id/nacha', async (req: AuthenticatedRequest, res) => {
 
     const run = await storage.getPayrollRun(runId, workspaceId);
     if (!run) return res.status(404).json({ message: 'Payroll run not found' });
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (!['processed', 'paid'].includes(run.status)) {
       return res.status(400).json({ message: 'NACHA file is only available for processed or paid payroll runs' });
     }
@@ -3311,7 +3305,7 @@ router.patch('/employees/:employeeId/bank-accounts/:accountId', async (req: Auth
     const parsed = employeeBankAccountUpdateSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Invalid bank account update data', details: parsed.error.flatten() });
     const { bankName, routingNumber, accountNumber, accountType, depositType, depositAmount, depositPercent, isPrimary, notes } = parsed.data;
-    const updateFields: Record<string, any> = { updatedAt: new Date() };
+    const updateFields: Record<string, unknown> = { updatedAt: new Date() };
 
     if (bankName !== undefined) updateFields.bankName = bankName;
     if (accountType !== undefined) updateFields.accountType = accountType;
@@ -3508,7 +3502,7 @@ router.post('/period/close', requireAuth, requireManager, async (req: Authentica
       periodStart,
       periodEnd,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[Payroll] Period close failed:', err?.message);
     res.status(500).json({ error: 'Failed to close period' });
   }
@@ -3538,7 +3532,7 @@ router.get('/period/status', requireAuth, async (req: AuthenticatedRequest, res)
       closedAt: isClosed ? result.rows[0].created_at : null,
       closedBy: isClosed ? result.rows[0].metadata?.closedBy : null,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: 'Failed to check period status' });
   }
 });

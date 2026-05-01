@@ -97,7 +97,7 @@ class TrialConversionOrchestrator {
             case 'suspended': results.suspended++; break;
             case 'notified': results.notified++; break;
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
           results.errors.push(`${workspace.workspaceId}: ${(error instanceof Error ? error.message : String(error))}`);
         }
       }
@@ -114,7 +114,7 @@ class TrialConversionOrchestrator {
       });
 
       return results;
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('Processing failed', { error: (error instanceof Error ? error.message : String(error)) });
       results.errors.push((error instanceof Error ? error.message : String(error)));
       return results;
@@ -257,7 +257,7 @@ class TrialConversionOrchestrator {
         message: 'Conversion failed, entering grace period',
         error: result.error,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
         workspaceId,
@@ -315,9 +315,7 @@ class TrialConversionOrchestrator {
     // Update last warned day in metadata
     await db.update(workspaces)
       .set({ 
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         metadata: { 
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           ...(workspace.metadata || {}), 
           last_trial_warning_day: daysRemaining 
         } 
@@ -331,7 +329,6 @@ class TrialConversionOrchestrator {
       description: `${workspaceName} trial expires in ${daysRemaining} days`,
       workspaceId,
       metadata: { workspaceId, daysRemaining, hasPaymentMethod },
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       visibility: 'workspace',
     });
   }
@@ -343,7 +340,6 @@ class TrialConversionOrchestrator {
     const { workspaceId, workspaceName, daysRemaining } = trial;
 
     await db.update(subscriptions)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .set({ status: 'grace_period' })
       .where(eq(subscriptions.workspaceId, workspaceId));
 
@@ -578,7 +574,7 @@ class TrialConversionOrchestrator {
 
       log.info('Workspace reactivated', { workspaceId, tier });
       return { success: true, message: `Workspace reactivated with ${tier} plan` };
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('Reactivation failed', { error: (error instanceof Error ? error.message : String(error)), workspaceId });
       
       // Emit failure event for visibility
@@ -625,7 +621,7 @@ class TrialConversionOrchestrator {
 
       log.info('Subscription cancelled', { workspaceId });
       return { success: true, message: 'Subscription cancelled' };
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('Cancellation failed', { error: (error instanceof Error ? error.message : String(error)), workspaceId });
       return { success: false, message: (error instanceof Error ? error.message : String(error)) };
     }
@@ -696,7 +692,6 @@ class TrialConversionOrchestrator {
       description: 'Check trial status for a workspace',
       requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const status = await trialManager.getTrialStatus(request.payload.workspaceId);
         return { success: true, actionId: request.actionId, message: 'Trial status retrieved', data: status };
       },
@@ -708,9 +703,7 @@ class TrialConversionOrchestrator {
       category: 'announcement',
       description: 'Extend trial period for a workspace',
       requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       handler: async (request) => {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const { workspaceId, days } = request.payload;
         const result = await trialManager.extendTrial(workspaceId, days || 7);
         return { success: result.success, actionId: request.actionId, message: result.success ? 'Trial extended' : result.error, data: result };
@@ -723,9 +716,7 @@ class TrialConversionOrchestrator {
       category: 'announcement',
       description: 'Start a new trial for a workspace',
       requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       handler: async (request) => {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const { workspaceId } = request.payload;
         const result = await trialManager.startTrial(workspaceId);
         return { success: result.success, actionId: request.actionId, message: result.success ? 'Trial started' : result.error, data: result };
@@ -740,7 +731,6 @@ class TrialConversionOrchestrator {
       description: 'Reactivate a suspended workspace after payment',
       requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const { workspaceId, tier } = request.payload;
         const result = await this.reactivateWorkspace(workspaceId, tier);
         return { success: result.success, actionId: request.actionId, message: result.message, data: result };
@@ -754,7 +744,6 @@ class TrialConversionOrchestrator {
       description: 'Cancel a workspace subscription',
       requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const { workspaceId, reason } = request.payload;
         const result = await this.cancelSubscription(workspaceId, reason);
         return { success: result.success, actionId: request.actionId, message: result.message, data: result };
@@ -780,7 +769,6 @@ class TrialConversionOrchestrator {
       description: 'Manually suspend a workspace subscription',
       requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
       handler: async (request) => {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const { workspaceId, reason } = request.payload;
         const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
         if (!workspace) return { success: false, actionId: request.actionId, message: `Workspace ${workspaceId} not found` };
@@ -818,7 +806,7 @@ export async function initializeTrialConversionOrchestrator(): Promise<void> {
         'TrialExpiryCheck',
         () => trialConversionOrchestrator.processExpiringTrials()
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('Daily trial expiry check failed', { error: err?.message });
     }
   };

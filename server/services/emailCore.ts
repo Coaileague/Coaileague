@@ -425,7 +425,7 @@ async function sendMeteredEmail(
   workspaceId: string | undefined,
   emailCategory: EmailCategory,
   sendFn: () => Promise<any>,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): Promise<{ success: boolean; data?: any; error?: any }> {
   try {
     const result = await sendFn();
@@ -1032,7 +1032,7 @@ export function isResendConfigured(): boolean {
       reportName: string;
       submittedBy: string;
       submittedDate: string;
-      reportData: Record<string, any>;
+      reportData: Record<string, unknown>;
       attachmentCount?: number;
     }) => ({
       subject: `Report Delivery: ${data.reportName || 'New Report'} [${data.reportNumber || ''}]`,

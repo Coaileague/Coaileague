@@ -120,7 +120,6 @@ class WeeklyBillingRunServiceImpl {
         parameters: {
           workspaceId: { type: 'string', required: true, description: 'Workspace ID to bill' },
         },
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         handler: async (params: { workspaceId: string }) => {
           const result = await this.processWorkspaceBilling(params.workspaceId);
           return {
@@ -240,7 +239,7 @@ class WeeklyBillingRunServiceImpl {
         newState: { runId, weekKey, status: 'running' },
       });
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error.code === '23505') {
         // Unique constraint violation on idempotencyKey — another process already locked this week
         log.info(`[BillingRun] Lock contention on weekKey ${weekKey} — another run is already active`);
@@ -352,7 +351,7 @@ class WeeklyBillingRunServiceImpl {
               log.warn('Failed to update next invoice date', { workspaceId: workspace.id, error: (err instanceof Error ? err.message : String(err)) })
             );
           }
-        } catch (orgError: any) {
+        } catch (orgError: unknown) {
           log.error('Unexpected error processing workspace — continuing with next org', {
             workspaceId: workspace.id,
             error: orgError.message,
@@ -411,7 +410,7 @@ class WeeklyBillingRunServiceImpl {
 
       log.info('Completed billing run', { invoicesGenerated: successfulResults.length, errors: errorResults.length, skipped: skipped.length });
       return runResult;
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('Fatal error in billing run', { runId, error: (error instanceof Error ? error.message : String(error)) });
       await this.updateRunStatus(runId, weekKey, 'failed', {
         workspacesProcessed: results.length,
@@ -605,11 +604,11 @@ class WeeklyBillingRunServiceImpl {
           try {
             const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
             await recordMiddlewareFeeCharge(workspaceId, 'invoice_processing', feeResult.amountCents, invoice.id);
-          } catch (err: any) {
+          } catch (err: unknown) {
             log.warn('[WeeklyBilling] Invoice fee revenue record failed (non-fatal):', err?.message);
           }
         }
-      } catch (feeErr: any) {
+      } catch (feeErr: unknown) {
         const msg = `Middleware fee charge exception: ${feeErr.message}`;
         log.error(`[WeeklyBilling] ${msg}`);
         billingExceptions.push(msg);
@@ -625,7 +624,7 @@ class WeeklyBillingRunServiceImpl {
         if (feeResult.recorded) {
           log.info(`[WeeklyBilling] Processing fee: $${(feeResult.amountCents / 100).toFixed(2)} for invoice ${invoice.invoiceNumber}`);
         }
-      } catch (feeErr: any) {
+      } catch (feeErr: unknown) {
         const msg = `Processing fee recording exception: ${feeErr.message}`;
         log.error(`[WeeklyBilling] ${msg}`);
         billingExceptions.push(msg);
@@ -644,12 +643,12 @@ class WeeklyBillingRunServiceImpl {
             try {
               const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
               await recordMiddlewareFeeCharge(workspaceId, 'seat_overage', overageResult.amountCents, workspaceId);
-            } catch (err: any) {
+            } catch (err: unknown) {
               log.warn('[WeeklyBilling] Seat overage revenue record failed (non-fatal):', err?.message);
             }
           }
         }
-      } catch (overageErr: any) {
+      } catch (overageErr: unknown) {
         const msg = `Seat overage charge exception: ${(overageErr as any).message}`;
         log.error(`[WeeklyBilling] ${msg}`);
         billingExceptions.push(msg);
@@ -680,12 +679,12 @@ class WeeklyBillingRunServiceImpl {
             try {
               const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
               await recordMiddlewareFeeCharge(workspaceId, 'credit_overage', creditOverageResult.amountCents, workspaceId);
-            } catch (err: any) {
+            } catch (err: unknown) {
               log.warn('[WeeklyBilling] Credit overage revenue record failed (non-fatal):', err?.message);
             }
           }
         }
-      } catch (creditOverageErr: any) {
+      } catch (creditOverageErr: unknown) {
         const msg = `Credit overage charge exception: ${creditOverageErr.message}`;
         log.error(`[WeeklyBilling] ${msg}`);
         billingExceptions.push(msg);
@@ -718,7 +717,7 @@ class WeeklyBillingRunServiceImpl {
             log.warn(`[WeeklyBilling] AI token overage of $${(overageChargesCents / 100).toFixed(2)} — no Stripe customer ID for workspace ${workspaceId}`);
           }
         }
-      } catch (tokenOverageErr: any) {
+      } catch (tokenOverageErr: unknown) {
         const msg = `AI token overage charge exception: ${(tokenOverageErr as any)?.message}`;
         log.error(`[WeeklyBilling] ${msg}`);
         billingExceptions.push(msg);
@@ -739,12 +738,12 @@ class WeeklyBillingRunServiceImpl {
             try {
               const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
               await recordMiddlewareFeeCharge(workspaceId, 'storage_overage', storageOverageResult.amountCents, workspaceId);
-            } catch (err: any) {
+            } catch (err: unknown) {
               log.warn('[WeeklyBilling] Storage overage revenue record failed (non-fatal):', err?.message);
             }
           }
         }
-      } catch (storageOverageErr: any) {
+      } catch (storageOverageErr: unknown) {
         const msg = `Storage overage charge exception: ${storageOverageErr?.message}`;
         log.error(`[WeeklyBilling] ${msg}`);
         billingExceptions.push(msg);
@@ -766,12 +765,12 @@ class WeeklyBillingRunServiceImpl {
             try {
               const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
               await recordMiddlewareFeeCharge(workspaceId, 'voice_sms_overage', voiceSmsResult.amountCents, workspaceId);
-            } catch (err: any) {
+            } catch (err: unknown) {
               log.warn('[WeeklyBilling] Voice/SMS overage revenue record failed (non-fatal):', err?.message);
             }
           }
         }
-      } catch (voiceSmsErr: any) {
+      } catch (voiceSmsErr: unknown) {
         const msg = `Voice/SMS overage charge exception: ${voiceSmsErr?.message}`;
         log.error(`[WeeklyBilling] ${msg}`);
         billingExceptions.push(msg);
@@ -803,7 +802,7 @@ class WeeklyBillingRunServiceImpl {
             overageLayers: ['seat', 'ai_credit', 'ai_token', 'storage', 'voice_sms'],
           },
         });
-      } catch (auditErr: any) {
+      } catch (auditErr: unknown) {
         log.warn('[WeeklyBilling] overage_cycle_complete audit log failed (non-fatal):', auditErr?.message);
       }
 
@@ -818,7 +817,7 @@ class WeeklyBillingRunServiceImpl {
         invoiceNumber: invoice.invoiceNumber,
         totalAmount,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('Error processing workspace', { workspaceId, error: (error instanceof Error ? error.message : String(error)) });
       return {
         workspaceId,
@@ -933,7 +932,7 @@ class WeeklyBillingRunServiceImpl {
         const _invoiceHtml = `<div><p><strong>firstName:</strong> ${ownerResult[0].firstName || 'Customer'}</p><p><strong>invoiceNumber:</strong> ${invoiceNumber}</p><p><strong>totalAmount:</strong> ${totalAmount.toFixed(2)}</p><p><strong>dueDate:</strong> ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p><p><strong>viewInvoiceUrl:</strong> /billing/invoices/${invoiceId}</p></div>`;
         await NotificationDeliveryService.send({ type: 'invoice_notification', workspaceId: workspaceId || 'system', recipientUserId: ownerResult[0].email, channel: 'email', body: { to: ownerResult[0].email, subject: `Invoice Generated - ${invoiceNumber}`, html: _invoiceHtml } });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.warn('Failed to send invoice notification', { error: (error instanceof Error ? error.message : String(error)) });
     }
   }
@@ -960,7 +959,7 @@ class WeeklyBillingRunServiceImpl {
           severity: error.errorType === 'system' ? 'high' : 'medium',
         });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('Failed to queue exceptions', { error: (err instanceof Error ? err.message : String(err)) });
     }
   }
@@ -993,7 +992,6 @@ class WeeklyBillingRunServiceImpl {
     const state = lastRunLog[0].newState as any;
     return {
       runId: state?.runId || 'unknown',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       completedAt: lastRunLog[0].createdAt,
       invoicesGenerated: state?.invoicesGenerated || 0,
       totalAmount: state?.totalAmount || 0,

@@ -83,7 +83,7 @@ export async function runLegacyBootstraps(): Promise<void> {
       await entry.fn(pool as unknown as Pool);
       entry.ran = true;
       results.ok++;
-    } catch (err: any) {
+    } catch (err: unknown) {
       results.failed++;
       log.error(`[legacyBootstrap] ${entry.name} failed`, { error: err?.message });
     }

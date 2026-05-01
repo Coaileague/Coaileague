@@ -72,7 +72,7 @@ export interface OpenAIRequest {
   modelId?: OpenAIModelId;
   maxTokens?: number;
   temperature?: number;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 export interface OpenAIResponse {
@@ -193,7 +193,6 @@ class OpenAIClient {
           inputTokens,
           outputTokens,
           triggeredByUserId: userId,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         }).catch((e: Error) => log.error('[Trinity:support-backend] Token metering error:', e.message));
       }
 

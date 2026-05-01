@@ -40,7 +40,7 @@ export default function ComplianceEvidencePage() {
       queryClient.invalidateQueries({ queryKey: ["/api/compliance-evidence/pending"] });
       toast({ title: "Evidence Verified", description: "The document has been successfully verified." });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Verification failed", description: error.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -53,7 +53,7 @@ export default function ComplianceEvidencePage() {
       queryClient.invalidateQueries({ queryKey: ["/api/compliance-evidence/pending"] });
       toast({ title: "Evidence Rejected", description: "The document has been rejected." });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Rejection failed", description: error.message || "Please try again.", variant: "destructive" });
     },
   });

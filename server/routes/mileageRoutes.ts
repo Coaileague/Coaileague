@@ -26,7 +26,6 @@ router.get("/", requireAuth, async (req: AuthenticatedRequest, res) => {
 
     let filterEmployeeId: string | undefined;
     if (!isManager) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const employee = await storage.getEmployeeByUserId(user.id);
       if (!employee || employee.workspaceId !== workspaceId) {
         return res.json({ logs: [], summary: { totalMiles: 0, totalReimbursement: 0, pendingCount: 0 } });
@@ -60,7 +59,6 @@ router.post("/", requireAuth, async (req: AuthenticatedRequest, res) => {
     const workspaceId = req.workspaceId!;
     const user = req.user;
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const employee = await storage.getEmployeeByUserId(user.id);
     if (!employee || employee.workspaceId !== workspaceId) {
       return res.status(404).json({ message: "Employee record not found" });
@@ -114,7 +112,7 @@ router.patch("/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
     }
 
     const allowed = ["tripDate", "startLocation", "endLocation", "purpose", "tripType", "miles", "ratePerMile", "notes"];
-    const data: Record<string, any> = {};
+    const data: Record<string, unknown> = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) data[key] = req.body[key];
     }
@@ -152,7 +150,6 @@ router.post("/:id/approve", requireManager, async (req: AuthenticatedRequest, re
   try {
     const workspaceId = req.workspaceId!;
     const user = req.user;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const log = await storage.approveMileageLog(req.params.id, workspaceId, user.id);
     if (!log) return res.status(404).json({ message: "Not found" });
     return res.json(log);
@@ -170,7 +167,6 @@ router.post("/:id/reject", requireManager, async (req: AuthenticatedRequest, res
     const rejectParsed = rejectSchema.safeParse(req.body);
     if (!rejectParsed.success) return res.status(400).json({ message: 'Rejection reason required' });
     const { reason } = rejectParsed.data;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const log = await storage.rejectMileageLog(req.params.id, workspaceId, user.id, reason);
     if (!log) return res.status(404).json({ message: "Not found" });
     return res.json(log);
@@ -186,10 +182,8 @@ router.delete("/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
     const existing = await storage.getMileageLog(req.params.id, workspaceId);
     if (!existing) return res.status(404).json({ message: "Not found" });
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const role = (req.user).workspaceRole || "";
     const isManager = ["manager", "department_manager", "org_manager", "co_owner", "org_owner"].includes(role)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       || ["root_admin", "deputy_admin", "sysop"].includes((req.user).platformRole || "");
 
     if (!isManager && existing.status !== "draft") {

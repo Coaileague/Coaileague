@@ -85,7 +85,7 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
       stream.getTracks().forEach(track => track.stop());
       setHasPermission(true);
       return true;
-    } catch (err: any) {
+    } catch (err: unknown) {
       setHasPermission(false);
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
         handleError('permission_denied', 'Microphone permission denied. Please allow access to use voice commands.');
@@ -137,7 +137,7 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
         confidence: data.confidence ?? 0.9,
         timestamp: new Date(),
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[VoiceCommand] transcription error:', err.message);
       setInterimTranscript('');
       handleError('network_error', 'Transcription failed. Please try again.');
@@ -209,7 +209,7 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
         stopListening();
       }, maxDuration);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[VoiceCommand] start error:', err.message);
       if (err.name === 'NotAllowedError') {
         handleError('permission_denied', 'Microphone permission denied.');

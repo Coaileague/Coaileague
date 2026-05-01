@@ -73,7 +73,7 @@ export default function AICommunicationsOnboarding() {
       });
       setLocation('/chatrooms');
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to complete onboarding",

@@ -184,7 +184,7 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
 
     log.info(`[Credentials] Created "${name}" for employee ${targetEmployeeId}`);
     res.status(201).json({ success: true, credential: created });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error("[Credentials] POST failed:", err?.message);
     res.status(500).json({ error: err.message || "Failed to create credential" });
   }
@@ -197,7 +197,7 @@ router.patch("/:id", async (req: AuthenticatedRequest, res) => {
     if (!workspaceId) return res.status(401).json({ error: "Workspace required" });
 
     const allowed = ['name','issuingOrganization','certificationNumber','issuedDate','expiryDate','certificateUrl','verificationUrl','status'];
-    const updates: Record<string, any> = { updatedAt: new Date() };
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
     for (const key of allowed) {
       if (req.body[key] !== undefined) {
         updates[key] = (key === 'issuedDate' || key === 'expiryDate') && req.body[key]
@@ -212,7 +212,7 @@ router.patch("/:id", async (req: AuthenticatedRequest, res) => {
 
     if (!updated) return res.status(404).json({ error: "Credential not found" });
     res.json({ success: true, credential: updated });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error("[Credentials] PATCH failed:", err?.message);
     res.status(500).json({ error: err.message || "Failed to update credential" });
   }
@@ -231,7 +231,7 @@ router.delete("/:id", async (req: AuthenticatedRequest, res) => {
 
     if (!deleted) return res.status(404).json({ error: "Credential not found" });
     res.json({ success: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error("[Credentials] DELETE failed:", err?.message);
     res.status(500).json({ error: err.message || "Failed to remove credential" });
   }
@@ -252,7 +252,7 @@ router.get("/employee/:employeeId", async (req: AuthenticatedRequest, res) => {
       .orderBy(desc(trainingCertifications.expiryDate));
 
     res.json({ credentials: creds });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: err.message || "Failed to fetch credentials" });
   }
 });

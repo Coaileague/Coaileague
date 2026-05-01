@@ -373,7 +373,7 @@ export default function CandidateProfilePage() {
 
   const initVoiceSessionMutation = useMutation({
     mutationFn: () => apiRequest("POST", `/api/recruitment/candidates/${candidateId}/voice-session`, {}),
-    onSuccess: (result: any) => {
+    onSuccess: (result) => {
       toast({ title: "Voice interview session created", description: `${result?.questionCount ?? 0} questions loaded.` });
       refetch();
     },

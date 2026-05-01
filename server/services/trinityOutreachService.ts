@@ -323,7 +323,6 @@ export class TrinityOutreachService {
         const { sendAutomationEmail } = await import('./emailService');
         await sendAutomationEmail({
           to: candidate.email,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           subject: `${candidate.companyName} - Streamline Your Security Operations with CoAIleague`,
           html: this.buildOutreachTemplate(candidate, token, trialDays, options?.customMessage),
           category: 'sales_outreach',
@@ -332,7 +331,7 @@ export class TrinityOutreachService {
 
         emailsSent++;
         await new Promise(resolve => setTimeout(resolve, 1500));
-      } catch (err: any) {
+      } catch (err: unknown) {
         errors.push(`Failed for ${candidate.email}: ${(err instanceof Error ? err.message : String(err))}`);
       }
     }

@@ -715,7 +715,7 @@ export default function HiringPipeline() {
 
   const seedMut = useMutation({
     mutationFn: () => apiRequest("POST", "/api/hiring/seed"),
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/hiring/pipeline"] });
       toast({ title: "Seed Complete", description: data?.message || "Hiring test data loaded" });
     },

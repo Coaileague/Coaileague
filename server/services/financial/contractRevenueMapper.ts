@@ -178,7 +178,7 @@ export async function mapContractToRevenue(
         changes: { contractId, invoiceId, contractValue, termMonths, monthlyValue },
         source: 'system',
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[ContractRevenueMapper] Audit log write failed (non-fatal)', { error: err?.message });
     }
 
@@ -192,7 +192,7 @@ export async function mapContractToRevenue(
       recognitionMethod: 'accrual',
       status: 'active',
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[ContractRevenueMapper] mapContractToRevenue error', {
       contractId,
       workspaceId,

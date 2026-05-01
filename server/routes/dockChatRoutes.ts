@@ -52,7 +52,7 @@ router.get("/rooms", requireAuth, async (req: AuthenticatedRequest, res) => {
       [wid, uid, false]
     );
     res.json(rows);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 router.post("/rooms", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -91,7 +91,7 @@ router.post("/rooms", requireAuth, async (req: AuthenticatedRequest, res) => {
       }
     }
     res.status(201).json(room);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 // ── MESSAGES ───────────────────────────────────────────────────────────────
@@ -135,7 +135,7 @@ router.get("/rooms/:roomId/messages", requireAuth, async (req: AuthenticatedRequ
       .slice(0, limit);
 
     res.json({ messages: combined.reverse(), page, limit });
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 router.post("/rooms/:roomId/messages", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -238,7 +238,7 @@ router.post("/rooms/:roomId/messages", requireAuth, async (req: AuthenticatedReq
     }
 
     res.status(201).json(rows[0]);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 router.post("/rooms/:roomId/broadcast", requireManager, async (req: AuthenticatedRequest, res) => {
@@ -273,7 +273,7 @@ router.post("/rooms/:roomId/broadcast", requireManager, async (req: Authenticate
       }).catch(() => null);
     }
     res.status(201).json(rows[0]);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 // ── DIRECT MESSAGES ─────────────────────────────────────────────────────────
@@ -315,7 +315,7 @@ router.get("/direct/:targetUserId", requireAuth, async (req: AuthenticatedReques
       );
     }
     res.status(201).json(room);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 // ── BOT COMMANDS ────────────────────────────────────────────────────────────
@@ -331,7 +331,7 @@ router.get("/commands", requireAuth, async (req: AuthenticatedRequest, res) => {
       [wid]
     );
     res.json({ builtin: BOT_COMMANDS, custom: custom });
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 // ── HELPERS ─────────────────────────────────────────────────────────────────
@@ -398,7 +398,7 @@ async function handleBotCommand(
           botResponse = (result?.response && typeof result.response === "string" && result.response.trim())
             ? result.response
             : "I was unable to process that request.";
-        } catch (err: any) {
+        } catch (err: unknown) {
           botResponse = "Trinity is temporarily unavailable. Please try again shortly.";
         }
       }
@@ -438,7 +438,7 @@ async function handleTrinityMention(wid: string, roomId: string, uid: string, co
     if (result?.response && typeof result.response === "string" && result.response.trim()) {
       response = result.response;
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     try {
       const { createLogger } = await import("../lib/logger");
       createLogger("DockChatTrinity").warn("Trinity mention failed (non-fatal):", err?.message);

@@ -310,7 +310,7 @@ class DocumentSigningService {
               idempotencyKey: `document_signature_request-${documentId}-${recipient.userId}`
             });
             log.info(`[DocumentSigning] Created notification for internal user ${recipient.userId}`);
-          } catch (notifErr: any) {
+          } catch (notifErr: unknown) {
             log.warn(`[DocumentSigning] Failed to create notification for ${recipient.userId}: ${notifErr.message}`);
           }
         }
@@ -322,7 +322,7 @@ class DocumentSigningService {
           verificationToken: recipient.type === 'external' ? verificationToken : null,
           status: 'sent',
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.error(`[DocumentSigning] Failed to process recipient ${recipient.email}: ${(err instanceof Error ? err.message : String(err))}`);
         results.push({
           signatureId: '',
@@ -483,7 +483,7 @@ class DocumentSigningService {
               signatureId: sigRecord.id,
             },
           });
-        } catch (notifErr: any) {
+        } catch (notifErr: unknown) {
           log.warn(`[DocumentSigning] Owner notification failed: ${notifErr.message}`);
         }
       }
@@ -512,7 +512,7 @@ class DocumentSigningService {
       }
 
       return { success: true, documentId: sigRecord.documentId };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[DocumentSigning] Error processing external signature: ${(err instanceof Error ? err.message : String(err))}`);
       return { success: false, error: (err instanceof Error ? err.message : String(err)) };
     }
@@ -618,7 +618,7 @@ class DocumentSigningService {
       }
 
       return { success: true };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[DocumentSigning] Error processing internal signature: \${err.message}`);
       return { success: false, error: err.message };
     }
@@ -655,7 +655,7 @@ class DocumentSigningService {
           }).catch(e => log.warn(`[DocumentSigning] Final copy email failed for \${sig.signerEmail}: \${e.message}`));
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[DocumentSigning] Failed to distribute final copies: \${err.message}`);
     }
   }

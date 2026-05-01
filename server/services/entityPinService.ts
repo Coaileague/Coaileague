@@ -202,7 +202,7 @@ export async function verifyEntityPin(params: PinVerifyParams): Promise<{
     if (!hash) return { valid: false, reason: 'no_pin' };
     const ok = await verifyPin(clean, hash);
     return { valid: ok, reason: ok ? 'ok' : 'wrong_pin' };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[EntityPinService] Verify failed for ${entity} ${entityId}: ${err?.message}`);
     return { valid: false, reason: 'wrong_pin' };
   }
@@ -251,7 +251,7 @@ export async function verifyIdentityAndPin(params: {
         workspaceId: rows[0].id,
         name: rows[0].name,
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[EntityPinService] owner verify failed:', err?.message);
       return { valid: false, reason: 'wrong_pin' };
     }
@@ -277,7 +277,7 @@ export async function verifyIdentityAndPin(params: {
         workspaceId: rows[0].workspace_id,
         name: rows[0].name,
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[EntityPinService] employee verify failed:', err?.message);
       return { valid: false, reason: 'wrong_pin' };
     }
@@ -303,7 +303,7 @@ export async function verifyIdentityAndPin(params: {
         workspaceId: rows[0].workspace_id,
         name: rows[0].name,
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[EntityPinService] client verify failed:', err?.message);
       return { valid: false, reason: 'wrong_pin' };
     }

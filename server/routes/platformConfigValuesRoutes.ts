@@ -56,7 +56,7 @@ platformConfigValuesRouter.get('/groups', requireAuth, async (req: Request, res:
 
     const result = await pool.query(query, params);
     res.json({ groups: result.rows });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: 'Failed to load config groups' });
   }
 });
@@ -83,7 +83,7 @@ platformConfigValuesRouter.get('/groups/:groupKey', requireAuth, async (req: Req
     }
 
     res.json({ group: groupResult.rows[0], values: valuesResult.rows });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: 'Failed to load config group' });
   }
 });
@@ -118,7 +118,7 @@ platformConfigValuesRouter.get('/values', requireAuth, async (req: Request, res:
 
     const result = await pool.query(query, params);
     res.json({ values: result.rows });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: 'Failed to load config values' });
   }
 });
@@ -152,7 +152,7 @@ platformConfigValuesRouter.post('/groups', requireAuth, async (req: Request, res
         isExtendable !== false, sortOrder ?? 0]);
 
     res.status(201).json({ group: result.rows[0] });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: 'Failed to create config group' });
   }
 });
@@ -207,7 +207,7 @@ platformConfigValuesRouter.post('/values', requireAuth, async (req: Request, res
         metadata ? JSON.stringify(metadata) : null]);
 
     res.status(201).json({ value: result.rows[0] });
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err.code === '23505') {
       return res.status(409).json({ error: 'A value with that key already exists in this group' });
     }
@@ -264,7 +264,7 @@ platformConfigValuesRouter.patch('/values/:id', requireAuth, async (req: Request
     );
 
     res.json({ value: result.rows[0] });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: 'Failed to update config value' });
   }
 });
@@ -301,7 +301,7 @@ platformConfigValuesRouter.delete('/values/:id', requireAuth, async (req: Reques
     }
 
     res.json({ deleted: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: 'Failed to delete config value' });
   }
 });
@@ -316,7 +316,7 @@ platformConfigValuesRouter.get('/domains', requireAuth, async (_req: Request, re
       ORDER BY domain ASC
     `);
     res.json({ domains: result.rows.map((r: any) => r.domain) });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: 'Failed to load domains' });
   }
 });

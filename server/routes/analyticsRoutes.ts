@@ -229,7 +229,7 @@ router.get("/stats", async (req: any, res) => {
       }
     }
 
-    const statsPayload: Record<string, any> = {
+    const statsPayload: Record<string, unknown> = {
       summary: {
         totalWorkspaces,
         totalCustomers: activeClients,
@@ -321,7 +321,6 @@ router.get("/incident-heatmap", async (req, res) => {
     // In our schema, incident_reports doesn't have lat/lng, so we might need to derive it from site_id
     // For now, let's assume we want a heatmap of incidents by site location
     // Converted to Drizzle ORM: GROUP BY with multiple tables → select({ ... }) + from().join().groupBy()
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const { rows } = await db.select({
       latitude: sql<string>`${sites.geofenceLat}`,
       longitude: sql<string>`${sites.geofenceLng}`,
@@ -339,7 +338,6 @@ router.get("/incident-heatmap", async (req, res) => {
     .groupBy(sites.geofenceLat, sites.geofenceLng, incidentReports.incidentType, incidentReports.severity);
 
     // Format for heatmap layer: [[lat, lng, weight], ...]
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const heatmapData = rows.map(r => [
       parseFloat(r.latitude || "0"),
       parseFloat(r.longitude || "0"),
@@ -433,9 +431,7 @@ router.get("/client-profitability", async (req: any, res) => {
     .from(invoices)
     .where(and(
       eq(invoices.workspaceId, workspaceId),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       dateFrom ? gte(invoices.issueDate, dateFrom) : undefined,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       dateTo ? lte(invoices.issueDate, dateTo) : undefined
     ))
     .groupBy(invoices.clientId);
@@ -549,7 +545,6 @@ router.get("/turnover", async (req: any, res) => {
         eq(employees.workspaceId, workspaceId),
         eq(employees.isActive, false),
         sql`${employees.terminationDate} IS NOT NULL`,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         gte(employees.terminationDate, cutoff.toISOString())
       ))
       .orderBy(sql`${employees.terminationDate} DESC`)
@@ -594,16 +589,13 @@ router.get("/turnover", async (req: any, res) => {
         eq(employees.workspaceId, workspaceId),
         eq(employees.isActive, false),
         sql`${employees.terminationDate} IS NOT NULL`,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         gte(employees.terminationDate, cutoff.toISOString())
       ))
       .groupBy(sql`TO_CHAR(${employees.terminationDate}, 'YYYY-MM')`)
       .orderBy(sql`month ASC`)
     ]);
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const activeCount = parseInt(summaryResult.rows[0]?.active_count ?? "0");
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const terminatedCount = parseInt(summaryResult.rows[0]?.terminated_count ?? "0");
     const avgHeadcount = activeCount + (terminatedCount / 2);
     const annualizedRate = avgHeadcount > 0
@@ -619,13 +611,9 @@ router.get("/turnover", async (req: any, res) => {
 
     const byRole = byRoleResult.rows.map(r => ({
       role: r.role,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       active: parseInt(r.active || "0"),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       terminated: parseInt(r.terminated || "0"),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       rate: (parseInt(r.active || "0") + parseInt(r.terminated || "0")) > 0
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         ? Math.round((parseInt(r.terminated || "0") / (parseInt(r.active || "0") + parseInt(r.terminated || "0") / 2)) * 100 * 10) / 10
         : 0,
     }));
@@ -733,19 +721,12 @@ router.get("/financial", async (req: any, res) => {
       [workspaceId]
     )).rows;
     res.json({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       totalInvoices: parseInt(invRow?.total_invoices || '0'),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       grossRevenue:  parseFloat(invRow?.gross_revenue || '0'),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       collected:     parseFloat(invRow?.collected     || '0'),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       outstanding:   parseFloat(invRow?.outstanding   || '0'),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       overdue:       parseFloat(invRow?.overdue       || '0'),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       collectionRate: invRow?.gross_revenue > 0
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         ? Math.round((parseFloat(invRow.collected) / parseFloat(invRow.gross_revenue)) * 100)
         : 0,
     });
@@ -784,11 +765,8 @@ router.get("/predictive", async (req: any, res) => {
          AND occurred_at >= NOW() - INTERVAL '30 days'`,
       [workspaceId]
     )).rows;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const noShows      = parseInt(noShowRow?.no_shows        || '0');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const overdues     = parseInt(overdueRow?.overdue_count  || '0');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const incidents    = parseInt(incidentRow?.recent_incidents || '0');
     const riskScore    = Math.min(100, (noShows * 5) + (overdues * 10) + (incidents * 3));
     res.json({
@@ -846,11 +824,9 @@ router.get("/forecast", async (req: any, res) => {
     )).rows;
 
     const revenueByMonth: Record<string, number> = {};
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     for (const r of revenueRows) revenueByMonth[r.month] = parseFloat(r.revenue || '0');
 
     const laborByMonth: Record<string, number> = {};
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     for (const r of payrollRows) laborByMonth[r.month] = parseFloat(r.labor_cost || '0');
 
     const allMonths = Array.from(new Set([...Object.keys(revenueByMonth), ...Object.keys(laborByMonth)])).sort();
@@ -959,11 +935,8 @@ router.get("/dashboard", async (req: any, res) => {
         [workspaceId, s, e]),
     ]);
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const totalHours = parseFloat(hoursRow.rows[0]?.total_hours || '0');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const totalRevenue = parseFloat(revenueRow.rows[0]?.invoiced || '0');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const laborCost = parseFloat(laborRow.rows[0]?.labor_cost || '0');
     const revenuePerHour = totalHours > 0 ? parseFloat((totalRevenue / totalHours).toFixed(2)) : 0;
 
@@ -973,13 +946,9 @@ router.get("/dashboard", async (req: any, res) => {
       laborCost: parseFloat(laborCost.toFixed(2)),
       revenuePerHour,
       utilizationRate: 0,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       activeEmployees: parseInt(activeEmp.rows[0]?.cnt || '0'),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       activeClients: parseInt(activeClients.rows[0]?.cnt || '0'),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       pendingInvoices: parseInt(invoiceRow.rows[0]?.pending_cnt || '0'),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       paidInvoices: parseInt(invoiceRow.rows[0]?.paid_cnt || '0'),
       comparison: { hoursChange: 0, revenueChange: 0, laborCostChange: 0 },
       trends: trendsRows.rows.map((r: any) => ({
@@ -1034,12 +1003,10 @@ router.get("/time-usage", async (req: any, res) => {
         [workspaceId, s, e]),
     ]);
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const totalHours = parseFloat(totalRow.rows[0]?.total_hours || '0');
     const dayCount = byDayRows.rows.length || 1;
     res.json({ data: {
       totalHours: parseFloat(totalHours.toFixed(1)),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       overtimeHours: parseFloat(parseFloat(totalRow.rows[0]?.ot_hours || '0').toFixed(1)),
       averageHoursPerDay: parseFloat((totalHours / dayCount).toFixed(1)),
       byEmployee: byEmpRows.rows.map((r: any) => ({
@@ -1101,22 +1068,16 @@ router.get("/scheduling", async (req: any, res) => {
     ]);
 
     const summary = summaryRow.rows[0] || {};
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const total = parseInt(summary.total || '0');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const filled = parseInt(summary.filled || '0');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const completed = parseInt(summary.completed || '0');
     res.json({ data: {
       totalShifts: total,
       completedShifts: completed,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       cancelledShifts: parseInt(summary.cancelled || '0'),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       noShows: parseInt(summary.no_shows || '0'),
       fillRate: total > 0 ? parseFloat(((filled / total) * 100).toFixed(1)) : 0,
       coverageRate: total > 0 ? parseFloat(((completed / total) * 100).toFixed(1)) : 0,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       averageShiftDuration: parseFloat(parseFloat(summary.avg_duration || '0').toFixed(1)),
       byStatus: byStatusRows.rows.map((r: any) => ({ status: r.status, count: parseInt(r.cnt) })),
       byDay: byDayRows.rows.map((r: any) => ({ day: r.day, scheduled: parseInt(r.scheduled), completed: parseInt(r.completed) })),
@@ -1147,9 +1108,7 @@ router.get("/revenue", async (req: any, res) => {
       .from(invoices)
       .where(and(
         eq(invoices.workspaceId, workspaceId),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         gte(invoices.createdAt, s),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         lte(invoices.createdAt, e)
       )),
       // Converted to Drizzle ORM: GROUP BY with multiple tables → select({ ... }).from().join().groupBy()
@@ -1163,9 +1122,7 @@ router.get("/revenue", async (req: any, res) => {
       .leftJoin(clients, eq(clients.id, invoices.clientId))
       .where(and(
         eq(invoices.workspaceId, workspaceId),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         gte(invoices.createdAt, s),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         lte(invoices.createdAt, e),
         sql`${invoices.clientId} IS NOT NULL`
       ))
@@ -1181,9 +1138,7 @@ router.get("/revenue", async (req: any, res) => {
       .from(invoices)
       .where(and(
         eq(invoices.workspaceId, workspaceId),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         gte(invoices.createdAt, s),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         lte(invoices.createdAt, e)
       ))
       .groupBy(sql`date_trunc('month',${invoices.createdAt})`)
@@ -1312,9 +1267,7 @@ router.get("/insights", async (req: any, res) => {
       .from(timeEntries)
       .where(and(
         eq(timeEntries.workspaceId, workspaceId),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         gte(timeEntries.clockIn, s),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         lte(timeEntries.clockIn, e),
         sql`${timeEntries.clockIn} IS NOT NULL`
       )),
@@ -1331,9 +1284,7 @@ router.get("/insights", async (req: any, res) => {
       .from(invoices)
       .where(and(
         eq(invoices.workspaceId, workspaceId),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         gte(invoices.createdAt, s),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         lte(invoices.createdAt, e)
       )),
       // CATEGORY C — Raw SQL retained: COUNT( | Tables: employees | Verified: 2026-03-23
@@ -1347,11 +1298,8 @@ router.get("/insights", async (req: any, res) => {
 
     const totalHours = parseFloat(String(((hoursRow as any)[0]?.total ?? (hoursRow as any).rows?.[0]?.total) || '0'));
     const otHours = parseFloat(String(((hoursRow as any)[0]?.ot ?? (hoursRow as any).rows?.[0]?.ot) || '0'));
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const totalShifts = parseInt(shiftsRow.rows[0]?.total || '0');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const noShows = parseInt(shiftsRow.rows[0]?.no_shows || '0');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const cancelled = parseInt(shiftsRow.rows[0]?.cancelled || '0');
     const overdue = parseFloat(String(((invoiceRow as any)[0]?.overdue ?? (invoiceRow as any).rows?.[0]?.overdue) || '0'));
     const totalInvoiced = parseFloat(String(((invoiceRow as any)[0]?.total ?? (invoiceRow as any).rows?.[0]?.total) || '0'));
@@ -1534,7 +1482,7 @@ router.get("/heatmap", async (req: any, res) => {
     .groupBy(sql`day_of_week`, sql`hour_of_day`);
 
     // Build lookup map
-    const map: Record<string, any> = {};
+    const map: Record<string, unknown> = {};
     for (const r of heatmapRows) map[`${r.dayOfWeek}_${r.hourOfDay}`] = r;
 
     // Build 7×24 grid

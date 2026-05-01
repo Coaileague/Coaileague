@@ -98,7 +98,7 @@ export async function verifyByPhone(phone: string): Promise<VerificationResult> 
         preferredLanguage: (row.preferred_language === 'es' ? 'es' : 'en') as 'en' | 'es',
       },
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[SmsIdentity] Phone verification error:', err?.message);
     return { verified: false, identity: null, failReason: 'no_record', isNewOfficer: false };
   }
@@ -152,7 +152,7 @@ export async function verifyByEmployeeNumber(
         preferredLanguage: (row.preferred_language === 'es' ? 'es' : 'en') as 'en' | 'es',
       },
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[SmsIdentity] Employee number verification error:', err?.message);
     return { verified: false, identity: null, failReason: 'no_record', isNewOfficer: false };
   }
@@ -173,7 +173,7 @@ export async function logFailedVerification(
     `, [phone, `SMS identity verification failed: ${reason}`]);
 
     log.warn(`[SmsIdentity] Failed verification from ${phone}: ${reason}`);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[SmsIdentity] Could not log failure:', err?.message);
   }
 }
@@ -204,7 +204,7 @@ export async function notifyManagementUnverified(
       `Unidentified person texted Trinity from ${phone}. Message: "${message.slice(0, 200)}". May be a new officer who does not know their credentials yet.`,
     ]);
     log.info(`[SmsIdentity] Management notified of unverified contact from ${phone}`);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[SmsIdentity] Could not notify management:', err?.message);
   }
 }

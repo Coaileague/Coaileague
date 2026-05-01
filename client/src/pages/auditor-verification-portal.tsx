@@ -135,7 +135,7 @@ export default function AuditorVerificationPortal() {
         toast({ title: 'Verification failed', description: data.reasoning ?? 'Trinity could not verify this document. Please re-submit.', variant: 'destructive', duration: 8000 });
       }
     },
-    onError: (err: any) => toast({ title: 'Submission failed', description: err?.message, variant: 'destructive' }),
+    onError: (err) => toast({ title: 'Submission failed', description: err?.message, variant: 'destructive' }),
   });
 
   const isUnlocked = safeStatus?.unlocked;

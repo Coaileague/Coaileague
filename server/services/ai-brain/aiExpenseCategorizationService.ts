@@ -106,7 +106,7 @@ class AIExpenseCategorizationService {
       });
       this.initialized = true;
       log.info('[AIExpenseCategorization] Service initialized');
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[AIExpenseCategorization] Initialization failed:', (error instanceof Error ? error.message : String(error)));
     }
   }
@@ -125,7 +125,6 @@ class AIExpenseCategorizationService {
 
     try {
       const authResult = await aiTokenGateway.preAuthorize(
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId,
         userId,
         'ai_expense_ocr'
@@ -161,7 +160,6 @@ If any field cannot be determined, use null. Focus on accuracy over completeness
       const ocrUsage = response.usageMetadata;
       const totalTokens = (ocrUsage?.promptTokenCount || 0) + (ocrUsage?.candidatesTokenCount || 0);
       await aiTokenGateway.finalizeBilling(
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId,
         userId,
         'ai_expense_ocr',
@@ -196,7 +194,7 @@ If any field cannot be determined, use null. Focus on accuracy over completeness
       }
 
       return { success: false, confidence: 0, rawText: text, error: 'Could not parse receipt data' };
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[AIExpenseCategorization] Receipt extraction error:', (error instanceof Error ? error.message : String(error)));
       return { success: false, confidence: 0, error: (error instanceof Error ? error.message : String(error)) };
     }
@@ -272,7 +270,7 @@ Rank by confidence (0-100). Be specific in reasoning.`;
       }
 
       return [];
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[AIExpenseCategorization] Category suggestion error:', (error instanceof Error ? error.message : String(error)));
       return [];
     }
@@ -341,7 +339,7 @@ Rank by confidence (0-100). Be specific in reasoning.`;
         anomalyFlags,
         duplicateWarning
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[AIExpenseCategorization] Categorize expense error:', (error instanceof Error ? error.message : String(error)));
       return null;
     }
@@ -383,12 +381,11 @@ Rank by confidence (0-100). Be specific in reasoning.`;
             await db.update(expenses)
               .set({
                 categoryId: result.suggestedCategory.categoryId,
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 status: 'categorized',
                 notes: `Auto-categorized by AI (confidence: ${confidence}%). Category: ${result.suggestedCategory.categoryName}. ${result.suggestedCategory.reasoning}`,
               })
               .where(eq(expenses.id, expense.id));
-          } catch (err: any) {
+          } catch (err: unknown) {
             log.error(`[AIExpenseCategorization] Failed to auto-apply category for expense ${expense.id}:`, (err instanceof Error ? err.message : String(err)));
           }
         } else {
@@ -396,12 +393,11 @@ Rank by confidence (0-100). Be specific in reasoning.`;
           try {
             await db.update(expenses)
               .set({
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 status: 'needs_review',
                 notes: `AI categorization confidence too low (${confidence}%) for auto-apply (threshold: ${AI_CONFIDENCE_THRESHOLDS.AUTO_APPLY}%). Suggested: ${result.suggestedCategory.categoryName}. ${result.suggestedCategory.reasoning}`,
               })
               .where(eq(expenses.id, expense.id));
-          } catch (err: any) {
+          } catch (err: unknown) {
             log.error(`[AIExpenseCategorization] Failed to flag expense ${expense.id} for review:`, (err instanceof Error ? err.message : String(err)));
           }
         }
@@ -507,7 +503,7 @@ Rank by confidence (0-100). Be specific in reasoning.`;
         confidence: bestMatch?.score || 0,
         reason: `No confident match found (best score: ${bestMatch?.score || 0}%, threshold: ${AI_CONFIDENCE_THRESHOLDS.RECEIPT_MATCH}%) — manual review required`
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[AIExpenseCategorization] Receipt matching error:', (error instanceof Error ? error.message : String(error)));
       return { matched: false, confidence: 0, reason: (error instanceof Error ? error.message : String(error)) };
     }
@@ -597,7 +593,7 @@ Rank by confidence (0-100). Be specific in reasoning.`;
         anomalies: anomalies.slice(0, 5),
         insights
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[AIExpenseCategorization] Pattern analysis error:', (error instanceof Error ? error.message : String(error)));
       return {
         topCategories: [],

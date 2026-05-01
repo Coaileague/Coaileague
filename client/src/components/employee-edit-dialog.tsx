@@ -966,7 +966,7 @@ export function EmployeeEditDialog({
                   </div>
                 ) : (
                   <div className="space-y-1.5">
-                    {currentAssignments.map((a: any) => {
+                    {currentAssignments.map((a) => {
                       const mgr = allEmployees.find((e) => e.id === a.managerId);
                       const label = mgr
                         ? `${mgr.firstName} ${mgr.lastName}`

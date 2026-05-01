@@ -96,7 +96,7 @@ interface SMSMessage {
   workspaceId?: string;
   userId?: string;
   type?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 interface SMSResult {
@@ -346,7 +346,7 @@ export async function sendSMS(message: SMSMessage): Promise<SMSResult> { // infr
           callType: message.type || 'sms_notification',
           twilioCostCents: 1, // Twilio SMS ~$0.0079/msg → 1 cent (ceil)
         });
-      } catch (e: any) {
+      } catch (e: unknown) {
         log.warn('[smsService] SMS metering error:', e?.message || String(e));
       }
     }
@@ -355,7 +355,7 @@ export async function sendSMS(message: SMSMessage): Promise<SMSResult> { // infr
       success: true,
       messageId: result.sid,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     log.error('[SMS] Failed to send:', (error instanceof Error ? error.message : String(error)));
     return {
       success: false,
@@ -400,7 +400,7 @@ export async function sendSMSToUser(userId: string, body: string, type: string =
       reason: result.success ? undefined : result.error,
     });
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     log.error('[SMS] Error sending to user:', error);
     return { success: false, error: (error instanceof Error ? error.message : String(error)) };
   }
@@ -465,7 +465,7 @@ export async function sendSMSToEmployee(employeeId: string, body: string, type: 
       reason: result.success ? undefined : result.error,
     });
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     log.error('[SMS] Error sending to employee:', error);
     return { success: false, error: (error instanceof Error ? error.message : String(error)) };
   }

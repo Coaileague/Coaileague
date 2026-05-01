@@ -57,7 +57,7 @@ export default function ExpenseApprovalsPage() {
       });
       handleCloseDialog();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to approve expense",
@@ -78,7 +78,7 @@ export default function ExpenseApprovalsPage() {
       });
       handleCloseDialog();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to reject expense",
@@ -98,7 +98,7 @@ export default function ExpenseApprovalsPage() {
         description: "Expense marked as reimbursed",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to mark expense as paid",
@@ -150,9 +150,9 @@ export default function ExpenseApprovalsPage() {
     return <Badge variant={variants[status] || 'outline'}>{status}</Badge>;
   };
 
-  const pendingExpenses = expenses.filter((e: any) => e.status === 'submitted');
-  const approvedExpenses = expenses.filter((e: any) => e.status === 'approved');
-  const reimbursedExpenses = expenses.filter((e: any) => e.status === 'reimbursed');
+  const pendingExpenses = expenses.filter((e) => e.status === 'submitted');
+  const approvedExpenses = expenses.filter((e) => e.status === 'approved');
+  const reimbursedExpenses = expenses.filter((e) => e.status === 'reimbursed');
 
   if (isLoading) {
     return (
@@ -249,7 +249,7 @@ export default function ExpenseApprovalsPage() {
               <p className="text-xs text-muted-foreground text-center px-4 py-2">
                 Swipe right to approve, left to reject
               </p>
-              {pendingExpenses.map((expense: any) => (
+              {pendingExpenses.map((expense) => (
                 <MobileExpenseCard
                   key={expense.id}
                   expense={expense}
@@ -259,7 +259,7 @@ export default function ExpenseApprovalsPage() {
               ))}
             </div>
           ) : (
-            pendingExpenses.map((expense: any) => (
+            pendingExpenses.map((expense) => (
               <Card key={expense.id} data-testid={`card-expense-${expense.id}`}>
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
@@ -320,7 +320,7 @@ export default function ExpenseApprovalsPage() {
         </TabsContent>
 
         <TabsContent value="approved" className="space-y-4">
-          {approvedExpenses.map((expense: any) => (
+          {approvedExpenses.map((expense) => (
             <Card key={expense.id}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
@@ -352,7 +352,7 @@ export default function ExpenseApprovalsPage() {
         </TabsContent>
 
         <TabsContent value="reimbursed" className="space-y-4">
-          {reimbursedExpenses.map((expense: any) => (
+          {reimbursedExpenses.map((expense) => (
             <Card key={expense.id}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">

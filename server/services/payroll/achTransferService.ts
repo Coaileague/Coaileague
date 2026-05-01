@@ -215,7 +215,7 @@ export async function initiatePayrollAchTransfer(params: {
     }
 
     return { status: 'initiated', transferId: transfer.transferId };
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (pendingRecord?.id) {
       await db.update(plaidTransferAttempts).set({
         status: 'failed',

@@ -116,7 +116,7 @@ export async function classifyAndPersist(params: {
         [JSON.stringify({ priority: result.priority, terms: result.reasonTerms }), params.callSid]
       );
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[VoicemailSentiment] persist failed (non-fatal):', err?.message);
   }
   return result;

@@ -102,7 +102,6 @@ export default function InboxPage() {
     queryKey: ["/api/internal-email/mailbox/auto-create"],
   });
 
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const mailbox = mailboxData?.mailbox as Mailbox | undefined;
 
   const { data: foldersData } = useQuery({
@@ -128,7 +127,6 @@ export default function InboxPage() {
 
   const sendEmailMutation = useMutation({
     mutationFn: async (data: { to: string[]; subject: string; bodyText: string; sendExternal?: boolean }) => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       return apiRequest("/api/internal-email/send", {
         method: "POST",
         body: JSON.stringify(data),
@@ -150,7 +148,6 @@ export default function InboxPage() {
 
   const markReadMutation = useMutation({
     mutationFn: async ({ id, isRead }: { id: string; isRead: boolean }) => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       return apiRequest(`/api/internal-email/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ isRead }),
@@ -172,7 +169,6 @@ export default function InboxPage() {
 
   const toggleStarMutation = useMutation({
     mutationFn: async ({ id, isStarred }: { id: string; isStarred: boolean }) => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       return apiRequest(`/api/internal-email/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ isStarred }),
@@ -193,7 +189,6 @@ export default function InboxPage() {
 
   const deleteEmailMutation = useMutation({
     mutationFn: async (id: string) => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       return apiRequest(`/api/internal-email/${id}`, { method: "DELETE" });
     },
     onSuccess: () => {
@@ -212,7 +207,6 @@ export default function InboxPage() {
 
   const restoreEmailMutation = useMutation({
     mutationFn: async (id: string) => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       return apiRequest(`/api/internal-email/${id}/restore`, { method: "POST" });
     },
     onSuccess: () => {
@@ -251,13 +245,10 @@ export default function InboxPage() {
     if (!selectedEmail) return;
     setGeneratingSummary(true);
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const res = await apiRequest(`/api/internal-email/${selectedEmail.id}/summarize`, {
         method: "POST",
       });
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (res.summary) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         setSelectedEmail({ ...selectedEmail, aiSummary: res.summary });
         setShowSummary(true);
         toast({ title: "Summary generated" });

@@ -178,7 +178,7 @@ export default function IntegrationsPage() {
       }
       return data;
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Connection Failed',
         description: friendlyError(error.message || 'Could not start connection'),
@@ -201,7 +201,7 @@ export default function IntegrationsPage() {
       });
       setHrisDisconnectDialog({ open: false, provider: null });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Disconnect Failed',
         description: friendlyError(error.message || 'Could not disconnect provider'),
@@ -227,7 +227,7 @@ export default function IntegrationsPage() {
         description: `Syncing ${data.result?.recordsProcessed || 0} records from HRIS.`,
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Sync Failed',
         description: friendlyError(error.message || 'Could not sync data'),
@@ -304,7 +304,7 @@ export default function IntegrationsPage() {
       
       return data;
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Could Not Connect',
         description: friendlyError(error.message || 'Failed to initiate connection'),
@@ -332,7 +332,7 @@ export default function IntegrationsPage() {
       });
       setDisconnectDialog({ open: false, partner: null });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Could Not Disconnect',
         description: friendlyError(error.message || 'Failed to disconnect'),
@@ -359,7 +359,7 @@ export default function IntegrationsPage() {
         description: FRIENDLY_MESSAGES.refreshSuccess,
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       // Invalidate status to update UI - may now show "Reconnect" button
       queryClient.invalidateQueries({ queryKey: ['/api/quickbooks/connection-status'] });
       queryClient.invalidateQueries({ queryKey: ['/api/integrations/connections'] });

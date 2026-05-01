@@ -189,7 +189,6 @@ export async function runPayrollAutoClose(): Promise<{
           draftsGenerated++;
           log.info('Payroll draft auto-generated', { workspaceId: ws.id, runId: result.payrollRunId });
 
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           await db.insert(billingAuditLog).values({
             workspaceId: ws.id,
             eventType: 'payroll_period_auto_closed',
@@ -214,11 +213,11 @@ export async function runPayrollAutoClose(): Promise<{
             }).catch((e: any) => log.warn('Failed to notify owner of payroll draft', { error: e.message }));
           }
         }
-      } catch (wsErr: any) {
+      } catch (wsErr: unknown) {
         log.warn('Payroll auto-close failed for workspace', { workspaceId: ws.id, error: wsErr.message });
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Payroll auto-close scan failed', { error: (err instanceof Error ? err.message : String(err)) });
   }
 
@@ -294,7 +293,7 @@ export async function detectOrphanedPayrollRuns(): Promise<void> {
         }
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('Orphaned payroll run detection failed', { error: err.message });
   }
 }

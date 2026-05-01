@@ -126,7 +126,7 @@ export default function TrinitySelfEditGovernancePage() {
       queryClient.invalidateQueries({ queryKey: ['/api/trinity/self-edit/stats'] });
       toast({ title: 'Circuit Breaker Reset', description: 'Trinity self-editing is now enabled.' });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: 'Reset Failed', description: error.message, variant: 'destructive' });
     },
   });
@@ -140,7 +140,7 @@ export default function TrinitySelfEditGovernancePage() {
       queryClient.invalidateQueries({ queryKey: ['/api/trinity/self-edit/proposals'] });
       toast({ title: 'Sandbox Tests Complete', description: 'Check the results below.' });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: 'Sandbox Failed', description: error.message, variant: 'destructive' });
     },
   });
@@ -155,7 +155,7 @@ export default function TrinitySelfEditGovernancePage() {
       setSelectedProposal(null);
       toast({ title: 'Proposal Approved', description: 'The changes can now be applied.' });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: 'Approval Failed', description: error.message, variant: 'destructive' });
     },
   });
@@ -172,7 +172,7 @@ export default function TrinitySelfEditGovernancePage() {
       setRejectReason('');
       toast({ title: 'Proposal Rejected', description: 'The changes will not be applied.' });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: 'Rejection Failed', description: error.message, variant: 'destructive' });
     },
   });
@@ -191,7 +191,7 @@ export default function TrinitySelfEditGovernancePage() {
         description: data.commitHash ? `Committed: ${data.commitHash.slice(0, 8)}` : 'Changes applied successfully.' 
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: 'Apply Failed', description: error.message, variant: 'destructive' });
     },
   });
@@ -206,7 +206,7 @@ export default function TrinitySelfEditGovernancePage() {
       setSelectedProposal(null);
       toast({ title: 'Rollback Complete', description: 'Changes have been reverted.' });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: 'Rollback Failed', description: error.message, variant: 'destructive' });
     },
   });

@@ -13,7 +13,6 @@ router.get("/topology", requireAuth, async (req: AuthenticatedRequest, res) => {
     const { swarmCommanderService } = await import("../services/ai-brain/swarmCommanderService");
     const { getUserPlatformRole } = await import("../rbac");
     const userId = req.user!;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const platformRole = await getUserPlatformRole(userId);
     const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
     if (!guruRoles.includes(platformRole || "")) {
@@ -35,7 +34,6 @@ router.get("/summary", requireAuth, async (req: AuthenticatedRequest, res) => {
     const { swarmCommanderService } = await import("../services/ai-brain/swarmCommanderService");
     const { getUserPlatformRole } = await import("../rbac");
     const userId = req.user!;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const platformRole = await getUserPlatformRole(userId);
     const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
     if (!guruRoles.includes(platformRole || "")) {
@@ -57,7 +55,6 @@ router.get("/conflicts", requireAuth, async (req: AuthenticatedRequest, res) => 
     const { swarmCommanderService } = await import("../services/ai-brain/swarmCommanderService");
     const { getUserPlatformRole } = await import("../rbac");
     const userId = req.user!;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const platformRole = await getUserPlatformRole(userId);
     const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
     if (!guruRoles.includes(platformRole || "")) {
@@ -79,7 +76,6 @@ router.post("/conflicts/:conflictId/resolve", requireAuth, async (req: Authentic
     const { swarmCommanderService } = await import("../services/ai-brain/swarmCommanderService");
     const { getUserPlatformRole } = await import("../rbac");
     const userId = req.user!;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const platformRole = await getUserPlatformRole(userId);
     const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager"];
     if (!guruRoles.includes(platformRole || "")) {
@@ -90,7 +86,6 @@ router.post("/conflicts/:conflictId/resolve", requireAuth, async (req: Authentic
     if (!decision || !["overrule", "sustain"].includes(decision)) {
       return res.status(400).json({ success: false, error: "decision must be overrule or sustain" });
     }
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const resolved = await swarmCommanderService.resolveConflict(conflictId, decision, userId, expiresInHours);
     if (!resolved) return res.status(404).json({ success: false, error: "Conflict not found" });
     res.json({ success: true, conflict: resolved });
@@ -119,14 +114,12 @@ router.get("/roi/:workspaceId", requireAuth, async (req: AuthenticatedRequest, r
     const { workspaceId } = req.params;
     const userId = req.user!;
     const { employees, workspaces } = await import("@shared/schema");
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [employee] = await db.select().from(employees).where(and(eq(employees.userId, userId), eq(employees.workspaceId, workspaceId))).limit(1);
     let hasAccess = false;
     if (employee) {
       hasAccess = true;
     } else {
       const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (workspace?.ownerId === userId) hasAccess = true;
     }
     if (!hasAccess) return res.status(403).json({ success: false, error: "Access denied" });
@@ -143,7 +136,6 @@ router.get("/replay/:workflowId", requireAuth, async (req: AuthenticatedRequest,
     const { swarmCommanderService } = await import("../services/ai-brain/swarmCommanderService");
     const { getUserPlatformRole } = await import("../rbac");
     const userId = req.user!;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const platformRole = await getUserPlatformRole(userId);
     const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
     if (!guruRoles.includes(platformRole || "")) {

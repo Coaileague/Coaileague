@@ -16,12 +16,9 @@ function mkAction(actionId: string, fn: (params: any) => Promise<any>): ActionHa
     description: `Trinity action: ${actionId}`,
     handler: async (req: ActionRequest): Promise<ActionResult> => {
       try {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const data = await fn(req.params || {});
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return { success: true, data };
-      } catch (err: any) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
+      } catch (err: unknown) {
         return { success: false, error: err?.message || 'Unknown error' };
       }
     }
@@ -189,7 +186,6 @@ export function registerScheduleTimeclockActions() {
   helpaiOrchestrator.registerAction(mkAction('scheduling.create_recurring', async (params) => {
     const { workspaceId, name, baseShift, frequency, daysOfWeek, startDate, endDate } = params;
     if (!workspaceId || !baseShift) return { error: 'workspaceId and baseShift required' };
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const template = await recurringScheduleTemplates.createTemplate({
       workspaceId,
       name: name || 'Recurring Shift',
@@ -205,7 +201,6 @@ export function registerScheduleTimeclockActions() {
   helpaiOrchestrator.registerAction(mkAction('scheduling.apply_template', async (params) => {
     const { workspaceId, templateId, weekStartDate } = params;
     if (!workspaceId || !templateId) return { error: 'workspaceId and templateId required' };
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const result = await recurringScheduleTemplates.applyTemplate({
       workspaceId,
       templateId,
@@ -653,7 +648,6 @@ export function registerScheduleTimeclockActions() {
         .where(eq(shifts.id, shiftId));
 
       await tx.update(shiftSwapRequests)
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .set({ status: 'completed', updatedAt: new Date() })
         .where(eq(shiftSwapRequests.id, swapRequestId));
 

@@ -887,7 +887,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
               skipUnsubscribeCheck: true,
             });
             log.info(`[Resend Inbound] Forwarded root@ email to ${rootForwardTo}`);
-          } catch (err: any) {
+          } catch (err: unknown) {
             log.warn(`[Resend Inbound] root@ forward failed: ${err?.message}`);
           }
         });
@@ -922,7 +922,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
           inboundEmail.html?.slice(0, 50000) || null,
           emailBody.slice(0, 200),
         ]);
-      } catch (storeErr: any) {
+      } catch (storeErr: unknown) {
         log.warn('[Resend Inbound] Failed to store platform email:', storeErr.message);
       }
 
@@ -946,7 +946,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
             inboundEmailLogId: (inboundEmail as any).id || null,
           });
           log.info(`[Email→Ticket] Created ticket ${ticketNumber} from ${fromEmail} to ${platformAddr}`);
-        } catch (ticketErr: any) {
+        } catch (ticketErr: unknown) {
           log.error('[Email→Ticket] Failed to create support ticket (non-fatal):', ticketErr?.message);
         }
       }
@@ -982,7 +982,6 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
                 workspaceId: 'PLATFORM',
                 feature: 'platform_support',
                 prompt,
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 billedTo: 'platform',
               });
 
@@ -999,7 +998,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
                 log.info(`[Platform Support] Replied to ${fromEmail} re: "${subject}"`);
               }
             }
-          } catch (trinityErr: any) {
+          } catch (trinityErr: unknown) {
             log.warn('[Trinity Platform] Processing failed (non-blocking):', trinityErr.message);
           }
         });
@@ -1106,7 +1105,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
           '../services/trinity/employmentVerificationService'
         );
         await handleEmploymentVerificationEmail(inboundEmail as any, slug, workspaceId);
-      } catch (verifyErr: any) {
+      } catch (verifyErr: unknown) {
         log.warn('[Resend Inbound] Employment verification handler failed (non-fatal):', verifyErr?.message);
       }
       return res.status(200).json({ received: true, routed: 'employment_verification' });
@@ -1187,7 +1186,6 @@ Keep your response concise (3-5 sentences), professional, and warm. Do NOT make 
             workspaceId,
             feature: 'trinity_staffing',
             prompt,
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             billedTo: 'org',
           });
           if (aiResp?.text && aiResp.text.length > 30) {
@@ -1291,7 +1289,6 @@ Keep your response concise (3-5 sentences), professional, and warm. Do NOT make 
           // Find any open shift offer in this workspace — most recent pending
           const { stagedShifts } = await import('@shared/schema');
           const [openShift] = await db.select()
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             .where(and(
               eq(stagedShifts.workspaceId, workspaceId),
               eq(stagedShifts.status, 'offers_sent')
@@ -1392,7 +1389,6 @@ Client email:
 """
 ${rawBody.substring(0, 2000)}
 """`,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           billedTo: 'system',
         });
         if (geminiResp?.text && geminiResp.text.length > 20) {
@@ -1537,7 +1533,6 @@ ${rawBody.substring(0, 2000)}
       processed: true,
       workspaceId,
       workspaceName,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       orgCode: orgCode || undefined,
       isNewProspect,
       prospectTempCode: prospectTempCode || undefined,
@@ -1573,7 +1568,6 @@ router.post("/api/webhooks/resend/inbound/test", async (req, res) => {
     const senderEmail = testEmail.from?.match(/<([^>]+)>/)?.[1] || testEmail.from;
     const senderName = testEmail.from?.split('<')[0]?.trim();
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const orgCode = extractOrgCodeFromEmail(testEmail);
     let workspaceId: string | null = null;
     let workspaceName: string | undefined;

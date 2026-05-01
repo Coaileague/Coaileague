@@ -423,7 +423,6 @@ router.post("/employees", async (req: Request, res: Response) => {
       })),
     });
   } catch (error: unknown) {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     releaseImportLock(workspaceId);
     log.error("[ImportRoutes] Import failed:", error);
     return res.status(500).json({

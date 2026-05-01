@@ -15,7 +15,7 @@ export interface CrossDomainInsight {
   title: string;
   summary: string;
   reasoningChain: string[];
-  dataPoints: Record<string, any>;
+  dataPoints: Record<string, unknown>;
   recommendedActions: string[];
   affectedEntities: { type: string; id: string; name: string }[];
   timestamp: Date;

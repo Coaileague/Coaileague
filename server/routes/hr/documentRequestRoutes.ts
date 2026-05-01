@@ -317,7 +317,6 @@ router.post('/send', requireAuth, requireManager, async (req: any, res) => {
       workspaceId,
       userId,
       featureKey: 'hr_document_request',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       featureName: 'HR Document Request',
       description: `Bulk document request: ${input.employeeIds.length} employees × ${input.documentTypes.length} doc types`,
       amountOverride: totalCredits,
@@ -444,7 +443,7 @@ router.patch('/:id/status', requireAuth, async (req: any, res) => {
 
     // Conditional WHERE — only updates if in an expected prior status (race protection)
     const allowedPrior = ALLOWED_TRANSITIONS[status];
-    const updateData: Record<string, any> = { status, updatedAt: new Date() };
+    const updateData: Record<string, unknown> = { status, updatedAt: new Date() };
     if (status === 'opened') updateData.openedAt = new Date();
     if (status === 'completed') updateData.completedAt = new Date();
 

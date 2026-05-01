@@ -91,7 +91,7 @@ export function mountClientRoutes(app: Express): void {
           orgCode: result.orgCode,
         },
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res.status(400).json({ message: err?.message || 'Handshake failed' });
     }
   });
@@ -164,7 +164,7 @@ export function mountClientRoutes(app: Express): void {
         [workspaceId]
       );
       res.json({ officers: result.rows ?? [], asOf: new Date().toISOString() });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res.json({ officers: [], asOf: new Date().toISOString() });
     }
   });

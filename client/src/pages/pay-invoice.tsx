@@ -90,7 +90,7 @@ function PaymentForm({
         });
         onSuccess();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       onError(err.message || 'An unexpected error occurred');
     } finally {
       setIsProcessing(false);

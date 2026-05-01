@@ -428,7 +428,7 @@ function QuickActionStrip({ isClockedIn, onClockAction, clockingIn, navigate, on
 
   return (
     <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-      {actions.map((action: any) => (
+      {actions.map((action) => (
         <button
           key={action.testId}
           onClick={action.onClick}
@@ -552,7 +552,7 @@ function EmployeePinCard() {
       setPinInput("");
       qc.invalidateQueries({ queryKey: ["/api/identity/pin/employee/self/status"] });
     },
-    onError: (err: any) => toast({
+    onError: (err) => toast({
       title: "Could not save PIN",
       description: err?.message || "Please try again",
       variant: "destructive",
@@ -564,7 +564,7 @@ function EmployeePinCard() {
       toast({ title: "Clock-in PIN cleared" });
       qc.invalidateQueries({ queryKey: ["/api/identity/pin/employee/self/status"] });
     },
-    onError: (err: any) => toast({
+    onError: (err) => toast({
       title: "Could not clear PIN",
       description: err?.message || "Please try again",
       variant: "destructive",
@@ -845,7 +845,7 @@ function WorkerDashboardInner() {
       }
       if ("vibrate" in navigator) navigator.vibrate([100, 50, 100]);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to clock in/out", variant: "destructive" });
     },
     onSettled: () => setClockingIn(false),
@@ -865,7 +865,7 @@ function WorkerDashboardInner() {
       queryClient.invalidateQueries({ queryKey: ["/api/shifts/upcoming"] });
       queryClient.invalidateQueries({ queryKey: ["/api/schedules/week/stats"] });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({
         title: "Could not confirm shift",
         description: err?.message || "Please try again",
@@ -881,7 +881,7 @@ function WorkerDashboardInner() {
       queryClient.invalidateQueries({ queryKey: ["/api/shifts/today"] });
       queryClient.invalidateQueries({ queryKey: ["/api/shifts/upcoming"] });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({
         title: "Could not decline shift",
         description: err?.message || "Please try again",

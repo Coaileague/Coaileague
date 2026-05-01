@@ -70,7 +70,6 @@ export default function AuditLogs() {
       case 'success': return <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />;
       case 'failure': return <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />;
       case 'warning': return <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       default: return <HelpCircle className="h-4 w-4 text-muted-foreground" />;
     }
   };

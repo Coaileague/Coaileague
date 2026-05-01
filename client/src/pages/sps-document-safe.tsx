@@ -162,7 +162,7 @@ function CompanyTab() {
   const credSlots = COMPANY_DOC_SLOTS.map(slot => ({
     ...slot,
     uploaded: (company?.companyDocs ?? []).some(
-      (d: any) =>
+      (d) =>
         d.documentType === slot.key ||
         d.documentName?.toLowerCase().includes(slot.label.toLowerCase().substring(0, 12))
     ),
@@ -568,7 +568,7 @@ function StaffTab() {
                     <div className="space-y-1">
                       {selected.documents
                         .filter(d => !selectedDocIds.has(d.id))
-                        .map((doc: any) => {
+                        .map((doc) => {
                           const dlUrl = doc.fileUrl
                             ? doc.fileUrl.replace("/view/", "/download/")
                             : null;

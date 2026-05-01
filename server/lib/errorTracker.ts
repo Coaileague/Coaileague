@@ -30,7 +30,7 @@ export interface TrackedError {
   stack?: string;
   level: 'info' | 'warn' | 'error' | 'critical';
   tags?: Record<string, string | undefined>;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   timestamp: Date;
 }
 
@@ -76,7 +76,7 @@ class HttpWebhookAdapter implements ErrorTrackerAdapter {
         // 2-second cap — observability must never block the request.
         signal: AbortSignal.timeout(2000),
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[errorTracker] webhook capture failed (non-fatal):', err?.message);
     }
   }
@@ -115,7 +115,7 @@ export function captureError(event: TrackedError): void {
     if (out instanceof Promise) {
       out.catch((err) => log.warn('[errorTracker] capture promise rejected', err));
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[errorTracker] capture threw (non-fatal):', err?.message);
   }
 }

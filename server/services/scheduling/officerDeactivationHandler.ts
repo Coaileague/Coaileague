@@ -93,7 +93,6 @@ export async function handleOfficerDeactivation(
               .set({
                 employeeId: null,
                 status: 'draft',
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 notes: noteText,
                 updatedAt: new Date(),
               })

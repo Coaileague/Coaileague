@@ -25,7 +25,6 @@ import {
 } from '@shared/schema';
 import { eq, and, gte, lte, lt, inArray, sql, desc, isNull, ne } from 'drizzle-orm';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
-// @ts-expect-error — TS migration: fix in refactoring sprint
 import type { ActionRequest, ActionResult, ActionHandler } from './actionRegistry';
 import { createNotification } from '../notificationService';
 import { platformEventBus } from '../platformEventBus';
@@ -93,7 +92,7 @@ const createHiringRecord = mkAction('hiring.create_record', async (req) => {
     return createResult(req.actionId, true,
       `Hiring record created for ${firstName} ${lastName}. PERC pipeline initiated. Next step: initiate background check.`,
       { applicationId: application.id, inviteId: invite.id, email, status: 'applied' }, start);
-  } catch (e: any) {
+  } catch (e: unknown) {
     return createResult(req.actionId, false, e.message, null, start);
   }
 });
@@ -125,7 +124,7 @@ const updateHiringStatus = mkAction('hiring.update_status', async (req) => {
     return createResult(req.actionId, true,
       `Hiring status updated to "${status}". ${NEXT_STEPS[status] || ''}`,
       { applicationId, newStatus: status, nextStep: NEXT_STEPS[status] || null }, start);
-  } catch (e: any) {
+  } catch (e: unknown) {
     return createResult(req.actionId, false, e.message, null, start);
   }
 });
@@ -159,7 +158,7 @@ const initiateBackgroundCheck = mkAction('hiring.initiate_background_check', asy
       stateNotes: 'Texas DPS Ch. 1702 — certain felonies auto-disqualify. Others require assessment per EEOC guidelines.',
       nextStep: 'Schedule Level II 6-hour pre-assignment training while awaiting results.',
     }, start);
-  } catch (e: any) {
+  } catch (e: unknown) {
     return createResult(req.actionId, false, e.message, null, start);
   }
 });
@@ -188,7 +187,7 @@ const schedulePERCTraining = mkAction('hiring.schedule_perc_training', async (re
       trainingDate: trainingDate || 'TBD', trainingProvider: trainingProvider || 'DPS-approved provider required',
       status: 'training_scheduled',
     }, start);
-  } catch (e: any) {
+  } catch (e: unknown) {
     return createResult(req.actionId, false, e.message, null, start);
   }
 });
@@ -211,7 +210,7 @@ const trackDPSApplication = mkAction('hiring.track_dps_application', async (req)
       `DPS application tracked. Application #${dpsApplicationNumber || 'pending'}. Estimated PERC card receipt: ${estimatedCompletion}. Do NOT schedule this officer until PERC confirmed in hand.`,
       { applicationId, dpsApplicationNumber, submittedDate, estimatedCompletion, status: 'dps_application_submitted',
         warning: 'SCHEDULING BLOCKED until license_received status confirmed.' }, start);
-  } catch (e: any) {
+  } catch (e: unknown) {
     return createResult(req.actionId, false, e.message, null, start);
   }
 });
@@ -263,7 +262,7 @@ const confirmLicenseReceived = mkAction('hiring.confirm_license_received', async
     return createResult(req.actionId, true,
       `PERC/Guard Card confirmed. Officer is now schedule-eligible. License record created. Compliance tracking started.`,
       { applicationId, employeeId, percCardNumber, licenseLevel: licenseLevel || 'Level II', expirationDate, scheduleEligible: true }, start);
-  } catch (e: any) {
+  } catch (e: unknown) {
     return createResult(req.actionId, false, e.message, null, start);
   }
 });
@@ -296,14 +295,13 @@ const getHiringPipelineStatus = mkAction('hiring.pipeline_status', async (req) =
       return acc;
     }, {});
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const dpsStuck = applications.filter(a => a.status === 'dps_application_submitted');
     const dpsAlert = dpsStuck.length > 0 ? `${dpsStuck.length} applicant(s) waiting on DPS. Follow up if >6 weeks since submission.` : '';
 
     return createResult(req.actionId, true,
       `Hiring pipeline: ${applications.length} active candidates. ${Object.entries(byStatus).map(([s, c]) => `${s}: ${c}`).join(', ')}. ${dpsAlert}`,
       { pipeline: applications, byStatus, dpsAlert, totalActive: applications.length }, start);
-  } catch (e: any) {
+  } catch (e: unknown) {
     return createResult(req.actionId, false, e.message, null, start);
   }
 });
@@ -358,7 +356,7 @@ const checkMultiStateLicenseEligibility = mkAction('hiring.check_multistate_lice
     }
 
     return createResult(req.actionId, true, stateReq.notes, { employeeId, targetState, eligible: stateReq.transfersFromTX }, start);
-  } catch (e: any) {
+  } catch (e: unknown) {
     return createResult(req.actionId, false, e.message, null, start);
   }
 });
@@ -397,7 +395,6 @@ const getExpiringLicensesAlert = mkAction('hiring.expiring_licenses_alert', asyn
       ...e,
       daysUntilExpiry: Math.ceil((new Date(e.expirationDate!).getTime() - now.getTime()) / 86400000),
       expiresDate: new Date(e.expirationDate!).toISOString().split('T')[0],
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       action: new Date(e.expiresAt!).getTime() - now.getTime() < 30 * 86400000
         ? 'URGENT: DPS renewal takes 2-6 weeks. Initiate immediately or remove from schedule on expiry date.'
         : 'Notify officer now. Texas DPS renewal processing: 2-6 weeks.',
@@ -406,7 +403,7 @@ const getExpiringLicensesAlert = mkAction('hiring.expiring_licenses_alert', asyn
     return createResult(req.actionId, true,
       `${expiring.length} security license(s) expiring within ${daysAhead} days. DPS renewal takes 2-6 weeks — notify officers NOW.`,
       { expiring: withDays, count: expiring.length, daysAhead }, start);
-  } catch (e: any) {
+  } catch (e: unknown) {
     return createResult(req.actionId, false, e.message, null, start);
   }
 });

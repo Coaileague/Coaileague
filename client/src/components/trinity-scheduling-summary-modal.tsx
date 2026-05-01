@@ -127,7 +127,7 @@ export function TrinitySchedulingSummaryModal({
       onOpenChange(false);
       onVerified?.();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         variant: 'destructive',
         title: 'Verification Failed',
@@ -154,7 +154,7 @@ export function TrinitySchedulingSummaryModal({
       onOpenChange(false);
       onRejected?.();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         variant: 'destructive',
         title: 'Rejection Failed',

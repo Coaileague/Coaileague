@@ -57,7 +57,7 @@ export default function AdminBannersPage() {
       toast({ title: "Success", description: "Banner created successfully" });
       resetForm();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to create banner", variant: "destructive" });
     },
   });
@@ -71,7 +71,7 @@ export default function AdminBannersPage() {
       toast({ title: "Success", description: "Banner updated successfully" });
       resetForm();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to update banner", variant: "destructive" });
     },
   });
@@ -83,7 +83,7 @@ export default function AdminBannersPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/promotional-banners/admin/all'] });
       toast({ title: "Success", description: "Banner deleted successfully" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to delete banner", variant: "destructive" });
     },
   });

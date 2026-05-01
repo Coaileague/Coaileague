@@ -99,7 +99,7 @@ export default function ClientPortalSetup() {
       });
       setTimeout(() => setLocation("/client/portal"), 2000);
     },
-    onError: (e: any) => {
+    onError: (e) => {
       toast({
         title: "Setup failed",
         description: e.message || "Something went wrong. Please try again.",

@@ -543,7 +543,7 @@ export default function RFPPipeline() {
   });
 
   const createDealMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/pipeline-deals", data),
+    mutationFn: (data) => apiRequest("POST", "/api/pipeline-deals", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/pipeline-deals"] });
       queryClient.invalidateQueries({ queryKey: ["/api/pipeline-deals/stats"] });

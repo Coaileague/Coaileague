@@ -159,7 +159,7 @@ router.get('/recognition/summary', async (req: any, res: any) => {
 
     const summary = await revenueRecognitionService.getRevenueRecognitionSummary(workspaceId);
     return res.json({ success: true, data: summary });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[RevenueRoutes] summary error', { error: err?.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -188,7 +188,7 @@ router.get('/recognition/schedules', async (req: any, res: any) => {
       .offset(parseInt(offset) || 0);
 
     return res.json({ success: true, data: schedules });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[RevenueRoutes] schedules list error', { error: err?.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -245,7 +245,7 @@ router.post('/recognition/schedules', async (req: any, res: any) => {
     } catch (_) {}
 
     return res.status(201).json({ success: true, data: { scheduleId } });
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err?.name === 'ZodError') return res.status(400).json({ error: err.errors });
     log.error('[RevenueRoutes] create schedule error', { error: err?.message });
     return res.status(500).json({ error: 'Internal server error' });
@@ -292,7 +292,7 @@ router.post('/recognition/run', async (req: any, res: any) => {
     } catch (_) {}
 
     return res.json({ success: true, data: result });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[RevenueRoutes] run error', { error: err?.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -309,7 +309,7 @@ router.get('/asc-606/report', async (req: any, res: any) => {
 
     const report = await asc606Tracker.generateAsc606Report(workspaceId);
     return res.json({ success: true, data: report });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[RevenueRoutes] asc-606 report error', { error: err?.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -327,7 +327,7 @@ router.get('/forecast', async (req: any, res: any) => {
     const months = Math.min(parseInt(req.query?.months as string) || 3, 12);
     const forecast = await revenueForecasting.generateRevenueForecast(workspaceId, months);
     return res.json({ success: true, data: forecast });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[RevenueRoutes] forecast error', { error: err?.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -462,7 +462,7 @@ router.get('/pl/detail', async (req: any, res: any) => {
         },
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[RevenueRoutes] pl/detail error', { error: err?.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -551,7 +551,7 @@ router.get('/pl/history', async (req: any, res: any) => {
     }
 
     return res.json({ success: true, data: { periods: periodsParam, history } });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[RevenueRoutes] pl/history error', { error: err?.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -583,7 +583,7 @@ router.post('/contracts/:contractId/map-revenue', async (req: any, res: any) => 
     }
 
     return res.status(201).json({ success: true, data: result });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[RevenueRoutes] map-revenue error', { error: err?.message });
     return res.status(500).json({ error: 'Internal server error' });
   }

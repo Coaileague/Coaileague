@@ -105,7 +105,7 @@ async function test_chat_db_persistence() {
       details: `${Number(cnt)} conversations, ${Number(msgCnt)} messages persisted in PostgreSQL`,
       severity: 'high',
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     record({
       name: 'Chat DB Persistence',
       category: 'CHAT',
@@ -239,7 +239,7 @@ async function test_support_room_db() {
       severity: 'high',
       fix: helpdeskRoom ? undefined : 'HelpDesk room should be seeded on startup',
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     record({
       name: 'Support Rooms in DB',
       category: 'SUPPORT',
@@ -317,7 +317,7 @@ async function test_email_event_audit() {
       details: `emailEvents table accessible. ${Number(cnt)} events logged.`,
       severity: 'medium',
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     record({
       name: 'Email Event Audit Trail',
       category: 'EMAIL',
@@ -399,7 +399,7 @@ async function test_notification_db() {
       details: `${Number(cnt)} notifications in database`,
       severity: 'medium',
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     record({
       name: 'Notification DB Persistence',
       category: 'NOTIFICATIONS',

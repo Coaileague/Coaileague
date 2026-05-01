@@ -216,7 +216,6 @@ function mapStageToSteps(flowState: FlowState | null): OnboardingStep[] {
 
 export default function WorkspaceOnboarding() {
   const { toast } = useToast();
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const { user, workspace } = useAuth();
 
   const { data: flowData, isLoading: flowLoading } = useQuery<{
@@ -248,13 +247,12 @@ export default function WorkspaceOnboarding() {
         toast({ title: "Error", description: data.message, variant: "destructive" });
       }
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
   const flow = flowData?.flow;
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const steps = mapStageToSteps(flow);
   const completedSteps = steps.filter(s => s.status === 'completed').length;
   const progress = (completedSteps / steps.length) * 100;

@@ -22,7 +22,7 @@ router.get('/status', requireAuth, ensureWorkspaceAccess, async (req: Authentica
         (SELECT COUNT(*) FROM schedules WHERE workspace_id=$1 AND is_published=true) as published_schedules
     `, [req.workspaceId]);
     res.json({ status: 'running', metrics: rows[0] });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/scheduler/templates — schedule templates
@@ -36,7 +36,7 @@ router.get('/templates', requireAuth, ensureWorkspaceAccess, async (req: Authent
       ORDER BY st.name
     `, [req.workspaceId]);
     res.json({ templates: rows });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/scheduler/coverage-gaps — open shifts needing coverage
@@ -53,7 +53,7 @@ router.get('/coverage-gaps', requireAuth, ensureWorkspaceAccess, async (req: Aut
       LIMIT 50
     `, [req.workspaceId]);
     res.json({ gaps: rows, count: rows.length });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/scheduler/offers — active shift offers
@@ -71,7 +71,7 @@ router.get('/offers', requireAuth, ensureWorkspaceAccess, async (req: Authentica
       LIMIT 50
     `, [req.workspaceId]);
     res.json({ offers: rows });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 export default router;

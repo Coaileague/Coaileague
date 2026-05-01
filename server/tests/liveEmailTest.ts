@@ -35,7 +35,7 @@ async function main() {
       jobSummary: JOB_SUMMARY,
     });
     console.log(`   ✅ Sent — MessageId: ${(r as any).messageId ?? 'n/a'}\n`);
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error(`   ❌ FAILED: ${e.message}\n`);
   }
 
@@ -53,7 +53,7 @@ async function main() {
       jobSummary: JOB_SUMMARY,
     });
     console.log(`   ✅ Sent — MessageId: ${(r as any).messageId ?? 'n/a'}\n`);
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error(`   ❌ FAILED: ${e.message}\n`);
   }
 
@@ -69,7 +69,7 @@ async function main() {
       referenceNumber: REF_LOSER,
     });
     console.log(`   ✅ Sent — MessageId: ${(r as any).messageId ?? 'n/a'}\n`);
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error(`   ❌ FAILED: ${e.message}\n`);
   }
 
@@ -103,7 +103,7 @@ async function main() {
       },
     });
     console.log(`   ✅ Sent — MessageId: ${(r as any).messageId ?? 'n/a'}\n`);
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error(`   ❌ FAILED: ${e.message}\n`);
   }
 

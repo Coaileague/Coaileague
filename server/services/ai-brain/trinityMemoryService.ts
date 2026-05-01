@@ -84,7 +84,7 @@ export interface UserPreferences {
 
 export interface InteractionPattern {
   patternType: 'time_of_day' | 'day_of_week' | 'feature_sequence' | 'issue_recurrence';
-  patternData: Record<string, any>;
+  patternData: Record<string, unknown>;
   confidence: number;
   occurrences: number;
   lastSeen: Date;
@@ -1395,12 +1395,11 @@ class TrinityMemoryService {
     actionName: string;
     actionDescription: string;
     outcome: 'success' | 'failure' | 'partial' | 'pending';
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     impactLevel?: 'low' | 'medium' | 'high' | 'critical';
   }): Promise<void> {
     try {
       await db.insert(automationActionLedger).values({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: params.workspaceId,
         actionId: `org_${params.actionCategory}_${Date.now()}`,
         actionName: params.actionName,

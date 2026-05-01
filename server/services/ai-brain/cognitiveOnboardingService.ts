@@ -44,7 +44,7 @@ export interface IntegrationCredentials {
   expiresAt?: Date;
   scopes: string[];
   companyId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface IntegrationConnection {
@@ -93,7 +93,7 @@ export interface ExtractedEmployeeData {
     state?: string;
     zip?: string;
   };
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ExtractedPayrollData {
@@ -1019,7 +1019,7 @@ Return JSON with:
     provider: IntegrationProvider;
     action: string;
     success: boolean;
-    details?: Record<string, any>;
+    details?: Record<string, unknown>;
   }): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({

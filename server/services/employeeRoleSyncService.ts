@@ -342,7 +342,6 @@ class EmployeeRoleSyncService {
   }
 
   private getRolePriority(role: WorkspaceRole | null): number {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const priorities: Record<WorkspaceRole, number> = {
       org_owner: 100,
       co_owner: 90,
@@ -423,7 +422,6 @@ class EmployeeRoleSyncService {
     const currentRole = (employee.workspaceRole as WorkspaceRole) || null;
     const suggestedRole = this.inferRoleFromPosition(employee.role, employee.organizationalTitle);
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const managementCapabilities: Record<WorkspaceRole, string[]> = {
       org_owner: ['all_employees', 'all_clients', 'all_schedules', 'billing', 'integrations', 'settings'],
       co_owner: ['all_employees', 'all_clients', 'all_schedules', 'some_settings'],

@@ -205,7 +205,7 @@ class ProofOfServiceService {
         isAuditProtected: true,
         chainOfCustodyHash: genesisSignature,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[POS] Failed to persist photo ${id}:`, err?.message);
       throw err;
     }

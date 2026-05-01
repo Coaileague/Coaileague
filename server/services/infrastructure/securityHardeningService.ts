@@ -25,7 +25,7 @@ interface ThreatEvent {
   target: string; // endpoint or resource
   description: string;
   blocked: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 interface BlockedEntity {
@@ -163,7 +163,7 @@ class SecurityHardeningService {
     source: string,
     target: string,
     description: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): ThreatEvent {
     const threat: ThreatEvent = {
       id: `threat-${Date.now()}-${crypto.randomUUID().slice(0, 9)}`,

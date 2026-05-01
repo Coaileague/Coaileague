@@ -323,7 +323,7 @@ export default function QuickBooksImportPage() {
         const data = await res.json();
         const connections = data.connections || data || [];
         const qbConnection = Array.isArray(connections) 
-          ? connections.find((c: any) => c.partnerType === 'quickbooks')
+          ? connections.find((c) => c.partnerType === 'quickbooks')
           : null;
         return {
           quickbooks: qbConnection ? {
@@ -361,7 +361,7 @@ export default function QuickBooksImportPage() {
       }
       const data = await res.json();
       
-      const customers = (data.customers || []).map((c: any) => ({
+      const customers = (data.customers || []).map((c) => ({
         ...c,
         recommended: c.monthlyRevenue > 1000 || c.invoiceCount > 3,
         recommendReason: c.monthlyRevenue > 5000 ? 'High-value client' : 
@@ -369,7 +369,7 @@ export default function QuickBooksImportPage() {
         isVendor: c.monthlyRevenue === 0 && c.invoiceCount === 0,
       }));
       
-      const employees = (data.employees || []).map((e: any) => ({
+      const employees = (data.employees || []).map((e) => ({
         ...e,
         recommended: e.active && e.employeeType !== '1099',
         recommendReason: e.employeeType === '1099' ? 'Contractor - review if field staff' :
@@ -508,7 +508,7 @@ export default function QuickBooksImportPage() {
         }, 300000);
       }
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Connection Failed',
         description: error.message || 'Failed to connect to QuickBooks',
@@ -553,7 +553,7 @@ export default function QuickBooksImportPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/integrations/status'] });
       setCurrentStep('complete');
     },
-    onError: (error: any) => {
+    onError: (error) => {
       if (error.code === 'MISSING_PAY_RATES' && Array.isArray(error.employeesWithMissingPayRates)) {
         setPayRateWarning({ employees: error.employeesWithMissingPayRates });
         toast({
@@ -740,7 +740,7 @@ export default function QuickBooksImportPage() {
       });
       refetchPreview();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       setShowPushModal(false);
       
       // Check for migration lock error
@@ -781,7 +781,7 @@ export default function QuickBooksImportPage() {
         description: 'The migration will stop after the current item.',
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Cancel Failed',
         description: error.message,
@@ -809,7 +809,7 @@ export default function QuickBooksImportPage() {
         description: data.message || 'You can now start a new sync.',
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Unlock Failed',
         description: error.message,
@@ -838,7 +838,7 @@ export default function QuickBooksImportPage() {
       const data = await res.json();
 
       if (data.tests) {
-        const mappedTests = data.tests.map((t: any) => ({
+        const mappedTests = data.tests.map((t) => ({
           name: t.name,
           description: initialTests.find(it => it.name === t.name)?.description || 'Integration test',
           status: t.status,
@@ -1743,7 +1743,6 @@ export default function QuickBooksImportPage() {
             <div className="flex gap-2 w-full sm:w-auto">
               <Button variant="outline" onClick={() => setLocation('/dashboard')} className="flex-1 sm:flex-initial min-w-0"><span className="truncate">Cancel</span></Button>
               <Button 
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 onClick={() => importMutation.mutate()} 
                 disabled={importMutation.isPending}
                 className="bg-green-600 flex-1 sm:flex-initial min-w-0"
@@ -1909,8 +1908,8 @@ export default function QuickBooksImportPage() {
           size="lg"
           className="bg-gradient-to-b from-background to-muted/50 border-2 border-primary/20"
           // @ts-expect-error — TS migration: fix in refactoring sprint
-          onPointerDownOutside={(e: any) => e.preventDefault()}
-          onEscapeKeyDown={(e: any) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
         >
           <VisuallyHidden>
             <UniversalModalTitle>Trinity Sync Progress</UniversalModalTitle>

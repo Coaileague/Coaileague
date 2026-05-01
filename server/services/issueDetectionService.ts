@@ -39,7 +39,7 @@ export class IssueDetectionService {
   async detectIssues(
     workspaceId: string,
     documentType: string,
-    extractedData: Record<string, any>,
+    extractedData: Record<string, unknown>,
     documentId?: string
   ): Promise<IssueDetectionResult> {
     const issues: DetectedIssue[] = [];
@@ -106,7 +106,7 @@ export class IssueDetectionService {
   /**
    * Evaluate a single rule against data
    */
-  private evaluateRule(rule: any, data: Record<string, any>): boolean {
+  private evaluateRule(rule: any, data: Record<string, unknown>): boolean {
     return rule.conditions.some((condition: any) => {
       const fieldValue = data[condition.field];
 
@@ -157,7 +157,7 @@ export class IssueDetectionService {
   /**
    * Find which fields have issues
    */
-  private findAffectedFields(rule: any, data: Record<string, any>): string[] {
+  private findAffectedFields(rule: any, data: Record<string, unknown>): string[] {
     return rule.conditions
       .map((condition: any) => {
         const fieldValue = data[condition.field];
@@ -197,7 +197,7 @@ export class IssueDetectionService {
   async analyzeWithAI(
     workspaceId: string,
     documentType: string,
-    extractedData: Record<string, any>,
+    extractedData: Record<string, unknown>,
     documentId?: string
   ): Promise<IssueDetectionResult> {
     const baseResult = await this.detectIssues(workspaceId, documentType, extractedData, documentId);

@@ -139,7 +139,7 @@ export async function rewriteUniversalId(
     );
 
     await client.query('COMMIT');
-  } catch (err: any) {
+  } catch (err: unknown) {
     try {
       await client.query('ROLLBACK');
     } catch (_) { /* best effort */ }

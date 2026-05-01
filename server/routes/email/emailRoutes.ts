@@ -117,7 +117,7 @@ emailRouter.get('/inbox', async (req: any, res) => {
       page,
       limit,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[EmailRoutes] inbox error:', err);
     return res.status(500).json({ error: 'Failed to fetch inbox' });
   }
@@ -147,7 +147,7 @@ emailRouter.get('/:emailId', async (req: any, res) => {
     );
 
     return res.json(result.rows[0]);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[EmailRoutes] get email error:', err);
     return res.status(500).json({ error: 'Failed to fetch email' });
   }
@@ -169,7 +169,7 @@ emailRouter.get('/thread/:messageId', async (req: any, res) => {
     `, [workspaceId, messageId, `%${messageId}%`]);
 
     return res.json(result.rows);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to fetch thread' });
   }
 });
@@ -245,7 +245,7 @@ emailRouter.post('/send', async (req: any, res) => {
         text: finalBodyText || undefined,
         ...(inReplyTo && { replyTo: inReplyTo }),
       });
-    } catch (sendErr: any) {
+    } catch (sendErr: unknown) {
       log.error('[EmailRoutes] Resend send error:', sendErr);
       // Store as draft/failed even if Resend fails — don't lose user's email
     }
@@ -284,7 +284,7 @@ emailRouter.post('/send', async (req: any, res) => {
     `, [addr.id]);
 
     return res.json({ success: true, emailId: emailResult.rows[0].id });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[EmailRoutes] send error:', err);
     return res.status(500).json({ error: 'Failed to send email' });
   }
@@ -310,7 +310,7 @@ emailRouter.post('/:emailId/reply', async (req: any, res) => {
       inReplyTo: p.message_id,
       trinityDraftReply: p.trinity_draft_reply || '',
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to prepare reply' });
   }
 });
@@ -340,7 +340,7 @@ emailRouter.patch('/:emailId', async (req: any, res) => {
     );
 
     return res.json({ success: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to update email' });
   }
 });
@@ -357,7 +357,7 @@ emailRouter.delete('/:emailId', async (req: any, res) => {
     );
 
     return res.json({ success: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to delete email' });
   }
 });
@@ -396,7 +396,7 @@ emailRouter.get('/management', async (req: any, res) => {
         fairUseEmailsPerSeat: EMAIL_PRICING.fairUseEmailsPerSeatMonthly,
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[EmailRoutes] management error:', err);
     return res.status(500).json({ error: 'Failed to fetch email management data' });
   }
@@ -433,7 +433,7 @@ emailRouter.get('/management/stats', async (req: any, res) => {
       monthlyCostCents: billedSeats * EMAIL_PRICING.perSeatMonthlyCents,
       approachingLimit: parseInt(s.approaching_limit) || 0,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });
@@ -458,7 +458,7 @@ emailRouter.post('/addresses/:id/activate', async (req: any, res) => {
     await emailProvisioningService.activateEmailAddress(emailAddressId, userId, stripeItemId);
 
     return res.json({ success: true, address: check.rows[0].address });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[EmailRoutes] activate error:', err);
     return res.status(500).json({ error: 'Failed to activate email address' });
   }
@@ -482,7 +482,7 @@ emailRouter.post('/addresses/:id/deactivate', async (req: any, res) => {
     await emailProvisioningService.deactivateEmailAddress(emailAddressId, userId);
 
     return res.json({ success: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to deactivate email address' });
   }
 });
@@ -510,7 +510,7 @@ emailRouter.post('/activate-all', async (req: any, res) => {
     }
 
     return res.json({ success: true, activated });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to bulk activate' });
   }
 });
@@ -537,7 +537,7 @@ emailRouter.get('/addresses/:id/settings', async (req: any, res) => {
     if (!result.rows[0]) return res.status(404).json({ error: 'Address not found' });
 
     return res.json(result.rows[0]);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[EmailRoutes] get settings error:', err);
     return res.status(500).json({ error: 'Failed to fetch address settings' });
   }
@@ -589,7 +589,7 @@ emailRouter.put('/addresses/:id/settings', async (req: any, res) => {
     `, [workspaceId, id, userId, JSON.stringify({ forwarding_enabled, has_signature: !!(signature_text || signature_html) })]);
 
     return res.json({ success: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[EmailRoutes] put settings error:', err);
     return res.status(500).json({ error: 'Failed to update address settings' });
   }
@@ -615,7 +615,7 @@ emailRouter.get('/addresses/mine', async (req: any, res) => {
     `, [userId, workspaceId]);
 
     return res.json({ addresses: result.rows });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[EmailRoutes] addresses/mine error:', err);
     return res.status(500).json({ error: 'Failed to fetch your email addresses' });
   }
@@ -678,7 +678,7 @@ emailRouter.get('/support-inbox', async (req: any, res) => {
       limit,
       agentPlatformRole: platformRole,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[EmailRoutes] support-inbox GET error:', err);
     return res.status(500).json({ error: 'Failed to fetch support inbox' });
   }
@@ -779,7 +779,7 @@ emailRouter.post('/support-inbox/:emailId/reply', async (req: any, res) => {
     ]);
 
     return res.json({ success: true, resendId: (sent as any).data?.id });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[EmailRoutes] support-inbox reply error:', err);
     return res.status(500).json({ error: 'Failed to send support reply' });
   }

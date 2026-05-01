@@ -38,7 +38,7 @@ export interface ShiftAlert {
   severity: 'warning' | 'critical';
   message: string;
   timestamp: Date;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 interface MonitoringResult {
@@ -92,7 +92,7 @@ class ShiftMonitoringService {
     this.intervalId = setInterval(async () => {
       try {
         await this.runMonitoringCycle();
-      } catch (error: any) {
+      } catch (error: unknown) {
         this.cycleRunning = false; // G10 FIX: release lock if orchestration threw
         log.warn('[ShiftMonitor] Monitoring cycle failed (will retry):', error?.message || 'unknown');
       }
@@ -110,7 +110,6 @@ class ShiftMonitoringService {
     log.info('[ShiftMonitor] Stopped');
   }
 
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   getStatus(): { running: boolean; lastRun: Date | null; stats: typeof this.stats } {
     return {
       running: this.isRunning,
@@ -123,7 +122,6 @@ class ShiftMonitoringService {
     // G10 FIX: prevent concurrent cycles if previous cycle is still running (slow DB)
     if (this.cycleRunning) {
       log.warn('[ShiftMonitor] Previous cycle still running — skipping this tick to prevent overlap');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       return { shiftsChecked: 0, lateAlerts: 0, ncnsAlerts: 0, replacementsTriggered: 0 };
     }
     this.cycleRunning = true;
@@ -323,7 +321,7 @@ class ShiftMonitoringService {
                 severity: 'info',
                 metadata: { shiftId: upShift.id, startTime: upShift.startTime, reminderType: 'pre_shift_30min' },
               });
-            } catch (notifyErr: any) {
+            } catch (notifyErr: unknown) {
               log.warn(`[ShiftMonitor] Pre-shift reminder failed for employee ${upEmployee.id}:`, notifyErr.message);
             }
           }
@@ -331,7 +329,7 @@ class ShiftMonitoringService {
           if (upcomingShifts.length > 0) {
             log.info(`[ShiftMonitor] Pre-shift reminders sent: ${upcomingShifts.length} upcoming shifts`);
           }
-        } catch (reminderErr: any) {
+        } catch (reminderErr: unknown) {
           log.error('[ShiftMonitor] Pre-shift reminder block failed (non-blocking):', reminderErr.message);
         }
 
@@ -381,7 +379,7 @@ class ShiftMonitoringService {
           if (overdueVisitorsResult.length > 0) {
             log.info(`[ShiftMonitor] Visitor alerts: ${overdueVisitorsResult.length} visitors never left`);
           }
-        } catch (visitorErr: any) {
+        } catch (visitorErr: unknown) {
           log.error('[ShiftMonitor] Visitor monitoring error (non-blocking):', visitorErr.message);
         }
 
@@ -475,7 +473,6 @@ class ShiftMonitoringService {
         shift.workspaceId,
         employee.id,
         'shift_no_show',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         { shiftId: shift.id }
       );
     } catch (err) {
@@ -552,7 +549,7 @@ class ShiftMonitoringService {
         log.info(`[ShiftMonitor] Stay-late notification sent to ${officer.firstName} ${officer.lastName} via UNE`);
         break; // Notify the single most relevant on-site officer — general pool follows below
       }
-    } catch (stayLateErr: any) {
+    } catch (stayLateErr: unknown) {
       log.warn(`[ShiftMonitor] Stay-late check failed (non-blocking): ${stayLateErr.message}`);
     }
     // ─────────────────────────────────────────────────────────────────────────
@@ -598,7 +595,7 @@ class ShiftMonitoringService {
       await this.handleReplacementFailed(shift, reason, result.error || 'Coverage pipeline failed');
       return { success: false, error: result.error };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[ShiftMonitor] Coverage pipeline failed:', error);
       await this.searchPlatformPool(shift).catch((err) => log.warn('[shiftMonitoringService] Fire-and-forget failed:', err));
       await this.handleReplacementFailed(shift, reason, (error instanceof Error ? error.message : String(error)));
@@ -682,7 +679,7 @@ class ShiftMonitoringService {
       }
 
       log.info(`[ShiftMonitor] Platform pool: notified ${available.length} workers for shift ${shift.id}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[ShiftMonitor] Platform pool search failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
     }
   }

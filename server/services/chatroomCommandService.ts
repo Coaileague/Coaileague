@@ -133,7 +133,7 @@ export interface SystemMessage {
   type: 'system' | 'motd' | 'help' | 'error' | 'info';
   content: string;
   timestamp: Date;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -496,7 +496,7 @@ export function processSlashCommand(
 export function createSystemMessage(
   type: SystemMessage['type'],
   content: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): SystemMessage {
   return {
     type,

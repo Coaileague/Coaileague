@@ -181,7 +181,7 @@ export default function BridgeChannels() {
       resetForm();
       toast({ title: "Channel Created", description: "Bridge channel has been created." });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Error", description: err.message || "Failed to create channel", variant: "destructive" });
     },
   });
@@ -196,7 +196,7 @@ export default function BridgeChannels() {
       setEditBridge(null);
       toast({ title: "Channel Updated", description: "Bridge channel has been updated." });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Error", description: err.message || "Failed to update channel", variant: "destructive" });
     },
   });
@@ -211,7 +211,7 @@ export default function BridgeChannels() {
       setEditBridge(null);
       toast({ title: "Channel Removed", description: "Bridge channel has been removed or deactivated." });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Error", description: err.message || "Failed to delete channel", variant: "destructive" });
     },
   });
@@ -228,7 +228,7 @@ export default function BridgeChannels() {
       setSendConversation(null);
       toast({ title: "Message Sent", description: "Outbound message has been sent." });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Error", description: err.message || "Failed to send message", variant: "destructive" });
     },
   });

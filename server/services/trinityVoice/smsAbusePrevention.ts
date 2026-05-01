@@ -51,7 +51,7 @@ async function ensureTables(): Promise<void> {
         ON sms_verification_failures(from_phone, occurred_at);
     `);
     bootstrapped = true;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[SmsAbusePrevention] Bootstrap failed (non-fatal):', err?.message);
   }
 }
@@ -82,7 +82,7 @@ export async function checkAndRecordRate(fromPhone: string, keyword?: string): P
       [fromPhone, (keyword || '').slice(0, 32)]
     );
     return { allowed: true, countLastHour: countLastHour + 1 };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[SmsAbusePrevention] rate-check failed (open):', err?.message);
     return { allowed: true, countLastHour: 0 };
   }
@@ -138,7 +138,7 @@ export async function recordVerificationFailure(params: {
       );
     }
     return { triggerWelfareCheck: trigger, failuresInWindow };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[SmsAbusePrevention] failure-record failed:', err?.message);
     return { triggerWelfareCheck: false, failuresInWindow: 0 };
   }
@@ -195,7 +195,7 @@ export async function placeSupervisorWelfareCall(params: {
       baseUrl: params.baseUrl,
     });
     return { placed: !!result.success, reason: result.error };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[SmsAbusePrevention] welfare-call placement failed:', err?.message);
     return { placed: false, reason: err?.message };
   }

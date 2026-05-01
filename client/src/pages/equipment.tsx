@@ -64,7 +64,7 @@ function EquipmentForm({ item, onClose }: { item?: any; onClose: () => void }) {
   });
 
   const mutation = useMutation({
-    mutationFn: (data: any) =>
+    mutationFn: (data) =>
       item
         ? apiRequest("PATCH", `/api/equipment/items/${item.id}`, data)
         : apiRequest("POST", "/api/equipment/items", { ...data, workspaceId }),
@@ -160,7 +160,7 @@ function EquipmentForm({ item, onClose }: { item?: any; onClose: () => void }) {
   );
 }
 
-function EquipmentCard({ item, onEdit, onAssign }: { item: any; onEdit: (item: any) => void; onAssign: (item: any) => void }) {
+function EquipmentCard({ item, onEdit, onAssign }: { item: any; onEdit: (item) => void; onAssign: (item) => void }) {
   const Icon = CATEGORY_ICONS[item.category] || Package;
   const statusClass = STATUS_COLORS[item.status] || "";
   return (
@@ -257,7 +257,7 @@ function ReportDamageDialog({ assignment, onClose }: { assignment: any; onClose:
   const [condition, setCondition] = useState("damaged");
 
   const mutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", `/api/equipment/report-damage/${assignment.id}`, data),
+    mutationFn: (data) => apiRequest("POST", `/api/equipment/report-damage/${assignment.id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/equipment/assignments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/equipment/items"] });
@@ -315,7 +315,7 @@ function ReturnWithDeductionDialog({ assignment, onClose }: { assignment: any; o
   const [damageNotes, setDamageNotes] = useState("");
 
   const mutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", `/api/equipment/return-with-deduction/${assignment.id}`, data),
+    mutationFn: (data) => apiRequest("POST", `/api/equipment/return-with-deduction/${assignment.id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/equipment/assignments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/equipment/items"] });
@@ -523,7 +523,7 @@ function OfficerEquipmentSection({ workspaceId }: { workspaceId: string }) {
 
       {officerAssignments.length > 0 && (
         <div className="space-y-3">
-          {officerAssignments.map((a: any) => {
+          {officerAssignments.map((a) => {
             const isActive = !a.actual_return_date && !a.actualReturnDate;
             return (
               <Card key={a.id} data-testid={`card-officer-assignment-${a.id}`}>
@@ -592,7 +592,7 @@ function OverdueEquipmentSection({ workspaceId }: { workspaceId: string }) {
 
   return (
     <div className="space-y-3">
-      {overdueItems.map((a: any) => {
+      {overdueItems.map((a) => {
         const expectedDate = new Date(a.expected_return_date || a.expectedReturnDate);
         const daysOverdue = Math.floor((Date.now() - expectedDate.getTime()) / (1000 * 60 * 60 * 24));
         return (
@@ -818,7 +818,7 @@ export default function EquipmentPage() {
               </Card>
             ) : (
               <div className="space-y-3">
-                {assignments.map((a: any) => {
+                {assignments.map((a) => {
                   const isActive = !a.actualReturnDate && !a.actual_return_date;
                   return (
                     <Card key={a.id} data-testid={`card-assignment-${a.id}`}>

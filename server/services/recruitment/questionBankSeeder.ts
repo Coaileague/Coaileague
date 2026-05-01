@@ -340,7 +340,7 @@ export async function seedDefaultQuestionBank(): Promise<{ seeded: number; skipp
         displayOrder: q.displayOrder,
       });
       seeded++;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('[QuestionBankSeeder] Failed to insert question:', err.message);
       skipped++;
     }

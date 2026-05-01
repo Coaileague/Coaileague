@@ -108,7 +108,7 @@ export function registerProactiveMonitors(adapter: SchedulerAdapter): void {
         });
       });
       log.info(`[${job.jobName}] registered`, { schedule: job.schedule });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[${job.jobName}] registration failed:`, err?.message);
     }
   }
@@ -155,7 +155,7 @@ const runPreShiftIntelAction: ActionHandler = {
         result,
         start,
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Pre-shift intel error: ${err.message}`, start);
     }
   },
@@ -193,7 +193,7 @@ const runRevenueScanAction: ActionHandler = {
         result,
         start,
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Revenue scan error: ${err.message}`, start);
     }
   },
@@ -226,7 +226,7 @@ const sendWeeklyBriefAction: ActionHandler = {
         result,
         start,
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Weekly brief error: ${err.message}`, start);
     }
   },
@@ -250,7 +250,7 @@ const runAnomalyWatchAction: ActionHandler = {
         result,
         start,
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       return fail(request.actionId, `Anomaly watch error: ${err.message}`, start);
     }
   },

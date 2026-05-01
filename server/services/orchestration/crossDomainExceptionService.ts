@@ -59,7 +59,7 @@ export interface PlatformException {
   sourceAction?: string;
   sourceService?: string;
   affectedResources: string[];
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   suggestedResolution?: string;
   autoResolutionAttempted: boolean;
   autoResolutionResult?: string;
@@ -212,7 +212,7 @@ class CrossDomainExceptionService {
     sourceAction?: string;
     sourceService?: string;
     affectedResources?: string[];
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     suggestedResolution?: string;
   }): Promise<PlatformException> {
     const {

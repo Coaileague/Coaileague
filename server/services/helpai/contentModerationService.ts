@@ -419,7 +419,7 @@ class ContentModerationService {
         workspaceId,
         userId,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[ContentModeration] DB log failed:', (err instanceof Error ? err.message : String(err)));
     }
   }
@@ -440,7 +440,7 @@ class ContentModerationService {
         metadata: { userId, category, severity: 'critical', messagePreview: message.substring(0, 100), timestamp: new Date().toISOString() },
       }).catch((err) => log.warn('[contentModerationService] Fire-and-forget failed:', err));
       log.warn(`[ContentModeration] CRITICAL alert sent: ${category} by user ${userId} in workspace ${workspaceId}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[ContentModeration] Admin notification failed:', (err instanceof Error ? err.message : String(err)));
     }
   }

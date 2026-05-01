@@ -47,7 +47,7 @@ export interface AIPMessage {
   fromAgent: string;
   toAgent: string;
   messageType: 'request' | 'response' | 'handoff' | 'capability_query';
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   correlationId?: string;
   timestamp: Date;
   expiresAt?: Date;
@@ -823,10 +823,9 @@ class TrinityFrontierCapabilities {
   // AUDIT LOGGING
   // -------------------------------------------------------------------------
   
-  private async logAudit(action: string, details: Record<string, any>): Promise<void> {
+  private async logAudit(action: string, details: Record<string, unknown>): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         userId: 0,
         workspaceId: 0,
         action: `trinity_frontier:${action}`,

@@ -712,10 +712,8 @@ class TrinityGuruMode {
     let improvementPercent = 0;
 
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (improvement.type === 'prompt_optimization') {
         improvementPercent = (improvement as any).proposedChanges?.length > 0 ? 25 : 5;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       } else if (improvement.type === 'routing_optimization') {
         improvementPercent = 15;
       } else {
@@ -726,7 +724,7 @@ class TrinityGuruMode {
         errors.push('No proposed changes to validate');
         improvementPercent = 0;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       errors.push((err instanceof Error ? err.message : String(err)) || 'Sandbox validation error');
     }
 

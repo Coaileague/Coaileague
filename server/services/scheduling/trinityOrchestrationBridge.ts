@@ -37,7 +37,7 @@ export const trinityOrchestrationBridge = {
         default:
           return { triggered: false, action, reason: 'Unknown action' };
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[OrchestrationBridge] ${action} failed: ${err?.message}`);
       return { triggered: false, action, error: err?.message };
     }

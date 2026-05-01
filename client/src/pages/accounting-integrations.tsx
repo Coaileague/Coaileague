@@ -156,7 +156,7 @@ export default function AccountingIntegrations() {
       setConnectDialogOpen(false);
       setApiKey('');
       setSelectedIntegration(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({
         title: 'Submission Failed',
         description: err?.message || 'Could not submit your connection request. Please try again.',
@@ -193,7 +193,7 @@ export default function AccountingIntegrations() {
       setRequestDialogOpen(false);
       setRequestedIntegrationName('');
       setRequestNotes('');
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({
         title: 'Request Failed',
         description: err?.message || 'Could not submit your integration request. Please try again.',

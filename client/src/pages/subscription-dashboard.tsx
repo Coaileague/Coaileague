@@ -244,7 +244,7 @@ export default function SubscriptionDashboard() {
           "Your subscription will cancel at the end of the current billing period. You retain full access until then.",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Cancellation failed",
         description: error?.message || "Please try again or contact support.",

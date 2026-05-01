@@ -76,7 +76,7 @@ export class SkillLoader {
 
         await this.loadSkill(dir.name);
         loadedCount++;
-      } catch (error: any) {
+      } catch (error: unknown) {
         this.log.error(`Failed to load skill ${dir.name}:`, (error instanceof Error ? error.message : String(error)));
       }
     }
@@ -112,7 +112,7 @@ export class SkillLoader {
       this.loadedModules.set(skillName, module);
 
       this.log.info(`✅ Loaded skill: ${skillName}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw new Error(`Failed to load skill ${skillName}: ${(error instanceof Error ? error.message : String(error))}`);
     }
   }
@@ -169,13 +169,13 @@ export class SkillLoader {
         
         try {
           await this.reloadSkill(skillName);
-        } catch (error: any) {
+        } catch (error: unknown) {
           this.log.error(`Hot reload failed for ${skillName}:`, (error instanceof Error ? error.message : String(error)));
         }
       });
 
       this.log.info(`👀 Watching skills directory for changes`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.log.warn(`Could not watch skills directory:`, (error instanceof Error ? error.message : String(error)));
     }
   }
@@ -209,28 +209,28 @@ export async function initializeSkillsSystem(): Promise<void> {
     try {
       await skillRegistry.register(payrollValidationSkill);
       log.info('  ✅ PayrollValidationSkill registered');
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.warn('  ⚠️  PayrollValidationSkill skipped:', e.message);
     }
     
     try {
       await skillRegistry.register(invoiceReconciliationSkill);
       log.info('  ✅ InvoiceReconciliationSkill registered');
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.warn('  ⚠️  InvoiceReconciliationSkill skipped:', e.message);
     }
     
     try {
       await skillRegistry.register(intelligentSchedulerSkill);
       log.info('  ✅ IntelligentSchedulerSkill registered');
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.warn('  ⚠️  IntelligentSchedulerSkill skipped:', e.message);
     }
     
     try {
       await skillRegistry.register(trinityStaffingSkill);
       log.info('  ✅ TrinityStaffingSkill registered (Premier)');
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.warn('  ⚠️  TrinityStaffingSkill skipped:', e.message);
     }
 
@@ -239,21 +239,21 @@ export async function initializeSkillsSystem(): Promise<void> {
     try {
       await skillRegistry.register(documentGeneratorSkill);
       log.info('  ✅ DocumentGeneratorSkill registered');
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.warn('  ⚠️  DocumentGeneratorSkill skipped:', e.message);
     }
 
     try {
       await skillRegistry.register(dataResearchSkill);
       log.info('  ✅ DataResearchSkill registered');
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.warn('  ⚠️  DataResearchSkill skipped:', e.message);
     }
 
     try {
       await skillRegistry.register(financialMathVerifierSkill);
       log.info('  ✅ FinancialMathVerifierSkill registered');
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.warn('  ⚠️  FinancialMathVerifierSkill skipped:', e.message);
     }
 
@@ -277,7 +277,7 @@ export async function initializeSkillsSystem(): Promise<void> {
       log.info(`║  ⚠️  UNHEALTHY: ${health.unhealthySkills.join(', ')}  ║`);
     }
     log.info('╚════════════════════════════════════════════════╝\n');
-  } catch (error: any) {
+  } catch (error: unknown) {
     log.error('❌ Failed to initialize skills system:', (error instanceof Error ? error.message : String(error)));
   }
 }

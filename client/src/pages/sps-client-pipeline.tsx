@@ -168,7 +168,7 @@ function NewProposalSheet({ onClose }: { onClose: () => void }) {
   });
 
   const createProposalMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       // First create the document (proposal type)
       const docRes = await apiRequest("POST", "/api/sps/documents", {
         documentType: 'proposal',
@@ -644,7 +644,7 @@ function NegotiationComposer({ threadId }: { threadId: string }) {
   const [polishResult, setPolishResult] = useState<{ original: string, polished: string } | null>(null);
 
   const sendMessageMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", `/api/sps/negotiations/${threadId}/messages`, data),
+    mutationFn: (data) => apiRequest("POST", `/api/sps/negotiations/${threadId}/messages`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sps/negotiations", threadId] });
       setMessage("");

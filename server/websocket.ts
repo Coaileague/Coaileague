@@ -195,7 +195,6 @@ function createSystemMessage(
     visibleToStaffOnly?: boolean;
   }
 ): ChatMessage {
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   return {
     id: Date.now().toString(),
     conversationId,
@@ -697,7 +696,7 @@ export function broadcastUserScopedNotification(
           try {
             client.send(payload);
             sentCount++;
-          } catch (sendErr: any) {
+          } catch (sendErr: unknown) {
             log.warn('User-scoped WS send failed — dead connection', { userId, error: sendErr?.message });
           }
         }
@@ -737,7 +736,7 @@ export function broadcastToAllClients(message: any) {
       try {
         client.send(payload);
         count++;
-      } catch (sendErr: any) {
+      } catch (sendErr: unknown) {
         log.warn('broadcastToAllClients: WS send failed — dead connection', { error: sendErr?.message });
       }
     }
@@ -829,7 +828,7 @@ export function broadcastTrinityAlertToSupport(message: any) {
         try {
           client.send(payload);
           sentCount++;
-        } catch (sendErr: any) {
+        } catch (sendErr: unknown) {
           log.warn('broadcastTrinityAlertToSupport: WS send failed — dead connection', { role, error: sendErr?.message });
         }
       }
@@ -882,7 +881,7 @@ export function syncToUserDevices(
   userId: string,
   resource: string,
   action: 'create' | 'update' | 'delete',
-  data?: Record<string, any>,
+  data?: Record<string, unknown>,
   queryKeys?: string[]
 ): number {
   return sessionSyncService.broadcastToUser(userId, {
@@ -993,7 +992,7 @@ export function broadcastToUser(userId: string, data: any): number {
     try {
       ws.send(payload);
       sentCount++;
-    } catch (sendErr: any) {
+    } catch (sendErr: unknown) {
       log.warn('broadcastToUser: WS send failed', { userId, error: sendErr?.message });
     }
   });
@@ -1295,7 +1294,7 @@ export function setupWebSocket(server: Server) {
             if (!userId || client.userId === userId) {
               try {
                 client.send(eventPayload);
-              } catch (sendErr: any) {
+              } catch (sendErr: unknown) {
                 log.warn('ChatServerHub conversation send failed — dead connection', { error: sendErr?.message });
               }
             }
@@ -1315,7 +1314,7 @@ export function setupWebSocket(server: Server) {
             if (!userId || client.userId === userId) {
               try {
                 client.send(eventPayload);
-              } catch (sendErr: any) {
+              } catch (sendErr: unknown) {
                 log.warn('ChatServerHub workspace send failed — dead connection', { error: sendErr?.message });
               }
             }
@@ -1338,7 +1337,7 @@ export function setupWebSocket(server: Server) {
           if (client.readyState === WebSocket.OPEN) {
             try {
               client.send(payload);
-            } catch (sendErr: any) {
+            } catch (sendErr: unknown) {
               log.warn('Room lifecycle broadcaster send failed — dead connection', { roomId, error: sendErr?.message });
             }
           }
@@ -1366,7 +1365,7 @@ export function setupWebSocket(server: Server) {
             if (!targetUserId || client.userId === targetUserId) {
               try {
                 client.send(eventPayload);
-              } catch (sendErr: any) {
+              } catch (sendErr: unknown) {
                 log.warn('IRC emitter room send failed — dead connection', { targetRoom, error: sendErr?.message });
               }
             }
@@ -1382,7 +1381,7 @@ export function setupWebSocket(server: Server) {
           if (!targetUserId || wsClient.userId === targetUserId) {
             try {
               client.send(JSON.stringify(event));
-            } catch (sendErr: any) {
+            } catch (sendErr: unknown) {
               log.warn('IRC emitter global send failed — dead connection', { error: sendErr?.message });
             }
           }
@@ -1470,7 +1469,7 @@ export function setupWebSocket(server: Server) {
                   messageId: incomingMessageId,
                   status: 'duplicate',
                 }));
-              } catch (sendErr: any) {
+              } catch (sendErr: unknown) {
                 log.warn('Failed to send duplicate ack', { error: sendErr?.message });
               }
             }
@@ -1516,7 +1515,6 @@ export function setupWebSocket(server: Server) {
             }
             break;
           }
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           case 'reconnect_sync': {
             // Client reconnected and sends the timestamp of the last event it received.
             // Server replays missed events from the per-workspace buffer, or instructs
@@ -1548,7 +1546,6 @@ export function setupWebSocket(server: Server) {
             log.info('Reconnect sync replay sent', { workspaceId: wsId, missedCount: missed.length, gapMs });
             break;
           }
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           case 'lone_worker_ack': {
             if (!ws.serverAuth?.userId) {
               ws.send(JSON.stringify({
@@ -1576,7 +1573,7 @@ export function setupWebSocket(server: Server) {
                 success: ackResult,
                 checkId: ackCheckId,
               }));
-            } catch (lwErr: any) {
+            } catch (lwErr: unknown) {
               log.error('Lone worker ack WS error', { error: lwErr?.message });
               ws.send(JSON.stringify({
                 type: 'lone_worker_ack_result',
@@ -1586,7 +1583,6 @@ export function setupWebSocket(server: Server) {
             }
             break;
           }
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           case 'trinity_agent_subscribe': {
             // Subscribe to Trinity Agent execution updates
             if (!ws.serverAuth?.userId) {
@@ -1618,7 +1614,6 @@ export function setupWebSocket(server: Server) {
             log.debug('TrinityAgent user subscribed', { userId: ws.serverAuth.userId, conversationId: trinityConversationId });
             break;
           }
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           case 'trinity_agent_ping': {
             // Heartbeat for Trinity Agent connection
             ws.send(JSON.stringify({
@@ -1628,7 +1623,6 @@ export function setupWebSocket(server: Server) {
             break;
           }
 
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           case 'ws_authenticate': {
             // Token-based auth fallback — handles cases where session cookie lookup
             // failed at connection time (DB hiccup, cookie edge cases in Replit env)
@@ -1731,7 +1725,6 @@ export function setupWebSocket(server: Server) {
               if (supportRoom) {
                 log.debug('join_conversation: found support room', { slug: supportRoom.slug, conversationId: supportRoom.conversationId });
                 // Store room mode - IRC-style: modes determine behavior, not slugs
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 roomMode = supportRoom.mode;
                 supportsBots = roomSupportsBots(roomMode);
                 
@@ -1988,7 +1981,7 @@ export function setupWebSocket(server: Server) {
                   workspaceId: conversation.workspaceId || undefined,
                   source: 'websocket',
                 });
-              } catch (err: any) {
+              } catch (err: unknown) {
                 log.warn('Failed to register participant in DB', { error: err.message });
               }
             }
@@ -2060,7 +2053,6 @@ export function setupWebSocket(server: Server) {
               }));
             } else {
               // Staff or other rooms: Load recent conversation history, filtering out join/leave noise
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               const allMessages = await storage.getChatMessagesByConversation(conversationId);
               const staffMessages = allMessages
                 .filter((m: any) => {
@@ -2575,7 +2567,6 @@ export function setupWebSocket(server: Server) {
             break;
           }
 
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           case 'leave_conversation': {
             const leaveConvId = (payload as any).conversationId || ws.conversationId;
             if (leaveConvId) {
@@ -2746,7 +2737,6 @@ export function setupWebSocket(server: Server) {
                   }
                   
                   // ESCALATION: If HelpAI can't solve, queue for human support
-                  // @ts-expect-error — TS migration: fix in refactoring sprint
                   if (helpResponse.shouldEscalate) {
                     const conversation = helpAIBotService.getConversation(ws.conversationId);
                     const issueSummary = conversation?.conversationHistory
@@ -2760,7 +2750,6 @@ export function setupWebSocket(server: Server) {
                     
                     if (!ticketNumber) {
                       const newTicket = await storage.createSupportTicket({
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         userId: ws.userId.startsWith('guest-') ? undefined : ws.userId,
                         workspaceId: ws.workspaceId || PLATFORM_WORKSPACE_ID,
                         subject: conversation?.intakeData?.subject || 'Support Request',
@@ -2897,7 +2886,6 @@ export function setupWebSocket(server: Server) {
                   }
                   
                   // RESOLUTION: If HelpAI resolved the issue, close the session
-                  // @ts-expect-error — TS migration: fix in refactoring sprint
                   if (helpResponse.shouldClose) {
                     const closeMsg = await storage.createChatMessage({
                       conversationId: ws.conversationId,
@@ -3982,7 +3970,7 @@ export function setupWebSocket(server: Server) {
                       });
                       helpaiMsg = aiGreet.text;
                     }
-                  } catch (aiErr: any) {
+                  } catch (aiErr: unknown) {
                     log.error('HelpAI AI generation failed, using fallback', { error: aiErr.message });
                     helpaiMsg = helpaiQuestion
                       ? `You asked: "${helpaiQuestion}"\n\nI'm HelpAI, your support assistant. I can help with:\n- Account issues and verification\n- Password resets\n- General platform questions\n- Connecting you with support staff\n\nLet me look into that for you. A support agent will be notified if needed.`
@@ -3996,7 +3984,6 @@ export function setupWebSocket(server: Server) {
                     senderType: 'bot',
                     message: helpaiMsg,
                     messageType: 'text',
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     metadata: { botCommand: 'helpai', question: helpaiQuestion || null, aiPowered: true },
                   });
 
@@ -4329,7 +4316,6 @@ export function setupWebSocket(server: Server) {
                         const { getMeteredOpenAICompletion } = await import('./services/billing/universalAIBillingInterceptor');
                         const result = await getMeteredOpenAICompletion({
                           workspaceId: workspaceId || '',
-                          // @ts-expect-error — TS migration: fix in refactoring sprint
                           userId: String(userId || 'system'),
                           featureKey: 'chatroom_hr_ai',
                           messages: [
@@ -5143,7 +5129,6 @@ export function setupWebSocket(server: Server) {
                     senderType: ws.isStaff ? 'staff' : 'user',
                     message: `* ${displayName} ${action}`,
                     messageType: 'action',
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     metadata: { isIrcAction: true },
                   });
 
@@ -5174,7 +5159,6 @@ export function setupWebSocket(server: Server) {
                     message: `${displayName} is now away: ${awayMessage}`,
                     messageType: 'text',
                     isSystemMessage: true,
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     metadata: { isAwayNotice: true },
                   });
 
@@ -5213,7 +5197,6 @@ export function setupWebSocket(server: Server) {
                     message: `${displayName} is back`,
                     messageType: 'text',
                     isSystemMessage: true,
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     metadata: { isBackNotice: true },
                   });
 
@@ -5261,7 +5244,6 @@ export function setupWebSocket(server: Server) {
                     senderType: 'bot',
                     message: `Processing: "${trinityQuery}"...`,
                     messageType: 'text',
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     metadata: { isTrinityThinking: true, staffOnly: true },
                   });
 
@@ -5337,7 +5319,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                       senderType: 'bot',
                       message: trinityResponse,
                       messageType: 'text',
-                      // @ts-expect-error — TS migration: fix in refactoring sprint
                       metadata: {
                         isTrinityResponse: true,
                         staffOnly: true, // Never visible to end users
@@ -5364,7 +5345,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                       senderType: 'bot',
                       message: `⚠️ I encountered an error processing your request. Please try again or use \`/help\` for command reference.`,
                       messageType: 'text',
-                      // @ts-expect-error — TS migration: fix in refactoring sprint
                       metadata: { staffOnly: true },
                     });
 
@@ -5403,14 +5383,12 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                       senderName: BOT_REGISTRY.meetingbot.name, senderType: 'bot',
                       message: aiResp.text || `Meeting "${meetingTitle}" started. Recording in progress.\n\nUse /actionitem, /decision, /note to track items.\nUse /meetingend to finish and generate summary.`,
                       messageType: 'text',
-                      // @ts-expect-error — TS migration: fix in refactoring sprint
                       metadata: { meetingTitle, startedBy: ws.userId, startedAt: new Date().toISOString(), botCommand: 'meetingstart' },
                     });
                     if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: botMsg })); }); }
                     // Update room metadata
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     await db.update(chatConversations).set({ metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({ meetingActive: true, meetingTitle, meetingStartedAt: new Date().toISOString(), meetingStartedBy: ws.userId })}::jsonb` }).where(eq(chatConversations.id, ws.conversationId));
-                  } catch (e: any) { ws.send(JSON.stringify({ type: 'error', message: `MeetingBot error: ${e.message}` })); }
+                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `MeetingBot error: ${e.message}` })); }
                   break;
                 }
 
@@ -5424,11 +5402,9 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                       senderName: BOT_REGISTRY.meetingbot.name, senderType: 'bot',
                       message: `Meeting ended by ${displayName}. Generating meeting summary PDF and saving to Document Safe...`,
                       messageType: 'text',
-                      // @ts-expect-error — TS migration: fix in refactoring sprint
                       metadata: { botCommand: 'meetingend', endedBy: ws.userId, endedAt: new Date().toISOString() },
                     });
                     if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: processingMsg })); }); }
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     await db.update(chatConversations).set({ metadata: sql`COALESCE(metadata, '{}'::jsonb) || '{"meetingActive": false}'::jsonb` }).where(eq(chatConversations.id, ws.conversationId));
                     // Generate PDF in background (non-blocking to UI)
                     const capturedConvId = ws.conversationId;
@@ -5450,15 +5426,14 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                             ? `Meeting summary saved to Document Safe.\n\n${result.summaryText || ''}\n\nDocument ID: ${result.documentId}`
                             : `Meeting summary could not be saved: ${result.error}. The AI summary:\n\n${result.summaryText || 'N/A'}`,
                           messageType: 'text',
-                          // @ts-expect-error — TS migration: fix in refactoring sprint
                           metadata: { botCommand: 'meetingend_complete', documentId: result.documentId },
                         });
                         if (capturedClients) { capturedClients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: doneMsg })); }); }
-                      } catch (pdfErr: any) {
+                      } catch (pdfErr: unknown) {
                         log.warn('[MeetingBot] PDF generation failed (non-blocking):', { error: pdfErr?.message });
                       }
                     })();
-                  } catch (e: any) { ws.send(JSON.stringify({ type: 'error', message: `MeetingBot error: ${e.message}` })); }
+                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `MeetingBot error: ${e.message}` })); }
                   break;
                 }
 
@@ -5469,7 +5444,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                     conversationId: ws.conversationId, senderId: 'meetingbot',
                     senderName: mb3.meetingbot.name, senderType: 'bot',
                     message: `Meeting recording paused by ${displayName}. Use /meetingcontinue to resume.`,
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     messageType: 'text', metadata: { botCommand: 'meetingpause' },
                   });
                   if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: pauseMsg })); }); }
@@ -5483,7 +5457,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                     conversationId: ws.conversationId, senderId: 'meetingbot',
                     senderName: mb4.meetingbot.name, senderType: 'bot',
                     message: `Meeting recording resumed by ${displayName}.`,
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     messageType: 'text', metadata: { botCommand: 'meetingcontinue' },
                   });
                   if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: resumeMsg })); }); }
@@ -5498,7 +5471,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                     conversationId: ws.conversationId, senderId: 'meetingbot',
                     senderName: mb5.meetingbot.name, senderType: 'bot',
                     message: `Action Item recorded by ${displayName}: ${actionText}`,
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     messageType: 'text', metadata: { botCommand: 'actionitem', actionItem: actionText, recordedBy: ws.userId },
                   });
                   if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: actionMsg })); }); }
@@ -5513,7 +5485,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                     conversationId: ws.conversationId, senderId: 'meetingbot',
                     senderName: mb6.meetingbot.name, senderType: 'bot',
                     message: `Decision recorded by ${displayName}: ${decisionText}`,
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     messageType: 'text', metadata: { botCommand: 'decision', decision: decisionText, recordedBy: ws.userId },
                   });
                   if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: decMsg })); }); }
@@ -5528,7 +5499,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                     conversationId: ws.conversationId, senderId: 'meetingbot',
                     senderName: mb7.meetingbot.name, senderType: 'bot',
                     message: `Note by ${displayName}: ${noteText}`,
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     messageType: 'text', metadata: { botCommand: 'note', note: noteText, recordedBy: ws.userId },
                   });
                   if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: noteMsg })); }); }
@@ -5546,13 +5516,11 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                       conversationId: ws.conversationId, senderId: 'reportbot',
                       senderName: rb.reportbot.name, senderType: 'bot',
                       message: `Incident report started by ${displayName}.\n\nDescribe the incident in your next messages. When finished, type /endreport to finalize.\n\nTip: Use /incident <type> to categorize (theft, trespass, medical, damage, fire, assault, other).`,
-                      // @ts-expect-error — TS migration: fix in refactoring sprint
                       messageType: 'text', metadata: { botCommand: 'report', reportStartedBy: ws.userId, reportStartedAt: new Date().toISOString() },
                     });
                     if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: reportStartMsg })); }); }
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     await db.update(chatConversations).set({ metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({ reportActive: true, reportStartedBy: ws.userId })}::jsonb` }).where(eq(chatConversations.id, ws.conversationId));
-                  } catch (e: any) { ws.send(JSON.stringify({ type: 'error', message: `ReportBot error: ${e.message}` })); }
+                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `ReportBot error: ${e.message}` })); }
                   break;
                 }
 
@@ -5564,7 +5532,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                     conversationId: ws.conversationId, senderId: 'reportbot',
                     senderName: rb2.reportbot.name, senderType: 'bot',
                     message: `Incident type set: ${incidentType.toUpperCase()}\nReported by: ${displayName}\nTimestamp: ${new Date().toLocaleString()}\n\nContinue describing the incident details. Type /endreport when done.`,
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     messageType: 'text', metadata: { botCommand: 'incident', incidentType, reportedBy: ws.userId },
                   });
                   if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: incidentMsg })); }); }
@@ -5576,7 +5543,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                   try {
                     const { BOT_REGISTRY: rb3 } = await import('./bots/registry');
                     const { botAIService: rAI } = await import('./bots/botAIService');
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     const reportMsgs = await storage.createChatMessage(ws.conversationId, 50);
                     // @ts-expect-error — TS migration: fix in refactoring sprint
                     const reportText = (reportMsgs as any).filter(m => m.senderType === 'user' || m.senderType === 'customer').map(m => m.message).join('\n');
@@ -5585,13 +5551,11 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                       conversationId: ws.conversationId, senderId: 'reportbot',
                       senderName: rb3.reportbot.name, senderType: 'bot',
                       message: `Report finalized by ${displayName}.\n\n${reportSummary.text}`,
-                      // @ts-expect-error — TS migration: fix in refactoring sprint
                       messageType: 'text', metadata: { botCommand: 'endreport', finalizedBy: ws.userId, finalizedAt: new Date().toISOString() },
                     });
                     if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: endReportMsg })); }); }
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     await db.update(chatConversations).set({ metadata: sql`COALESCE(metadata, '{}'::jsonb) || '{"reportActive": false}'::jsonb` }).where(eq(chatConversations.id, ws.conversationId));
-                  } catch (e: any) { ws.send(JSON.stringify({ type: 'error', message: `ReportBot error: ${e.message}` })); }
+                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `ReportBot error: ${e.message}` })); }
                   break;
                 }
 
@@ -5618,11 +5582,10 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                       conversationId: ws.conversationId, senderId: 'reportbot',
                       senderName: rb4.reportbot.name, senderType: 'bot',
                       message: `Report Analysis requested by ${displayName} (filter: ${filter})\n\n${aiAnalysis.text}`,
-                      // @ts-expect-error — TS migration: fix in refactoring sprint
                       messageType: 'text', metadata: { botCommand: 'analyzereports', filter, requestedBy: ws.userId },
                     });
                     if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: analyzeMsg })); }); }
-                  } catch (e: any) { ws.send(JSON.stringify({ type: 'error', message: `ReportBot error: ${e.message}` })); }
+                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `ReportBot error: ${e.message}` })); }
                   break;
                 }
 
@@ -5643,11 +5606,10 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                       conversationId: ws.conversationId, senderId: 'clockbot',
                       senderName: cb.clockbot.name, senderType: 'bot',
                       message: `Clock ${clockAction.toUpperCase()} recorded for ${displayName}\nTime: ${new Date().toLocaleString()}\nReason: ${clockReason}\nMethod: Manual (chat command)`,
-                      // @ts-expect-error — TS migration: fix in refactoring sprint
                       messageType: 'text', metadata: { botCommand: 'clockme', clockAction, reason: clockReason, userId: ws.userId, timestamp: new Date().toISOString() },
                     });
                     if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: clockMsg })); }); }
-                  } catch (e: any) { ws.send(JSON.stringify({ type: 'error', message: `ClockBot error: ${e.message}` })); }
+                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `ClockBot error: ${e.message}` })); }
                   break;
                 }
 
@@ -5673,11 +5635,10 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                       conversationId: ws.conversationId, senderId: 'clockbot',
                       senderName: cb2.clockbot.name, senderType: 'bot',
                       message: `SUPERVISOR OVERRIDE: Clock ${forceAction.toUpperCase()} forced for @${targetEmp}\nAuthorized by: ${displayName}\nTime: ${new Date().toLocaleString()}\nReason: ${forceReason}`,
-                      // @ts-expect-error — TS migration: fix in refactoring sprint
                       messageType: 'text', metadata: { botCommand: 'forceclock', targetEmployee: targetEmp, clockAction: forceAction, reason: forceReason, authorizedBy: ws.userId, timestamp: new Date().toISOString() },
                     });
                     if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: forceClockMsg })); }); }
-                  } catch (e: any) { ws.send(JSON.stringify({ type: 'error', message: `ClockBot error: ${e.message}` })); }
+                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `ClockBot error: ${e.message}` })); }
                   break;
                 }
 
@@ -5696,11 +5657,10 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                       conversationId: ws.conversationId, senderId: 'clockbot',
                       senderName: cb3.clockbot.name, senderType: 'bot',
                       message: `Clock Status for ${statusTarget}:\n\n${statusResp.text}`,
-                      // @ts-expect-error — TS migration: fix in refactoring sprint
                       messageType: 'text', metadata: { botCommand: 'clockstatus', target: statusTarget },
                     });
                     if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: clockStatusMsg })); }); }
-                  } catch (e: any) { ws.send(JSON.stringify({ type: 'error', message: `ClockBot error: ${e.message}` })); }
+                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `ClockBot error: ${e.message}` })); }
                   break;
                 }
 
@@ -5739,7 +5699,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
               let currentViolationCount = 0;
               try {
                 currentViolationCount = await storage.getUserViolationCount(ws.userId);
-              } catch (tableError: any) {
+              } catch (tableError: unknown) {
                 // If abuse_violations table doesn't exist, treat as first violation
                 if (tableError?.code === '42P01') {
                   log.warn('abuse_violations table not found, treating as first violation');
@@ -5771,7 +5731,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                   bannedUntil: action === 'ban' ? null : undefined, // null = permanent ban
                   banReason: action === 'ban' ? `Repeated abusive behavior (${newViolationCount} violations)` : undefined,
                 });
-              } catch (violationError: any) {
+              } catch (violationError: unknown) {
                 // If abuse_violations table doesn't exist, just log the warning
                 if (violationError?.code === '42P01') {
                   log.warn('abuse_violations table not found, skipping violation logging');
@@ -5906,7 +5866,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                       messageId: savedMessage.id,
                     });
                   }
-                } catch (orchErr: any) {
+                } catch (orchErr: unknown) {
                   // Orchestrator is always non-blocking
                   log.warn('ShiftBotOrchestrator error (non-blocking):', { error: orchErr?.message });
                 }
@@ -6028,7 +5988,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
             // CHAT SERVER HUB: Emit message_posted event for unified event system
             ChatServerHub.emitMessagePosted({
               conversationId: ws.conversationId,
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               roomMode: ws.roomMode, // IRC-style room mode instead of hardcoded slug
               workspaceId: ws.workspaceId,
               userId: ws.userId,
@@ -6045,16 +6004,13 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                 // Uses dynamic ws.supportsBots flag set during join
                 const isSupportRoom = ws.supportsBots === true;
                 
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 const userPlatformRole = await storage.getUserPlatformRole(ws.userId).catch(() => null);
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 const isStaffUser = hasPlatformWideAccess(userPlatformRole);
                 
                 // Only auto-respond to non-staff in support rooms
                 if (!isSupportRoom || isStaffUser) return;
                 
                 // Check if any staff is currently connected to this conversation
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 const connectedClients = conversationClients.get(ws.conversationId);
                 let staffPresent = false;
                 if (connectedClients) {
@@ -6084,7 +6040,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                     const { helpAIExecutor } = await import('./services/helpAICapabilities');
                     
                     // Get conversation history for context
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     const recentMessages = await storage.getChatMessagesByConversation(ws.conversationId);
                     const conversationHistory = recentMessages
                       .slice(-5)
@@ -6096,7 +6051,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                     
                     // Generate dynamic AI response with Trinity brain
                     const aiResponse = await helpAIExecutor.generateDynamicResponse(
-                      // @ts-expect-error — TS migration: fix in refactoring sprint
                       ws.userId,
                       ws.workspaceId || 'platform-external',
                       sanitizedMessage,
@@ -6105,7 +6059,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                     
                     // Save bot message to database
                     const botMsg = await storage.createChatMessage({
-                      // @ts-expect-error — TS migration: fix in refactoring sprint
                       conversationId: ws.conversationId,
                       senderId: CHAT_SERVER_CONFIG.helpai.userId,
                       senderName: CHAT_SERVER_CONFIG.helpai.name,
@@ -6115,7 +6068,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                     });
 
                     // Broadcast bot reply to all connected room clients in real-time
-                    // @ts-expect-error — TS migration: fix in refactoring sprint
                     const botRoomClients = conversationClients.get(ws.conversationId);
                     if (botRoomClients) {
                       const botMsgPayload = JSON.stringify({ type: 'new_message', message: botMsg });
@@ -6126,7 +6078,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                     
                     // Broadcast via IRC event system
                     ircEmitter.botMessage({
-                      // @ts-expect-error — TS migration: fix in refactoring sprint
                       roomId: ws.conversationId,
                       messageId: String(botMsg.id),
                       botId: CHAT_SERVER_CONFIG.helpai.userId,
@@ -6144,9 +6095,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                     if (aiResponse.shouldEscalate) {
                       log.info('HelpAI Trinity suggests escalation', { displayName, reason: aiResponse.escalationReason });
                       ChatServerHub.emitSupportEscalation({
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         conversationId: ws.conversationId,
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         userId: ws.userId,
                         userName: displayName,
                         reason: aiResponse.escalationReason || 'User needs human assistance',
@@ -6166,7 +6115,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                         ws.workspaceId
                       );
                       const botMsg = await storage.createChatMessage({
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         conversationId: ws.conversationId,
                         senderId: CHAT_SERVER_CONFIG.helpai.userId,
                         senderName: CHAT_SERVER_CONFIG.helpai.name,
@@ -6175,7 +6123,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                         messageType: 'text',
                       });
                       // Broadcast fallback bot reply to room clients
-                      // @ts-expect-error — TS migration: fix in refactoring sprint
                       const fallbackRoomClients = conversationClients.get(ws.conversationId);
                       if (fallbackRoomClients) {
                         const fPayload = JSON.stringify({ type: 'new_message', message: botMsg });
@@ -6184,7 +6131,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                         });
                       }
                       ircEmitter.botMessage({
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         roomId: ws.conversationId,
                         messageId: String(botMsg.id),
                         botId: CHAT_SERVER_CONFIG.helpai.userId,
@@ -6625,7 +6571,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
             // Add HelpAI bot from config for rooms with bot support
             // Check room mode dynamically instead of hardcoded slug
             const supportRoomForKick = await storage.getSupportRoomByConversationId(ws.conversationId);
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             const roomSupportsBotsDynamic = roomSupportsBots(supportRoomForKick?.mode);
             
             const allUsers = roomSupportsBotsDynamic 
@@ -7174,7 +7119,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
             break;
           }
 
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           case 'join_scheduling_progress': {
             // Subscribe to Trinity scheduling progress updates for a workspace
             // SECURITY: Require session authentication
@@ -7229,7 +7173,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
             break;
           }
 
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           case 'join_credit_updates': {
             // Subscribe to credit balance updates for real-time sync
             // SECURITY: Require session authentication
@@ -7909,7 +7852,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
             break;
           }
 
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           case 'join_platform_updates': {
             // Client subscribes to platform-wide update broadcasts.
             // Platform updates are already broadcast to all authenticated connections;
@@ -8125,7 +8067,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
 
           // Create leave announcement
           const leaveAnnouncement = await storage.createChatMessage({
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             conversationId: ws.conversationId,
             senderId: ws.userId?.startsWith('guest-') ? null : ws.userId, // Guests don't have user records - use null for FK compatibility
             senderName: 'Server',
@@ -8136,7 +8077,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
           });
 
           // Broadcast leave announcement to remaining clients
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           const clients = conversationClients.get(ws.conversationId);
           if (clients) {
             const announcementPayload = JSON.stringify({
@@ -8206,7 +8146,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
             if (client.readyState === WebSocket.OPEN) {
               try {
                 client.send(participantsPayload);
-              } catch (sendErr: any) {
+              } catch (sendErr: unknown) {
                 log.warn('Failed to send participants_update to client', { error: sendErr?.message });
               }
             }
@@ -8273,7 +8213,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
         if (client.readyState === WebSocket.OPEN) {
           try {
             client.send(payload);
-          } catch (sendErr: any) {
+          } catch (sendErr: unknown) {
             log.warn('Failed to send shift update to client', { error: sendErr?.message });
           }
         } else {
@@ -8950,7 +8890,6 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
     };
 
     if (payload.userId) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       sessionSyncService.broadcastToUser(payload.userId, thoughtMsg);
     } else {
       broadcastToWorkspace(wsId, thoughtMsg);

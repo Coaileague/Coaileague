@@ -77,7 +77,7 @@ export interface LedgerEntry {
   category: string;
   description: string;
   taskId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   createdAt: Date;
 }
 
@@ -319,7 +319,6 @@ class SubagentBanker {
       workspaceId: reservation.workspaceId,
       userId: reservation.userId,
       featureKey: 'ai_general',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       featureName: 'Task Execution',
       amountOverride: creditsToDeduct,
       relatedEntityType: 'automation_task',
@@ -368,7 +367,6 @@ class SubagentBanker {
       workspaceId,
       userId,
       featureKey: 'ai_general',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       featureName: actionType,
       amountOverride: credits,
       relatedEntityType: actionType,

@@ -96,7 +96,7 @@ export async function runStressTestSeed() {
             updatedAt: sql`now()`,
           }).onConflictDoNothing();
           created++;
-        } catch (e: any) {
+        } catch (e: unknown) {
           skipped++;
         }
       }
@@ -144,7 +144,7 @@ export async function runStressTestSeed() {
             updatedAt: sql`now()`,
           }).onConflictDoNothing();
           created++;
-        } catch (e: any) {
+        } catch (e: unknown) {
           skipped++;
         }
       }

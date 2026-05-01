@@ -34,12 +34,9 @@ function mkAction(actionId: string, fn: (params: any) => Promise<any>): ActionHa
     description: `Trinity form action: ${actionId}`,
     handler: async (req: ActionRequest): Promise<ActionResult> => {
       try {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const data = await fn(req.params || {});
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return { success: true, data };
-      } catch (err: any) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
+      } catch (err: unknown) {
         return { success: false, error: err?.message || 'Unknown error' };
       }
     },
@@ -217,7 +214,7 @@ export function registerFormActions() {
               autoSubmitted: true,
             },
           });
-        } catch (notifErr: any) {
+        } catch (notifErr: unknown) {
           log.warn('[trinityFormActions] Notification failed (non-fatal):', notifErr?.message);
         }
       }

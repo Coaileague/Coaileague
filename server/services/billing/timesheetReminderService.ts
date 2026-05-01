@@ -187,7 +187,7 @@ export async function runTimesheetReminderScan(): Promise<{
               });
               submissionReminders++;
             }
-          } catch (empErr: any) {
+          } catch (empErr: unknown) {
             log.warn('Failed to check/notify employee for timesheet', { employeeId: emp.id, error: empErr.message });
           }
         }
@@ -236,16 +236,16 @@ export async function runTimesheetReminderScan(): Promise<{
                 idempotencyKey: `timesheet_approval_reminder-${Date.now()}-${mgr.userId}`
               });
               approvalReminders++;
-            } catch (mgrErr: any) {
+            } catch (mgrErr: unknown) {
               log.warn('Failed to notify manager for timesheet approval', { userId: mgr.userId, error: mgrErr.message });
             }
           }
         }
-      } catch (wsErr: any) {
+      } catch (wsErr: unknown) {
         log.warn('Timesheet reminder scan failed for workspace', { workspaceId: ws.id, error: wsErr.message });
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Timesheet reminder scan failed', { error: (err instanceof Error ? err.message : String(err)) });
   }
 

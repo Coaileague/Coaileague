@@ -167,7 +167,7 @@ export function ScheduleTemplates({
       return;
     }
 
-    const shifts: Partial<Shift>[] = template.shiftPatterns.map((pattern: any) => {
+    const shifts: Partial<Shift>[] = template.shiftPatterns.map((pattern) => {
       const startTime = new Date(selectedDate);
       const endTime = new Date(selectedDate);
       

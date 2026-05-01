@@ -306,7 +306,6 @@ function setupWebSocketBridge() {
 
     try {
       const { helpaiOrchestrator } = await import('../helpai/platformActionHub');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const result = await helpaiOrchestrator.executeAction({
         actionId: data.actionId,
         userId: data.userId || 'trinity-ai',

@@ -40,7 +40,7 @@ export interface SyncEvent {
   resourceId?: string;
   workspaceId?: string;
   userId?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   queryKeys?: string[];
   timestamp: string;
   sessionId?: string;
@@ -240,7 +240,7 @@ class SessionSyncService {
     workspaceId: string,
     action: 'create' | 'update' | 'delete',
     shiftId: string,
-    data?: Record<string, any>
+    data?: Record<string, unknown>
   ): number {
     return this.broadcastToWorkspace(workspaceId, {
       type: 'shift_update',
@@ -315,7 +315,7 @@ class SessionSyncService {
     userId: string,
     workspaceId: string | undefined,
     actionType: string,
-    result: Record<string, any>
+    result: Record<string, unknown>
   ): number {
     return this.broadcastToUser(userId, {
       type: 'ai_action_complete',

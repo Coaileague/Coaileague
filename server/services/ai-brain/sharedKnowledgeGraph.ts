@@ -33,7 +33,7 @@ export interface KnowledgeEntity {
   description: string;
   domain: KnowledgeDomain;
   workspaceId?: string;
-  attributes: Record<string, any>;
+  attributes: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
@@ -75,7 +75,7 @@ export interface KnowledgeRelationship {
   targetId: string;
   type: RelationshipType;
   strength: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   createdAt: Date;
   createdBy: string;
 }
@@ -97,7 +97,7 @@ export interface LearningEntry {
   domain: KnowledgeDomain;
   agentId: string;
   action: string;
-  context: Record<string, any>;
+  context: Record<string, unknown>;
   outcome: 'success' | 'failure' | 'partial';
   reward: number;
   insights: string[];
@@ -152,7 +152,7 @@ class SharedKnowledgeGraph {
             return;
           }
           await this.instance.loadFromDatabase();
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn('[SharedKnowledgeGraph] DB load deferred startup failed (non-fatal):', err?.message);
         }
       }, 5000);
@@ -175,16 +175,12 @@ class SharedKnowledgeGraph {
           id: dbEntity.id,
           type: dbEntity.entityType as EntityType,
           name: dbEntity.name,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           description: dbEntity.content,
           domain: dbEntity.domain as KnowledgeDomain,
           attributes: dbEntity.metadata || {},
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           createdAt: dbEntity.createdAt,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           updatedAt: dbEntity.updatedAt || dbEntity.createdAt,
           createdBy: dbEntity.sourceAgent || 'system',
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           confidence: parseFloat(dbEntity.confidence || '0.5'),
           usageCount: dbEntity.accessCount || 0,
           lastAccessedAt: dbEntity.lastAccessed || undefined,
@@ -202,10 +198,8 @@ class SharedKnowledgeGraph {
           sourceId: dbRel.sourceId,
           targetId: dbRel.targetId,
           type: (dbRel as any).relationship as RelationshipType,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           strength: parseFloat(dbRel.strength || '0.5'),
           metadata: {},
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           createdAt: dbRel.createdAt,
           createdBy: dbRel.createdBy || 'system',
         };
@@ -214,7 +208,7 @@ class SharedKnowledgeGraph {
 
       this.dbInitialized = true;
       log.info(`[SharedKnowledgeGraph] Loaded ${dbEntities.length} entities and ${dbRelationships.length} relationships from database`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[SharedKnowledgeGraph] Database load error:', (error instanceof Error ? error.message : String(error)));
     }
   }
@@ -271,7 +265,7 @@ class SharedKnowledgeGraph {
     type: RelationshipType;
     strength?: number;
     createdBy: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): KnowledgeRelationship | null {
     const source = this.entities.get(params.sourceId);
     const target = this.entities.get(params.targetId);
@@ -604,7 +598,7 @@ Return JSON array of indices in order of relevance (most relevant first):
   checkRules(params: {
     action: string;
     domain: KnowledgeDomain;
-    context: Record<string, any>;
+    context: Record<string, unknown>;
     workspaceId?: string;
   }): { allowed: boolean; reason?: string; applicableRules: KnowledgeEntity[] } {
     let rules = Array.from(this.entities.values())

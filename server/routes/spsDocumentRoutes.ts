@@ -150,7 +150,6 @@ spsDocumentRouter.post('/', async (req: any, res) => {
       portalUrl: `/sps-packet/${accessToken}`,
     });
   } catch (err: unknown) {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (err.name === 'ZodError') return res.status(400).json({ error: 'Validation error', details: err.errors });
     log.error('[spsDocumentRoutes] POST /documents error:', err);
     res.status(500).json({ error: 'Failed to create document' });
@@ -215,7 +214,7 @@ spsDocumentRouter.patch('/:id', async (req: any, res) => {
       .where(and(eq(spsDocuments.id, req.params.id), eq(spsDocuments.workspaceId, workspaceId)));
     if (!existing) return res.status(404).json({ error: 'Document not found' });
 
-    const updates: Record<string, any> = { updatedAt: new Date() };
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (formData !== undefined) updates.formData = { ...(existing.formData as any || {}), ...formData };
     if (signatures !== undefined) updates.signatures = { ...(existing.signatures as any || {}), ...signatures };
     if (initials !== undefined) updates.initials = { ...(existing.initials as any || {}), ...initials };
@@ -403,7 +402,6 @@ If this is a Texas guard card, confirm it appears to be an official Texas DPS Pr
       const raw = await callSpsVisionAI(prompt, imageBase64, 1024);
       verificationResult = JSON.parse(raw.replace(/```json\n?|\n?```/g, '').trim());
     } catch (aiErr: unknown) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       log.error('[spsDocumentRoutes] Vision ID scan error:', aiErr.message);
       verificationResult = {
         verification_confidence: 'low',

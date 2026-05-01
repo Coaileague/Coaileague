@@ -62,7 +62,7 @@ export function notifyTrinity(
   source: EventSource = 'api',
   options?: {
     resourceId?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     forceScanTrigger?: boolean;
   }
 ): void {
@@ -103,7 +103,6 @@ export function notifyTrinity(
       const shouldScan = options?.forceScanTrigger || SCAN_TRIGGER_RESOURCES.has(resourceType);
       if (shouldScan) {
         const { platformEventBus } = await import('../platformEventBus');
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         platformEventBus.publish('fix_applied', {
           eventType,
           resourceType,
@@ -130,7 +129,7 @@ export function postDatabaseEventToAIBrain(
   operation: DatabaseOperation,
   recordId: string,
   source: EventSource = 'api',
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): void {
   notifyTrinity(null, table, operation, source, { resourceId: recordId, metadata });
 }
@@ -144,7 +143,7 @@ export function postBatchDatabaseEvents(
     operation: DatabaseOperation;
     recordId: string;
     source?: EventSource;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }>
 ): void {
   events.forEach(event =>
@@ -162,7 +161,7 @@ export function postPlatformEvent(
   eventType: string,
   resourceType: string,
   operation: DatabaseOperation,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): void {
   notifyTrinity(null, resourceType, operation, 'api', { metadata: { eventType, ...metadata } });
 }

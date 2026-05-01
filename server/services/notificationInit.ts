@@ -119,7 +119,7 @@ export async function pushSystemNotification(
     priority?: number;
     learnMoreUrl?: string;
     broadcast?: boolean;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   } = {}
 ): Promise<{ id: string } | null> {
   // Route through UniversalNotificationEngine - SINGLE SOURCE OF TRUTH

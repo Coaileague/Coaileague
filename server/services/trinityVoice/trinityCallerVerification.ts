@@ -119,7 +119,7 @@ export async function verifyCaller(fromPhone: string): Promise<CallerVerificatio
       employeeNumber: row.employee_number,
       orgId: row.org_id,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[CallerVerify] lookup failed:', err?.message);
     return { verified: false, reason: 'lookup_error' };
   }

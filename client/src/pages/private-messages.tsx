@@ -106,13 +106,13 @@ export default function PrivateMessages() {
   // Socket-first DM updates (Codex: socket-first instead of polling-first)
   const wsBus = useWebSocketBus();
   useEffect(() => {
-    const unsub = wsBus.subscribe('private_message_received', (data: any) => {
+    const unsub = wsBus.subscribe('private_message_received', (data) => {
       const { conversationId: incomingConvId, message } = data;
       // Update active conversation thread live
       if (incomingConvId && queryClient) {
         queryClient.setQueryData(
           ['/api/private-messages', incomingConvId],
-          (old: any) => old ? [...(Array.isArray(old) ? old : []), message] : [message]
+          (old) => old ? [...(Array.isArray(old) ? old : []), message] : [message]
         );
         // Refresh conversation list for unread counts
         queryClient.invalidateQueries({ queryKey: ['/api/private-messages/conversations'] });
@@ -189,7 +189,7 @@ export default function PrivateMessages() {
     enabled: searchQuery.length > 2,
     select: (data: any[]) => {
       if (!Array.isArray(data)) return [];
-      return data.filter((u: any) => u.id !== user?.id); // Exclude self
+      return data.filter((u) => u.id !== user?.id); // Exclude self
     },
   });
 
@@ -230,7 +230,7 @@ export default function PrivateMessages() {
     mutationFn: async (recipientId: string) => {
       return await apiRequest('POST', '/api/private-messages/start', { recipientId });
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/private-messages/conversations'] });
       setSelectedConversation(data.conversationId);
       setShowNewChatDialog(false);
@@ -792,7 +792,7 @@ export default function PrivateMessages() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {searchResults.map((result: any) => (
+                    {searchResults.map((result) => (
                       <button
                         key={result.id}
                         onClick={() => startConversationMutation.mutate(result.id)}
@@ -873,7 +873,7 @@ export default function PrivateMessages() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {searchResults.map((result: any) => (
+                    {searchResults.map((result) => (
                       <button
                         key={result.id}
                         onClick={() => {

@@ -103,7 +103,7 @@ export default function ClientSatisfactionPage() {
       setForm({ client_id: "", check_in_type: "scheduled", check_in_date: "", satisfaction_score: "", nps_score: "", feedback_text: "", follow_up_required: false });
       toast({ title: "Check-in recorded" });
     },
-    onError: (err: any) => toast({ title: "Failed to save", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Failed to save", description: err.message, variant: "destructive" }),
   });
 
   const clientRows = dashboard?.clients || [];

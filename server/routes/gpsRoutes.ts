@@ -22,7 +22,7 @@ router.post('/location', requireAuth, ensureWorkspaceAccess, async (req: Authent
       RETURNING id, latitude, longitude, created_at
     `, [req.workspaceId, employeeId, timeEntryId, latitude, longitude, accuracy, altitude, speed, heading, isMoving ?? false]);
     res.status(201).json({ location: rows[0] });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/gps/locations/:employeeId — location history for officer
@@ -38,7 +38,7 @@ router.get('/locations/:employeeId', requireAuth, ensureWorkspaceAccess, async (
       LIMIT 500
     `, [req.workspaceId, req.params.employeeId, hours]);
     res.json({ locations: rows, count: rows.length, hours });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/gps/active — all officers' latest positions (dispatcher map)
@@ -56,7 +56,7 @@ router.get('/active', requireAuth, ensureWorkspaceAccess, async (req: Authentica
       ORDER BY gl.employee_id, gl.created_at DESC
     `, [req.workspaceId]);
     res.json({ officers: rows, count: rows.length });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/gps/geofences — workspace geofence zones
@@ -70,7 +70,7 @@ router.get('/geofences', requireAuth, ensureWorkspaceAccess, async (req: Authent
       ORDER BY gz.name
     `, [req.workspaceId]);
     res.json({ geofences: rows });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 export default router;

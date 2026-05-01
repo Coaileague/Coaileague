@@ -74,7 +74,7 @@ export default function SupportConsoleWorkspacePage() {
   });
 
   const executeMutation = useMutation({
-    mutationFn: (payload: any) =>
+    mutationFn: (payload) =>
       apiRequest("POST", "/api/support/actions/execute", payload).then(r => r.json()),
     onSuccess: (data) => {
       if (data.success) {
@@ -125,7 +125,7 @@ export default function SupportConsoleWorkspacePage() {
     SURVIVAL: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
   };
 
-  const filteredOfficers = officers.filter((o: any) =>
+  const filteredOfficers = officers.filter((o) =>
     !searchQuery || [o.first_name, o.last_name, o.email].join(" ").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -218,7 +218,7 @@ export default function SupportConsoleWorkspacePage() {
             {orgState.priorityStack?.length > 0 && (
               <div className="mt-3 space-y-1">
                 <p className="text-xs font-medium text-muted-foreground">Trinity Priority Stack</p>
-                {orgState.priorityStack.slice(0, 4).map((p: any) => (
+                {orgState.priorityStack.slice(0, 4).map((p) => (
                   <div key={p.rank} className="flex items-center gap-2 text-xs" data-testid={`priority-item-${p.rank}`}>
                     <span className="font-mono text-muted-foreground w-4">{p.rank}.</span>
                     <span className="flex-1">{p.action}</span>
@@ -245,7 +245,7 @@ export default function SupportConsoleWorkspacePage() {
         <TabsContent value="overview" className="space-y-4 mt-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: "Active Officers", value: officers.filter((o: any) => o.status === "active").length, icon: Users, color: "text-blue-500" },
+              { label: "Active Officers", value: officers.filter((o) => o.status === "active").length, icon: Users, color: "text-blue-500" },
               { label: "Open Shifts", value: shifts.length, icon: Clock, color: "text-yellow-500" },
               { label: "Open Invoices", value: invoices.length, icon: DollarSign, color: "text-green-500" },
               { label: "Compliance Alerts", value: compliance.length, icon: ShieldCheck, color: "text-orange-500" },
@@ -266,7 +266,7 @@ export default function SupportConsoleWorkspacePage() {
           {tickets.length > 0 && (
             <Section title="Recent Support Tickets" icon={FileText}>
               <div className="space-y-2">
-                {tickets.slice(0, 5).map((t: any) => (
+                {tickets.slice(0, 5).map((t) => (
                   <div key={t.id} className="flex items-center gap-3 p-3 rounded-md border text-sm"
                     data-testid={`row-ws-ticket-${t.id}`}>
                     <Badge className={t.status === "escalated" ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" : ""}>
@@ -286,7 +286,7 @@ export default function SupportConsoleWorkspacePage() {
           {incidents.length > 0 && (
             <Section title="Recent Incidents" icon={AlertTriangle}>
               <div className="space-y-2">
-                {incidents.slice(0, 4).map((inc: any) => (
+                {incidents.slice(0, 4).map((inc) => (
                   <div key={inc.id} className="flex items-center gap-3 p-3 rounded-md border text-sm"
                     data-testid={`row-incident-${inc.id}`}>
                     <AlertTriangle className={`w-4 h-4 shrink-0 ${inc.severity === 'critical' ? 'text-red-500' : 'text-yellow-500'}`} />
@@ -319,7 +319,7 @@ export default function SupportConsoleWorkspacePage() {
                 </div>
               ) : (
                 <div className="divide-y">
-                  {filteredOfficers.map((o: any) => (
+                  {filteredOfficers.map((o) => (
                     <div key={o.id} className="flex items-center gap-3 p-4" data-testid={`row-officer-${o.id}`}>
                       <UserCheck className="w-4 h-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -353,7 +353,7 @@ export default function SupportConsoleWorkspacePage() {
               <p className="text-sm text-muted-foreground">No open shifts.</p>
             ) : (
               <div className="space-y-2">
-                {shifts.slice(0, 8).map((s: any) => (
+                {shifts.slice(0, 8).map((s) => (
                   <div key={s.id} className="flex items-center gap-3 p-3 rounded-md border text-sm"
                     data-testid={`row-shift-${s.id}`}>
                     <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -372,7 +372,7 @@ export default function SupportConsoleWorkspacePage() {
               <p className="text-sm text-muted-foreground">No compliance alerts.</p>
             ) : (
               <div className="space-y-2">
-                {compliance.map((c: any) => (
+                {compliance.map((c) => (
                   <div key={c.id} className="flex items-center gap-3 p-3 rounded-md border text-sm"
                     data-testid={`row-compliance-${c.id}`}>
                     <ShieldCheck className="w-4 h-4 text-orange-500 shrink-0" />
@@ -399,7 +399,7 @@ export default function SupportConsoleWorkspacePage() {
               <p className="text-sm text-muted-foreground">No open invoices.</p>
             ) : (
               <div className="space-y-2">
-                {invoices.map((inv: any) => (
+                {invoices.map((inv) => (
                   <div key={inv.id} className="flex items-center gap-3 p-3 rounded-md border text-sm"
                     data-testid={`row-invoice-${inv.id}`}>
                     <DollarSign className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -472,7 +472,7 @@ export default function SupportConsoleWorkspacePage() {
                   <SelectValue placeholder="Choose an action…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(actionRegistry || []).map((a: any) => (
+                  {(actionRegistry || []).map((a) => (
                     <SelectItem key={a.id} value={a.id}>{a.label}</SelectItem>
                   ))}
                   {(!actionRegistry || actionRegistry.length === 0) && [

@@ -204,7 +204,6 @@ export class AIBrainCodeEditorService {
       expiresAt.setDate(expiresAt.getDate() + 7);
 
       const [change] = await db.insert(stagedCodeChanges).values({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: 'system',
         title: request.title,
         description: request.description,
@@ -249,7 +248,6 @@ export class AIBrainCodeEditorService {
   ): Promise<{ success: boolean; batchId?: string; changeIds?: string[]; errors?: string[] }> {
     try {
       const [batch] = await db.insert(codeChangeBatches).values({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: 'system',
         title: request.title,
         description: request.description,
@@ -515,7 +513,6 @@ export class AIBrainCodeEditorService {
             title: `Code Change Applied: ${change.title}`,
             message: `Platform code change "${change.title}" has been applied. File: ${change.filePath}`,
             targetUserIds: supportRoles.map(r => r.userId),
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             severity: 'medium',
             source: 'ai_brain_code_editor',
             metadata: { 

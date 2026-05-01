@@ -5,7 +5,7 @@ export class RetryStrategy {
 
   async executeWithRetry<T>(
     fn: () => Promise<T>,
-    context?: Record<string, any>
+    context?: Record<string, unknown>
   ): Promise<T> {
     let lastError: any;
 

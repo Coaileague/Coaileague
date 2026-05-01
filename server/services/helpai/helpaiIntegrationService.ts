@@ -29,7 +29,7 @@ export interface IntegrationConfig {
   workspaceId: string;
   isEnabled?: boolean;
   customEndpoint?: string;
-  customConfig?: Record<string, any>;
+  customConfig?: Record<string, unknown>;
   autoSyncEnabled?: boolean;
   syncIntervalMinutes?: number;
 }

@@ -145,7 +145,7 @@ export interface AnomalyDetection {
   deviationScore: number;
   
   // Context
-  context: Record<string, any>;
+  context: Record<string, unknown>;
   
   // Classification
   severity: 'low' | 'medium' | 'high' | 'critical';
@@ -645,7 +645,6 @@ class BehavioralMonitoringService {
     await this.logBehavioralEvent('anomaly_detected', anomaly);
 
     // Publish platform event
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     platformEventBus.publish('ai_brain_action', {
       action: 'behavioral_anomaly',
       anomalyId: anomaly.anomalyId,
@@ -675,7 +674,6 @@ class BehavioralMonitoringService {
     await this.logBehavioralEvent('drift_detected', drift);
 
     // Publish platform event
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     platformEventBus.publish('ai_brain_action', {
       action: 'behavioral_drift',
       driftId: drift.driftId,

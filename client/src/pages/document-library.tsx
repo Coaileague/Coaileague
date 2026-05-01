@@ -103,14 +103,14 @@ function CreateContractDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   };
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/contracts", data),
+    mutationFn: (data) => apiRequest("POST", "/api/contracts", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/contracts"] });
       toast({ title: "Contract created", description: `"${form.title}" is ready in Draft status` });
       onOpenChange(false);
       setForm({ title: "", docType: "contract", clientName: "", clientEmail: "", totalValue: "", content: "", expiresAt: "", specialTerms: "" });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Failed to create", description: err.message, variant: "destructive" });
     },
   });
@@ -221,7 +221,7 @@ function ContractCard({ contract, onSend }: { contract: PipelineContract; onSend
       queryClient.invalidateQueries({ queryKey: ["/api/contracts"] });
       toast({ title: "Contract sent", description: `Sent to ${contract.clientEmail}` });
     },
-    onError: (err: any) => toast({ title: "Send failed", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Send failed", description: err.message, variant: "destructive" }),
   });
 
   return (
@@ -417,7 +417,7 @@ function SendForSignatureDialog({
       setMessage("");
       onSuccess();
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Failed to send", description: err.message, variant: "destructive" });
     },
   });
@@ -560,14 +560,12 @@ export default function DocumentLibrary() {
   const { data: contractsData, isLoading: contractsLoading } = useQuery<{ contracts: PipelineContract[] }>({
     queryKey: ["/api/contracts"],
     enabled: isContractsView,
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     queryFn: () => apiFetch('/api/contracts', AnyResponse),
   });
 
   const { data: contractStats } = useQuery<{ stats: any }>({
     queryKey: ["/api/contracts/stats"],
     enabled: isContractsView,
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     queryFn: () => apiFetch('/api/contracts/stats', AnyResponse),
   });
 
@@ -605,7 +603,7 @@ export default function DocumentLibrary() {
   });
 
   const uploadMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('POST', '/api/documents', data),
+    mutationFn: (data) => apiRequest('POST', '/api/documents', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
       setShowUpload(false);
@@ -640,8 +638,8 @@ export default function DocumentLibrary() {
 
 
   // @ts-expect-error — TS migration: fix in refactoring sprint
-  const documents: OrgDocument[] = docsData?.data?.map((d: any) => ({ ...d.document, uploadedByUser: d.uploadedByUser })) || [];
-  const signatures: Signature[] = signaturesData?.data?.map((s: any) => ({ ...s.signature, signer: s.signer })) || [];
+  const documents: OrgDocument[] = docsData?.data?.map((d) => ({ ...d.document, uploadedByUser: d.uploadedByUser })) || [];
+  const signatures: Signature[] = signaturesData?.data?.map((s) => ({ ...s.signature, signer: s.signer })) || [];
 
   const filteredDocs = documents.filter(doc => {
     const matchesCategory = activeCategory === "all" || doc.category === activeCategory;
@@ -651,7 +649,6 @@ export default function DocumentLibrary() {
     return matchesCategory && matchesSearch;
   });
 
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const allContracts: PipelineContract[] = contractsData?.contracts || [];
   const filteredContracts = allContracts.filter(c => {
     const matchesStatus = contractStatusFilter === "all" || c.status === contractStatusFilter;
@@ -1110,7 +1107,7 @@ export default function DocumentLibrary() {
                       toast({ title: "Sent via email", description: `Contract sent to ${selectedContractForSign.clientEmail}` });
                       setSelectedContractForSign(null);
                     })
-                    .catch((err: any) => toast({ title: "Failed", description: err.message, variant: "destructive" }));
+                    .catch((err) => toast({ title: "Failed", description: err.message, variant: "destructive" }));
                 }}
                 data-testid="button-send-email"
               >
@@ -1132,7 +1129,7 @@ export default function DocumentLibrary() {
                       toast({ title: "Internal signing request created", description: "Signer added for internal signature" });
                       setSelectedContractForSign(null);
                     })
-                    .catch((err: any) => toast({ title: "Failed", description: err.message, variant: "destructive" }));
+                    .catch((err) => toast({ title: "Failed", description: err.message, variant: "destructive" }));
                 }}
                 data-testid="button-send-internal"
               >

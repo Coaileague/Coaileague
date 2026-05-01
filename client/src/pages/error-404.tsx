@@ -4,7 +4,6 @@ import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 const error404Config: CanvasPageConfig = {
   id: 'error-404',
   title: 'Page Not Found',
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   category: 'system',
   variant: 'centered',
   showHeader: false,

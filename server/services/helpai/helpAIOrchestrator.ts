@@ -135,7 +135,7 @@ export interface OrchestratorResponse {
   shouldDisconnect: boolean;
   queuePosition?: number;
   requiresRating?: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface BotSummonRequest {
@@ -1012,7 +1012,7 @@ class HelpAIOrchestrator {
         durationMs: Date.now() - startTime,
       });
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[HelpAI] Bot execution error for ${request.botName}:`, (err instanceof Error ? err.message : String(err)));
       executionResult = {
         success: false,
@@ -1339,8 +1339,8 @@ class HelpAIOrchestrator {
       toolUsed?: string;
       botSummoned?: string;
       commandUsed?: string;
-      inputPayload?: Record<string, any>;
-      outputPayload?: Record<string, any>;
+      inputPayload?: Record<string, unknown>;
+      outputPayload?: Record<string, unknown>;
       faqId?: string;
       success?: boolean;
       errorMessage?: string;

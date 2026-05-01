@@ -131,7 +131,7 @@ class TrinityCalloffPredictor {
       `, [workspaceId, horizonHours]);
 
       return (result as unknown as any[]).map(row => this.scoreCalloffRisk(row));
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[CalloffPredictor] Failed to compute calloff risks: ${(err instanceof Error ? err.message : String(err))}`);
       return [];
     }
@@ -244,7 +244,7 @@ class TrinityCalloffPredictor {
       `, [workspaceId]);
 
       return (result as unknown as any[]).map(row => this.scoreSiteRisk(row));
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[CalloffPredictor] Failed to compute site risks: ${(err instanceof Error ? err.message : String(err))}`);
       return [];
     }

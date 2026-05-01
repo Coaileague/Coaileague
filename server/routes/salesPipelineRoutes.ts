@@ -39,7 +39,7 @@ router.get("/leads", requireAuth, async (req: AuthenticatedRequest, res) => {
     );
     const countRes = await pool.query(`SELECT COUNT(*) FROM sales_leads WHERE ${where}`, params);
     res.json({ leads: rows, total: parseInt(countRes.rows[0].count) });
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 router.post("/leads", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -80,7 +80,7 @@ router.post("/leads", requireAuth, async (req: AuthenticatedRequest, res) => {
       [rows[0].id, wid, req.user?.id]
     );
     res.status(201).json(rows[0]);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 router.patch("/leads/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -133,7 +133,7 @@ router.patch("/leads/:id", requireAuth, async (req: AuthenticatedRequest, res) =
       );
     }
     res.json(rows[0]);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 router.post("/leads/:id/advance", requireManager, async (req: AuthenticatedRequest, res) => {
@@ -161,7 +161,7 @@ router.post("/leads/:id/advance", requireManager, async (req: AuthenticatedReque
       [id, wid, `Advanced to ${nextStage}`, `Manager advanced stage: ${lead.rows[0].stage} → ${nextStage}`, req.user?.id]
     );
     res.json(rows[0]);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 // ── ACTIVITIES ─────────────────────────────────────────────────────────────
@@ -175,7 +175,7 @@ router.get("/leads/:id/activities", requireAuth, async (req: AuthenticatedReques
       [req.params.id, wid]
     );
     res.json(rows);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 router.post("/leads/:id/activities", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -189,7 +189,7 @@ router.post("/leads/:id/activities", requireAuth, async (req: AuthenticatedReque
       [req.params.id, wid, activityType || "note", direction || "outbound", subject, body, req.user?.id]
     );
     res.status(201).json(rows[0]);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 // ── PROPOSALS ──────────────────────────────────────────────────────────────
@@ -222,7 +222,7 @@ router.post("/proposals/generate", requireManager, async (req: AuthenticatedRequ
       [leadId, wid, req.user?.id]
     );
     res.status(201).json(rows[0]);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 router.post("/proposals/:id/send", requireManager, async (req: AuthenticatedRequest, res) => {
@@ -236,7 +236,7 @@ router.post("/proposals/:id/send", requireManager, async (req: AuthenticatedRequ
     );
     if (!rows[0]) return res.status(404).json({ error: "Proposal not found" });
     res.json(rows[0]);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 router.post("/proposals/:id/approve", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -256,7 +256,7 @@ router.post("/proposals/:id/approve", requireAuth, async (req: AuthenticatedRequ
       [rows[0].lead_id, wid]
     );
     res.json(rows[0]);
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 // ── PIPELINE ANALYTICS ─────────────────────────────────────────────────────
@@ -289,7 +289,7 @@ router.get("/pipeline/analytics", requireManager, async (req: AuthenticatedReque
       totalLeads: r.total,
       avgLeadScore: parseFloat(r.avg_score).toFixed(0),
     });
-  } catch (err: any) { res.status(500).json({ error: sanitizeError(err) }); }
+  } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
 });
 
 // ── TRINITY ACTIONS ────────────────────────────────────────────────────────

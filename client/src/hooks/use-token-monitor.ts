@@ -94,7 +94,7 @@ export function useTokenMonitor() {
     if (bus.isConnected()) sendJoin();
     const unsubConnect = bus.subscribe('__ws_connected', sendJoin);
 
-    const handleUsageUpdate = (message: any) => {
+    const handleUsageUpdate = (message) => {
       queryClient.invalidateQueries({ queryKey: ['/api/usage/tokens'] });
       queryClient.invalidateQueries({ queryKey: ['/api/usage/token-breakdown'] });
       queryClient.invalidateQueries({ queryKey: ['/api/usage/token-log'] });

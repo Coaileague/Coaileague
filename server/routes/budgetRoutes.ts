@@ -90,9 +90,7 @@ router.post('/', requireManager, async (req: AuthenticatedRequest, res) => {
     res.json(budget);
   } catch (error: unknown) {
     log.error("Error creating budget:", error);
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (error.name === 'ZodError') {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       return res.status(400).json({ message: "Validation error", errors: error.errors });
     }
     res.status(500).json({ message: "Failed to create budget" });
@@ -134,9 +132,7 @@ router.patch('/:id', requireManager, async (req: AuthenticatedRequest, res) => {
     res.json(updated);
   } catch (error: unknown) {
     log.error("Error updating budget:", error);
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (error.name === 'ZodError') {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       return res.status(400).json({ message: "Validation error", errors: error.errors });
     }
     res.status(500).json({ message: "Failed to update budget" });
@@ -236,9 +232,7 @@ router.post('/:budgetId/line-items', requireManager, async (req: AuthenticatedRe
     res.json(lineItem);
   } catch (error: unknown) {
     log.error("Error creating budget line item:", error);
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (error.name === 'ZodError') {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       return res.status(400).json({ message: "Validation error", errors: error.errors });
     }
     res.status(500).json({ message: "Failed to create budget line item" });
@@ -287,9 +281,7 @@ router.patch('/:budgetId/line-items/:id', requireManager, async (req: Authentica
     res.json(updated);
   } catch (error: unknown) {
     log.error("Error updating budget line item:", error);
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (error.name === 'ZodError') {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       return res.status(400).json({ message: "Validation error", errors: error.errors });
     }
     res.status(500).json({ message: "Failed to update budget line item" });
@@ -411,9 +403,7 @@ router.post('/:budgetId/variances', requireManager, async (req: AuthenticatedReq
     res.json(variance);
   } catch (error: unknown) {
     log.error("Error creating budget variance:", error);
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (error.name === 'ZodError') {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       return res.status(400).json({ message: "Validation error", errors: error.errors });
     }
     res.status(500).json({ message: "Failed to create budget variance" });

@@ -387,7 +387,7 @@ export default function EmailManagement() {
 
   const activateAllMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/email/activate-all"),
-    onSuccess: (res: any) => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["/api/email/management"] });
       queryClient.invalidateQueries({ queryKey: ["/api/email/management/stats"] });
       toast({ title: `Activated ${res.activated} email seats` });

@@ -32,7 +32,7 @@ export type IdempotencyStatus = 'processing' | 'completed' | 'failed';
 interface IdempotencyParams {
   workspaceId: string;
   operationType: OperationType;
-  requestData: Record<string, any>; // Hash these params for fingerprint
+  requestData: Record<string, unknown>; // Hash these params for fingerprint
   ttlDays?: number; // Default: 7 days
 }
 
@@ -47,7 +47,7 @@ interface IdempotencyResult {
  * Generate fingerprint hash from request parameters
  * Ensures identical requests produce identical hashes
  */
-function generateFingerprint(params: Record<string, any>): string {
+function generateFingerprint(params: Record<string, unknown>): string {
   // Sort keys to ensure consistent ordering
   const sorted = Object.keys(params).sort().reduce((acc, key) => {
     acc[key] = params[key];
@@ -223,7 +223,7 @@ export async function updateIdempotencyResult(
     idempotencyKeyId: string;
     status: 'completed' | 'failed' | 'pending_approval';
     resultId?: number | string;
-    resultMetadata?: Record<string, any>;
+    resultMetadata?: Record<string, unknown>;
     errorMessage?: string;
     errorStack?: string;
   },
@@ -275,7 +275,7 @@ export async function updateIdempotencyResult(
 export async function completeIdempotencyKey(
   idempotencyKeyId: string,
   resultId: string,
-  resultMetadata?: Record<string, any>
+  resultMetadata?: Record<string, unknown>
 ): Promise<void> {
   await updateIdempotencyResult({
     idempotencyKeyId,
@@ -487,25 +487,18 @@ export async function getClientRateAtDate(params: RateVersionParams): Promise<Cl
   // Check history
   const [historicalRate] = await db
     .select()
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     .from(clientRateHistory)
     .where(
       and(
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         eq(clientRateHistory.workspaceId, workspaceId),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         eq(clientRateHistory.clientId, clientId),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         lte(clientRateHistory.validFrom, effectiveDate),
         or(
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           isNull(clientRateHistory.validTo),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           gte(clientRateHistory.validTo, effectiveDate)
         )
       )
     )
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     .orderBy(clientRateHistory.validFrom)
     .limit(1);
 

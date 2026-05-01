@@ -54,7 +54,7 @@ export async function appendWorkingMemory(opts: {
       metadata: opts.metadata ? JSON.stringify(opts.metadata) : null,
       expiresAt,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[WorkingMemory] Append failed (non-fatal):', err?.message);
   }
 }
@@ -78,7 +78,7 @@ export async function getTodayWorkingMemory(workspaceId: string): Promise<string
     );
 
     return `TODAY'S OPERATIONAL LOG (last ${entries.length} events):\n${lines.join('\n')}`;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[WorkingMemory] Read failed (non-fatal):', err?.message);
     return '';
   }
@@ -117,7 +117,7 @@ export async function storeEpisodicMemory(opts: {
     });
 
     log.info(`[EpisodicMemory] Stored for ${opts.entityType}:${opts.entityId} in ws:${opts.workspaceId}`);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[EpisodicMemory] Store failed (non-fatal):', err?.message);
   }
 }
@@ -155,7 +155,7 @@ export async function getRelevantMemories(opts: {
     });
 
     return `MEMORY OF PAST INTERACTIONS (most relevant):\n${formatted.join('\n')}`;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[EpisodicMemory] Retrieval failed (non-fatal):', err?.message);
     return '';
   }
@@ -187,7 +187,7 @@ export async function buildTrinityMemoryContext(opts: {
     if (episodic) parts.push(episodic);
 
     return parts.join('\n\n');
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[MemoryContext] Build failed (non-fatal):', err?.message);
     return '';
   }
@@ -218,7 +218,7 @@ export async function recordDeliberation(opts: {
     }).returning({ id: trinityDeliberationLog.id });
 
     return record.id;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[Deliberation] Log failed (non-fatal):', err?.message);
     return '';
   }
@@ -264,7 +264,7 @@ export async function compressOldMemories(workspaceId: string): Promise<void> {
       ));
 
     log.info(`[MemoryCompressor] Compressed ${old.length} memories for ws:${workspaceId}`);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[MemoryCompressor] Compression failed (non-fatal):', err?.message);
   }
 }

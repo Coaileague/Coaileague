@@ -252,7 +252,6 @@ Write in a warm, direct, human voice. Use real numbers from the data. Avoid gene
       userId,
       featureKey: 'business_health_scan',
       prompt,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       model: 'gemini-3-pro-preview',
       temperature: 0.7,
       maxOutputTokens: 2048,
@@ -261,7 +260,7 @@ Write in a warm, direct, human voice. Use real numbers from the data. Avoid gene
     if (result.success && result.text) {
       return result.text;
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[BusinessInsights] AI narrative generation failed:', (err instanceof Error ? err.message : String(err)));
   }
 
@@ -436,7 +435,6 @@ function buildScan(raw: OrgRawData, aiNarrative: string): BusinessHealthScan {
   }
 
   // Available execution actions
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const availableActions: BusinessInsightAction[] = [
     {
       actionId: 'send_invoice_reminders',

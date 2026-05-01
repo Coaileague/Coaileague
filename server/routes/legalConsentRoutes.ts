@@ -31,7 +31,7 @@ router.get('/agreements', async (req: Request, res: Response) => {
       [type || null]
     );
     res.json(result.rows);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Failed to fetch agreements:', err?.message);
     res.status(500).json({ error: 'Failed to fetch agreements' });
   }
@@ -62,7 +62,7 @@ router.get('/pending-agreements', requireAuth, async (req: Request, res: Respons
       [required, user.id]
     );
     res.json(result.rows);
-  } catch (err: any) {
+  } catch (err: unknown) {
     const msg = err?.message || '';
     if (msg.includes('does not exist') || msg.includes('relation')) {
       return res.json([]); // No pending agreements if tables don't exist yet
@@ -149,7 +149,7 @@ router.post('/accept-agreements', requireAuth, async (req: Request, res: Respons
 
     log.info(`User ${user.id} accepted ${agreements.length} agreements`);
     res.json({ success: true, acceptedCount: agreements.length });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Failed to record agreement acceptance:', err?.message);
     res.status(500).json({ error: 'Failed to record acceptance' });
   }
@@ -179,7 +179,7 @@ router.get('/consent-check/:userId/:channel', requireAuth, async (req: Request, 
       interview: row.trinity_interview_calls,
     };
     res.json({ consented: channelMap[channel] ?? false, preferences: row });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Consent check failed:', err?.message);
     res.status(500).json({ error: 'Consent check failed' });
   }
@@ -224,7 +224,7 @@ router.post('/opt-out', async (req: Request, res: Response) => {
 
     log.info(`Opt-out recorded for user ${userId} channel=${channel}`);
     res.json({ success: true, message: 'Opt-out recorded. You will no longer receive these communications.' });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Opt-out failed:', err?.message);
     res.status(500).json({ error: 'Opt-out failed' });
   }
@@ -245,7 +245,7 @@ router.get('/my-acceptances', requireAuth, async (req: Request, res: Response) =
       [user.id]
     );
     res.json(result.rows);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Failed to fetch acceptances:', err?.message);
     res.status(500).json({ error: 'Failed to fetch acceptances' });
   }
@@ -261,7 +261,7 @@ router.get('/consent-preferences', requireAuth, async (req: Request, res: Respon
       [user.id]
     );
     res.json(result.rows[0] || null);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Failed to fetch consent preferences:', err?.message);
     res.status(500).json({ error: 'Failed to fetch consent preferences' });
   }
@@ -305,7 +305,7 @@ router.patch('/consent-preferences', requireAuth, async (req: Request, res: Resp
       ]
     );
     res.json({ success: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Failed to update consent preferences:', err?.message);
     res.status(500).json({ error: 'Failed to update consent preferences' });
   }

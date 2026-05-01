@@ -72,11 +72,11 @@ export async function createAuditLog(
   action: 'create' | 'update' | 'delete' | 'login' | 'logout' | 'clock_in' | 'clock_out' | 'generate_invoice' | 'payment_received' | 'assign_manager' | 'remove_manager',
   entityType: string,
   entityId: string,
-  changes?: Record<string, any>,
+  changes?: Record<string, unknown>,
   options?: {
     isSensitiveData?: boolean;
     complianceTag?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }
 ): Promise<void> {
   // Require audit context from middleware
@@ -169,11 +169,11 @@ export async function createAuditLogFromContext(
   action: 'create' | 'update' | 'delete' | 'login' | 'logout' | 'clock_in' | 'clock_out' | 'generate_invoice' | 'payment_received' | 'assign_manager' | 'remove_manager',
   entityType: string,
   entityId: string,
-  changes?: Record<string, any>,
+  changes?: Record<string, unknown>,
   options?: {
     isSensitiveData?: boolean;
     complianceTag?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }
 ): Promise<void> {
   try {

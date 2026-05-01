@@ -99,7 +99,7 @@ function CsvImportPanel({
       setPreviewResult(data);
       setImportResult(null);
     },
-    onError: (e: any) => toast({ title: "Preview failed", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Preview failed", description: e.message, variant: "destructive" }),
   });
 
   const importMutation = useMutation({
@@ -115,7 +115,7 @@ function CsvImportPanel({
         description: `${data.imported ?? 0} ${type} imported, ${data.skippedDuplicates ?? 0} duplicates skipped`,
       });
     },
-    onError: (e: any) => toast({ title: "Import failed", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Import failed", description: e.message, variant: "destructive" }),
   });
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {

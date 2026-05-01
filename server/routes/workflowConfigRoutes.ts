@@ -19,7 +19,7 @@ router.get('/', requireAuth, ensureWorkspaceAccess, async (req: AuthenticatedReq
       ORDER BY created_at DESC
     `, [req.workspaceId]);
     res.json({ configs: rows });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/workflow-configs/onboarding-templates — onboarding workflow templates
@@ -31,7 +31,7 @@ router.get('/onboarding-templates', requireAuth, ensureWorkspaceAccess, async (r
       ORDER BY created_at DESC
     `, [req.workspaceId]);
     res.json({ templates: rows });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/workflow-configs/agent-tasks — Trinity agent tasks and status
@@ -46,7 +46,7 @@ router.get('/agent-tasks', requireAuth, ensureWorkspaceAccess, async (req: Authe
       LIMIT 50
     `, [req.workspaceId]);
     res.json({ tasks: rows });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // POST /api/workflow-configs — create a new workflow config
@@ -59,7 +59,7 @@ router.post('/', requireAuth, ensureWorkspaceAccess, async (req: AuthenticatedRe
       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, NOW()) RETURNING *
     `, [req.workspaceId, name, type, JSON.stringify(config ?? {}), isActive ?? true]);
     res.status(201).json({ config: rows[0] });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 export default router;

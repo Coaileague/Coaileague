@@ -51,7 +51,7 @@ export async function seedAcmeVoiceData(): Promise<void> {
     } else {
       log.info('[VoiceSeed] ACME test phone number already exists');
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[VoiceSeed] ACME voice seed failed (non-fatal):', err.message);
   }
 }

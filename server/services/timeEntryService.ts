@@ -185,7 +185,7 @@ export async function createTimeEntry(
     capturedBillRate = clientRecord?.contractRate || null;
   }
 
-  const insertValues: Record<string, any> = {
+  const insertValues: Record<string, unknown> = {
     workspaceId,
     employeeId: data.employeeId,
     clockIn: data.clockIn,
@@ -206,7 +206,6 @@ export async function createTimeEntry(
 
   const result = await db
     .insert(timeEntries)
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     .values(insertValues)
     .returning();
 

@@ -140,7 +140,7 @@ export default function EmployeeComplianceDetail() {
         description: "Employee has been enrolled in the selected state compliance program",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         variant: "destructive",
         title: "Failed to Add State",
@@ -150,7 +150,7 @@ export default function EmployeeComplianceDetail() {
   });
 
   const uploadMutation = useMutation({
-    mutationFn: async (formData: any) => {
+    mutationFn: async (formData) => {
       return await apiRequest('POST', '/api/security-compliance/documents', formData);
     },
     onSuccess: () => {
@@ -162,7 +162,7 @@ export default function EmployeeComplianceDetail() {
         description: "Document has been uploaded and queued for approval",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         variant: "destructive",
         title: "Upload Failed",

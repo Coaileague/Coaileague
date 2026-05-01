@@ -437,7 +437,7 @@ export async function getReportAnalytics(
     endDate?: Date;
     templateId?: string;
   }
-): Promise<any> {
+): Promise<unknown> {
   // Query locked reports with cross-references
   const lockedReports = await storage.getLockedReportRecords(workspaceId, filters);
 

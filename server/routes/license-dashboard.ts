@@ -366,7 +366,6 @@ router.get('/export/:stateCode/csv', ensureWorkspaceAccess, async (req: Request,
       .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
       .join('\n');
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await universalAudit({
       workspaceId,
       userId: req.user?.id,

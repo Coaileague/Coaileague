@@ -187,7 +187,7 @@ export async function synthesizeStripeInvoiceWebhook(
     const result = await stripeWebhookService.handleEvent(payload as any);
     handlerOk = result.success && result.handled;
     handlerMsg = result.message || result.error || 'no message';
-  } catch (err: any) {
+  } catch (err: unknown) {
     handlerOk = false;
     handlerMsg = `Handler threw: ${err?.message ?? String(err)}`;
   }
@@ -305,7 +305,7 @@ export async function synthesizePlaidAchWebhook(
         [params.payrollRunId]
       );
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     handlerOk = false;
     handlerMsg = `Plaid sim flip failed: ${err?.message ?? String(err)}`;
   }

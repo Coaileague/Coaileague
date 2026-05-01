@@ -265,7 +265,7 @@ class MetricsDashboardService {
   /**
    * Get current system stats for overview
    */
-  getSystemOverview(): Record<string, any> {
+  getSystemOverview(): Record<string, unknown> {
     const memoryUsage = process.memoryUsage();
     
     return {

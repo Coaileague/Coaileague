@@ -35,7 +35,7 @@ interface DecisionLogEntry {
     score?: number;
   }>;
   candidatesEvaluated?: CandidateEvaluation[];
-  contextSnapshot?: Record<string, any>;
+  contextSnapshot?: Record<string, unknown>;
   confidenceScore?: string;
   primaryModel?: string;
   tokensUsed?: number;
@@ -125,7 +125,7 @@ class TrinityDecisionLogger {
     chosenOptionId?: string;
     reasoning: string;
     candidates?: CandidateEvaluation[];
-    contextSnapshot?: Record<string, any>;
+    contextSnapshot?: Record<string, unknown>;
   }): Promise<TriadJusticeResult> {
     try {
       const { claudeService } = await import('./ai-brain/trinity-orchestration/trinityValidationService');
@@ -261,7 +261,7 @@ ESCALATE = Too risky for AI, flag for human review`;
       score?: number;
     }>;
     candidatesEvaluated?: CandidateEvaluation[];
-    contextSnapshot?: Record<string, any>;
+    contextSnapshot?: Record<string, unknown>;
     confidenceScore?: string;
     triggerEvent?: string;
   }): Promise<string | null> {
@@ -296,7 +296,7 @@ ESCALATE = Too risky for AI, flag for human review`;
     decisionType: string;
     chosenAction: string;
     reasoning: string;
-    contextSnapshot?: Record<string, any>;
+    contextSnapshot?: Record<string, unknown>;
     triggerEvent?: string;
   }): Promise<string | null> {
     return this.logDecision({
@@ -321,7 +321,7 @@ ESCALATE = Too risky for AI, flag for human review`;
     decisionType: string;
     chosenAction: string;
     reasoning: string;
-    contextSnapshot?: Record<string, any>;
+    contextSnapshot?: Record<string, unknown>;
     confidenceScore?: string;
     triggerEvent?: string;
   }): Promise<string | null> {
@@ -348,7 +348,7 @@ ESCALATE = Too risky for AI, flag for human review`;
     decisionType: string;
     chosenAction: string;
     reasoning: string;
-    contextSnapshot?: Record<string, any>;
+    contextSnapshot?: Record<string, unknown>;
     confidenceScore?: string;
     triggerEvent?: string;
   }): Promise<string | null> {

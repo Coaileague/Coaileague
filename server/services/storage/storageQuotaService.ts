@@ -165,7 +165,7 @@ export async function recordStorageUsage(
     emitStorageWarnings(workspaceId).catch((err) =>
       log.warn(`[StorageQuota] Warning emit failed for ${workspaceId}:`, err?.message)
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[StorageQuota] recordStorageUsage failed ws=${workspaceId} cat=${category}:`, err?.message);
   }
 }
@@ -188,7 +188,7 @@ export async function releaseStorageUsage(
     );
     // Re-check warning thresholds (may need to clear a fired warning)
     emitStorageWarnings(workspaceId).catch(() => null);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[StorageQuota] releaseStorageUsage failed: ${err?.message}`);
   }
 }
@@ -284,7 +284,6 @@ export async function emitStorageWarnings(workspaceId: string): Promise<void> {
           const { NotificationDeliveryService } = await import('../notificationDeliveryService');
           const isCritical = threshold === '95';
           await NotificationDeliveryService.send({
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             type: isCritical ? 'critical_system_alert' : 'billing_reminder',
             workspaceId,
             recipientUserId: ws.ownerId,
@@ -309,7 +308,7 @@ export async function emitStorageWarnings(workspaceId: string): Promise<void> {
         log.info(`[StorageQuota] Cleared ${threshold}% warning for workspace ${workspaceId} (${pct}% now)`);
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[StorageQuota] emitStorageWarnings failed for ${workspaceId}:`, err?.message);
   }
 }
@@ -368,7 +367,7 @@ export async function ensureStorageTables(): Promise<void> {
       )
     `);
     log.info('[StorageQuota] Tables ensured (storage_usage, storage_warning_state)');
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[StorageQuota] ensureStorageTables:', err?.message);
   }
 }

@@ -79,7 +79,7 @@ export default function Contact() {
     mutationFn: async (data: typeof formData) => {
       return await apiRequest("POST", "/api/contact", data);
     },
-    onSuccess: (response: any) => {
+    onSuccess: (response) => {
       setIsSubmitted(true);
       setTicketNumber(response.ticketNumber);
       toast({
@@ -87,7 +87,7 @@ export default function Contact() {
         description: `Trinity AI is reviewing your request. Ticket: ${response.ticketNumber}`,
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Submission Failed",
         description: error.message || "Failed to submit contact form. Please try again.",

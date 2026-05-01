@@ -45,7 +45,6 @@ import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 const PAGE_CONFIG: CanvasPageConfig = {
   title: "Onboarding Hub",
   description: "Track tenant setup and officer onboarding progress with Trinity guidance",
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   icon: ClipboardList,
 };
 
@@ -229,14 +228,14 @@ function StepSubmitModal({
         documentTitle: step!.title,
         metadata: { notes },
       }),
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       toast({ title: "Step completed", description: data.message || `${step!.title} completed.` });
       queryClient.invalidateQueries({ queryKey: ["/api/smart-onboarding/employee", employeeId] });
       queryClient.invalidateQueries({ queryKey: ["/api/smart-onboarding/employees"] });
       onSuccess(data.newProgressPct);
       onClose();
     },
-    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   if (!step) return null;
@@ -371,7 +370,7 @@ function TenantDocUploadModal({
       setFileSelected(false);
       fileRef[1](null);
     },
-    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   if (!step) return null;
@@ -459,11 +458,11 @@ function TenantSetupTab() {
   const completeMutation = useMutation({
     mutationFn: (stepKey: string) =>
       apiRequest("POST", `/api/smart-onboarding/tenant/steps/${stepKey}/complete`, {}),
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       toast({ title: "Step completed", description: `Progress: ${data.newProgressPct}%` });
       queryClient.invalidateQueries({ queryKey: ["/api/smart-onboarding/tenant"] });
     },
-    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   if (isLoading) return (

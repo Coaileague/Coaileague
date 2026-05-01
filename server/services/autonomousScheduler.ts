@@ -156,7 +156,7 @@ async function trackJobExecution(jobName: string, fn: () => Promise<any>): Promi
     persistJobResult(entry).catch((e) =>
       log.error('Failed to persist completed result', { jobName, error: e instanceof Error ? e.message : String(e) })
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     entry.completedAt = new Date();
     entry.status = 'failed';
     entry.durationMs = entry.completedAt.getTime() - entry.startedAt.getTime();
@@ -317,7 +317,7 @@ async function applyGovernanceGate(
 
     log.info('Automation approved by governance', { domain, reason: result.reason });
     return { proceed: true, reason: result.reason };
-  } catch (error: any) {
+  } catch (error: unknown) {
     log.error('Governance check failed — blocking automation for safety', { error: (error instanceof Error ? error.message : String(error)), domain, workspaceId });
     return { proceed: false, reason: `Governance check error: ${(error instanceof Error ? error.message : String(error))} — automation blocked (fail-safe)` };
   }
@@ -333,7 +333,7 @@ interface AutomationEventData {
   success: boolean;
   recordsProcessed?: number;
   duration?: number;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   workspaceId?: string;
 }
 
@@ -596,7 +596,7 @@ async function logAutomationLifecycle<T>(
     }
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     const duration = Date.now() - startTime;
 
     // Log job error
@@ -916,7 +916,7 @@ async function runNightlyInvoiceGeneration() {
                       } else {
                         log.warn('Failed to send invoice via Stripe', { invoiceNumber: invoice.invoiceNumber, error: result.error });
                       }
-                    } catch (stripeError: any) {
+                    } catch (stripeError: unknown) {
                       log.error('Stripe error for invoice', { invoiceNumber: invoice.invoiceNumber, error: stripeError.message });
                     }
                   }
@@ -934,7 +934,7 @@ async function runNightlyInvoiceGeneration() {
                       } else {
                         log.warn('QuickBooks sync failed for invoice', { invoiceNumber: invoice.invoiceNumber, error: qbResult.error });
                       }
-                    } catch (qbError: any) {
+                    } catch (qbError: unknown) {
                       log.warn('QuickBooks sync error for invoice', { invoiceNumber: invoice.invoiceNumber, error: qbError.message });
                     }
                   }
@@ -1015,7 +1015,7 @@ async function runNightlyInvoiceGeneration() {
                   isDuplicate: false,
                   idempotencyKeyId: idem.idempotencyKeyId,
                 };
-              } catch (error: any) {
+              } catch (error: unknown) {
                 // Mark idempotency operation failed with full error context
                 await updateIdempotencyResult({
                   idempotencyKeyId: idem.idempotencyKeyId,
@@ -1103,17 +1103,17 @@ async function runNightlyInvoiceGeneration() {
                 if (cs.autoSendInvoice) {
                   try {
                     await sendInvoiceViaStripe(invoice.id);
-                  } catch (e: any) {
+                  } catch (e: unknown) {
                     log.warn('Per-client auto-send failed', { invoiceId: invoice.id, error: e.message });
                   }
                 }
               }
             }
-          } catch (clientErr: any) {
+          } catch (clientErr: unknown) {
             log.error('Per-client billing error', { clientId: cs.clientId, error: clientErr.message });
           }
         }
-      } catch (wsErr: any) {
+      } catch (wsErr: unknown) {
         log.error('Per-client billing workspace error', { workspaceId: workspace.id, error: wsErr.message });
       }
     }
@@ -1388,7 +1388,6 @@ async function runWeeklyScheduleGeneration() {
                     
                     // Handle insufficient credits
                     if (!creditResult.success) {
-                      // @ts-expect-error — TS migration: fix in refactoring sprint
                       if (creditResult.insufficientCredits) {
                         log.warn('Insufficient credits for autonomous schedule generation', { creditsRequired: 25 });
                         log.info('Purchase more credits to resume AI automations');
@@ -1431,7 +1430,7 @@ async function runWeeklyScheduleGeneration() {
                       }
                     }
                   }
-                } catch (aiError: any) {
+                } catch (aiError: unknown) {
                   log.error('AI Brain error', { error: aiError.message });
                   // Continue to mark operation as completed even if AI fails
                 }
@@ -1784,7 +1783,7 @@ async function runAutomaticPayrollProcessing() {
                       } else if (qbPayrollResult.error !== 'QuickBooks not connected') {
                         log.warn('QuickBooks payroll sync failed', { error: qbPayrollResult.error });
                       }
-                    } catch (qbError: any) {
+                    } catch (qbError: unknown) {
                       log.warn('QuickBooks payroll sync error', { error: qbError.message });
                     }
                   }
@@ -1851,7 +1850,7 @@ async function runAutomaticPayrollProcessing() {
                   
                   return { employeesProcessed: 0, grossPay: 0, netPay: 0 };
                 }
-              } catch (error: any) {
+              } catch (error: unknown) {
                 // Mark idempotency operation failed with full error context
                 await updateIdempotencyResult({
                   idempotencyKeyId: idem.idempotencyKeyId,
@@ -2096,7 +2095,7 @@ async function runRoomAutoClose() {
         );
 
         successWorkspaces++;
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.error('Error processing workspace for room auto-close', { workspaceId, error: (error instanceof Error ? error.message : String(error)) });
         errorWorkspaces++;
       }
@@ -2178,14 +2177,14 @@ async function runLateFeeApplication() {
           totalApplied += results.length;
         }
         workspacesProcessed++;
-      } catch (wsErr: any) {
+      } catch (wsErr: unknown) {
         log.warn('Late fee application failed for workspace', { workspaceId: ws.id, error: wsErr.message });
       }
     }
 
     log.info('Late fee application complete', { workspacesProcessed, invoicesAffected: totalApplied });
     return { workspacesProcessed, invoicesAffected: totalApplied };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Late fee application failed', { error: (err instanceof Error ? err.message : String(err)) });
     throw err;
   }
@@ -2430,7 +2429,7 @@ export function startAutonomousScheduler() {
             success: true,
             duration: Date.now() - startTime,
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
           emitAutomationEvent({
             jobName: 'CoAIleague Smart Billing',
             category: 'billing',
@@ -2459,7 +2458,7 @@ export function startAutonomousScheduler() {
             success: true,
             duration: Date.now() - startTime,
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
           emitAutomationEvent({
             jobName: 'AI Schedule Generation',
             category: 'scheduling',
@@ -2497,7 +2496,7 @@ export function startAutonomousScheduler() {
             success: true,
             duration: Date.now() - startTime,
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
           emitAutomationEvent({
             jobName: 'Automatic Payroll Processing',
             category: 'payroll',
@@ -2535,7 +2534,7 @@ export function startAutonomousScheduler() {
             recordsProcessed: result.totalReminders,
             details: { notifications: result.totalNotifications },
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
           emitAutomationEvent({
             jobName: 'Payment Reminder Check',
             category: 'billing',
@@ -2565,7 +2564,7 @@ export function startAutonomousScheduler() {
             recordsProcessed: result.invoicesAffected,
             details: { workspacesProcessed: result.workspacesProcessed },
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
           emitAutomationEvent({
             jobName: 'Late Fee Application',
             category: 'billing',
@@ -2596,7 +2595,7 @@ export function startAutonomousScheduler() {
             recordsProcessed: result.workspacesScanned,
             details: { totalFlagged: result.totalFlagged, totalCritical: result.totalCritical },
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
           emitAutomationEvent({
             jobName: 'Payroll Readiness Scan',
             category: 'payroll',
@@ -2632,7 +2631,7 @@ export function startAutonomousScheduler() {
               interventionsCreated: result.interventionsCreated,
             },
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
           emitAutomationEvent({
             jobName: 'Training Certificate Renewal',
             category: 'compliance',
@@ -2657,9 +2656,7 @@ export function startAutonomousScheduler() {
   // / expireOldApprovals never called by cron" — this is the fix.
   // @ts-expect-error — TS migration: fix in refactoring sprint
   registerJobInfo('Approval Expiry Sweep', (SCHEDULER_CONFIG as any).approvalExpiry.schedule, (SCHEDUL as any)(ER_CONFIG.approvalExpiry.description as any), (SCHEDULER_CONFIG as any).approvalExpiry.enabled);
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   if (SCHEDULER_CONFIG.approvalExpiry.enabled) {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     cron.schedule(SCHEDULER_CONFIG.approvalExpiry.schedule, () => {
       trackJobExecution('Approval Expiry Sweep', async () => {
         const startTime = Date.now();
@@ -2674,7 +2671,7 @@ export function startAutonomousScheduler() {
             recordsProcessed: expiredCount,
             details: { expiredCount },
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
           emitAutomationEvent({
             jobName: 'Approval Expiry Sweep',
             category: 'governance',
@@ -2928,7 +2925,7 @@ export function startAutonomousScheduler() {
           recordsProcessed: result.prompted,
           details: { checked: result.checked, prompted: result.prompted, supervisorAlerts: result.supervisorAlerts },
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.error('[PhotoPrompt] cron failed', { error: err instanceof Error ? err.message : String(err) });
         emitAutomationEvent({
           jobName: 'Hourly Proof-of-Service Prompt',
@@ -2966,7 +2963,7 @@ export function startAutonomousScheduler() {
     try {
       const { processSMSOutbox } = await import('./sms/smsQueueService');
       await processSMSOutbox();
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[Cron] SMS outbox worker error:', err?.message);
     }
   });
@@ -3004,7 +3001,7 @@ export function startAutonomousScheduler() {
           recordsProcessed: result.processed,
           details: { tokensUsed: result.totalCredits },
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.error('Platform billing error', { error: (error instanceof Error ? error.message : String(error)) });
         emitAutomationEvent({
           jobName: 'Monthly Platform Infrastructure Billing',
@@ -3037,7 +3034,7 @@ export function startAutonomousScheduler() {
             recordsProcessed: processed,
             details: { workspacesProcessed: results.length, totalAmount: amount.toFixed(2) },
           });
-        } catch (error: any) {
+        } catch (error: unknown) {
           log.error('Monthly revenue recognition error', { error: (error instanceof Error ? error.message : String(error)) });
           emitAutomationEvent({
             jobName: 'Monthly Revenue Recognition',
@@ -3166,7 +3163,6 @@ export function startAutonomousScheduler() {
         category: 'compliance',
         success: true,
         duration: Date.now() - startTime,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         recordsProcessed: (certValue?.alertsSent || 0) + conflictsFound,
         details: { shiftLicenseConflicts: conflictsFound, auditReadinessReminded: readiness?.reminded ?? 0 },
       });
@@ -3214,7 +3210,6 @@ export function startAutonomousScheduler() {
       const result = await gpsInactivityMonitor.checkActiveShiftsForInactivity();
       emitAutomationEvent({
         jobName: 'GPS Inactivity Monitor (Silent Supervisor)',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         category: 'monitoring',
         success: true,
         duration: Date.now() - startTime,
@@ -3259,7 +3254,6 @@ export function startAutonomousScheduler() {
         .where(
           and(
             isNull(orgDocumentSignatures.signedAt),
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             eq(orgDocumentSignatures.status, 'pending')
           )
         );
@@ -3417,7 +3411,7 @@ export function startAutonomousScheduler() {
             results: results.map(r => ({ job: r.job, success: r.success, records: r.recordsProcessed })),
           },
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.error('Database maintenance error', { error: error instanceof Error ? error.message : String(error) });
         await emitAutomationEvent({
           jobName: 'Database Maintenance',
@@ -3520,7 +3514,7 @@ export function startAutonomousScheduler() {
         if (retried > 0 || deadLettered > 0) {
           log.info('NDS retry sweep complete', { retried, deadLettered });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('NDS retry sweep error (non-blocking)', { error: err instanceof Error ? err.message : String(err) });
       }
     })();
@@ -3536,7 +3530,7 @@ export function startAutonomousScheduler() {
       try {
         const { checkDeliverabilityRates } = await import('../routes/resendWebhooks');
         await checkDeliverabilityRates();
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('Deliverability health check error (non-blocking)', { error: err instanceof Error ? err.message : String(err) });
       }
     })();
@@ -3557,7 +3551,7 @@ export function startAutonomousScheduler() {
         if (deleted > 0) {
           log.info('Session cleanup complete', { deletedSessions: deleted });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('Session cleanup error (non-blocking)', { error: err instanceof Error ? err.message : String(err) });
       }
     })();
@@ -3572,7 +3566,7 @@ export function startAutonomousScheduler() {
         if (cleaned > 0) {
           log.info('Notification cleanup complete', { notificationsCleaned: cleaned });
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.error('Notification cleanup error', { error: (error instanceof Error ? error.message : String(error)) });
       }
     })();
@@ -3601,7 +3595,7 @@ export function startAutonomousScheduler() {
             skipped: stats.skipped,
           },
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.error('Daily digest job error', { error: error instanceof Error ? error.message : String(error) });
         await emitAutomationEvent({
           jobName: 'Daily Digest Emails',
@@ -3632,12 +3626,12 @@ export function startAutonomousScheduler() {
           try {
             await aiMeteringService.rollupDailySummary(ws.id, dateStr);
             rolled++;
-          } catch (rollupErr: any) {
+          } catch (rollupErr: unknown) {
             log.warn('[AutonomousScheduler] AI usage rollup failed for workspace', { workspaceId: ws.id, date: dateStr, error: rollupErr?.message });
           }
         }
         log.info('AI usage daily summary rollup complete', { date: dateStr, workspaces: rolled });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.error('AI usage daily summary rollup error', { error: err instanceof Error ? err.message : String(err) });
       }
     })();
@@ -3663,7 +3657,6 @@ export function startAutonomousScheduler() {
         
         await emitAutomationEvent({
           jobName: 'QuickBooks Token Health',
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           category: 'integration',
           success: healthResult.expired === 0 && refreshResult.failed === 0,
           duration: Date.now() - startTime,
@@ -3673,11 +3666,10 @@ export function startAutonomousScheduler() {
             refresh: refreshResult,
           },
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.error('QuickBooks token health check error', { error: error instanceof Error ? error.message : String(error) });
         await emitAutomationEvent({
           jobName: 'QuickBooks Token Health',
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           category: 'integration',
           success: false,
           details: { error: (error instanceof Error ? error.message : String(error)) },
@@ -3741,7 +3733,6 @@ export function startAutonomousScheduler() {
         if (totalSynced > 0) {
           await emitAutomationEvent({
             jobName: 'QuickBooks Weekly Staffing Client Scan',
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             category: 'integration',
             success: true,
             recordsProcessed: totalSynced,
@@ -3760,11 +3751,10 @@ export function startAutonomousScheduler() {
             log.warn('[autonomousScheduler] Event publish failed (non-fatal):', err);
           }
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.error('QB weekly staffing scan error', { error: (err instanceof Error ? err.message : String(err)) });
         await emitAutomationEvent({
           jobName: 'QuickBooks Weekly Staffing Client Scan',
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           category: 'integration',
           success: false,
           details: { error: (err instanceof Error ? err.message : String(err)) },
@@ -3890,7 +3880,7 @@ export function startAutonomousScheduler() {
             scanResults,
           },
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.error('VQA scheduled scan error', { error: error instanceof Error ? error.message : String(error) });
         await emitAutomationEvent({
           jobName: 'Visual QA Scan',
@@ -3992,7 +3982,7 @@ export function startAutonomousScheduler() {
               details: { totalClosed, workspacesChecked: activeWorkspaces.length },
             });
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
           log.error('Auto clock-out scan error', { error: error instanceof Error ? error.message : String(error) });
           await emitAutomationEvent({
             jobName: 'Auto Clock-Out',
@@ -4033,7 +4023,7 @@ export function startAutonomousScheduler() {
               },
             });
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.error('Shift Completion Bridge error', { error: (err instanceof Error ? err.message : String(err)) });
           await emitAutomationEvent({
             jobName: 'Shift Completion Bridge',
@@ -4114,7 +4104,7 @@ export function startAutonomousScheduler() {
             recommendations: report.recommendations.slice(0, 5),
           },
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.error('Weekly platform audit error', { error: error instanceof Error ? error.message : String(error) });
         await emitAutomationEvent({
           jobName: 'Weekly Platform Audit',
@@ -4139,7 +4129,7 @@ export function startAutonomousScheduler() {
         const { trinityProactiveScanner } = await import('./ai-brain/trinityProactiveScanner');
         await trinityProactiveScanner.runAllWorkspacesDailyScan();
         log.info('Trinity Daily Intelligence Scan complete');
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.error('Trinity Daily Intelligence Scan error', { error: error instanceof Error ? error.message : String(error) });
       }
     })();
@@ -4154,7 +4144,7 @@ export function startAutonomousScheduler() {
         const { trinityProactiveScanner } = await import('./ai-brain/trinityProactiveScanner');
         await trinityProactiveScanner.runAllWorkspacesWeeklyScan();
         log.info('Trinity Weekly Intelligence Scan complete');
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.error('Trinity Weekly Intelligence Scan error', { error: error instanceof Error ? error.message : String(error) });
       }
     })();
@@ -4302,7 +4292,7 @@ export function startAutonomousScheduler() {
         const { trinityProactiveScanner } = await import('./ai-brain/trinityProactiveScanner');
         await trinityProactiveScanner.runAllWorkspacesMonthlyCycle();
         log.info('Trinity Monthly Business Cycle complete');
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.error('Trinity Monthly Business Cycle error', { error: error instanceof Error ? error.message : String(error) });
       }
     })();
@@ -4316,7 +4306,7 @@ export function startAutonomousScheduler() {
         const { trinityProactiveScanner } = await import('./ai-brain/trinityProactiveScanner');
         await trinityProactiveScanner.runAllWorkspacesNightBefore();
         log.info('Trinity Night-Before Confirmation Sweep complete');
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.error('Trinity Night-Before Confirmation Sweep error', { error: error instanceof Error ? error.message : String(error) });
       }
     })();
@@ -4335,7 +4325,6 @@ export function startAutonomousScheduler() {
         const { workspaces: workspacesTable } = await import('@shared/schema');
         const activeWorkspaces = await db.select({ id: workspacesTable.id })
           .from(workspacesTable)
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           .where(eq(workspacesTable.status, 'active'))
           .limit(20)
           .catch(() => [] as { id: string }[]);
@@ -4350,7 +4339,7 @@ export function startAutonomousScheduler() {
         if (totalNew > 0) {
           log.info('Trinity Autonomous Task Scanner complete', { newTasksIdentified: totalNew, workspacesScanned: activeWorkspaces.length });
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.error('Trinity Autonomous Task Scanner error', { error: error instanceof Error ? error.message : String(error) });
       }
     })();
@@ -4378,7 +4367,7 @@ export function startAutonomousScheduler() {
         if (overdueTasks.length > 0) {
           log.info('Trinity Overdue Task Escalation Scan complete', { overdueTasks: overdueTasks.length, escalated });
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         log.error('Trinity Overdue Task Escalation Scan error', { error: error instanceof Error ? error.message : String(error) });
       }
     })();
@@ -4679,7 +4668,7 @@ export function startAutonomousScheduler() {
       const { registerProactiveMonitors } = await import('./trinity/proactive/proactiveOrchestrator');
       registerProactiveMonitors({ registerJobInfo, trackJobExecution });
       log.info('Trinity Phase 24 proactive monitors registered');
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('Failed to register Phase 24 proactive monitors', {
         error: err instanceof Error ? err.message : String(err),
       });

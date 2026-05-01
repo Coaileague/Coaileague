@@ -163,10 +163,8 @@ router.post('/portal/setup/:token', async (req, res) => {
           userId,
           // Persist verified POC data if provided on verification screen
           ...(pocEmail ? { pocEmail } : {}),
-          // @ts-expect-error — TS migration
           ...(address ? { address } : {}),
           ...(billRate ? { contractRate: billRate } : {}),
-          // @ts-expect-error — TS migration
           clientOnboardingStatus: 'active',
           updatedAt: new Date(),
         })

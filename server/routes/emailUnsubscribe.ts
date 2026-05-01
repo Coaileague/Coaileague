@@ -136,7 +136,7 @@ router.post("/unsubscribe", async (req: Request, res: Response) => {
     }
 
     // Determine what to unsubscribe from
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       unsubscribedAt: new Date(),
       unsubscribeSource: isOneClick ? 'one_click' : 'email_link',
       ipAddress: req.ip || req.headers['x-forwarded-for']?.toString().split(',')[0],
@@ -265,7 +265,7 @@ router.put("/unsubscribe/preferences", async (req: Request, res: Response) => {
       });
     }
 
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       updatedAt: new Date(),
       unsubscribeSource: 'preferences',
       ipAddress: req.ip || req.headers['x-forwarded-for']?.toString().split(',')[0],

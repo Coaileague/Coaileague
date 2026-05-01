@@ -295,7 +295,7 @@ export async function ensureSessionsTable(): Promise<void> {
     await pool.query(`
       CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON sessions (expire)
     `);
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Non-fatal — connect-pg-simple will also attempt this on first write
     console.warn('[Auth] Sessions table ensure (non-fatal):', err?.message?.slice(0, 100));
   }
@@ -624,7 +624,6 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
       rateLimitRemaining: rateLimitResult.remaining,
     });
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     req.user = testUser;
     req.isTestMode = true;
     req.workspaceId = TEST_MODE_WORKSPACE_ID;
@@ -633,7 +632,6 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
 
     // Populate session so ensureWorkspaceAccess fast-path fires without a DB lookup
     if (!req.session) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       req.session = {};
     }
     req.session.userId = testUser.id;
@@ -651,7 +649,6 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
   const botToken = req.get('x-trinity-bot-token');
   if (botToken && validateTrinityBotToken(botToken)) {
     log.info('Trinity bot bypass granted', { endpoint, method, ip: ipAddress });
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     req.user = TRINITY_BOT_USER;
     req.platformRole = 'Bot';
     req.workspaceRole = undefined;
@@ -753,7 +750,7 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
   }
 
   next();
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err?.message?.includes('CircuitBreaker') || err?.message?.includes('circuit is open')) {
       return res.status(503).json({ message: "Database temporarily unavailable — please try again shortly" });
     }

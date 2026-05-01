@@ -80,7 +80,7 @@ export default function EmployeeProfile() {
     queryFn: async () => {
       const res = await apiRequest('GET', `/api/employees?workspaceId=${workspaceId}&role=manager`);
       const json = await res.json();
-      return (json.data || json || []).filter((m: any) =>
+      return (json.data || json || []).filter((m) =>
         ['manager', 'department_manager', 'supervisor', 'org_owner', 'co_owner'].includes(m.workspaceRole)
       );
     },
@@ -174,7 +174,7 @@ export default function EmployeeProfile() {
 
   // Update contact info mutation
   const updateContactMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       return await apiRequest('PATCH', '/api/employees/me/contact-info', data);
     },
     onSuccess: () => {
@@ -208,7 +208,7 @@ export default function EmployeeProfile() {
         description: "Check your new inbox and click the link to confirm the change.",
       });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({
         variant: "destructive",
         title: "Request Failed",
@@ -341,7 +341,7 @@ export default function EmployeeProfile() {
     );
   }
 
-  const lockedDocumentTypes = lockedDocuments?.filter((doc: any) => doc.isImmutable) || [];
+  const lockedDocumentTypes = lockedDocuments?.filter((doc) => doc.isImmutable) || [];
 
   return (
     <CanvasHubPage config={pageConfig}>
@@ -676,7 +676,7 @@ export default function EmployeeProfile() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">No manager</SelectItem>
-                      {(managers || []).map((m: any) => (
+                      {(managers || []).map((m) => (
                         <SelectItem key={m.id} value={m.id}>
                           {m.firstName} {m.lastName}
                           {m.organizationalTitle ? ` — ${m.organizationalTitle}` : ''}
@@ -1063,7 +1063,7 @@ export default function EmployeeProfile() {
           <CardContent>
             {lockedDocumentTypes.length > 0 ? (
               <div className="space-y-3">
-                {lockedDocumentTypes.map((doc: any) => (
+                {lockedDocumentTypes.map((doc) => (
                   <div key={doc.id} className="flex items-center justify-between gap-2 p-3 bg-muted rounded-lg" data-testid={`locked-doc-${doc.id}`}>
                     <div className="flex items-center gap-3">
                       <FileText className="h-5 w-5 text-primary" />

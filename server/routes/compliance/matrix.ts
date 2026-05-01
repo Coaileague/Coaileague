@@ -236,7 +236,7 @@ router.get("/my-score", requireAuth, async (req: AuthenticatedRequest, res) => {
     const { computeComplianceScore } = await import("../../services/auditor/auditorAccessService");
     const score = await computeComplianceScore(workspaceId);
     res.json(score);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error("[Compliance my-score] Error:", err?.message);
     res.status(500).json({ error: "Failed to compute score" });
   }

@@ -84,7 +84,7 @@ export default function FileGrievance() {
       const res = await apiRequest('POST', '/api/disputes', data);
       return res.json();
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       toast({
         title: "Grievance Filed Successfully",
         description: "Your grievance has been submitted for review. You will be notified of the decision.",

@@ -75,14 +75,12 @@ function getTimeAgo(date: Date): string {
 function ActionLogCard({ log, onReview }: { log: AiBrainActionLog; onReview: (id: string) => void }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const resultConfig = getResultConfig(log.result);
   const ResultIcon = resultConfig?.icon ?? CheckCircle2;
   const domainColor = getDomainColor(log.actorType);
 
   // @ts-expect-error — TS migration: fix in refactoring sprint
   const actionData = log.actionData as Record<string, unknown> | null;
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const createdAt = new Date(log.createdAt);
   const timeAgo = getTimeAgo(createdAt);
 
@@ -223,12 +221,10 @@ export default function AIAuditLogViewer() {
         const searchLower = searchQuery.toLowerCase();
         const matchesType = (log.actorType || '').toLowerCase().includes(searchLower);
         const matchesId = log.id.toLowerCase().includes(searchLower);
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const matchesResult = (log.result || '').toLowerCase().includes(searchLower);
         if (!matchesType && !matchesId && !matchesResult) return false;
       }
       if (resultFilter !== 'all') {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const r = (log.result || '').toLowerCase();
         if (resultFilter === 'success' && !['success','completed','ok','reviewed'].includes(r)) return false;
         if (resultFilter === 'error' && !['error','failed','failure'].includes(r)) return false;

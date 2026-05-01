@@ -98,7 +98,7 @@ async function fetchClientContext(params: {
       `${row.upcoming_shifts ?? 0} upcoming scheduled shifts. ` +
       `${row.open_invoices ?? 0} open invoices.`
     );
-  } catch (e: any) {
+  } catch (e: unknown) {
     log.warn('[clientExtension] Context enrichment failed (non-fatal):', e?.message);
     return '';
   }
@@ -179,7 +179,7 @@ export async function handleClientSupport(params: {
         lang
       )
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[clientExtension] Error:', err?.message);
     return twiml(sayEn('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }

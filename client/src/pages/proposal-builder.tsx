@@ -39,7 +39,6 @@ import {
 const pageConfig: CanvasPageConfig = {
   title: "Proposal Builder",
   subtitle: "Create and manage client proposals with templates and PDF generation",
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   icon: FileText,
 };
 
@@ -178,7 +177,7 @@ function ProposalFormDialog({
 
   const applyTemplateMutation = useMutation({
     mutationFn: (templateId: string) => apiRequest("GET", `/api/proposals/templates/${templateId}`),
-    onSuccess: (template: any) => {
+    onSuccess: (template) => {
       setForm((p) => ({
         ...p,
         templateId: template.id,
@@ -191,7 +190,7 @@ function ProposalFormDialog({
   });
 
   const saveMutation = useMutation({
-    mutationFn: (data: any) =>
+    mutationFn: (data) =>
       proposal
         ? apiRequest("PATCH", `/api/proposals/${proposal.id}`, data)
         : apiRequest("POST", "/api/proposals", { ...data, workspaceId }),
@@ -875,10 +874,10 @@ export default function ProposalBuilderPage() {
   const pendingContracts = pendingSignData?.contracts || [];
 
   const sendPortalMutation = useMutation({
-    mutationFn: async (proposal: any) => {
+    mutationFn: async (proposal) => {
       if (!proposal.clientEmail) throw new Error("Client email is required to send via portal");
       const content = (proposal.sections || [])
-        .map((s: any) => `## ${s.title}\n\n${s.content}`)
+        .map((s) => `## ${s.title}\n\n${s.content}`)
         .join("\n\n") || proposal.proposalName;
       const contractRes = await apiRequest("POST", "/api/contracts", {
         clientName: proposal.clientName || "Client",
@@ -892,11 +891,9 @@ export default function ProposalBuilderPage() {
         specialTerms: proposal.termsAndConditions,
         expiresAt: proposal.validUntil || undefined,
       });
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const contractId = contractRes.contract?.id;
       if (!contractId) throw new Error("Failed to create contract document");
       const sendRes = await apiRequest("POST", `/api/contracts/${contractId}/send`);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       return { portalUrl: sendRes.portalUrl as string, contractId };
     },
     onSuccess: (data) => setPortalModal({ open: true, url: data.portalUrl, contractId: data.contractId }),
@@ -935,7 +932,7 @@ export default function ProposalBuilderPage() {
   });
 
   const duplicateMutation = useMutation({
-    mutationFn: async (proposal: any) => {
+    mutationFn: async (proposal) => {
       const { id, createdAt, updatedAt, fileUrl, submittedAt, ...rest } = proposal;
       return apiRequest("POST", "/api/proposals", {
         ...rest,
@@ -968,16 +965,16 @@ export default function ProposalBuilderPage() {
   };
 
   const filtered = (proposalsList || []).filter(
-    (p: any) => filterStatus === "all" || p.status === filterStatus
+    (p) => filterStatus === "all" || p.status === filterStatus
   );
 
   const stats = {
     total: proposalsList?.length || 0,
-    draft: proposalsList?.filter((p: any) => p.status === "draft").length || 0,
-    submitted: proposalsList?.filter((p: any) => p.status === "submitted").length || 0,
-    won: proposalsList?.filter((p: any) => p.status === "won").length || 0,
+    draft: proposalsList?.filter((p) => p.status === "draft").length || 0,
+    submitted: proposalsList?.filter((p) => p.status === "submitted").length || 0,
+    won: proposalsList?.filter((p) => p.status === "won").length || 0,
     totalValue: proposalsList
-      ?.filter((p: any) => p.status === "won")
+      ?.filter((p) => p.status === "won")
       .reduce((sum: number, p: any) => sum + (Number(p.totalValue) || 0), 0) || 0,
   };
 
@@ -1055,7 +1052,7 @@ export default function ProposalBuilderPage() {
                 These contracts have been signed by the client and are waiting for your countersignature.
               </p>
               <div className="space-y-2">
-                {pendingContracts.map((c: any) => (
+                {pendingContracts.map((c) => (
                   <div key={c.id} className="flex items-center justify-between gap-2 flex-wrap bg-background rounded-md p-2.5 border">
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{c.title || "Contract"}</p>
@@ -1099,7 +1096,7 @@ export default function ProposalBuilderPage() {
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {filtered.map((p: any) => (
+            {filtered.map((p) => (
               <ProposalCard
                 key={p.id}
                 proposal={p}

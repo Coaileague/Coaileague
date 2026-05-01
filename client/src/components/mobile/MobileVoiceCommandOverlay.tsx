@@ -191,12 +191,9 @@ export function MobileVoiceCommandOverlay({
         executionMode: fastModeEnabled ? 'trinity_fast' : 'normal',
       });
 
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const trinityResponse = result.response || result.message;
       
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       setSubmissionState(result.success ? 'success' : 'error');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       onModeChange?.(result.success ? 'SUCCESS' : 'ERROR');
       
       if (trinityResponse) {
@@ -204,10 +201,8 @@ export function MobileVoiceCommandOverlay({
         speak(trinityResponse);
         
         toast({
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           title: result.success ? 'Trinity Says' : 'Trinity Error',
           description: trinityResponse.length > 100 ? trinityResponse.substring(0, 100) + '...' : trinityResponse,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           variant: result.success ? 'default' : 'destructive',
         });
       }

@@ -421,11 +421,9 @@ class TrinitySelfAssessment {
     const telemetryBySubagent = new Map<string, { successes: number; failures: number }>();
     for (const t of recentTelemetry) {
       const key = t.subagentId;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const current = telemetryBySubagent.get(key) || { successes: 0, failures: 0 };
       if (t.status === 'completed') current.successes++;
       else if (t.status === 'failed') current.failures++;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       telemetryBySubagent.set(key, current);
     }
     
@@ -455,7 +453,6 @@ class TrinitySelfAssessment {
         subagentName: hasData ? subagent.name : `${subagent.name} (NO TELEMETRY)`,
         capabilities: (subagent.capabilities as string[]) || [],
         limitations: hasData 
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           ? ((subagent.limitations as string[]) || [])
           : ['NO TELEMETRY DATA - Cannot assess capability'],
         maturityLevel,

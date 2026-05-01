@@ -16,7 +16,7 @@ const log = createLogger('documentExtraction');
 export interface ExtractedData {
   documentId: string;
   documentType: string;
-  extractedFields: Record<string, any>;
+  extractedFields: Record<string, unknown>;
   confidence: number;
   rawText: string;
   status: "success" | "failed" | "pending";
@@ -74,7 +74,7 @@ export async function extractDocumentData(
     const responseText = result.text;
     
     // Parse extracted JSON
-    let extractedFields: Record<string, any> = {};
+    let extractedFields: Record<string, unknown> = {};
     try {
       extractedFields = JSON.parse(responseText);
     } catch {
@@ -137,7 +137,7 @@ export async function batchExtractDocuments(
 export function mapExtractedToWorkspace(
   extractedData: ExtractedData,
   targetEntityType: string
-): Record<string, any> {
+): Record<string, unknown> {
   const extracted = extractedData.extractedFields;
 
   const mappings: Record<string, Record<string, string>> = {
@@ -167,7 +167,7 @@ export function mapExtractedToWorkspace(
   };
 
   const mapping = mappings[targetEntityType] || {};
-  const mapped: Record<string, any> = {};
+  const mapped: Record<string, unknown> = {};
 
   for (const [key, field] of Object.entries(mapping)) {
     if (field in extracted) {

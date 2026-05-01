@@ -270,7 +270,6 @@ export class QuickBooksService {
         })
         .where(eq(partnerDataMappings.id, existingMapping.id));
     } else {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(partnerDataMappings).values({
         workspaceId,
         partnerConnectionId: connection.id,
@@ -344,7 +343,6 @@ export class QuickBooksService {
       // Sync client first
       qboCustomerId = await this.syncClient(workspaceId, invoice.clientId, userId);
     } else {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       qboCustomerId = customerMapping.partnerEntityId;
     }
 
@@ -399,7 +397,6 @@ export class QuickBooksService {
     const result = await createQBOInvoice();
 
     // Create mapping
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(partnerDataMappings).values({
       workspaceId,
       partnerConnectionId: connection.id,
@@ -485,7 +482,6 @@ export class QuickBooksService {
           Amount: amount,
           LinkedTxn: [
             {
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               TxnId: invoiceMapping.partnerEntityId,
               TxnType: 'Invoice',
             },
@@ -616,7 +612,6 @@ export class QuickBooksService {
 
     const result = await createJournalEntry();
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(partnerDataMappings).values({
       workspaceId,
       partnerConnectionId: connection.id,

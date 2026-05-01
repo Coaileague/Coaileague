@@ -71,24 +71,20 @@ router.post("/api/quickbooks/sync/initial", requireAuth, requireManager, async (
     if (!workspaceId) {
       return res.status(400).json({ error: "Workspace required" });
     }
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const lockResult = acquireQbSyncLock(workspaceId, req.user.id);
     if (!lockResult.acquired) {
       return res.status(409).json({ error: "A QuickBooks sync is already in progress for this workspace", lockedBy: lockResult.holder });
     }
     try {
       const syncService = await getQuickbooksSyncService();
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const result = await syncService.runInitialSync(workspaceId, req.user.id);
       releaseQbSyncLock(workspaceId);
 
       // Deduct 5 credits per QuickBooks sync (99% automated accounting sync)
       tokenManager.recordUsage({
         workspaceId,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         userId: req.user.id,
         featureKey: 'quickbooks_sync',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         featureName: 'QuickBooks Sync',
         description: 'QuickBooks initial bidirectional sync',
         amountOverride: 5,
@@ -134,7 +130,6 @@ router.post("/api/quickbooks/invoice/create", requireAuth, requireManager, async
       clientId,
       new Date(weekEnding),
       lineItems,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       req.user.id
     );
     res.json(result);
@@ -151,7 +146,6 @@ router.post("/api/quickbooks/sync/cdc", requireAuth, requireManager, async (req:
     if (!workspaceId) {
       return res.status(400).json({ error: "Workspace required" });
     }
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const lockResult = acquireQbSyncLock(workspaceId, req.user.id);
     if (!lockResult.acquired) {
       return res.status(409).json({ error: "A QuickBooks sync is already in progress for this workspace", lockedBy: lockResult.holder });
@@ -161,7 +155,6 @@ router.post("/api/quickbooks/sync/cdc", requireAuth, requireManager, async (req:
       const syncService = await getQuickbooksSyncService();
       const result = await syncService.runCDCPoll(
         workspaceId,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         req.user.id,
         sinceDate ? new Date(sinceDate) : undefined
       );
@@ -170,10 +163,8 @@ router.post("/api/quickbooks/sync/cdc", requireAuth, requireManager, async (req:
       // Deduct 5 credits per QuickBooks CDC sync
       tokenManager.recordUsage({
         workspaceId,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         userId: req.user.id,
         featureKey: 'quickbooks_sync',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         featureName: 'QuickBooks Sync',
         description: 'QuickBooks change data capture (CDC) sync',
         amountOverride: 5,

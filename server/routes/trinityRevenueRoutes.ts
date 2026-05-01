@@ -364,7 +364,6 @@ router.post('/dev/simulate-week', async (req: Request, res: Response) => {
           createdEntryIds.push(inserted.id);
         }
       } catch (entryErr: unknown) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         log.error(`[TrinityRevenue] Failed to create entry for shift ${shift.id}:`, entryErr.message);
         entriesSkipped++;
       }
@@ -377,9 +376,7 @@ router.post('/dev/simulate-week', async (req: Request, res: Response) => {
     try {
       billingResult = await generateWeeklyInvoices(workspaceId, weekEnd, 7);
     } catch (billErr: unknown) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       log.error('[TrinityRevenue] Billing failed after simulation:', billErr.message);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       billingResult = { error: billErr.message };
     }
 
@@ -393,9 +390,7 @@ router.post('/dev/simulate-week', async (req: Request, res: Response) => {
         weekEnd,
       );
     } catch (prErr: unknown) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       log.error('[TrinityRevenue] Payroll failed after simulation:', prErr.message);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       payrollResult = { error: prErr.message };
     }
 
@@ -441,7 +436,6 @@ router.post('/dev/simulate-week', async (req: Request, res: Response) => {
 router.get('/dev/pipeline-status', async (req: Request, res: Response) => {
   if (isDevOnly(req, res)) return;
 
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const workspaceId: string = (req.query?.workspaceId as string) || DEV_WS;
 
   try {

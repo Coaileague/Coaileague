@@ -307,7 +307,7 @@ class CleanupAgentSubagent {
     }
   }
 
-  async getComponentBySpecId(specId: string): Promise<any> {
+  async getComponentBySpecId(specId: string): Promise<unknown> {
     const components = (specIndex as any).components || {};
     return components[specId] || null;
   }
@@ -330,7 +330,7 @@ class CleanupAgentSubagent {
     return matches;
   }
 
-  async getEditingRulesForComponent(specId: string): Promise<any> {
+  async getEditingRulesForComponent(specId: string): Promise<unknown> {
     const component = await this.getComponentBySpecId(specId);
     if (!component) return null;
 

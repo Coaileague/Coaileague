@@ -79,7 +79,7 @@ export default function PostOrderVersionsPage() {
       setForm(EMPTY_FORM);
       toast({ title: "Version created", description: "Post order version saved successfully." });
     },
-    onError: (err: any) => toast({ title: "Failed to create version", description: err.message, variant: "destructive" }),
+    onError: (err) => toast({ title: "Failed to create version", description: err.message, variant: "destructive" }),
   });
 
   const filtered = selectedSite === "all"

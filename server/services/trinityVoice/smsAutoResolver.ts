@@ -333,7 +333,7 @@ async function handleShiftOfferAcceptance(
           `${identity.firstName} ${identity.lastName} accepted the open shift via SMS. Trinity has assigned the shift.`,
         ]);
       }
-    } catch (nErr: any) {
+    } catch (nErr: unknown) {
       log.warn('[SMS] Supervisor notification failed (non-fatal):', nErr?.message);
     }
 
@@ -343,7 +343,7 @@ async function handleShiftOfferAcceptance(
       const { inboundOpportunityAgent } = await import('../inboundOpportunityAgent');
       await inboundOpportunityAgent.triggerAutoStaffing(identity.workspaceId);
       log.info(`[SMS] Stage C triggered for workspace ${identity.workspaceId}`);
-    } catch (stageErr: any) {
+    } catch (stageErr: unknown) {
       log.warn('[SMS] Stage C trigger failed (non-fatal):', stageErr?.message);
     }
 
@@ -368,7 +368,7 @@ async function handleShiftOfferAcceptance(
       workspaceId: identity.workspaceId,
       employeeId: identity.employeeId,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[SMS] Shift acceptance error:', err?.message);
     return {
       resolved: true,
@@ -465,7 +465,7 @@ async function handleManagerApproval(
           ]);
         }
       }
-    } catch (nErr: any) {
+    } catch (nErr: unknown) {
       log.warn('[SMS] Employee notification failed (non-fatal):', nErr?.message);
     }
 
@@ -488,7 +488,7 @@ async function handleManagerApproval(
       workspaceId: identity.workspaceId,
       employeeId: identity.employeeId,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[SMS] Approval workflow error:', err?.message);
     return {
       resolved: true,
@@ -588,7 +588,7 @@ async function logInboundResolution(params: {
         reason ? reason.slice(0, 200) : null,
       ]
     );
-  } catch (logErr: any) {
+  } catch (logErr: unknown) {
     log.warn('[SmsAutoResolver] Audit log failed (non-fatal):', logErr?.message);
   }
 }
@@ -811,7 +811,7 @@ async function resolveInboundSmsInner(params: {
         employeeId: identity.employeeId,
       };
     }
-  } catch (cmdErr: any) {
+  } catch (cmdErr: unknown) {
     log.warn('[SmsAutoResolver] Officer command routing non-fatal error:', cmdErr?.message);
   }
 
@@ -872,7 +872,7 @@ async function resolveInboundSmsInner(params: {
         tokenCapExhausted = true;
         log.warn(`[SmsAutoResolver] Token hard cap exhausted for workspace ${identity.workspaceId} — falling through to ticket`);
       }
-    } catch (capErr: any) {
+    } catch (capErr: unknown) {
       log.warn('[SmsAutoResolver] Token cap check failed (non-fatal):', capErr?.message);
     }
   }
@@ -900,7 +900,7 @@ async function resolveInboundSmsInner(params: {
         callType: 'trinity_ai_response',
         twilioCostCents: 0,
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.warn('[SmsAutoResolver] SMS metering failed (non-fatal):', e?.message);
     }
 

@@ -121,7 +121,7 @@ class TrinityAuditIntelligenceService {
         priorSessionSummary,
         generatedAt: new Date().toISOString(),
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[AuditIntelligence] Brief build failed (non-fatal):', err?.message);
       return null;
     }
@@ -336,7 +336,7 @@ AUDIT INTELLIGENCE INSTRUCTIONS:
         totalFinesPaid,
         pendingFollowups: followupCount,
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[AuditIntelligence] History fetch failed:', err?.message);
       return empty;
     }
@@ -384,7 +384,7 @@ AUDIT INTELLIGENCE INSTRUCTIONS:
         openIncidents: incidentsRes.status === 'fulfilled'
           ? parseInt(incidentsRes.value.rows[0]?.cnt || '0', 10) : 0,
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[AuditIntelligence] Snapshot failed:', err?.message);
       return {
         totalOfficers: 0, activeOfficers: 0, armedOfficers: 0, unarmedOfficers: 0,

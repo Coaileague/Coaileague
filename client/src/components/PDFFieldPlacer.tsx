@@ -68,7 +68,7 @@ export function PDFFieldPlacer({
       toast({ title: "Field positions saved", description: `${fields.length} field(s) saved to ${docName}` });
       onOpenChange(false);
     },
-    onError: (e: any) => toast({ title: "Save failed", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Save failed", description: e.message, variant: "destructive" }),
   });
 
   const handleOverlayClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -224,7 +224,6 @@ export function PDFFieldPlacer({
                         borderColor: rColor,
                         background: rColor + "20",
                         color: rColor,
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         ringColor: rColor,
                         pointerEvents: "auto",
                       }}

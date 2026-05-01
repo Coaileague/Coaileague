@@ -227,7 +227,7 @@ export default function EmployeePortal() {
           </CardHeader>
           <CardContent>
             <Progress value={onboardingProgress.completionPercentage ?? 0} className="mb-3" />
-            {requiredDocs.map((doc: any) => (
+            {requiredDocs.map((doc) => (
               <div key={doc.id} className="flex items-center gap-3 py-2 border-b border-border/40">
                 {doc.status === 'approved'
                   ? <CheckCircle2 className="h-4 w-4 text-green-500" />

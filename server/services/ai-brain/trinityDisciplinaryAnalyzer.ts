@@ -75,17 +75,13 @@ class TrinityDisciplinaryAnalyzer {
     `, [workspaceId]);
 
     return rows.map(r => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const dowPattern = this.detectDayOfWeekPattern(r.days_of_week || []);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const sitePattern = this.detectSitePattern(r.sites || []);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       return {
         patternType: 'tardiness' as const,
         employeeId: r.employee_id,
         workspaceId,
         employeeName: r.employee_name,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         severity: r.late_count >= 6 ? 'medium' : 'low',
         instances: r.late_instances || [],
         investigation: {
@@ -122,15 +118,12 @@ class TrinityDisciplinaryAnalyzer {
     `, [workspaceId]);
 
     return rows.map(r => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const dowPattern = this.detectDayOfWeekPattern(r.days_of_week || []);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       return {
         patternType: 'calloff_pattern' as const,
         employeeId: r.employee_id,
         workspaceId,
         employeeName: r.employee_name,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         severity: r.calloff_count >= 5 ? 'medium' : 'low',
         instances: r.calloff_dates || [],
         investigation: {
@@ -170,7 +163,6 @@ class TrinityDisciplinaryAnalyzer {
       HAVING COUNT(*) >= 2
     `, [workspaceId]).catch(() => ({ rows: [] }));
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     return rows.map(r => ({
       patternType: 'report_delinquency' as const,
       employeeId: r.employee_id,
@@ -306,7 +298,6 @@ class TrinityDisciplinaryAnalyzer {
     const { rows } = await typedPool(`
       SELECT hire_date FROM employees WHERE id = $1
     `, [employeeId]);
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const hireDate = rows[0]?.hire_date ? new Date(rows[0].hire_date) : new Date();
     const tenureMonths = Math.floor((Date.now() - hireDate.getTime()) / (1000 * 60 * 60 * 24 * 30));
     return { tenureMonths };

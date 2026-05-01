@@ -159,7 +159,6 @@ router.get('/summary', async (req: Request, res: Response) => {
     ];
 
     const degradedCount = services.filter(s => s.status === 'degraded').length;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const downCount = services.filter(s => s.status === 'down').length;
 
     const overallHealth: 'operational' | 'degraded' | 'down' = 

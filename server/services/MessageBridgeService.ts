@@ -35,7 +35,7 @@ interface InboundMessageParams {
   channelType: ChannelType;
   senderIdentity: string;
   message: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   externalMessageId?: string;
   senderDisplayName?: string;
   attachmentUrl?: string;
@@ -66,7 +66,7 @@ interface ProviderAdapter {
     message: string;
     from?: string;
     attachmentUrl?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }): Promise<{ externalMessageId: string; providerResponse: Record<string, any> }>;
 }
 
@@ -741,9 +741,9 @@ class MessageBridgeService {
   async updateDeliveryStatus(
     bridgeMessageId: string,
     deliveryStatus: DeliveryStatus,
-    providerResponse?: Record<string, any>,
+    providerResponse?: Record<string, unknown>,
   ): Promise<void> {
-    const updates: Record<string, any> = {
+    const updates: Record<string, unknown> = {
       deliveryStatus,
       updatedAt: new Date(),
     };

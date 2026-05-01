@@ -106,7 +106,7 @@ export default function PendingTimeEntries() {
     mutationFn: async (timeEntryIds: string[]) => {
       return await apiRequest('POST', '/api/time-entries/bulk-approve', { timeEntryIds });
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/time-entries/pending'] });
       toast({
         title: "Entries Approved",
@@ -114,7 +114,7 @@ export default function PendingTimeEntries() {
       });
       setSelectedEntries(new Set());
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Approval Failed",
         description: error.message || "Failed to approve time entries",
@@ -136,7 +136,7 @@ export default function PendingTimeEntries() {
       });
       setSelectedEntry(null);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Approval Failed",
         description: error.message || "Failed to approve time entry",
@@ -159,7 +159,7 @@ export default function PendingTimeEntries() {
       setSelectedEntry(null);
       setRejectReason("");
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Rejection Failed",
         description: error.message || "Failed to reject time entry",

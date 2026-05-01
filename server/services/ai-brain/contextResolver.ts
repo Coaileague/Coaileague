@@ -24,7 +24,7 @@ export interface ResolvedContext {
   isPlatformAdmin: boolean;
   hasEscalationRights: boolean;
   source: 'user' | 'automation' | 'scheduler' | 'webhook' | 'trinity' | 'helpai';
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export interface ContextInput {
@@ -249,7 +249,7 @@ class ContextResolverService {
   async escalate(
     context: ResolvedContext,
     type: 'notification' | 'alert' | 'approval' | 'trinity',
-    payload: Record<string, any>
+    payload: Record<string, unknown>
   ): Promise<void> {
     if (!context.hasEscalationRights && !context.isPlatformAdmin) {
       log.warn('[ContextResolver] Escalation attempted without rights');

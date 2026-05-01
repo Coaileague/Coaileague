@@ -44,7 +44,7 @@ export type TrinityEmailEventType =
 export async function emitTrinityEvent(
   domain: string,
   eventType: string,
-  data: Record<string, any>
+  data: Record<string, unknown>
 ): Promise<void> {
   try {
     // Log to AI Brain action logs for Trinity awareness (only existing DB columns)

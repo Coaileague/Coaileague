@@ -120,7 +120,7 @@ export interface ActionRequest {
   category: ActionCategory;
   name: string;
   description?: string;
-  payload?: Record<string, any>;
+  payload?: Record<string, unknown>;
   workspaceId?: string;
   userId: string;
   userRole: string;
@@ -415,7 +415,6 @@ class PlatformActionHub {
           type: type || 'system',
           title,
           message,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           workspaceId: request.workspaceId || undefined,
           targetUserIds: [targetUserId],
           severity: 'warning',
@@ -709,7 +708,7 @@ class PlatformActionHub {
             data: { workspaceId: targetWorkspace, status: deactivationStatus, reason },
             executionTimeMs: Date.now() - startTime
           };
-        } catch (error: any) {
+        } catch (error: unknown) {
           return {
             success: false,
             actionId: request.actionId,
@@ -752,7 +751,7 @@ class PlatformActionHub {
             data: { workspaceId: targetWorkspace, status: "active" },
             executionTimeMs: Date.now() - startTime
           };
-        } catch (error: any) {
+        } catch (error: unknown) {
           return {
             success: false,
             actionId: request.actionId,
@@ -800,7 +799,7 @@ class PlatformActionHub {
             },
             executionTimeMs: Date.now() - startTime
           };
-        } catch (err: any) {
+        } catch (err: unknown) {
           return {
             success: false,
             actionId: request.actionId,
@@ -1189,7 +1188,6 @@ class PlatformActionHub {
 
         let callRows: any[] = [];
         if (callId) {
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           callRows = await typedPool(
             `SELECT id, call_number, call_type, priority, location, site_name, latitude, longitude FROM cad_calls WHERE id=$1 AND workspace_id=$2`,
             [callId, workspaceId]
@@ -1922,7 +1920,6 @@ class PlatformActionHub {
     this.registerAction({
       actionId: 'trinity.select_cognitive_layer',
       name: 'Trinity: Select Cognitive Layer',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       category: 'ai_brain',
       description: 'Select the optimal Trinity cognitive layer (Claude=ethics, Gemini=vision/data, GPT=execution) for a given task',
       requiredRoles: [],
@@ -1950,7 +1947,6 @@ class PlatformActionHub {
     this.registerAction({
       actionId: 'trinity.parallel_monitor',
       name: 'Trinity: Parallel ADHD Monitor',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       category: 'ai_brain',
       description: 'Run 8-thread parallel monitoring loop for simultaneous workspace supervision and cross-workspace pattern detection',
       requiredRoles: ['platform_admin', 'root_admin', 'sysop'],
@@ -1976,7 +1972,6 @@ class PlatformActionHub {
     this.registerAction({
       actionId: 'trinity.status_broadcast',
       name: 'Trinity: Status Broadcast',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       category: 'ai_brain',
       description: 'Get the next Trinity status phrase for streaming broadcast (purple vocabulary pool)',
       requiredRoles: [],
@@ -1997,7 +1992,6 @@ class PlatformActionHub {
     this.registerAction({
       actionId: 'trinity.priority_interrupt',
       name: 'Trinity: Priority Interrupt',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       category: 'ai_brain',
       description: 'Interrupt Trinity\'s current task queue to process a critical priority item from HelpAI command bus immediately',
       requiredRoles: [],
@@ -2022,7 +2016,6 @@ class PlatformActionHub {
     this.registerAction({
       actionId: 'trinity.hyperfocus_mode',
       name: 'Trinity: Hyperfocus Mode',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       category: 'ai_brain',
       description: 'Activate Trinity Hyperfocus Mode — dedicate full cognitive bandwidth to a single workspace emergency for up to 15 minutes',
       requiredRoles: ['org_owner', 'co_owner', 'platform_admin', 'root_admin'],
@@ -2082,7 +2075,7 @@ class PlatformActionHub {
             data: { draft, threadId, subject: thread.subject, lastMessagePreview: lastMsg?.body?.slice(0, 100) },
             executionTimeMs: Date.now() - startTime,
           };
-        } catch (err: any) {
+        } catch (err: unknown) {
           return { success: false, actionId: request.actionId, message: err?.message || 'Failed to draft reply', executionTimeMs: Date.now() - startTime };
         }
       },
@@ -2124,7 +2117,7 @@ class PlatformActionHub {
             summary: `Thread "${thread.subject}" has ${messages.length} messages (${staffCount} from staff, ${clientCount} from client). Status: ${thread.status}. SLA: ${thread.slaStatus}.`,
           };
           return { success: true, actionId: request.actionId, message: 'Thread summary generated', data: summary, executionTimeMs: Date.now() - startTime };
-        } catch (err: any) {
+        } catch (err: unknown) {
           return { success: false, actionId: request.actionId, message: err?.message || 'Failed to summarize thread', executionTimeMs: Date.now() - startTime };
         }
       },
@@ -2171,7 +2164,7 @@ class PlatformActionHub {
             data: { totalChecked: threads.length, amberThreadIds: amber, redThreadIds: red, amberCount: amber.length, redCount: red.length },
             executionTimeMs: Date.now() - startTime,
           };
-        } catch (err: any) {
+        } catch (err: unknown) {
           return { success: false, actionId: request.actionId, message: err?.message || 'Failed to check SLA', executionTimeMs: Date.now() - startTime };
         }
       },
@@ -2308,13 +2301,11 @@ class PlatformActionHub {
     }
 
     // Check authorization
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (!this.isAuthorized(request.userRole, handler.requiredRoles)) {
       log.warn(`[Platform Action Hub] Unauthorized: ${request.userId} with role ${request.userRole} tried to execute ${request.actionId}`);
       return {
         success: false,
         actionId: request.actionId,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         message: `Unauthorized: requires one of roles [${handler.requiredRoles.join(', ')}]`,
         executionTimeMs: Date.now() - startTime
       };
@@ -2774,7 +2765,6 @@ class PlatformActionHub {
             trinityActionReasoner.reflect(
               {
                 domain: handler.category as any,
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 workspaceId: request.workspaceId,
                 userId: request.userId,
               },
@@ -2849,7 +2839,7 @@ class PlatformActionHub {
       }
 
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errorResult: ActionResult = {
         success: false,
         actionId: request.actionId,
@@ -2889,7 +2879,6 @@ class PlatformActionHub {
   getAvailableActions(userRole: string, options: ActionCatalogOptions = {}): ActionHandler[] {
     const authorizedActions: ActionHandler[] = [];
     ACTION_REGISTRY.forEach((handler) => {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (this.isAuthorized(userRole, handler.requiredRoles)) {
         authorizedActions.push(handler);
       }
@@ -3143,7 +3132,6 @@ class PlatformActionHub {
     }
 
     // Map action categories to user-friendly event types and visibility
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const EVENT_POLICY: Record<ActionCategory, { 
       eventType: 'feature_released' | 'feature_updated' | 'automation_completed' | 'announcement';
       category: 'feature' | 'improvement' | 'announcement';
@@ -3286,7 +3274,7 @@ class PlatformActionHub {
           lastCheck: new Date(),
           responseTimeMs: Date.now() - startTime
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         this.serviceHealth.set(service.name, {
           serviceName: service.name,
           isHealthy: false,
@@ -3355,7 +3343,7 @@ class PlatformActionHub {
         errorMessage: result.success ? null : (result.message || null),
         createdAt: sql`now()`,
       });
-    } catch (telErr: any) {
+    } catch (telErr: unknown) {
       log.warn('[Trinity Telemetry] Invocation log failed (non-blocking):', telErr?.message);
     }
   }

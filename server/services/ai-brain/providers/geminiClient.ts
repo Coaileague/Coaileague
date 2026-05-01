@@ -708,8 +708,8 @@ const TOOL_REQUIRED_FIELDS: Record<string, string[]> = {
   forecast_trends: ['forecastType'],
 };
 
-function sanitizeToolArgs(args: Record<string, any>): Record<string, any> {
-  const sanitized: Record<string, any> = {};
+function sanitizeToolArgs(args: Record<string, unknown>): Record<string, unknown> {
+  const sanitized: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(args)) {
     if (typeof value === 'string' && value.length > 500) {
       sanitized[key] = value.substring(0, 500) + '...[truncated]';
@@ -720,7 +720,7 @@ function sanitizeToolArgs(args: Record<string, any>): Record<string, any> {
   return sanitized;
 }
 
-function validateToolArgs(toolName: string, args: Record<string, any>): string | null {
+function validateToolArgs(toolName: string, args: Record<string, unknown>): string | null {
   const required = TOOL_REQUIRED_FIELDS[toolName];
   if (!required || required.length === 0) return null;
   const missing = required.filter(field => args[field] === undefined || args[field] === null || args[field] === '');
@@ -732,7 +732,7 @@ function validateToolArgs(toolName: string, args: Record<string, any>): string |
 
 async function logToolCallFailure(
   toolName: string,
-  args: Record<string, any>,
+  args: Record<string, unknown>,
   errorMessage: string,
   context: ToolExecutionContext
 ): Promise<void> {
@@ -758,7 +758,7 @@ async function logToolCallFailure(
 
 async function executeToolCall(
   toolName: string,
-  args: Record<string, any>,
+  args: Record<string, unknown>,
   context: ToolExecutionContext
 ): Promise<ToolResult> {
   log.info(`🔧 [AI Brain] Executing tool: ${toolName}`, args);
@@ -815,7 +815,6 @@ async function executeToolCall(
         return await executeDetectSchedulingConflicts(args, context);
       
       case 'analyze_sentiment':
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return await executeAnalyzeSentiment(args, context);
       
       case 'lookup_incidents':
@@ -840,11 +839,9 @@ async function executeToolCall(
         return await executeListAvailableActions(args, context);
       
       case 'execute_platform_action':
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return await executePlatformAction(args, context);
       
       case 'get_financial_analysis':
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return await executeFinancialAnalysis(args, context);
       
       case 'analyze_cross_domain':
@@ -854,11 +851,9 @@ async function executeToolCall(
         return await executeDetectAnomaliesOnDemand(args, context);
       
       case 'explain_reasoning':
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return await executeExplainReasoning(args, context);
       
       case 'forecast_trends':
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return await executeForecastTrends(args, context);
       
       case 'get_temporal_trends':
@@ -878,7 +873,7 @@ async function executeToolCall(
       setTimeout(() => reject(new Error(`Tool '${toolName}' timed out after ${TOOL_TIMEOUT_MS / 1000}s`)), TOOL_TIMEOUT_MS);
     });
     return await Promise.race([toolExecution(), timeoutPromise]);
-  } catch (error: any) {
+  } catch (error: unknown) {
     const errorMessage = (error instanceof Error ? error.message : String(error)) || 'Tool execution failed';
     log.error(`❌ [AI Brain] Tool execution failed for ${toolName}:`, error);
     await logToolCallFailure(toolName, args, errorMessage, context);
@@ -933,7 +928,7 @@ async function executeSearchFaqs(
         query: args.query
       }
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       data: null,
@@ -982,7 +977,7 @@ async function executeCreateSupportTicket(
         message: `Support ticket ${ticketNumber} has been created and assigned to our support team.`
       }
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       data: null,
@@ -1122,7 +1117,7 @@ async function executeGetBusinessInsights(
       success: true,
       data: insights
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       data: null,
@@ -1331,7 +1326,7 @@ async function executeUpdateFaq(
         }
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       data: null,
@@ -1403,7 +1398,7 @@ async function executeLookupSchedule(
         }
       }
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: `Schedule lookup failed: ${(error instanceof Error ? error.message : String(error))}` };
   }
 }
@@ -1459,7 +1454,7 @@ async function executeLookupTimesheets(
         }
       }
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: `Timesheet lookup failed: ${(error instanceof Error ? error.message : String(error))}` };
   }
 }
@@ -1510,7 +1505,7 @@ async function executeLookupPayroll(
         }
       }
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: `Payroll lookup failed: ${(error instanceof Error ? error.message : String(error))}` };
   }
 }
@@ -1552,7 +1547,7 @@ async function executeLookupInvoices(
             }
           }
         };
-      } catch (biError: any) {
+      } catch (biError: unknown) {
         log.warn('[AI Brain] BI search fallback to standard query:', biError.message);
       }
     }
@@ -1601,7 +1596,7 @@ async function executeLookupInvoices(
         }
       }
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: `Invoice lookup failed: ${(error instanceof Error ? error.message : String(error))}` };
   }
 }
@@ -1664,7 +1659,7 @@ async function executeLookupEmployees(
         }
       }
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: `Employee lookup failed: ${(error instanceof Error ? error.message : String(error))}` };
   }
 }
@@ -1767,7 +1762,7 @@ async function executeDetectSchedulingConflicts(
         }
       }
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: `Conflict detection failed: ${(error instanceof Error ? error.message : String(error))}` };
   }
 }
@@ -1863,7 +1858,7 @@ async function executeLookupIncidents(
       .limit(25);
 
     return { success: true, data: { incidents, total: incidents.length, daysBack } };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
   }
 }
@@ -1914,7 +1909,7 @@ async function executeLookupCertifications(
     });
 
     return { success: true, data: { certifications: certs, total: certs.length, expiringSoon: expiringSoon.length } };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
   }
 }
@@ -1952,7 +1947,7 @@ async function executeLookupClients(
       .limit(25);
 
     return { success: true, data: { clients: clientList, total: clientList.length } };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
   }
 }
@@ -1989,7 +1984,7 @@ async function executeLookupComplianceScore(
       : 0;
 
     return { success: true, data: { scores, total: scores.length, averageScore: avgScore } };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
   }
 }
@@ -2022,7 +2017,7 @@ async function executeLookupGuardTours(
       .limit(25);
 
     return { success: true, data: { tours, total: tours.length } };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
   }
 }
@@ -2057,7 +2052,7 @@ async function executeLookupEquipment(
     });
 
     return { success: true, data: { equipment: items, total: items.length, statusSummary } };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
   }
 }
@@ -2091,7 +2086,7 @@ async function executeListAvailableActions(
         usage: 'Pass a canonical actionId to execute_platform_action to invoke an action.',
       },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
   }
 }
@@ -2119,7 +2114,7 @@ async function executePlatformAction(
       userRole: 'system',
     });
     return { success: result.success, data: result.data || result, error: result.error };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
   }
 }
@@ -2237,7 +2232,7 @@ async function executeFinancialAnalysis(
     }
 
     return { success: true, data: analysis };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
   }
 }
@@ -2292,7 +2287,7 @@ async function executeAnalyzeCrossDomain(
     };
 
     return { success: true, data: results };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
   }
 }
@@ -2340,7 +2335,7 @@ async function executeDetectAnomaliesOnDemand(
         })),
       },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
   }
 }
@@ -2392,7 +2387,7 @@ async function executeExplainReasoning(
     });
 
     return { success: true, data: { analysisType: args.analysisType, detailLevel, explanations } };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
   }
 }
@@ -2425,7 +2420,7 @@ async function executeForecastTrends(
     }
 
     return { success: true, data: results };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
   }
 }
@@ -2451,7 +2446,7 @@ async function executeGetTemporalTrends(
     });
 
     return { success: true, data: { trends: data, count: data.length } };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { success: false, data: null, error: (error instanceof Error ? error.message : String(error)) };
   }
 }
@@ -2524,13 +2519,12 @@ export class UnifiedGeminiClient {
     try {
       const safeFeatureKey = featureKey || 'ai_general';
       const { aiTokenGateway } = await import('../../billing/aiTokenGateway');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const result = await aiTokenGateway.preAuthorize(workspaceId, userId, safeFeatureKey);
       if (!result.authorized) {
         return { allowed: false, errorMessage: result.reason };
       }
       return { allowed: true };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[BillingGate] Pre-check FAILED for ${featureKey}: ${(err instanceof Error ? err.message : String(err))} - BLOCKING`);
       return { allowed: false, errorMessage: `Billing system error: ${(err instanceof Error ? err.message : String(err))}` };
     }
@@ -2550,13 +2544,12 @@ export class UnifiedGeminiClient {
     try {
       const { aiTokenGateway } = await import('../../billing/aiTokenGateway');
       const tokensTotal = (tokenData?.inputTokens || 0) + (tokenData?.outputTokens || 0);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await aiTokenGateway.finalizeBilling(workspaceId, userId, featureKey, tokensTotal, {
         inputTokens: tokenData?.inputTokens || 0,
         outputTokens: tokenData?.outputTokens || 0,
         model: tokenData?.model || 'gemini',
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[BillingGate] BILLING_LEAK: Deduction crashed for ${featureKey} workspace=${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
     }
   }
@@ -2579,7 +2572,6 @@ export class UnifiedGeminiClient {
         workspaceId,
         userId: userId || 'system-gemini',
         featureKey: creditKey,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         featureName: featureKey,
         description: `AI operation: ${featureKey}`,
       });
@@ -2589,7 +2581,7 @@ export class UnifiedGeminiClient {
       } else {
         log.warn(`[CreditEnforcer] Deduction failed for ${featureKey}: ${result.errorMessage}`);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[CreditEnforcer] Post-deduction error for ${featureKey}:`, (err instanceof Error ? err.message : String(err)));
     }
   }
@@ -2654,7 +2646,7 @@ export class UnifiedGeminiClient {
         });
         return { data: null, tokensUsed, error: "Failed to parse JSON response" };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       return { data: null, tokensUsed: 0, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
@@ -2977,7 +2969,7 @@ export class UnifiedGeminiClient {
             }
           };
 
-        } catch (error: any) {
+        } catch (error: unknown) {
           attempts++;
           lastError = error;
           log.warn(`⚠️ [AI Brain] Attempt ${attempts}/${maxAttempts} failed:`, (error instanceof Error ? error.message : String(error)));
@@ -2991,7 +2983,7 @@ export class UnifiedGeminiClient {
 
       throw lastError || new Error('All retry attempts failed');
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(`❌ [AI Brain] Gemini error for ${request.featureKey}:`, error);
       throw new Error(`AI Brain inference failed: ${(error instanceof Error ? error.message : String(error)) || 'Unknown error'}`);
     }
@@ -3044,7 +3036,6 @@ export class UnifiedGeminiClient {
       if (requestOrPrompt.generationConfig?.temperature) temperature = requestOrPrompt.generationConfig.temperature;
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const response = await this.generate({
       userMessage: prompt,
       workspaceId,
@@ -3070,7 +3061,6 @@ export class UnifiedGeminiClient {
     prompt: string,
     context: { workspaceId?: string; userId?: string; purpose?: string } = {}
   ): Promise<{ text: string; tokensUsed: number }> {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const response = await this.generate({
       userMessage: prompt,
       workspaceId: context.workspaceId,
@@ -3292,7 +3282,7 @@ Guidelines:
         tokensUsed
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(`❌ [AI Brain] Vision error:`, error);
       throw new Error(`AI Brain vision failed: ${(error instanceof Error ? error.message : String(error))}`);
     }
@@ -3418,7 +3408,7 @@ Generate ONE thought for ${greeting}:`;
       }
 
       return text || null;
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[Trinity AI] Thought generation failed:', (error instanceof Error ? error.message : String(error)));
       return null;
     }
@@ -3473,7 +3463,7 @@ Generate ONE thought for ${greeting}:`;
       }
 
       return result.response.text().trim() || null;
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[AI Brain] Quick insight failed:', (error instanceof Error ? error.message : String(error)));
       return null;
     }

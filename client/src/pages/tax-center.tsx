@@ -89,7 +89,7 @@ export default function TaxCenterPage() {
       toast({ title: 'Form 941 generated', description: 'Your quarterly federal payroll tax return is ready to download.' });
       queryClient.invalidateQueries({ queryKey: ['/api/payroll/tax-center'] });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: 'Generation failed', description: err?.message || 'Could not generate Form 941', variant: 'destructive' });
     },
   });

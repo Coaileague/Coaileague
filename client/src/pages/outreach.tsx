@@ -20,7 +20,6 @@ import {
 const pageConfig: CanvasPageConfig = {
   title: "Trinity Outreach",
   subtitle: "AI-powered prospect discovery and automated outreach",
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   icon: Globe,
   badge: "AI Sales",
   badgeVariant: "default" as const,

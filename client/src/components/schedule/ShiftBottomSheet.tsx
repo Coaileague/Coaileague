@@ -88,7 +88,7 @@ interface ShiftBottomSheetProps {
   selectedDate: Date;
   selectedEmployee?: Employee;
   editingShift?: Shift;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data) => Promise<void>;
   isSubmitting: boolean;
 }
 
@@ -142,7 +142,6 @@ export function ShiftBottomSheet({
         employeeId: editingShift.employeeId || '',
         title: editingShift.title || '',
         clientId: editingShift.clientId || '',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         location: editingShift.location || '',
         startTime: format(start, 'HH:mm'),
         endTime: format(end, 'HH:mm'),

@@ -29,7 +29,7 @@ export interface DisputeRejectionRequest {
  */
 export async function approveDispute(
   request: DisputeApprovalRequest
-): Promise<any> {
+): Promise<unknown> {
   const dispute = await db
     .update(disputes)
     .set({
@@ -55,7 +55,7 @@ export async function approveDispute(
  */
 export async function rejectDispute(
   request: DisputeRejectionRequest
-): Promise<any> {
+): Promise<unknown> {
   const dispute = await db
     .update(disputes)
     .set({

@@ -71,7 +71,7 @@ export async function bootstrapGuestSessionTable(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_guest_session_sid
         ON guest_session_log (session_id)
     `);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[GuestSession] Table bootstrap failed (non-fatal):', err?.message);
   }
 }
@@ -119,7 +119,7 @@ export async function recordGuestSessionUsage(params: {
       cappedOut,
       tokensRemaining: Math.max(0, cap - row.tokens_used),
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[GuestSession] recordGuestSessionUsage failed (non-fatal):', err?.message);
     return { cappedOut: false, tokensRemaining: cap };
   }

@@ -122,7 +122,7 @@ function COIRequestDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
       onOpenChange(false);
       setForm({ reason: "", additionalInfo: "", clientName: "", certificateHolder: "" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   return (
@@ -214,7 +214,7 @@ function RenewalRequestDialog({
       onOpenChange(false);
       setNotes("");
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   return (
@@ -311,7 +311,7 @@ function ClientMessagesTab({ clientId }: { clientId: string }) {
       queryClient.invalidateQueries({ queryKey: ["/api/client-comms/portal/threads", clientId] });
       setCompose("");
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const selectedThread = threads.find(t => t.id === selectedId) || null;
@@ -473,7 +473,7 @@ function StripePaymentForm({
       } else {
         onError("Payment status unclear. Please check your email for confirmation.");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       onError(err.message || "Unexpected error during payment.");
     } finally {
       setConfirming(false);
@@ -542,7 +542,7 @@ function InvoicePaymentModal({ invoice, accessToken, onClose, onPaid }: InvoiceP
           invoiceNumber: data.invoiceNumber,
         });
         setStep("ready");
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (cancelled) return;
         setErrorMsg(err.message || "Could not start payment session.");
         setStep("error");
@@ -744,7 +744,7 @@ export default function ClientPortal() {
       setPreRegForm({ expectedVisitorName: '', expectedVisitorCompany: '', visitorType: 'guest', siteName: '', expectedArrival: '', expectedDeparture: '', hostName: '', hostContact: '', reason: '' });
       setShowPreRegForm(false);
     },
-    onError: (err: any) => { toast({ title: 'Error', description: err.message, variant: 'destructive' }); },
+    onError: (err) => { toast({ title: 'Error', description: err.message, variant: 'destructive' }); },
   });
   const allVisitors = visitorsData?.visitors || [];
   const filteredVisitors = allVisitors.filter(v => {
@@ -792,7 +792,7 @@ export default function ClientPortal() {
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
       setSvcReqForm({ requestType: "", description: "", urgency: "normal", requestedDate: "" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   // ── Settings ─────────────────────────────────────────────────────────────────
@@ -805,7 +805,7 @@ export default function ClientPortal() {
       toast({ title: "Profile Updated", description: "Your name has been updated successfully." });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
   const changePasswordMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/auth/change-password", {
@@ -816,7 +816,7 @@ export default function ClientPortal() {
       toast({ title: "Password Changed", description: "Your password has been updated. Please log in again." });
       setCurrentPassword(""); setNewPassword(""); setConfirmNewPassword("");
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   // ── Phase 25 — Client Identity: CLT number + self-service PIN ───────────────
@@ -833,7 +833,7 @@ export default function ClientPortal() {
       setClientPinInput("");
       queryClient.invalidateQueries({ queryKey: ["/api/identity/pin/client/self/status"] });
     },
-    onError: (e: any) => toast({
+    onError: (e) => toast({
       title: "Could not save PIN",
       description: e?.message || "Please try again",
       variant: "destructive",
@@ -845,7 +845,7 @@ export default function ClientPortal() {
       toast({ title: "Client PIN cleared" });
       queryClient.invalidateQueries({ queryKey: ["/api/identity/pin/client/self/status"] });
     },
-    onError: (e: any) => toast({
+    onError: (e) => toast({
       title: "Could not clear PIN",
       description: e?.message || "Please try again",
       variant: "destructive",
@@ -1812,7 +1812,7 @@ export default function ClientPortal() {
                   </div>
                 ) : (
                   <div className="space-y-2" data-testid="client-pre-registrations-list">
-                    {preRegistrations.map((p: any) => (
+                    {preRegistrations.map((p) => (
                       <div key={p.id} className="flex items-center justify-between gap-3 p-3 rounded-md border flex-wrap" data-testid={`card-client-prereg-${p.id}`}>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">

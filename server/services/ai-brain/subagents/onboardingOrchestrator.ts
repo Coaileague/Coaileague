@@ -38,7 +38,7 @@ export interface OnboardingSource {
   fileName?: string;
   data?: Record<string, any>[]; // For spreadsheet data
   headers?: string[]; // For spreadsheet columns
-  formData?: Record<string, any>; // For manual entry
+  formData?: Record<string, unknown>; // For manual entry
   extractionType?: 'employees' | 'teams' | 'schedules' | 'auto';
 }
 

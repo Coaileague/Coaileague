@@ -52,7 +52,7 @@ export async function makeOutboundCall(params: OutboundCallParams): Promise<{
           toPhone,
         },
       });
-    } catch (auditErr: any) {
+    } catch (auditErr: unknown) {
       log.warn('[TrinityOutbound] Gate audit failed (non-fatal):', auditErr?.message);
     }
     return { success: false, error: 'SUBSCRIPTION_INACTIVE' };
@@ -98,7 +98,7 @@ export async function makeOutboundCall(params: OutboundCallParams): Promise<{
 
     log.info(`[TrinityOutbound] Call initiated to ${toPhone}, SID: ${call.sid}`);
     return { success: true, callSid: call.sid };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[TrinityOutbound] Call failed:', err.message);
     return { success: false, error: err.message };
   }
@@ -140,7 +140,7 @@ export async function callOfficerWelfareCheck(params: {
       baseUrl: params.baseUrl,
       language: params.language,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[TrinityOutbound] Welfare check error:', err.message);
     return { success: false, error: err.message };
   }

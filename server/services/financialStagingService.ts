@@ -249,7 +249,7 @@ export async function stageBillingRun(
         billable: toFinancialString(generated.summary.totalAmount),
         entriesCount: generated.summary.entriesCount,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       const reason = err?.message || 'Unknown error';
       log.warn(`[FinStaging] Skipped client ${clientId}: ${reason}`);
       skipped.push({ clientId, clientName, reason });
@@ -425,7 +425,7 @@ export async function finalizeFinancialBatch(
       await PayrollAutomationEngine.approvePayrollRun(run.id, approvedBy, runEntryIds);
       runEntryIds.forEach(id => lockedTimeEntryIds.add(id));
       finalizedRuns.push({ payrollRunId: run.id, status: 'approved' });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn(`[FinStaging] Payroll run ${run.id} approve failed: ${err?.message}`);
       finalizedRuns.push({ payrollRunId: run.id, status: `failed: ${err?.message ?? 'unknown'}` });
     }

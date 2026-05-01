@@ -108,7 +108,7 @@ export function OperationVisibilityPanel({
 
   const steps = (stepsData as any)?.steps || [];
   const status = (stepsData as any)?.status || 'unknown';
-  const completedSteps = steps.filter((s: any) => s.status === 'completed').length;
+  const completedSteps = steps.filter((s) => s.status === 'completed').length;
 
   return (
     <Card className="p-3 space-y-2" data-testid="operation-visibility-panel">
@@ -124,7 +124,7 @@ export function OperationVisibilityPanel({
 
       <div className="flex items-center gap-1">
         {STEP_ORDER.map((step, i) => {
-          const stepData = steps.find((s: any) => s.step === step);
+          const stepData = steps.find((s) => s.step === step);
           const stepStatus = stepData?.status || 'pending';
           const isActive = stepStatus === 'started' || stepStatus === 'in_progress';
           const isCompleted = stepStatus === 'completed';
@@ -166,9 +166,9 @@ export function OperationVisibilityPanel({
         })}
       </div>
 
-      {steps.some((s: any) => s.status === 'failed') && (
+      {steps.some((s) => s.status === 'failed') && (
         <div className="text-xs text-red-500 bg-red-50 dark:bg-red-950/30 rounded-md px-2 py-1">
-          {steps.find((s: any) => s.status === 'failed')?.error || 'Step failed - check escalation status'}
+          {steps.find((s) => s.status === 'failed')?.error || 'Step failed - check escalation status'}
         </div>
       )}
     </Card>

@@ -122,14 +122,14 @@ function QuickIncidentForm({ workspaceId, onComplete, onCancel }: QuickIncidentF
   const [photos, setPhotos] = useState<string[]>([]);
 
   const mutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/rms/incidents", { ...data, workspaceId }),
-    onSuccess: (d: any) => {
+    mutationFn: (data) => apiRequest("POST", "/api/rms/incidents", { ...data, workspaceId }),
+    onSuccess: (d) => {
       queryClient.invalidateQueries({ queryKey: ["/api/rms/incidents", { workspaceId }] });
       queryClient.invalidateQueries({ queryKey: ["/api/rms/stats", { workspaceId }] });
       toast({ title: "Incident submitted", description: d.report_number || "Report created successfully" });
       onComplete();
     },
-    onError: (e: any) => toast({ title: "Failed to submit", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Failed to submit", description: e.message, variant: "destructive" }),
   });
 
   function handleFiles(files: FileList | null) {

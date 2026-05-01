@@ -35,7 +35,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       assignedToUserId,
     });
     res.status(201).json(pipeline);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Failed to create pipeline:', err?.message);
     res.status(500).json({ error: 'Failed to create pipeline' });
   }
@@ -60,7 +60,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       [user.workspaceId]
     );
     res.json(result.rows);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Failed to list pipelines:', err?.message);
     res.status(500).json({ error: 'Failed to list pipelines' });
   }
@@ -77,7 +77,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
     }
     const progress = await employeeOnboardingPipeline.getProgress(req.params.id);
     res.json({ ...pipeline, progress });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Failed to get pipeline:', err?.message);
     res.status(500).json({ error: 'Failed to get pipeline' });
   }
@@ -99,7 +99,7 @@ router.get('/public/:id', async (req: Request, res: Response) => {
       progress,
       createdAt: pipeline.created_at,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Failed to get public pipeline:', err?.message);
     res.status(500).json({ error: 'Failed to get pipeline' });
   }
@@ -121,7 +121,7 @@ router.patch('/:id/steps/:stepId/complete', requireAuth, async (req: Request, re
       req.body.data
     );
     res.json(updated);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Failed to complete step:', err?.message);
     res.status(500).json({ error: 'Failed to complete step' });
   }
@@ -141,7 +141,7 @@ router.post('/public/:id/steps/:stepId/complete', async (req: Request, res: Resp
     );
     const progress = await employeeOnboardingPipeline.getProgress(req.params.id);
     res.json({ pipeline: updated, progress });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Failed to complete step (public):', err?.message);
     res.status(500).json({ error: 'Failed to complete step' });
   }
@@ -160,7 +160,7 @@ router.get('/by-employee/:employeeId', requireAuth, async (req: Request, res: Re
 
     const progress = await employeeOnboardingPipeline.getProgress(pipeline.id);
     res.json({ ...pipeline, progress });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Failed to get employee pipeline:', err?.message);
     res.status(500).json({ error: 'Failed to get pipeline' });
   }
@@ -181,7 +181,7 @@ router.post('/:id/activate', requireAuth, async (req: Request, res: Response) =>
 
     await employeeOnboardingPipeline.activateEmployee(pipeline.entity_id, pipeline.workspace_id);
     res.json({ success: true, message: 'Employee activated successfully' });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Failed to activate employee:', err?.message);
     res.status(500).json({ error: 'Failed to activate employee' });
   }

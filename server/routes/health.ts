@@ -220,7 +220,7 @@ apiHealthRouter.get('/slo', async (_req: Request, res: Response) => {
   try {
     const { SLO_TARGETS } = await import('../lib/sloConfig');
     res.json({ ok: true, targets: SLO_TARGETS });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ ok: false, error: err?.message || 'Failed to load SLO config' });
   }
 });
@@ -237,7 +237,7 @@ apiHealthRouter.post('/error-tracker-test', (_req: Request, res: Response) => {
       ok: true,
       note: 'Synthetic event fired. Check the configured observability backend. If no backend is configured, the event was no-op.',
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ ok: false, error: err?.message || 'Unknown failure' });
   }
 });
@@ -631,7 +631,6 @@ supportRouter.post(
       } catch (validationError: unknown) {
         return res.status(400).json({
           error: 'Invalid report data',
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           details: validationError.errors || validationError.message,
         });
       }

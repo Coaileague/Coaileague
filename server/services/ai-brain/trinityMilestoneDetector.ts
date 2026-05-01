@@ -46,7 +46,7 @@ export interface DetectedMilestone {
   employeeName: string;
   milestoneType: MilestoneType;
   milestoneDate: string;
-  context: Record<string, any>;
+  context: Record<string, unknown>;
   alreadyTriggered: boolean;
 }
 
@@ -74,15 +74,12 @@ class TrinityMilestoneDetector {
 
       // --- BIRTHDAY ---
       if (emp.date_of_birth) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const dob = new Date(emp.date_of_birth);
         const thisYearBirthday = new Date(today.getFullYear(), dob.getMonth(), dob.getDate());
         const daysUntil = Math.floor((thisYearBirthday.getTime() - today.getTime()) / 86400000);
         if (daysUntil >= 0 && daysUntil <= 3) {
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           const already = await this.alreadyTriggeredThisYear(workspaceId, emp.id, 'birthday');
           detected.push({
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId, employeeId: emp.id, employeeName: empName,
             milestoneType: 'birthday',
             milestoneDate: thisYearBirthday.toISOString().split('T')[0],
@@ -94,7 +91,6 @@ class TrinityMilestoneDetector {
 
       // --- WORK ANNIVERSARIES ---
       if (emp.hire_date) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const hire = new Date(emp.hire_date);
         const yearsInService = today.getFullYear() - hire.getFullYear();
         for (const yr of [1, 2, 5]) {
@@ -103,10 +99,8 @@ class TrinityMilestoneDetector {
             const daysUntil = Math.floor((anniversaryDate.getTime() - today.getTime()) / 86400000);
             if (daysUntil >= -1 && daysUntil <= 2) {
               const type: MilestoneType = `work_anniversary_${yr}yr` as MilestoneType;
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               const already = await this.alreadyTriggeredThisYear(workspaceId, emp.id, type);
               detected.push({
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 workspaceId, employeeId: emp.id, employeeName: empName,
                 milestoneType: type,
                 milestoneDate: anniversaryDate.toISOString().split('T')[0],
@@ -122,10 +116,8 @@ class TrinityMilestoneDetector {
         for (const [days, type] of [[30, 'probation_30day'], [90, 'probation_90day'], [365, 'tenure_1year']] as const) {
           if (daysInService >= days && daysInService <= days + 2) {
             const milestoneDate = new Date(hire.getTime() + days * 86400000).toISOString().split('T')[0];
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             const already = await this.alreadyTriggered(workspaceId, emp.id, type as MilestoneType, milestoneDate);
             detected.push({
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               workspaceId, employeeId: emp.id, employeeName: empName,
               milestoneType: type as MilestoneType, milestoneDate,
               context: { daysInService, firstName: emp.first_name, performanceScore: emp.performance_score },
@@ -137,14 +129,11 @@ class TrinityMilestoneDetector {
 
       // --- NEW HIRE (last 48 hours) ---
       if (emp.created_at) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const created = new Date(emp.created_at);
         const hoursAgo = (today.getTime() - created.getTime()) / 3600000;
         if (hoursAgo <= 48) {
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           const already = await this.alreadyTriggered(workspaceId, emp.id, 'new_hire', todayStr);
           detected.push({
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId, employeeId: emp.id, employeeName: empName,
             milestoneType: 'new_hire', milestoneDate: todayStr,
             context: { hoursAgo: Math.round(hoursAgo), position: emp.position || 'Security Officer', firstName: emp.first_name },
@@ -243,7 +232,7 @@ class TrinityMilestoneDetector {
   }
 
   /** Record a milestone as triggered so it doesn't re-fire */
-  async recordMilestone(m: DetectedMilestone, actionTaken: Record<string, any>): Promise<void> {
+  async recordMilestone(m: DetectedMilestone, actionTaken: Record<string, unknown>): Promise<void> {
     // Converted to Drizzle ORM: ON CONFLICT
     await db.insert(milestoneTracker).values({
       workspaceId: m.workspaceId,

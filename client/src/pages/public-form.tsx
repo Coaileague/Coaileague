@@ -158,7 +158,7 @@ export default function PublicFormPage() {
       if (!res.ok) throw new Error(result.error || result.message || "Submission failed");
       setSubmitted(true);
       setSuccessMessage(result.message || formData.successMessage);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || "Failed to submit form. Please try again.");
     } finally {
       setSubmitting(false);

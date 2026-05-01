@@ -60,7 +60,7 @@ router.get('/', requireAuth, async (req: any, res) => {
         languagePreference: userRows[0]?.preferred_language || 'en',
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[NotifPrefRoutes] GET preferences error:', err.message);
     return res.status(500).json({ error: 'Failed to fetch preferences' });
   }
@@ -117,7 +117,7 @@ router.put('/', requireAuth, async (req: any, res) => {
     invalidatePreferenceCache(userId, workspaceId);
 
     return res.json({ success: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[NotifPrefRoutes] PUT preferences error:', err.message);
     return res.status(500).json({ error: 'Failed to update preferences' });
   }
@@ -129,7 +129,7 @@ router.get('/templates', requireAuth, async (req: any, res) => {
     const { workspaceId } = req.user;
     const templates = await listTemplates(workspaceId);
     return res.json({ templates });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[NotifPrefRoutes] GET templates error:', err.message);
     return res.status(500).json({ error: 'Failed to fetch templates' });
   }
@@ -145,7 +145,7 @@ router.post('/templates/preview', requireAuth, async (req: any, res) => {
     const rendered = previewTemplate(bodyTemplate, sampleData);
 
     return res.json({ rendered, variables });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[NotifPrefRoutes] preview error:', err.message);
     return res.status(500).json({ error: 'Failed to preview template' });
   }
@@ -189,7 +189,7 @@ router.post('/templates', requireAuth, async (req: any, res) => {
     });
 
     return res.status(201).json({ template });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[NotifPrefRoutes] POST template error:', err.message);
     return res.status(500).json({ error: 'Failed to create notification template. Please try again.' });
   }
@@ -209,7 +209,7 @@ router.get('/templates/:notifType/versions', requireAuth, async (req: any, res) 
     );
 
     return res.json({ versions: rows });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[NotifPrefRoutes] GET versions error:', err.message);
     return res.status(500).json({ error: 'Failed to fetch template versions' });
   }

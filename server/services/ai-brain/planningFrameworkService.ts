@@ -92,7 +92,7 @@ export interface PlanStep {
   
   // Execution details
   subagent?: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   
   // Dependencies
   dependsOn: string[];
@@ -129,7 +129,7 @@ export interface ReasoningNode {
   content: string;
   timestamp: Date;
   parentNodeId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface RiskAssessment {
@@ -224,7 +224,6 @@ class PlanningFrameworkService {
     await this.logPlan(request, plan);
 
     // Publish event
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     platformEventBus.publish('ai_brain_action', {
       action: 'plan_created',
       planId,

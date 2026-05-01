@@ -522,7 +522,6 @@ REASONING: [your analysis]`;
     const totalCostDollars = result.costBreakdown.totalCostCents / 100;
 
     // Converted to Drizzle ORM: CASE WHEN → outcomes logic above
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [inserted] = await db.insert(metaCognitionLogs).values({
       workspaceId: context.workspaceId || null,
       originalTaskId: context.taskId ? context.taskId : null,

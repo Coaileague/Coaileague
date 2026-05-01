@@ -26,7 +26,6 @@ const testAlertLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 5,
   message: { success: false, error: 'Too many test alerts. Please wait before trying again.' },
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   keyGenerator: (req: Request) => {
     const authReq = req as AuthenticatedRequest;
     return authReq.user || 'anonymous';
@@ -144,7 +143,6 @@ router.post('/test-alert', requirePlatformStaff, testAlertLimiter, async (req: R
     
     // Audit trail entry
     testAlertAuditLog.push({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: authReq.user,
       timestamp: new Date(),
       alertId: alert.id,

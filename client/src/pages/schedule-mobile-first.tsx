@@ -217,7 +217,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
       queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
       setCalloffPromptShiftId(null);
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({
         title: 'Could not mark shift as calloff',
         description: err?.message || 'Please try again',
@@ -369,7 +369,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
 
   // Mutations
   const createShiftMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       const res = await apiRequest('POST', '/api/shifts', data);
       return res.json();
     },
@@ -381,7 +381,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
       setSelectedEmployee(undefined);
       setEditingShift(undefined);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Failed to create shift",
         description: error.message,
@@ -400,7 +400,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
       queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
 
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Failed to delete shift",
         description: error.message,
@@ -447,7 +447,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
     }
   };
 
-  const handleSubmitShift = async (data: any) => {
+  const handleSubmitShift = async (data) => {
     try {
       await createShiftMutation.mutateAsync(data);
     } catch {
@@ -1376,7 +1376,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
           sessionId: trinityCompletionResult.sessionId,
           executionId: trinityCompletionResult.executionId || '',
           totalMutations: trinityCompletionResult.mutationCount || 0,
-          mutations: (trinityCompletionResult.mutations || []).map((m: any) => ({
+          mutations: (trinityCompletionResult.mutations || []).map((m) => ({
             id: m.id,
             type: m.type || 'fill_open_shift',
             description: m.description,

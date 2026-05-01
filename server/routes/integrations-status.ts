@@ -148,7 +148,7 @@ integrationsStatusRouter.get('/', requireAuth, async (req: Request, res: Respons
         disconnected: integrations.filter(i => !i.connected).length,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({ error: 'Failed to get integrations', message: error.message });
   }
 });
@@ -233,7 +233,7 @@ integrationsStatusRouter.get('/:id', requireAuth, async (req: Request, res: Resp
     }
 
     res.json({ success: true, integration });
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({ error: 'Failed to get integration status', message: error.message });
   }
 });
@@ -274,7 +274,7 @@ integrationsStatusRouter.post('/:id/test', requireAuth, async (req: Request, res
             const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
             await stripe.balance.retrieve();
             testResult = { success: true, message: 'Stripe connection successful' };
-          } catch (err: any) {
+          } catch (err: unknown) {
             testResult = { success: false, message: `Stripe test failed: ${err.message}` };
           }
         } else {
@@ -305,7 +305,7 @@ integrationsStatusRouter.post('/:id/test', requireAuth, async (req: Request, res
     }
 
     res.json(testResult);
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({ error: 'Failed to test integration', message: error.message });
   }
 });
@@ -424,7 +424,7 @@ integrationsStatusRouter.post('/:id/sync', requireAuth, async (req: Request, res
       syncId,
       status: syncResult.success ? 'completed' : 'failed',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({ error: 'Failed to sync integration', message: error.message });
   }
 });
@@ -520,7 +520,7 @@ integrationsStatusRouter.delete('/:id/disconnect', requireAuth, async (req: Requ
     console.log(`[Integrations] User ${userId} requested disconnect of ${id} in workspace ${workspaceId}`);
 
     res.json(disconnectResult);
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({ error: 'Failed to disconnect integration', message: error.message });
   }
 });

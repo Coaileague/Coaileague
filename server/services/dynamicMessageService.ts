@@ -150,7 +150,6 @@ class DynamicMessageService {
       const prompt = this.buildPrompt(context, params);
       
       const result = await meteredGemini.generate({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: workspaceId,
         userId: null,
         featureKey: 'dynamic_message_generation',
@@ -193,7 +192,6 @@ class DynamicMessageService {
       const modesInfo = roomModes.length > 0 ? `Room type: ${roomModes.join(', ')}` : '';
       
       const result = await meteredGemini.generate({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: workspaceId,
         userId: null,
         featureKey: 'dynamic_motd',
@@ -252,7 +250,6 @@ class DynamicMessageService {
         .join('\n');
       
       const result = await meteredGemini.generate({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: workspaceId,
         userId: 'system',
         featureKey: 'helpai_dynamic_response',

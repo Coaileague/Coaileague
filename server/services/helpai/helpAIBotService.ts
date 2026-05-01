@@ -197,7 +197,6 @@ class HelpAIBotService {
           message: `Generate a warm, professional greeting for ${userName} (${userType}). ${context || ''}`,
           maxWords: 30,
         },
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         priority: 'medium',
       });
 
@@ -418,7 +417,7 @@ class HelpAIBotService {
             includeCrossChannel: true,
           }).catch(() => ''),
         ]);
-      } catch (histErr: any) { log.warn('[HelpAI] Failed to load context:', histErr.message); }
+      } catch (histErr: unknown) { log.warn('[HelpAI] Failed to load context:', histErr.message); }
 
       const historyBlock = userHistory ? buildUserHistoryBlock(userHistory.recentSessions) : '';
       const emotion = detectEmotionalContext(message);
@@ -492,13 +491,11 @@ WHAT YOU ALWAYS DO: Make them feel heard. Make them feel helped. Make them feel 
         : `User's message: ${message}\n\n[Think through the problem step by step before responding]`;
 
       const result = await meteredGemini.generate({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: context.workspaceId,
         userId: context.userId,
         featureKey: 'helpai_complex_trinity',
         prompt,
         systemInstruction,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         model: 'gemini-3-pro-preview',
         temperature: 0.3,
         maxOutputTokens: 1024,
@@ -509,7 +506,7 @@ WHAT YOU ALWAYS DO: Make them feel heard. Make them feel helped. Make them feel 
         log.info(`[HelpAI] Trinity brain (Gemini 3) resolved complex issue — ${result.tokensUsed.total} tokens`);
         return { response: result.text, confidence: 0.88 };
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[HelpAI] Trinity brain (Gemini 3) unavailable, falling back:', (err instanceof Error ? err.message : String(err)));
     }
     // Fallback to standard response
@@ -540,7 +537,6 @@ WHAT YOU ALWAYS DO: Make them feel heard. Make them feel helped. Make them feel 
         .join('\n');
 
       const result = await meteredGemini.generate({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: workspaceId,
         featureKey: 'helpai_escalation_summary',
         model: 'gemini-2.5-flash',
@@ -565,7 +561,7 @@ Format as plain text, no headers.`,
       if (result.success && result.text) {
         return result.text.trim();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[HelpAI] Escalation summary generation failed:', (err instanceof Error ? err.message : String(err)));
     }
 
@@ -660,7 +656,7 @@ Format as plain text, no headers.`,
             includeCrossChannel: true,
           }).catch(() => ''),
         ]);
-      } catch (histErr: any) { log.warn('[HelpAI] History fetch failed:', histErr.message); }
+      } catch (histErr: unknown) { log.warn('[HelpAI] History fetch failed:', histErr.message); }
       const emotion = detectEmotionalContext(message);
       const toneGuidance = buildToneGuidance(emotion);
       const memorySummary = userHistory ? buildMemorySummary(userHistory) : '';
@@ -900,7 +896,6 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
       const [agentResult] = await db
         .select({ total: count() })
         .from(chatParticipants)
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .innerJoin(platformRoles, eq(chatParticipants.userId, platformRoles.userId))
         .where(
           and(
@@ -1018,7 +1013,7 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
               state: HelpAIState.ASSISTING,
             };
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn('[HelpAI] Staffing intent detection failed (non-fatal):', err?.message);
         }
 
@@ -1051,7 +1046,6 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
     await this.updateSessionState(sessionId, HelpAIState.ESCALATED);
     
     // 2. Create support ticket via existing system
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [ticket] = await db.insert(supportTickets).values({
       workspaceId: session.workspaceId!,
       requestedBy: session.userId!,
@@ -1118,7 +1112,6 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
     // First check employee table for permanent safety code
     const [employee] = await db.select().from(employees).where(eq(employees.userId, userId)).limit(1);
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (employee?.safetyCode === code) {
       await this.logAction(sessionId, 'safety_code_verify', 'Permanent safety code verified', { success: true });
       return true;
@@ -1190,7 +1183,7 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
           [workspaceId],
         );
         if (rows[0]?.slug) orgSlug = rows[0].slug;
-      } catch (slugErr: any) {
+      } catch (slugErr: unknown) {
         log.warn(`[HelpAI] Staffing slug lookup failed (non-fatal): ${slugErr?.message}`);
       }
 
@@ -1229,7 +1222,7 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
         shouldClose: false,
         state: HelpAIState.ASSISTING,
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn(`[HelpAI] Staffing intake creation failed (non-fatal): ${err?.message}`);
       return null;
     }

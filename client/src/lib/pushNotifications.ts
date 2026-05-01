@@ -63,7 +63,6 @@ export function isPushSupported(): boolean {
 export async function getVapidPublicKey(): Promise<string | null> {
   try {
     const data = await apiRequest("GET", "/api/push/vapid-public-key");
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     return data.publicKey || null;
   } catch {
     return null;
@@ -144,7 +143,7 @@ export async function sendTestPush(): Promise<{ success: boolean; message: strin
   try {
     const res = await apiRequest("POST", "/api/push/test", {});
     return await res.json();
-  } catch (err: any) {
+  } catch (err: unknown) {
     return { success: false, message: err.message || "Failed to send test" };
   }
 }

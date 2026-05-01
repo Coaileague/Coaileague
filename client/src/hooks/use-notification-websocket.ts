@@ -273,13 +273,13 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
           break;
 
         case 'notification_read_bulk':
-          queryClient.setQueryData(["/api/notifications/combined"], (oldData: any) => {
+          queryClient.setQueryData(["/api/notifications/combined"], (oldData) => {
             if (!oldData) return oldData;
             return {
               ...oldData,
-              notifications: oldData.notifications?.map((n: any) => ({ ...n, isRead: true })) || [],
-              platformUpdates: oldData.platformUpdates?.map((u: any) => ({ ...u, isViewed: true })) || [],
-              maintenanceAlerts: oldData.maintenanceAlerts?.map((a: any) => ({ ...a, isAcknowledged: true })) || [],
+              notifications: oldData.notifications?.map((n) => ({ ...n, isRead: true })) || [],
+              platformUpdates: oldData.platformUpdates?.map((u) => ({ ...u, isViewed: true })) || [],
+              maintenanceAlerts: oldData.maintenanceAlerts?.map((a) => ({ ...a, isAcknowledged: true })) || [],
               unreadNotifications: 0,
               unreadPlatformUpdates: 0,
               unreadAlerts: 0,
@@ -300,14 +300,14 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
             setUnreadCount(data.unreadCount);
           }
           if (data.source === 'clear_all' || (data.counts && data.counts.total === 0)) {
-            queryClient.setQueryData(["/api/notifications/combined"], (oldData: any) => {
+            queryClient.setQueryData(["/api/notifications/combined"], (oldData) => {
               if (!oldData) return oldData;
               const now = new Date().toISOString();
               return {
                 ...oldData,
-                notifications: oldData.notifications?.map((n: any) => ({ ...n, isRead: true, clearedAt: n.clearedAt || now })) || [],
-                platformUpdates: oldData.platformUpdates?.map((u: any) => ({ ...u, isViewed: true })) || [],
-                maintenanceAlerts: oldData.maintenanceAlerts?.map((a: any) => ({ ...a, isAcknowledged: true })) || [],
+                notifications: oldData.notifications?.map((n) => ({ ...n, isRead: true, clearedAt: n.clearedAt || now })) || [],
+                platformUpdates: oldData.platformUpdates?.map((u) => ({ ...u, isViewed: true })) || [],
+                maintenanceAlerts: oldData.maintenanceAlerts?.map((a) => ({ ...a, isAcknowledged: true })) || [],
                 unreadNotifications: 0,
                 unreadPlatformUpdates: 0,
                 unreadAlerts: 0,
@@ -334,14 +334,14 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
 
         case 'notification_cleared_all':
         case 'all_notifications_cleared':
-          queryClient.setQueryData(["/api/notifications/combined"], (oldData: any) => {
+          queryClient.setQueryData(["/api/notifications/combined"], (oldData) => {
             if (!oldData) return oldData;
             const now = new Date().toISOString();
             return {
               ...oldData,
-              notifications: oldData.notifications?.map((n: any) => ({ ...n, isRead: true, clearedAt: n.clearedAt || now })) || [],
-              platformUpdates: oldData.platformUpdates?.map((u: any) => ({ ...u, isViewed: true })) || [],
-              maintenanceAlerts: oldData.maintenanceAlerts?.map((a: any) => ({ ...a, isAcknowledged: true })) || [],
+              notifications: oldData.notifications?.map((n) => ({ ...n, isRead: true, clearedAt: n.clearedAt || now })) || [],
+              platformUpdates: oldData.platformUpdates?.map((u) => ({ ...u, isViewed: true })) || [],
+              maintenanceAlerts: oldData.maintenanceAlerts?.map((a) => ({ ...a, isAcknowledged: true })) || [],
               unreadNotifications: 0,
               unreadPlatformUpdates: 0,
               unreadAlerts: 0,
@@ -363,19 +363,19 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
 
         case 'notification_cleared':
           if (data.notificationId) {
-            queryClient.setQueryData(["/api/notifications/combined"], (oldData: any) => {
+            queryClient.setQueryData(["/api/notifications/combined"], (oldData) => {
               if (!oldData) return oldData;
               return {
                 ...oldData,
-                notifications: oldData.notifications?.filter((n: any) => n.id !== data.notificationId) || [],
+                notifications: oldData.notifications?.filter((n) => n.id !== data.notificationId) || [],
                 unreadNotifications: Math.max(0, (oldData.unreadNotifications || 0) - 1),
                 totalUnread: Math.max(0, (oldData.totalUnread || 0) - 1),
               };
             });
-            queryClient.setQueryData(["/api/notifications"], (oldData: any) => {
+            queryClient.setQueryData(["/api/notifications"], (oldData) => {
               if (!oldData) return oldData;
               if (Array.isArray(oldData)) {
-                return oldData.filter((n: any) => n.id !== data.notificationId);
+                return oldData.filter((n) => n.id !== data.notificationId);
               }
               return oldData;
             });
@@ -414,9 +414,7 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
           }
           break;
 
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         case 'officer_clocked_in':
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         case 'officer_clocked_out':
           queryClient.invalidateQueries({ queryKey: ['/api/time-entries/status'] });
           break;

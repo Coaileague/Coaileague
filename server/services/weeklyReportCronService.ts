@@ -70,7 +70,6 @@ export async function runSundayWeeklyReports(): Promise<void> {
 
   await automationOrchestration.executeAutomation(
     {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       domain: 'reporting',
       automationName: 'sunday-weekly-reports',
       automationType: 'cron_job',
@@ -125,7 +124,7 @@ export async function runSundayWeeklyReports(): Promise<void> {
           }
 
           success++;
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.error(`[WeeklyReportCron] Failed for workspace ${workspaceId}:`, err?.message);
           failed++;
         }

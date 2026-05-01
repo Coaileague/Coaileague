@@ -134,7 +134,7 @@ function FormsTab({ forms, isLoading }: { forms: PlatformForm[]; isLoading: bool
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       const fields = [
         { name: "full_name", label: "Full Name", type: "text", required: true },
         { name: "email", label: "Email Address", type: "email", required: true },
@@ -149,7 +149,7 @@ function FormsTab({ forms, isLoading }: { forms: PlatformForm[]; isLoading: bool
       setShowCreate(false);
       form.reset();
     },
-    onError: (e: any) => toast({ title: "Failed to create form", description: e?.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Failed to create form", description: e?.message, variant: "destructive" }),
   });
 
   const filtered = forms.filter(f =>
@@ -280,7 +280,7 @@ function InvitationsTab({ forms }: { forms: PlatformForm[] }) {
   });
 
   const sendMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       const res = await apiRequest("POST", `/api/forms/${data.formId}/invite`, {
         email: data.email,
         name: data.name,
@@ -299,7 +299,7 @@ function InvitationsTab({ forms }: { forms: PlatformForm[] }) {
       setShowSend(false);
       invForm.reset();
     },
-    onError: (e: any) => toast({ title: "Failed to send", description: e?.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Failed to send", description: e?.message, variant: "destructive" }),
   });
 
   const reminderMutation = useMutation({
@@ -489,7 +489,7 @@ function SubmissionsTab({ forms }: { forms: PlatformForm[] }) {
       setForwardEmail("");
       setForwardMessage("");
     },
-    onError: (e: any) => toast({ title: "Failed to forward", description: e?.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Failed to forward", description: e?.message, variant: "destructive" }),
   });
 
   const filtered = (submissions as FormSubmission[]).filter(s => {
@@ -630,7 +630,7 @@ function SigningTab() {
       setDocTitle("");
       setSigners([{ name: "", email: "", role: "signer" }]);
     },
-    onError: (e: any) => toast({ title: "Failed", description: e?.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Failed", description: e?.message, variant: "destructive" }),
   });
 
   const addSigner = () => setSigners(prev => [...prev, { name: "", email: "", role: "signer" }]);

@@ -208,7 +208,6 @@ router.get("/api/feature-updates", requireAuth, async (req: AuthenticatedRequest
     const updates = await db
       .select()
       .from(featureUpdates)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .where(eq(featureUpdates.isActive, true))
       .orderBy(desc(featureUpdates.releaseAt));
 
@@ -369,7 +368,6 @@ router.post("/api/voice-command", requireAuth, async (req: AuthenticatedRequest,
           }
         }
       } catch (execErr: unknown) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         log.error('[VoiceCommand] clock_in execution error:', execErr.message);
         parsed.executed = false;
         parsed.naturalResponse = "I understood 'clock in' but couldn't execute it. Please use the clock-in button.";
@@ -405,7 +403,6 @@ router.post("/api/voice-command", requireAuth, async (req: AuthenticatedRequest,
           }
         }
       } catch (execErr: unknown) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         log.error('[VoiceCommand] clock_out execution error:', execErr.message);
         parsed.executed = false;
         parsed.naturalResponse = "I understood 'clock out' but couldn't execute it. Please use the clock-out button.";
@@ -444,7 +441,6 @@ router.post("/api/voice-command", requireAuth, async (req: AuthenticatedRequest,
           parsed.scheduleData = upcoming;
         }
       } catch (execErr: unknown) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         log.error('[VoiceCommand] schedule_lookup error:', execErr.message);
         parsed.naturalResponse = "I couldn't retrieve your schedule. Please check the Schedule page.";
       }
@@ -479,7 +475,6 @@ router.post("/api/voice-command", requireAuth, async (req: AuthenticatedRequest,
           parsed.executed = true;
         }
       } catch (execErr: unknown) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         log.error('[VoiceCommand] calloff error:', execErr.message);
         parsed.naturalResponse = "I couldn't process your calloff. Please contact your supervisor directly.";
       }
@@ -516,7 +511,6 @@ router.post("/api/voice-command", requireAuth, async (req: AuthenticatedRequest,
         }
         parsed.executed = true;
       } catch (execErr: unknown) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         log.error('[VoiceCommand] post_orders error:', execErr.message);
         parsed.naturalResponse = "I couldn't retrieve post orders. Please check the Site Briefing page.";
       }
@@ -544,7 +538,6 @@ router.post("/api/voice-command", requireAuth, async (req: AuthenticatedRequest,
           parsed.naturalResponse = "Could not find your employee record. Please contact your supervisor directly.";
         }
       } catch (execErr: unknown) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         log.error('[VoiceCommand] message_supervisor error:', execErr.message);
         parsed.naturalResponse = "Message could not be sent. Please contact your supervisor directly.";
       }
@@ -946,7 +939,6 @@ router.post("/api/contact", async (req, res) => {
     });
 
     // Send confirmation to submitter
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const _confEmail = emailService.buildSupportTicketConfirmation(ticket.id, email, ticketNumber, subject, name);
     await NotificationDeliveryService.send({ idempotencyKey: `notif:ticket:${ticket.id}:confirmation`,
             type: 'support_ticket_confirmation', workspaceId: platformWorkspaceId, recipientUserId: email, channel: 'email', body: _confEmail });
@@ -988,7 +980,6 @@ Respond with a JSON object:
 Resolve if the inquiry is about: pricing, features, getting started, demo requests, general questions, platform capabilities.
 Escalate to human if: there are complaints, billing disputes, legal matters, urgent security issues, or complex technical problems.`;
 
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const aiResult = await meteredGemini(
           triagePrompt,
           'PLATFORM',
@@ -1033,7 +1024,6 @@ Escalate to human if: there are complaints, billing disputes, legal matters, urg
               workspaceId: platformWorkspaceId,
               recipientUserId: email,
               channel: 'email',
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               body: replyHtml,
             });
           } catch (emailErr) {
@@ -1248,7 +1238,6 @@ router.post("/api/search", requireAuth, async (req, res) => {
       .from(employees)
       .where(
         and(
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           eq(employees.workspaceId, workspaceId),
           or(ilike(employees.firstName, pattern), ilike(employees.lastName, pattern), ilike(employees.email, pattern))
         )
@@ -1268,7 +1257,6 @@ router.post("/api/search", requireAuth, async (req, res) => {
     const matchedClients = await db
       .select()
       .from(clients)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .where(and(eq(clients.workspaceId, workspaceId), ilike(clients.companyName, pattern)))
       .limit(10);
 
@@ -1283,7 +1271,6 @@ router.post("/api/search", requireAuth, async (req, res) => {
     }
 
     await db.insert(searchQueries).values({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       workspaceId,
       userId: req.user?.id,
       query,
@@ -1372,7 +1359,6 @@ router.post("/api/migration/import-extracted", requireManager, async (req: Authe
         workspaceId,
         id: `emp_${randomUUID()}`,
       });
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       importedId = newEmployee[0].id;
     } else if (entityType === "client") {
       const newClient = await db.insert(clients).values({
@@ -1380,7 +1366,6 @@ router.post("/api/migration/import-extracted", requireManager, async (req: Authe
         workspaceId,
         id: `cli_${randomUUID()}`,
       });
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       importedId = newClient[0].id;
     }
 
@@ -1469,7 +1454,6 @@ router.get("/api/my-team", requireAuth, async (req: AuthenticatedRequest, res) =
 
     const workspaceRole = currentEmployee?.workspaceRole || user.role;
     const managerRoles = ["org_owner", "co_owner", "department_manager", "supervisor", "manager"];
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const isManager = managerRoles.includes(workspaceRole);
     if (!isManager) {
       return res.status(403).json({ message: "Only managers and supervisors can access My Team" });
@@ -1735,7 +1719,6 @@ router.get("/api/search/suggestions", requireAuth, async (req: AuthenticatedRequ
       suggestions.push({
         type: "client",
         id: client.id,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         label: client.companyName,
         description: client.industry || "Client",
       });
@@ -1887,7 +1870,7 @@ router.delete("/api/shift-templates/:id", requireAuth, async (req: any, res) => 
       .returning();
     if (!deleted) return res.status(404).json({ message: 'Template not found' });
     res.json({ success: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ message: err.message || 'Failed to delete template' });
   }
 });

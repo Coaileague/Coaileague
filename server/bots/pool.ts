@@ -19,7 +19,7 @@ export interface BotInstance {
   roomId: string;
   orgId: string;
   status: BotInstanceStatus;
-  sessionData: Record<string, any>;
+  sessionData: Record<string, unknown>;
   startedAt: Date;
   lastActivityAt: Date;
   messageCount: number;
@@ -33,7 +33,7 @@ export interface BotMessage {
   senderName: string;
   content: string;
   timestamp: Date;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 class BotPoolManagerClass {

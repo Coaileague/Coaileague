@@ -230,7 +230,7 @@ app.get('/health', rateLimitMiddleware(
     await pool.query('SELECT 1');
     dbLatencyMs = Date.now() - dbStart;
     dbConnected = true;
-  } catch (dbHealthErr: any) {
+  } catch (dbHealthErr: unknown) {
     log.warn('[HealthCheck] DB ping failed', { error: dbHealthErr?.message });
   }
 
@@ -566,7 +566,6 @@ app.use(helmet({
   frameguard: false,
   xssFilter: true, // X-XSS-Protection: 1; mode=block
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   contentTypeOptions: true, // X-Content-Type-Options: nosniff
   // G24-03 fix: Explicit HSTS with 1-year max-age (Phase 24 spec requires min 1 year).
   // Helmet default is 180 days — overriding to 365 days (31536000s) with includeSubDomains.
@@ -962,7 +961,7 @@ async function initializeCriticalServices() {
       `).catch(() => null);
 
       log.info('[DevAccounts] Test accounts ready — owner@acme-security.test / admin123 | root@coaileague.com / admin123');
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[DevAccounts] Failed to ensure dev accounts:', err?.message);
     }
   }
@@ -1580,7 +1579,7 @@ async function initializeBackgroundServices(): Promise<void> {
         try {
           await runScheduledClientInvoiceAutoGeneration();
           log.info('Client Invoice Auto-Generation: weekly cycle complete');
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.error('Client Invoice Auto-Generation: cycle failed', { error: err?.message });
         }
       };
@@ -1639,7 +1638,7 @@ async function initializeBackgroundServices(): Promise<void> {
                 data: result,
                 executionTimeMs: Date.now() - startTime,
               };
-            } catch (error: any) {
+            } catch (error: unknown) {
               return {
                 success: false,
                 actionId: request.actionId,
@@ -1863,7 +1862,7 @@ process.on('unhandledRejection', (reason: any, promise) => {
     const { pool: earlyPool } = await import('./db');
     await earlyPool.query(`ALTER TABLE platform_updates ADD COLUMN IF NOT EXISTS date TIMESTAMP WITH TIME ZONE DEFAULT NOW()`);
     await earlyPool.query(`ALTER TABLE platform_updates ALTER COLUMN date DROP NOT NULL`);
-  } catch (e: any) {
+  } catch (e: unknown) {
     // Non-fatal: table may not exist yet (first boot) or column already exists
   }
   // ─────────────────────────────────────────────────────────────────────────────
@@ -2005,7 +2004,7 @@ self.addEventListener('activate', async () => {
 
         const { rows } = await pool.query(query, wid ? [wid] : []);
         res.json({ success: true, approvals: rows, count: rows.length });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.error('[Route] Internal error:', err);
         res.status(500).json({ error: 'Internal server error' });
       }
@@ -2056,7 +2055,7 @@ self.addEventListener('activate', async () => {
             ],
           );
           rows = res1.rows;
-        } catch (schemaErr: any) {
+        } catch (schemaErr: unknown) {
           // Columns not present — fall back to v1 shape (id + workspace + pending)
           const res2 = await pool.query(
             `UPDATE governance_approvals
@@ -2136,7 +2135,7 @@ self.addEventListener('activate', async () => {
                 message: result.message,
               });
             } catch { /* non-fatal */ }
-          } catch (execErr: any) {
+          } catch (execErr: unknown) {
             await pool.query(
               `UPDATE governance_approvals SET status = 'failed', updated_at = NOW() WHERE id = $1`, [id],
             ).catch(() => {});
@@ -2145,7 +2144,7 @@ self.addEventListener('activate', async () => {
         });
 
         res.json({ success: true, message: 'Action approved and queued for execution', approvalId: id, approval });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.error('[Route] pending-approvals/approve internal error:', err);
         res.status(500).json({ error: 'Internal server error' });
       }
@@ -2200,7 +2199,7 @@ self.addEventListener('activate', async () => {
         }
         if (!rows.length) return res.status(409).json({ error: 'cannot_reject', message: 'Approval not pending or not found' });
         res.json({ success: true, approval: rows[0] });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.error('[Route] pending-approvals/reject internal error:', err);
         res.status(500).json({ error: 'Internal server error' });
       }
@@ -2219,7 +2218,7 @@ self.addEventListener('activate', async () => {
           [wid]
         );
         res.json({ success: true, activity: rows, count: rows.length });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.error('[Route] Internal error:', err);
         res.status(500).json({ error: 'Internal server error' });
       }
@@ -2260,7 +2259,7 @@ self.addEventListener('activate', async () => {
           totalLicenses: Number(summary?.total_licenses || 0),
           violations,
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.error('[Route] Internal error:', err);
         res.status(500).json({ error: 'Internal server error' });
       }
@@ -2285,7 +2284,7 @@ self.addEventListener('activate', async () => {
           [wid, limit]
         );
         res.json({ success: true, data: rows, count: rows.length });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.error('[Route] Internal error:', err);
         res.status(500).json({ error: 'Internal server error' });
       }
@@ -2394,7 +2393,7 @@ self.addEventListener('activate', async () => {
     try {
       serveStatic(app);
       log.info('[Startup] Static files registered from dist/public/');
-    } catch (staticErr: any) {
+    } catch (staticErr: unknown) {
       // dist/public/ doesn't exist — Vite build didn't run or failed.
       // Register a fallback that serves a proper page instead of raw JSON.
       log.error('[Startup] serveStatic failed — dist/public/ not found. Vite build may have failed.', {
@@ -2437,7 +2436,7 @@ self.addEventListener('activate', async () => {
 
   try {
     await bindToPort(port);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Could not bind to port after all retries', { error: err.message, port });
     process.exit(1);
   }
@@ -2472,7 +2471,7 @@ self.addEventListener('activate', async () => {
       const { pool } = await import('./db');
       await pool.query(`ALTER TABLE platform_updates ADD COLUMN IF NOT EXISTS date TIMESTAMP WITH TIME ZONE DEFAULT NOW()`);
       log.info('[PreGrace] platform_updates.date column ensured');
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.warn('[PreGrace] platform_updates migration failed (non-fatal):', e.message);
     }
     // ─────────────────────────────────────────────────────────────────────────
@@ -2510,7 +2509,7 @@ self.addEventListener('activate', async () => {
       try {
         await initializeCriticalServices();
         log.info('Phase 1: Critical services complete');
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.error(`[CriticalServices] Failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`);
       }
     });
@@ -2671,10 +2670,10 @@ self.addEventListener('activate', async () => {
           await authPool.query('CREATE INDEX IF NOT EXISTS idx_auth_tokens_user ON auth_tokens (user_id)');
           await authPool.query('CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions (user_id)');
           log.info('[Startup] Auth tables verified: auth_tokens, auth_sessions');
-        } catch (authTableErr: any) {
+        } catch (authTableErr: unknown) {
           log.warn('[Startup] Auth table create (non-fatal):', authTableErr?.message?.slice(0, 80));
         }
-        } catch (tableErr: any) {
+        } catch (tableErr: unknown) {
           log.warn('[Startup] Missing table auto-create (non-fatal):', tableErr?.message?.slice(0, 80));
         }
         // Reset demo account locks in non-production (dev/staging Railway environments)

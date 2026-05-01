@@ -306,7 +306,6 @@ migrationRouter.post("/import/:jobId", async (req: any, res: any) => {
         }).onConflictDoNothing();
         importedCount++;
       } catch (rowErr: unknown) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         importErrors.push({ row: record.row, error: rowErr.message });
       }
     }

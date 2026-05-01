@@ -411,7 +411,6 @@ export default function Employees() {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(() => {
     const employeeId = new URLSearchParams(window.location.search).get('employee');
     if (employeeId && employees.length > 0) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       return employees.find(e => e.id === employeeId) || null;
     }
     return null;
@@ -454,7 +453,6 @@ export default function Employees() {
     payType: "hourly", // hourly, salary, commission, contractor
     payFrequency: "biweekly", // weekly, biweekly, semimonthly, monthly
     workspaceRole: "staff", // Default to staff role
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     platformRole: "", // Empty = no platform role
     isArmed: false,
     workerType: "employee" as "employee" | "contractor",
@@ -529,7 +527,7 @@ export default function Employees() {
   }, [isError, error, toast, refetch]);
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiPost('employees.create', { ...data, workspaceId }),
+    mutationFn: (data) => apiPost('employees.create', { ...data, workspaceId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/employees', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['/api/analytics/stats'] });
@@ -551,7 +549,6 @@ export default function Employees() {
         payType: "hourly",
         payFrequency: "biweekly",
         workspaceRole: "staff",
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         platformRole: "",
         isArmed: false,
         workerType: "employee" as "employee" | "contractor",
@@ -598,7 +595,6 @@ export default function Employees() {
 
   const handleSubmit = () => {
     // Validate email requirement for platform roles
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (formData.platformRole && !formData.email) {
       toast({
         title: "Email Required",
@@ -611,7 +607,6 @@ export default function Employees() {
     const validatedData = insertEmployeeSchema.parse({
       ...formData,
       hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate as string).toString() : undefined,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       platformRole: formData.platformRole || undefined,
       workspaceId: workspaceId!,
       isActive: true,
@@ -718,9 +713,7 @@ export default function Employees() {
   };
 
   const employeeFilterConfigs: FilterConfig[] = useMemo(() => {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const roles = [...new Set((employees || []).map(e => e.role).filter(Boolean))] as string[];
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const wsRoles = [...new Set((employees || []).map(e => e.workspaceRole).filter(Boolean))] as string[];
     return [
       {
@@ -765,7 +758,6 @@ export default function Employees() {
   ];
 
   const filteredEmployees = useMemo(() => {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     return (employees || []).filter(emp => {
       const matchesSearch = !searchQuery || `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesRole = !empFilterValues.role || empFilterValues.role === "__all__" || emp.role === empFilterValues.role;
@@ -805,7 +797,6 @@ export default function Employees() {
     });
   }, [paginatedEmployees, empGroupBy]);
 
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const pendingApprovals = employees?.filter(emp => emp.onboardingStatus === 'pending_review') || [];
 
   const handleRefresh = async () => {
@@ -886,7 +877,7 @@ export default function Employees() {
     });
   };
 
-  const selectAll = () => setSelectedIds(new Set(employees.map((e: any) => e.id)));
+  const selectAll = () => setSelectedIds(new Set(employees.map((e) => e.id)));
   const deselectAll = () => setSelectedIds(new Set());
 
   const bulkNotifyMutation = useMutation({
@@ -921,11 +912,11 @@ export default function Employees() {
   };
 
   const handleExportCSV = () => {
-    const selectedEmployees = employees.filter((e: any) => selectedIds.has(e.id));
+    const selectedEmployees = employees.filter((e) => selectedIds.has(e.id));
     const headers = ["First Name", "Last Name", "Email", "Phone", "Role", "Hourly Rate"];
     const csvRows = [
       headers.join(","),
-      ...selectedEmployees.map((e: any) => [
+      ...selectedEmployees.map((e) => [
         e.firstName,
         e.lastName,
         e.email,
@@ -1090,7 +1081,6 @@ export default function Employees() {
                         id="email" 
                         type="email"
                         placeholder="john.doe@example.com" 
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         data-testid="input-employee-email"
@@ -1114,7 +1104,6 @@ export default function Employees() {
                       <Input 
                         id="role" 
                         placeholder="e.g. Developer" 
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         value={formData.role}
                         onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                         data-testid="input-employee-role"
@@ -1124,9 +1113,7 @@ export default function Employees() {
                     <div className="space-y-1.5">
                       <Label htmlFor="workspaceRole" className="text-xs">Organization Role <span className="text-destructive" aria-hidden="true">*</span></Label>
                       <Select 
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         value={formData.workspaceRole} 
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         onValueChange={(val) => setFormData({ ...formData, workspaceRole: val })}
                       >
                         <SelectTrigger id="workspaceRole" className="h-9 text-sm" data-testid="select-workspace-role">
@@ -1147,7 +1134,6 @@ export default function Employees() {
                         id="hourlyRate" 
                         type="number"
                         placeholder="0.00" 
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         value={formData.hourlyRate}
                         onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
                         data-testid="input-employee-rate"
@@ -1157,7 +1143,6 @@ export default function Employees() {
                     <div className="space-y-1.5">
                       <Label htmlFor="payFrequency" className="text-xs">Pay Frequency</Label>
                       <Select 
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         value={formData.payFrequency} 
                         onValueChange={(val) => setFormData({ ...formData, payFrequency: val })}
                       >

@@ -53,7 +53,6 @@ export class AccountStateService {
   /**
    * Transition account to a new state with audit logging
    */
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   async transitionState(change: AccountStateChange): Promise<Workspace> {
     const { workspaceId, newState, reason, actorId, actorType = 'system' } = change;
 
@@ -136,7 +135,6 @@ export class AccountStateService {
   async suspendForNonPayment(
     workspaceId: string,
     invoiceId: string
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   ): Promise<Workspace> {
     const [invoice] = await db.select()
       .from(subscriptionInvoices)
@@ -162,7 +160,6 @@ export class AccountStateService {
     workspaceId: string,
     reason: string,
     supportTicketId?: string
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   ): Promise<Workspace> {
     const [workspace] = await db.update(workspaces)
       .set({
@@ -201,7 +198,6 @@ export class AccountStateService {
     workspaceId: string,
     actorId: string,
     reason: string
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   ): Promise<Workspace> {
     const [workspace] = await db.select()
       .from(workspaces)
@@ -235,7 +231,6 @@ export class AccountStateService {
   async markPaymentFailed(
     workspaceId: string,
     reason: string
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   ): Promise<Workspace> {
     return this.transitionState({
       workspaceId,
@@ -366,7 +361,6 @@ export class AccountStateService {
                 {
                   clientName: ownerUser.name || 'Workspace Owner',
                   invoiceNumber: invoice.invoiceNumber || `INV-${invoice.id.slice(0, 8)}`,
-                  // @ts-expect-error — TS migration: fix in refactoring sprint
                   total: String(invoice.totalAmount || '0.00'),
                   dueDate: invoice.dueDate.toLocaleDateString(),
                   daysOverdue,
@@ -444,7 +438,6 @@ export class AccountStateService {
   /**
    * Get all workspaces in a specific state
    */
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   async getWorkspacesByState(state: AccountState): Promise<Workspace[]> {
     return db.select()
       .from(workspaces)

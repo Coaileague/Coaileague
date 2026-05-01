@@ -24,7 +24,7 @@ function mkAction(actionId: string, fn: (params: any) => Promise<any>, category:
       try {
         const data = await fn(req.payload || {});
         return { success: true, actionId, message: `${actionId} completed`, data, executionTimeMs: Date.now() - start };
-      } catch (err: any) {
+      } catch (err: unknown) {
         return { success: false, actionId, message: err?.message || 'Unknown error', executionTimeMs: Date.now() - start };
       }
     }
@@ -92,7 +92,6 @@ export function registerTimesheetPayrollCycleActions() {
         eq(timeEntries.status as any, 'pending'),
         gte(timeEntries.clockIn, startDate),
         lte(timeEntries.clockIn, endDate),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         gt(timeEntries.totalMinutes, 0),
         sql`${timeEntries.notes} NOT ILIKE '%flag%' AND ${timeEntries.notes} NOT ILIKE '%review%' AND ${timeEntries.notes} NOT ILIKE '%PHOTO_REVIEW%'`
       ));

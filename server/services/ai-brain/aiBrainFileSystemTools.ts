@@ -171,7 +171,7 @@ class AIBrainFileSystemTools {
     action: string, 
     filePath: string, 
     userId: string,
-    details?: Record<string, any>
+    details?: Record<string, unknown>
   ): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({

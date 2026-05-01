@@ -140,7 +140,7 @@ function QRCheckInInput({ sessionId }: { sessionId: string }) {
       toast({ title: "QR Check-in successful", description: "Your attendance has been recorded." });
       setToken('');
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ variant: 'destructive', title: "Invalid QR token", description: err?.message ?? "Please check the token and try again." });
     },
   });
@@ -193,7 +193,7 @@ function SessionDetailView({
       queryClient.invalidateQueries({ queryKey: ['/api/training/sessions', sessionId, 'attendance'] });
       toast({ title: "Officer checked in successfully" });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ variant: 'destructive', title: "Check-in failed", description: err?.message ?? "Could not process check-in." });
     },
   });
@@ -206,7 +206,7 @@ function SessionDetailView({
       queryClient.invalidateQueries({ queryKey: ['/api/training/tcole-hours'] });
       toast({ title: "Checked in!", description: "Your attendance has been recorded." });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ variant: 'destructive', title: "Check-in failed", description: err?.message ?? "Could not process check-in." });
     },
   });
@@ -218,7 +218,7 @@ function SessionDetailView({
       queryClient.invalidateQueries({ queryKey: ['/api/training/sessions', sessionId, 'attendance'] });
       toast({ title: "Registered!", description: "You are now registered for this session." });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ variant: 'destructive', title: "Registration failed", description: err?.message ?? "Could not register." });
     },
   });
@@ -230,7 +230,7 @@ function SessionDetailView({
       queryClient.invalidateQueries({ queryKey: ['/api/training/sessions', sessionId] });
       toast({ title: "Session completed and hours awarded" });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ variant: 'destructive', title: "Could not complete session", description: err?.message ?? "Please try again." });
     },
   });
@@ -242,13 +242,12 @@ function SessionDetailView({
       queryClient.invalidateQueries({ queryKey: ['/api/training/sessions', sessionId] });
       toast({ title: "Session started", description: "Officers can now check in." });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ variant: 'destructive', title: "Could not start session", description: err?.message });
     },
   });
 
   if (sessionLoading) return <div className="p-8 text-center">Loading session details...</div>;
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   if (!session) return <DsEmptyState icon={AlertCircle} title="Session not found" description="The requested training session could not be located." />;
 
   return (
@@ -457,7 +456,7 @@ function SessionCalendarTab({
       queryClient.invalidateQueries({ queryKey: ['/api/training/sessions', sessionId, 'attendance'] });
       toast({ title: "Registered successfully", description: "You are now registered for this training session." });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ variant: 'destructive', title: "Registration failed", description: err?.message ?? "Could not register for session." });
     },
   });
@@ -858,7 +857,7 @@ function CreateSessionModal({ open, onClose }: { open: boolean; onClose: () => v
         description: '',
       });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ variant: 'destructive', title: "Failed to schedule session", description: err?.message ?? "An error occurred." });
     },
   });

@@ -83,14 +83,14 @@ export default function RegulatoryEnrollmentPage() {
   });
 
   const submitMutation = useMutation({
-    mutationFn: (payload: any) => apiRequest('POST', '/api/compliance/enrollment/submit', payload),
+    mutationFn: (payload) => apiRequest('POST', '/api/compliance/enrollment/submit', payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/compliance/enrollment/status'] });
       queryClient.invalidateQueries({ queryKey: ['/api/compliance/enrollment/workspace'] });
       toast({ title: 'Credential submitted', description: 'Your submission is under review.' });
       navigate('/security-compliance');
     },
-    onError: (e: any) => {
+    onError: (e) => {
       toast({ title: 'Submission failed', description: e.message, variant: 'destructive' });
     },
   });

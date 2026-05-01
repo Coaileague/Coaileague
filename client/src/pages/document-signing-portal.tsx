@@ -273,7 +273,7 @@ export default function DocumentSigningPortal({ token }: { token: string }) {
     onSuccess: () => {
       setSigned(true);
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Signing failed", description: err.message, variant: "destructive" });
     },
   });

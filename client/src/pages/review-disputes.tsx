@@ -160,7 +160,7 @@ export default function ReviewDisputes() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {disputes.map((dispute: any) => (
+                {disputes.map((dispute) => (
                   <TableRow key={dispute.id} data-testid={`row-dispute-${dispute.id}`}>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -226,7 +226,7 @@ export default function ReviewDisputes() {
             </Table>
             </div>
             <div className="sm:hidden space-y-3">
-              {disputes.map((dispute: any) => (
+              {disputes.map((dispute) => (
                 <div
                   key={dispute.id}
                   className="border rounded-lg p-3 space-y-2 hover-elevate cursor-pointer"

@@ -21,7 +21,7 @@ export class InterviewChatOrchestrator {
     sessionId?: string;
     humanCopilotUserId?: string;
     roomType?: string;
-  }): Promise<any> {
+  }): Promise<unknown> {
     const questions = await this.getDefaultQuestions(params.workspaceId);
     const result = await pool.query(
       `INSERT INTO interview_chatrooms
@@ -174,7 +174,7 @@ We appreciate your interest in joining the team!`
     log.info(`Interview completed chatroom=${chatroomId} score=${overallScore} rec=${recommendation}`);
   }
 
-  async sendTrinityMessage(chatroomId: string, workspaceId: string, text: string): Promise<any> {
+  async sendTrinityMessage(chatroomId: string, workspaceId: string, text: string): Promise<unknown> {
     const result = await pool.query(
       `INSERT INTO interview_messages
        (chatroom_id, workspace_id, sender_type, sender_id, message_text,
@@ -196,7 +196,7 @@ We appreciate your interest in joining the team!`
     );
   }
 
-  async sendCandidateMessage(chatroomId: string, workspaceId: string, candidateId: string, text: string): Promise<any> {
+  async sendCandidateMessage(chatroomId: string, workspaceId: string, candidateId: string, text: string): Promise<unknown> {
     const result = await pool.query(
       `INSERT INTO interview_messages
        (chatroom_id, workspace_id, sender_type, sender_id, message_text,

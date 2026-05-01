@@ -41,7 +41,6 @@ export async function generateEmployeeICalFeed(
         lte(shifts.startTime, lookAhead),
         or(
           eq(shifts.status, 'published'),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           eq(shifts.status, 'assigned'),
           eq(shifts.status, 'confirmed')
         )
@@ -114,7 +113,6 @@ export async function generateWorkspaceICalFeed(
         lte(shifts.startTime, lookAhead),
         or(
           eq(shifts.status, 'published'),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           eq(shifts.status, 'assigned'),
           eq(shifts.status, 'confirmed')
         )

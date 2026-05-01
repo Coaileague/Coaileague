@@ -137,11 +137,10 @@ export default function DeveloperPortal() {
               <TableBody>
                 {keysLoading ? (
                   <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Loading API keys and access status...</TableCell></TableRow>
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 ) : keys?.length === 0 ? (
                   <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No API keys found.</TableCell></TableRow>
                 // @ts-expect-error — TS migration: fix in refactoring sprint
-                ) : keys?.map((key: any) => (
+                ) : keys?.map((key) => (
                   <TableRow key={key.id}>
                     <TableCell className="font-medium" data-testid={`text-key-name-${key.id}`}>{key.name}</TableCell>
                     <TableCell><code>{key.key_prefix}...</code></TableCell>

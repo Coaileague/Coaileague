@@ -292,7 +292,7 @@ function PayrollStep({
         onExit: () => {},
       });
       handler.open();
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: 'Bank connection unavailable', description: err?.message || 'Please enter your bank details manually.', variant: 'destructive' });
     } finally {
       setIsLoadingPlaid(false);
@@ -450,7 +450,7 @@ export default function EmployeeOnboardingWizard() {
     onSuccess: (data) => {
       setApplicationId(data.id);
     },
-    onError: (e: any) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
+    onError: (e) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   });
 
   const updateAppMutation = useMutation({
@@ -464,7 +464,7 @@ export default function EmployeeOnboardingWizard() {
       if (!res.ok) { const e = await res.json(); throw new Error(e.message); }
       return res.json();
     },
-    onError: (e: any) => toast({ title: 'Save failed', description: e.message || 'Failed to save your progress. Please try again.', variant: 'destructive' }),
+    onError: (e) => toast({ title: 'Save failed', description: e.message || 'Failed to save your progress. Please try again.', variant: 'destructive' }),
   });
 
   const fetchContracts = useCallback(async () => {
@@ -509,7 +509,7 @@ export default function EmployeeOnboardingWizard() {
         }
       }
     },
-    onError: (e: any) => toast({ title: 'Signing failed', description: e.message, variant: 'destructive' }),
+    onError: (e) => toast({ title: 'Signing failed', description: e.message, variant: 'destructive' }),
   });
 
   const submitMutation = useMutation({
@@ -523,7 +523,7 @@ export default function EmployeeOnboardingWizard() {
       return res.json();
     },
     onSuccess: () => setStep(9),
-    onError: (e: any) => toast({ title: 'Submit failed', description: e.message, variant: 'destructive' }),
+    onError: (e) => toast({ title: 'Submit failed', description: e.message, variant: 'destructive' }),
   });
 
   const handleNext = async () => {

@@ -36,7 +36,7 @@ export default function EmployeeEngagement() {
 
   // Submit pulse survey response
   const submitSurveyMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       return await apiRequest("POST", "/api/engagement/pulse-surveys/responses", data);
     },
     onSuccess: () => {
@@ -54,7 +54,7 @@ export default function EmployeeEngagement() {
 
   // Submit employer rating
   const submitRatingMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       return await apiRequest("POST", "/api/engagement/employer-ratings", data);
     },
     onSuccess: () => {
@@ -72,7 +72,7 @@ export default function EmployeeEngagement() {
 
   // Submit anonymous suggestion
   const submitSuggestionMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       return await apiRequest("POST", "/api/engagement/suggestions", data);
     },
     onSuccess: () => {
@@ -90,7 +90,7 @@ export default function EmployeeEngagement() {
 
   // Submit employee recognition
   const submitRecognitionMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       return await apiRequest("POST", "/api/engagement/recognition", data);
     },
     onSuccess: () => {
@@ -145,11 +145,11 @@ export default function EmployeeEngagement() {
             <CardContent>
               {pulseSurveys && pulseSurveys.length > 0 ? (
                 <div className="space-y-4">
-                  {pulseSurveys.slice(0, 1).map((survey: any) => (
+                  {pulseSurveys.slice(0, 1).map((survey) => (
                     <PulseSurveyForm
                       key={survey.id}
                       survey={survey}
-                      onSubmit={(responses: any) => {
+                      onSubmit={(responses) => {
                         submitSurveyMutation.mutate({
                           surveyTemplateId: survey.id,
                           responses
@@ -178,7 +178,7 @@ export default function EmployeeEngagement() {
             </CardHeader>
             <CardContent>
               <EmployerRatingForm
-                onSubmit={(data: any) => submitRatingMutation.mutate(data)}
+                onSubmit={(data) => submitRatingMutation.mutate(data)}
                 isSubmitting={submitRatingMutation.isPending}
               />
             </CardContent>
@@ -194,7 +194,7 @@ export default function EmployeeEngagement() {
             </CardHeader>
             <CardContent>
               <SuggestionForm
-                onSubmit={(data: any) => submitSuggestionMutation.mutate(data)}
+                onSubmit={(data) => submitSuggestionMutation.mutate(data)}
                 isSubmitting={submitSuggestionMutation.isPending}
               />
             </CardContent>
@@ -210,7 +210,7 @@ export default function EmployeeEngagement() {
             </CardHeader>
             <CardContent>
               <RecognitionForm
-                onSubmit={(data: any) => submitRecognitionMutation.mutate(data)}
+                onSubmit={(data) => submitRecognitionMutation.mutate(data)}
                 isSubmitting={submitRecognitionMutation.isPending}
               />
             </CardContent>
@@ -224,7 +224,7 @@ export default function EmployeeEngagement() {
             <CardContent>
               <div className="space-y-3">
                 {recognitions && recognitions.length > 0 ? (
-                  recognitions.slice(0, 5).map((rec: any) => (
+                  recognitions.slice(0, 5).map((rec) => (
                     <div key={rec.id} className="border rounded-lg p-3 flex items-start gap-3">
                       <Award className="h-5 w-5 text-yellow-500 mt-0.5" />
                       <div className="flex-1">

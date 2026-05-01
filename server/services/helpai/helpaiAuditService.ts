@@ -30,7 +30,7 @@ export interface AuditLogEntry {
     | 'error';
   apiName?: string;
   status: 'success' | 'error' | 'pending';
-  requestPayload?: Record<string, any>;
+  requestPayload?: Record<string, unknown>;
   responseStatus?: number;
   responseMessage?: string;
   durationMs?: number;
@@ -38,7 +38,7 @@ export interface AuditLogEntry {
   ipAddress?: string;
   userAgent?: string;
   requestId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export class HelpaiAuditService {
@@ -131,9 +131,7 @@ export class HelpaiAuditService {
     // Filter by date range in-memory if needed
     if (options?.startDate || options?.endDate) {
       return results.filter(log => {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         if (options.startDate && log.createdAt < options.startDate) return false;
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         if (options.endDate && log.createdAt > options.endDate) return false;
         return true;
       });
@@ -295,7 +293,6 @@ export class HelpaiAuditService {
     // CSV rows
     const rows = logs.map(log => [
       log.id,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       log.createdAt.toISOString(),
       log.userId || 'N/A',
       log.action,
@@ -325,7 +322,7 @@ export class HelpaiAuditService {
   private generateActionHash(data: {
     action: string;
     apiName?: string;
-    requestPayload: Record<string, any>;
+    requestPayload: Record<string, unknown>;
     integrationId?: string;
   }): string {
     // Sort keys deterministically

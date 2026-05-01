@@ -61,7 +61,6 @@ class WeaponCheckService {
     );
     if (!(rows as any).length) return { valid: false, reason: 'Employee not found' };
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const emp = rows[0];
     if (!emp.is_armed) return { valid: false, reason: 'Employee does not have armed officer designation' };
     if (!emp.armed_license_verified) return { valid: false, reason: 'Armed license has not been verified' };
@@ -74,7 +73,7 @@ class WeaponCheckService {
     return { valid: true };
   }
 
-  async issueWeapon(data: WeaponIssuance): Promise<any> {
+  async issueWeapon(data: WeaponIssuance): Promise<unknown> {
     // Block if armed endorsement is missing or expired
     const endorsement = await this.verifyArmedEndorsement(data.employeeId, data.workspaceId);
     if (!endorsement.valid) {
@@ -95,7 +94,6 @@ class WeaponCheckService {
       [data.weaponId, data.workspaceId]
     );
     if (!(weaponRows as any).length) throw new Error('Weapon not found');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const weapon = weaponRows[0];
 
     // Check no active checkout for this weapon
@@ -140,11 +138,10 @@ class WeaponCheckService {
     });
 
     log.info(`Weapon issued: ${weapon.serial_number} to employee ${data.employeeId}`);
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     return rows[0];
   }
 
-  async returnWeapon(data: WeaponReturn): Promise<any> {
+  async returnWeapon(data: WeaponReturn): Promise<unknown> {
     // Converted to Drizzle ORM
     await db.update(weaponCheckouts).set({
       checkedInAt: sql`now()`,
@@ -158,7 +155,6 @@ class WeaponCheckService {
       [data.checkoutId]
     );
     if (!(rows as any).length) throw new Error('Checkout record not found');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const checkout = rows[0];
 
     if (data.conditionAtCheckin === 'damaged') {
@@ -253,7 +249,6 @@ class WeaponCheckService {
     platformActionHub.registerAction({
       actionId: 'external.weapon_checkout.audit',
       name: 'Weapon Audit Report',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       category: 'external',
       description: 'Generate a weapon accountability audit for all weapons in the workspace.',
       requiredRoles: ['owner', 'deputy_admin', 'root_admin'],

@@ -47,7 +47,7 @@ async function enforceSearchQueryLogs(retentionDays: number): Promise<SweepResul
       const del = await pool.query(`DELETE FROM search_query_log WHERE created_at < now() - ($1 || ' days')::interval`, [Math.floor(Number(retentionDays))]);
       result.records_affected = del.rowCount ?? 0;
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     result.errors.push(e.message);
   }
   return result;
@@ -63,7 +63,7 @@ async function enforceSupportTickets(retentionDays: number): Promise<SweepResult
       const del = await pool.query("DELETE FROM support_tickets WHERE status IN ('closed','resolved') AND updated_at < now() - ($1 || ' days')::interval", [safeRetentionDays]);
       result.records_affected = del.rowCount ?? 0;
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     result.errors.push(e.message);
   }
   return result;
@@ -87,11 +87,11 @@ async function enforceIncidentReports(retentionDays: number): Promise<SweepResul
           [row.id]
         );
         result.records_affected++;
-      } catch (e: any) {
+      } catch (e: unknown) {
         result.errors.push(`Incident ${row.id}: ${e.message}`);
       }
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     result.errors.push(e.message);
   }
   return result;
@@ -163,7 +163,7 @@ export async function runRetentionSweep(): Promise<SweepResult[]> {
       });
     }
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[RetentionEnforcement] Fatal sweep error:', err.message);
     await universalAudit.log({
       workspaceId: 'platform',

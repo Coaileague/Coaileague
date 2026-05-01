@@ -143,7 +143,6 @@ To execute an action, respond with JSON in format:
               params,
               userId,
               userRole,
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               req.user?.currentWorkspaceId
             );
             
@@ -278,7 +277,6 @@ aiBrainConsoleRouter.post('/execute', requireSupportRole, async (req: Authentica
       params || {},
       userId,
       userRole,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       req.user?.currentWorkspaceId
     );
 
@@ -673,7 +671,7 @@ aiBrainConsoleRouter.get('/history', requireSupportRole, async (req: Authenticat
 async function logConsoleAction(
   userId: string,
   action: string,
-  details: Record<string, any>
+  details: Record<string, unknown>
 ): Promise<void> {
   try {
     await db.insert(auditLogs).values({

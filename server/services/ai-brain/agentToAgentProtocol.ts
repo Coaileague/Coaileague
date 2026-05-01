@@ -64,7 +64,7 @@ export interface A2AMessage {
   timestamp: Date;
   expiresAt?: Date;
   status: MessageStatus;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export type MessageType = 

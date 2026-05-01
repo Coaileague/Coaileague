@@ -232,7 +232,7 @@ function NewThreadModal({ open, onOpenChange, workspaceId, onCreated }: {
       onOpenChange(false);
       setForm({ clientId: "", subject: "", channel: "platform", initialMessage: "" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   return (
@@ -249,7 +249,7 @@ function NewThreadModal({ open, onOpenChange, workspaceId, onCreated }: {
                 <SelectValue placeholder="Select client..." />
               </SelectTrigger>
               <SelectContent>
-                {clientList.map((c: any) => (
+                {clientList.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.companyName || `${c.firstName} ${c.lastName}`}
                   </SelectItem>
@@ -367,7 +367,7 @@ export default function ClientCommunications() {
       setAttachments([]);
       setTrinityDraft(null);
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const resolveMutation = useMutation({
@@ -380,7 +380,7 @@ export default function ClientCommunications() {
       qc.invalidateQueries({ queryKey: ["/api/client-comms/threads", workspaceId, statusFilter] });
       setSelectedThreadId(null);
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   async function handleTrinityDraft() {
@@ -400,7 +400,7 @@ export default function ClientCommunications() {
       } else {
         toast({ title: "Draft generated", description: "No draft text returned.", variant: "destructive" });
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     } finally {
       setTrinityLoading(false);

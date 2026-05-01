@@ -49,7 +49,7 @@ export interface AlertTriggerContext {
   title: string;
   message: string;
   severity?: 'low' | 'medium' | 'high' | 'critical';
-  triggerData?: Record<string, any>;
+  triggerData?: Record<string, unknown>;
   relatedEntityType?: string;
   relatedEntityId?: string;
   deduplicationKey?: string;
@@ -539,11 +539,9 @@ class AlertService {
       query = (query as any).where(eq(alertHistory.isResolved, options.resolved));
     }
     if (options?.limit) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       query = query.limit(options.limit);
     }
     if (options?.offset) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       query = query.offset(options.offset);
     }
 

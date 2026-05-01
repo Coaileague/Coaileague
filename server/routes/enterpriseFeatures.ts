@@ -115,7 +115,7 @@ enterpriseRouter.post('/vehicles', async (req: AuthenticatedRequest, res: Respon
     const wsId = requireWorkspace(req, res);
     if (!wsId) return;
     const { make, model, year, vin, licensePlate, color, status, currentMileage, assignedEmployeeId, insuranceExpiry, registrationExpiry, lastMaintenanceAt, nextMaintenanceDue, fuelType, notes } = req.body;
-    const safeValues: Record<string, any> = { workspaceId: wsId };
+    const safeValues: Record<string, unknown> = { workspaceId: wsId };
     if (make !== undefined) safeValues.make = make;
     if (model !== undefined) safeValues.model = model;
     if (year !== undefined) safeValues.year = year;
@@ -131,7 +131,6 @@ enterpriseRouter.post('/vehicles', async (req: AuthenticatedRequest, res: Respon
     if (nextMaintenanceDue !== undefined) safeValues.nextMaintenanceDue = nextMaintenanceDue;
     if (fuelType !== undefined) safeValues.fuelType = fuelType;
     if (notes !== undefined) safeValues.notes = notes;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [created] = await db.insert(vehicles).values(safeValues).returning();
     res.json(created);
   } catch (err) {
@@ -144,7 +143,7 @@ enterpriseRouter.patch('/vehicles/:id', async (req: AuthenticatedRequest, res: R
     const wsId = requireWorkspace(req, res);
     if (!wsId) return;
     const { make, model, year, licensePlate, vin, color, status, mileage, lastMaintenanceDate, insuranceExpiry, notes } = req.body;
-    const safeUpdates: Record<string, any> = { updatedAt: new Date() };
+    const safeUpdates: Record<string, unknown> = { updatedAt: new Date() };
     if (make !== undefined) safeUpdates.make = make;
     if (model !== undefined) safeUpdates.model = model;
     if (year !== undefined) safeUpdates.year = year;
@@ -260,7 +259,7 @@ enterpriseRouter.post('/weapons', async (req: AuthenticatedRequest, res: Respons
     const wsId = requireWorkspace(req, res);
     if (!wsId) return;
     const { serialNumber, weaponType, make, model, caliber, status, assignedEmployeeId, purchaseDate, lastInspectionAt, nextInspectionDue, certificateExpiry, condition, notes } = req.body;
-    const safeValues: Record<string, any> = { workspaceId: wsId };
+    const safeValues: Record<string, unknown> = { workspaceId: wsId };
     if (serialNumber !== undefined) safeValues.serialNumber = serialNumber;
     if (weaponType !== undefined) safeValues.weaponType = weaponType;
     if (make !== undefined) safeValues.make = make;
@@ -274,7 +273,6 @@ enterpriseRouter.post('/weapons', async (req: AuthenticatedRequest, res: Respons
     if (certificateExpiry !== undefined) safeValues.certificateExpiry = certificateExpiry;
     if (condition !== undefined) safeValues.condition = condition;
     if (notes !== undefined) safeValues.notes = notes;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [created] = await db.insert(weapons).values(safeValues).returning();
     res.json(created);
   } catch (err) {
@@ -287,7 +285,7 @@ enterpriseRouter.patch('/weapons/:id', async (req: AuthenticatedRequest, res: Re
     const wsId = requireWorkspace(req, res);
     if (!wsId) return;
     const { type, serialNumber, make, model, caliber, status, assignedEmployeeId, lastInspectionDate, notes } = req.body;
-    const safeWeaponUpdates: Record<string, any> = { updatedAt: new Date() };
+    const safeWeaponUpdates: Record<string, unknown> = { updatedAt: new Date() };
     if (type !== undefined) safeWeaponUpdates.type = type;
     if (serialNumber !== undefined) safeWeaponUpdates.serialNumber = serialNumber;
     if (make !== undefined) safeWeaponUpdates.make = make;
@@ -502,11 +500,10 @@ enterpriseRouter.post('/background-checks/providers', async (req: AuthenticatedR
     const wsId = requireWorkspace(req, res);
     if (!wsId) return;
     const { providerName, apiEndpoint, isActive } = req.body;
-    const safeValues: Record<string, any> = { workspaceId: wsId };
+    const safeValues: Record<string, unknown> = { workspaceId: wsId };
     if (providerName !== undefined) safeValues.providerName = providerName;
     if (apiEndpoint !== undefined) safeValues.apiEndpoint = apiEndpoint;
     if (isActive !== undefined) safeValues.isActive = isActive;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [created] = await db.insert(backgroundCheckProviders).values(safeValues).returning();
     res.json(created);
   } catch (err) {
@@ -554,7 +551,7 @@ enterpriseRouter.patch('/background-checks/:id', async (req: AuthenticatedReques
     const wsId = requireWorkspace(req, res);
     if (!wsId) return;
     const { status: checkStatus, result, notes: checkNotes, completedAt, provider, reportUrl } = req.body;
-    const safeBgUpdates: Record<string, any> = {};
+    const safeBgUpdates: Record<string, unknown> = {};
     if (checkStatus !== undefined) safeBgUpdates.status = checkStatus;
     if (result !== undefined) safeBgUpdates.result = result;
     if (checkNotes !== undefined) safeBgUpdates.notes = checkNotes;
@@ -630,7 +627,7 @@ enterpriseRouter.patch('/api-keys/:id', async (req: AuthenticatedRequest, res: R
     const wsId = requireWorkspace(req, res);
     if (!wsId) return;
     const { name: keyName, isActive, permissions, rateLimit, expiresAt: keyExpiry } = req.body;
-    const safeKeyUpdates: Record<string, any> = { updatedAt: new Date() };
+    const safeKeyUpdates: Record<string, unknown> = { updatedAt: new Date() };
     if (keyName !== undefined) safeKeyUpdates.name = keyName;
     if (isActive !== undefined) safeKeyUpdates.isActive = isActive;
     if (permissions !== undefined) safeKeyUpdates.permissions = permissions;

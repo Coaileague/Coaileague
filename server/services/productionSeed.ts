@@ -715,7 +715,7 @@ export async function runProductionDataCleanup(): Promise<void> {
         await db.transaction(async (sp) => {
           await fn(sp);
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Don't log the entire txn abort cascade — just the original failure.
         // 25P02 = aborted transaction state, 42P01 = missing table — both expected.
         if (err?.code !== '25P02' && err?.code !== '42P01') {
@@ -1203,7 +1203,7 @@ export async function resetDemoAccountLocks(): Promise<void> {
       AND (login_attempts > 0 OR locked_until IS NOT NULL)
     `);
     console.log('[DemoReset] Dev demo account locks cleared');
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.log('[DemoReset] Could not reset demo locks (non-fatal):', err?.message);
   }
 }

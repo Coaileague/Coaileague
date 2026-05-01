@@ -79,7 +79,7 @@ class CommitmentManagerService {
     resourceType: string,
     resourceId: string,
     description: string,
-    commitmentData?: Record<string, any>
+    commitmentData?: Record<string, unknown>
   ): Promise<CommitmentLedger> {
     const [commitment] = await db.insert(commitmentLedger).values({
       workspaceId: context.workspaceId,
@@ -169,7 +169,7 @@ class CommitmentManagerService {
 
   async commit(
     commitmentId: string,
-    compensationData?: Record<string, any>
+    compensationData?: Record<string, unknown>
   ): Promise<CommitmentLedger | undefined> {
     const [commitment] = await db.update(commitmentLedger)
       .set({
@@ -232,7 +232,7 @@ class CommitmentManagerService {
     context: CommitmentContext,
     resourceType: string,
     resourceId: string,
-    reservationData: Record<string, any>,
+    reservationData: Record<string, unknown>,
     expiresInMs: number = 300000
   ): Promise<CommitmentLedger> {
     const [reservation] = await db.insert(commitmentLedger).values({
@@ -256,7 +256,7 @@ class CommitmentManagerService {
     resourceType: string,
     resourceId: string,
     description: string,
-    approvalData: Record<string, any>
+    approvalData: Record<string, unknown>
   ): Promise<CommitmentLedger> {
     const [approval] = await db.insert(commitmentLedger).values({
       workspaceId: context.workspaceId,

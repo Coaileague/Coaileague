@@ -72,7 +72,7 @@ async function writeThalamicSignal(params: {
       priorityScore: params.priorityScore,
       signalPayload: params.signalPayload,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[TrinityEvents] thalamic_log insert failed (${params.signalType}): ${err?.message}`);
   }
 }
@@ -143,7 +143,7 @@ async function onPayrollProcessed(event: PlatformEvent): Promise<void> {
         await NotificationDeliveryService.send({ type: 'payroll_notification', workspaceId: workspaceId || 'system', recipientUserId: workspace.ownerId || owner.email, channel: 'email', body: { to: owner.email, subject: 'Payroll Processed Successfully', html: `<h2>Payroll Complete</h2><p>I've processed payroll for ${employeeCount} employees.</p><ul><li><strong>Total:</strong> ${totalAmount?.toLocaleString()}</li><li><strong>Deposit Date:</strong> ${depositDate || 'Next business day'}</li></ul><p><a href="${APP_URL}/payroll">View Payroll Details</a></p>` } });
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[TrinityEvents] onPayrollProcessed failed (non-crashing):', err?.message);
   }
 }
@@ -164,7 +164,6 @@ async function onIncidentCreated(event: PlatformEvent): Promise<void> {
         where: eq(employees.id, reportedBy),
       });
 
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (reporter?.supervisorId) {
         const supervisor = await db.query.employees.findFirst({
           where: eq(employees.id, (reporter as any).supervisorId),
@@ -183,7 +182,7 @@ async function onIncidentCreated(event: PlatformEvent): Promise<void> {
         }
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[TrinityEvents] onIncidentCreated failed (non-crashing):', err?.message);
   }
 }
@@ -203,7 +202,6 @@ async function onGPSViolation(event: PlatformEvent): Promise<void> {
       where: eq(employees.id, employeeId),
     });
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (employee?.supervisorId) {
       const supervisor = await db.query.employees.findFirst({
         where: eq(employees.id, (employee as any).supervisorId),
@@ -213,7 +211,7 @@ async function onGPSViolation(event: PlatformEvent): Promise<void> {
         await NotificationDeliveryService.send({ type: 'schedule_notification', workspaceId: workspaceId || 'system', recipientUserId: (employee as any).supervisorId || supervisor.phone, channel: 'sms', body: { to: supervisor.phone, body: `GPS ALERT: ${employee.firstName} ${employee.lastName} attempted clock-in ${Math.round(distance)}m from ${siteName}. Possible fraud attempt.` } });
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[TrinityEvents] onGPSViolation failed (non-crashing):', err?.message);
   }
 }
@@ -234,7 +232,7 @@ async function onShiftReminder(event: PlatformEvent): Promise<void> {
     if (employee?.phone) {
       await NotificationDeliveryService.send({ type: 'schedule_notification', workspaceId: workspaceId || 'system', recipientUserId: employeeId, channel: 'sms', body: { to: employee.phone, body: `Reminder: Your shift at ${siteName || 'assigned location'} starts at ${startTime}. Clock in on time!` } });
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[TrinityEvents] onShiftReminder failed (non-crashing):', err?.message);
   }
 }
@@ -255,7 +253,7 @@ async function onCertificationExpiring(event: PlatformEvent): Promise<void> {
     if (employee?.phone && daysUntilExpiry <= 14) {
       await NotificationDeliveryService.send({ type: 'certification_alert', workspaceId: workspaceId || 'system', recipientUserId: employeeId, channel: 'sms', body: { to: employee.phone, body: `Your ${certName} certification expires in ${daysUntilExpiry} days. Renew ASAP to stay compliant.` } });
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[TrinityEvents] onCertificationExpiring failed (non-crashing):', err?.message);
   }
 }
@@ -280,7 +278,7 @@ async function onComplianceChecked(event: PlatformEvent): Promise<void> {
           await NotificationDeliveryService.send({ type: 'compliance_alert', workspaceId: workspaceId || 'system', recipientUserId: workspace.ownerId || owner.email, channel: 'email', body: { to: owner.email, subject: `URGENT: ${criticalCount} Critical Compliance Violations`, html: `<h2>Compliance Alert</h2><p>I've detected <strong>${criticalCount} critical</strong> compliance violations requiring immediate attention.</p><p><a href="${APP_URL}/compliance">View Compliance Dashboard</a></p>` } });
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[TrinityEvents] onComplianceChecked failed (non-crashing):', err?.message);
     }
   }
@@ -316,7 +314,7 @@ async function onInvoicePaid(event: PlatformEvent): Promise<void> {
       message: `Invoice ${invoiceNumber} for $${amount.toFixed(2)} has been paid in full via ${paymentMethod || 'manual'}. Your AR has been updated.`,
       metadata: { invoiceId, invoiceNumber, total, paymentMethod, clientId, source: 'TrinityEvents' },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[TrinityEvents] onInvoicePaid notification failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
   }
 }
@@ -343,7 +341,7 @@ async function onInvoiceOverdue(event: PlatformEvent): Promise<void> {
       actionUrl: `/invoices`,
       metadata: { invoiceId, invoiceNumber, total, clientId, daysOverdue, source: 'TrinityEvents' },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[TrinityEvents] onInvoiceOverdue notification failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
   }
 }
@@ -375,7 +373,7 @@ async function onPayrollRunPaid(event: PlatformEvent): Promise<void> {
       actionUrl: `/payroll`,
       metadata: { payrollRunId, disbursementMethod, confirmedBy, source: 'TrinityEvents' },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[TrinityEvents] onPayrollRunPaid notification failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
   }
 }
@@ -401,7 +399,7 @@ async function onStripePaymentReceived(event: PlatformEvent): Promise<void> {
       actionUrl: `/invoices`,
       metadata: { invoiceId, invoiceNumber, amount, stripeInvoiceId, source: 'TrinityEvents' },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[TrinityEvents] onStripePaymentReceived notification failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
   }
 }
@@ -432,7 +430,6 @@ async function onShiftCancelled(event: PlatformEvent): Promise<void> {
       message: `A shift${shiftInfo}${clientInfo} was cancelled.${cancelReason} Trinity is checking for replacement coverage.`,
       priority: 'high',
       metadata: { shiftId, employeeId, clientId, startTime, reason, source: 'TrinityEvents' },
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       targetRoles: ['org_owner', 'manager', 'supervisor'],
       idempotencyKey: `shift_cancelled_alert-${Date.now()}-`
     });
@@ -577,7 +574,7 @@ async function onWorkspaceCreated(event: PlatformEvent): Promise<void> {
       await emailProvisioningService.provisionWorkspaceAddresses(workspaceId, computedSlug);
       log.info(`[TrinityEvents] System email mailboxes provisioned for workspace: ${workspaceId} (slug: ${computedSlug})`);
     }
-  } catch (emailErr: any) {
+  } catch (emailErr: unknown) {
     log.warn(`[TrinityEvents] Email provisioning failed for workspace ${workspaceId} (non-fatal):`, emailErr?.message);
   }
 
@@ -599,7 +596,7 @@ async function onWorkspaceCreated(event: PlatformEvent): Promise<void> {
               owner.firstName, owner.lastName, computedSlug,
             );
             log.info(`[TrinityEvents] Reserved personal email for workspace owner: ${ownerId} (${owner.firstName}.${owner.lastName}@${computedSlug}.coaileague.com)`);
-          } catch (ownerEmailErr: any) {
+          } catch (ownerEmailErr: unknown) {
             log.warn(`[TrinityEvents] Owner email reservation failed (non-fatal):`, ownerEmailErr?.message);
           }
         }
@@ -619,7 +616,7 @@ async function onWorkspaceCreated(event: PlatformEvent): Promise<void> {
         }
       }
     }
-  } catch (welcomeErr: any) {
+  } catch (welcomeErr: unknown) {
     log.warn(`[TrinityEvents] Trinity welcome email failed for workspace ${workspaceId} (non-fatal):`, welcomeErr?.message);
   }
 }
@@ -749,10 +746,9 @@ export function initializeTrinityEventSubscriptions(): void {
           await coveragePipeline.triggerCoverage({
             workspaceId,
             shiftId: metadata.shiftId,
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             reason: 'open_shift_created',
           }).catch(() => null);
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn('[TrinityEvents] Coverage pipeline trigger failed for new open shift:', (err instanceof Error ? err.message : String(err)));
         }
       }
@@ -819,7 +815,6 @@ export function initializeTrinityEventSubscriptions(): void {
           limit: 5,
         });
 
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const { notificationService } = await import('./notificationService');
         for (const mgr of managers) {
           if (!mgr.userId) continue;
@@ -843,7 +838,7 @@ export function initializeTrinityEventSubscriptions(): void {
           message: 'Payroll run blocked: employees with $0.00 pay rate detected. Please fix before processing.',
           severity: 'error',
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] payroll_zero_rate_detected handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -877,7 +872,6 @@ export function initializeTrinityEventSubscriptions(): void {
           limit: 3,
         });
 
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const { notificationService } = await import('./notificationService');
         for (const mgr of managers) {
           if (!mgr.userId) continue;
@@ -892,7 +886,7 @@ export function initializeTrinityEventSubscriptions(): void {
             metadata: { clientId, missingFields },
           }).catch((err: any) => log.warn('[trinityEventSubscriptions] Fire-and-forget failed:', err));
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] client.created handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -921,7 +915,6 @@ export function initializeTrinityEventSubscriptions(): void {
             log.error(`[TrinityEvents] QB invoice sync failed — invoiceId=${invoiceId}: ${result.error}`);
             // Notify org owner of sync failure (non-blocking)
             try {
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               const { notificationService } = await import('./notificationService');
               const { db } = await import('../db');
               const { workspaces } = await import('@shared/schema');
@@ -939,11 +932,11 @@ export function initializeTrinityEventSubscriptions(): void {
                   idempotencyKey: `qb_sync_failed-${Date.now()}-${ws.ownerId}`
                 });
               }
-            } catch (notifErr: any) {
+            } catch (notifErr: unknown) {
               log.warn('[TrinityEvents] QB sync failure notification failed (non-blocking):', notifErr.message);
             }
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.error(`[TrinityEvents] QB invoice auto-push threw — invoiceId=${invoiceId}:`, (err instanceof Error ? err.message : String(err)));
         }
       }).catch((err) => log.warn('[trinityEventSubscriptions] Fire-and-forget failed:', err));
@@ -1013,7 +1006,6 @@ export function initializeTrinityEventSubscriptions(): void {
             log.error(`[TrinityEvents] QB payroll sync failed — runId=${payrollRunId}: ${result.error}`);
             // Notify org owner of sync failure (non-blocking)
             try {
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               const { notificationService } = await import('./notificationService');
               const { db } = await import('../db');
               const { workspaces } = await import('@shared/schema');
@@ -1031,11 +1023,11 @@ export function initializeTrinityEventSubscriptions(): void {
                   idempotencyKey: `qb_payroll_sync_failed-${Date.now()}-${ws.ownerId}`
                 });
               }
-            } catch (notifErr: any) {
+            } catch (notifErr: unknown) {
               log.warn('[TrinityEvents] QB payroll sync failure notification failed (non-blocking):', notifErr.message);
             }
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.error(`[TrinityEvents] QB payroll auto-push threw — runId=${payrollRunId}:`, (err instanceof Error ? err.message : String(err)));
         }
       }).catch((err) => log.warn('[trinityEventSubscriptions] Fire-and-forget failed:', err));
@@ -1097,7 +1089,6 @@ export function initializeTrinityEventSubscriptions(): void {
       const { payrollRunId, voidedBy, reason } = metadata || {};
       log.info(`[TrinityEvents] payroll_run_voided — run=${payrollRunId}, by=${voidedBy}, reason="${reason}"`);
       try {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const { notificationService } = await import('./notificationService');
         const workspace = await db.query.workspaces.findFirst({
           where: eq(workspaces.id, workspaceId),
@@ -1113,7 +1104,7 @@ export function initializeTrinityEventSubscriptions(): void {
             metadata: { payrollRunId, voidedBy, reason },
           });
         }
-      } catch (notifErr: any) {
+      } catch (notifErr: unknown) {
         log.warn('[TrinityEvents] payroll_run_voided notification failed (non-blocking):', notifErr.message);
       }
     },
@@ -1136,7 +1127,7 @@ export function initializeTrinityEventSubscriptions(): void {
           if (!owner.email) continue;
           await NotificationDeliveryService.send({ type: 'billing_notification', workspaceId: workspaceId || 'system', recipientUserId: owner.id || owner.email, channel: 'email', body: { to: owner.email, subject: `Action Required: ${ws.name} Account Suspended`, html: `<p>Hi ${owner.firstName},</p><p>Your CoAIleague workspace <strong>${ws.name}</strong> has been suspended due to a payment issue. Please update your payment method to restore access.</p><p><a href="${APP_URL}/billing">Resolve Payment</a></p>` } });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] workspace_suspended notification failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -1159,7 +1150,7 @@ export function initializeTrinityEventSubscriptions(): void {
           if (!owner.email) continue;
           await NotificationDeliveryService.send({ type: 'billing_notification', workspaceId: workspaceId || 'system', recipientUserId: owner.id || owner.email, channel: 'email', body: { to: owner.email, subject: `Access Restored: ${ws.name} Account Reactivated`, html: `<p>Hi ${owner.firstName},</p><p>Your CoAIleague workspace <strong>${ws.name}</strong> has been reactivated. All features are now available.</p><p><a href="${APP_URL}">Continue Using CoAIleague</a></p>` } });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] workspace_reactivated notification failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -1198,7 +1189,7 @@ export function initializeTrinityEventSubscriptions(): void {
             : `<p>Hi ${owner.firstName},</p><p>Your CoAIleague subscription for <strong>${ws.name}</strong> is set to cancel at the end of your billing period. You can still reactivate at any time before then from <a href="${APP_URL}/billing">Billing Settings</a>.</p>`;
           await NotificationDeliveryService.send({ type: 'billing_notification', workspaceId: workspaceId || 'system', recipientUserId: owner.id || owner.email, channel: 'email', body: { to: owner.email, subject, html: body } });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] subscription_cancelled notification failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -1231,7 +1222,7 @@ export function initializeTrinityEventSubscriptions(): void {
           if (!owner.email) continue;
           await NotificationDeliveryService.send({ type: 'billing_notification', workspaceId: workspaceId || 'system', recipientUserId: owner.id || owner.email, channel: 'email', body: { to: owner.email, subject: `Payment Failed: ${ws.name} — Action Required`, html: `<p>Hi ${owner.firstName},</p><p>A payment for your CoAIleague workspace <strong>${ws.name}</strong> has failed. Please update your payment method to avoid service interruption.</p><p><a href="${APP_URL}/billing">Update Payment Method</a></p>` } });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] payment_failed notification failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -1299,7 +1290,6 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `alert-${Date.now()}-${o.userId}`
           }).catch(() => null);
         }
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId: workspaceId,
           entityType: 'org_finance_settings',
@@ -1310,7 +1300,7 @@ export function initializeTrinityEventSubscriptions(): void {
           createdAt: new Date(),
         }).catch(() => null);
         log.info(`[TrinityEvents] plaid_bank_disconnected in ${workspaceId} — ${metadata?.priorInstitution} removed`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] plaid_bank_disconnected handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -1348,7 +1338,6 @@ export function initializeTrinityEventSubscriptions(): void {
             }).catch(() => null);
           }
           // Audit log
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           await db.insert(auditLogs).values({
             workspaceId: workspaceId,
             entityType: 'pay_stub',
@@ -1385,11 +1374,11 @@ export function initializeTrinityEventSubscriptions(): void {
                   source: 'trinityEventSubscriptions_settled',
                 },
               });
-            } catch (ledgerErr: any) {
+            } catch (ledgerErr: unknown) {
               log.warn(`[TrinityEvents] payroll_disbursed ledger write failed for transfer ${metadata?.transferId}:`, ledgerErr.message);
             }
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn('[TrinityEvents] transfer_settled notification error:', (err instanceof Error ? err.message : String(err)));
         }
       }).catch((err) => log.warn('[trinityEventSubscriptions] Fire-and-forget failed:', err));
@@ -1406,7 +1395,6 @@ export function initializeTrinityEventSubscriptions(): void {
       // Non-blocking notification to org owner
       Promise.resolve().then(async () => {
         try {
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           const { notificationService } = await import('./notificationService');
           const { db } = await import('../db');
           const { workspaces } = await import('@shared/schema');
@@ -1424,7 +1412,7 @@ export function initializeTrinityEventSubscriptions(): void {
               idempotencyKey: `payroll_transfer_failed-${Date.now()}-${ws.ownerId}`
             });
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn('[TrinityEvents] Transfer failed notification error (non-blocking):', (err instanceof Error ? err.message : String(err)));
         }
       }).catch((err) => log.warn('[trinityEventSubscriptions] Fire-and-forget failed:', err));
@@ -1454,7 +1442,7 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `agent_escalation-${String(Date.now())}-${mgr.userId}`,
         }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] agent_escalation notification error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -1481,7 +1469,7 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `schedule_escalation-${String(Date.now())}-${mgr.userId}`,
         }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] schedule_escalation notification error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -1510,7 +1498,7 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `ai_cost_alert-${String(Date.now())}-${owner.userId}`,
         }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] ai_cost_alert notification error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -1543,7 +1531,6 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `sla_breach-${String(Date.now())}-${m.userId}`,
         }).catch(() => null);
         }
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId: workspaceId,
           entityType: 'sla_breach',
@@ -1553,7 +1540,7 @@ export function initializeTrinityEventSubscriptions(): void {
           metadata: JSON.stringify({ breachType, clientId, shiftId, payload }),
           createdAt: new Date(),
         }).catch(() => null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] sla_breach handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -1571,7 +1558,6 @@ export function initializeTrinityEventSubscriptions(): void {
         const serviceId = payload?.serviceId || payload?.domain || 'unknown';
         const serviceName = payload?.serviceName || serviceId;
         const failureCount = payload?.failureCount || 0;
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId: 'platform',
           entityType: 'infrastructure',
@@ -1595,7 +1581,7 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `circuit_breaker_opened-${String(Date.now())}-${o.userId}`,
         }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] circuit_breaker_opened handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -1635,7 +1621,6 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `compliance_violation-${Date.now()}-${o.userId}`
           }).catch(() => null);
         }
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId: workspaceId,
           entityType: 'compliance',
@@ -1645,7 +1630,7 @@ export function initializeTrinityEventSubscriptions(): void {
           metadata: JSON.stringify({ violation, employeeId, payload }),
           createdAt: new Date(),
         }).catch(() => null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] trinity_labor_law_flag handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -1682,7 +1667,6 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `trinity_action_blocked-${String(Date.now())}-${o.userId}`,
         }).catch(() => null);
         }
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId: workspaceId,
           entityType: 'trinity_action',
@@ -1692,7 +1676,7 @@ export function initializeTrinityEventSubscriptions(): void {
           metadata: JSON.stringify({ actionId, reason, payload }),
           createdAt: new Date(),
         }).catch(() => null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] trinity_action_blocked handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -1744,7 +1728,7 @@ export function initializeTrinityEventSubscriptions(): void {
                 },
               }).catch(() => null);
             }
-          } catch (clientErr: any) {
+          } catch (clientErr: unknown) {
             log.warn('[TrinityEvents] contract_executed — auto-create client failed (non-blocking):', clientErr.message);
           }
         }
@@ -1766,7 +1750,6 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `contract_executed-${String(Date.now())}-${o.userId}`,
         }).catch(() => null);
         }
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId,
           entityType: 'contract',
@@ -1776,7 +1759,7 @@ export function initializeTrinityEventSubscriptions(): void {
           metadata: JSON.stringify({ contractId, clientName, title, autoCreatedClientId, existingClientId, payload }),
           createdAt: new Date(),
         }).catch(() => null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] contract_executed handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -1804,7 +1787,6 @@ export function initializeTrinityEventSubscriptions(): void {
             },
           }).catch(() => null);
         }
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId,
           entityType: 'subscription',
@@ -1814,7 +1796,7 @@ export function initializeTrinityEventSubscriptions(): void {
           metadata: JSON.stringify({ tier, subscriptionId, workspaceName }),
           createdAt: new Date(),
         }).catch(() => null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] subscription_created handler failed:', err?.message);
       }
     },
@@ -1843,7 +1825,6 @@ export function initializeTrinityEventSubscriptions(): void {
             },
           }).catch(() => null);
         }
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId,
           entityType: 'client',
@@ -1853,7 +1834,7 @@ export function initializeTrinityEventSubscriptions(): void {
           metadata: JSON.stringify({ clientId, clientName, source }),
           createdAt: new Date(),
         }).catch(() => null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] client_created handler failed:', err?.message);
       }
     },
@@ -1881,7 +1862,6 @@ export function initializeTrinityEventSubscriptions(): void {
             },
           }).catch(() => null);
         }
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId,
           entityType: 'employee',
@@ -1891,7 +1871,7 @@ export function initializeTrinityEventSubscriptions(): void {
           metadata: JSON.stringify({ newUserId, firstName, lastName, email, role, method }),
           createdAt: new Date(),
         }).catch(() => null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] member_joined handler failed:', err?.message);
       }
     },
@@ -1908,7 +1888,6 @@ export function initializeTrinityEventSubscriptions(): void {
         const employeeId = payload?.employeeId;
         const documentType = payload?.documentType || 'compliance document';
         const employeeDocumentId = payload?.employeeDocumentId;
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId: workspaceId,
           entityType: 'document',
@@ -1936,7 +1915,7 @@ export function initializeTrinityEventSubscriptions(): void {
         }).catch(() => null);
           }
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] document_bridged handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -1953,7 +1932,6 @@ export function initializeTrinityEventSubscriptions(): void {
         const entityType = payload?.entityType || payload?.actionName || 'unknown';
         const entityId = payload?.entityId || payload?.gateId || 'unknown';
         const approvedBy = payload?.approvedBy || 'system';
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId: workspaceId,
           entityType: entityType,
@@ -1964,7 +1942,7 @@ export function initializeTrinityEventSubscriptions(): void {
           createdAt: new Date(),
         }).catch(() => null);
         log.info(`[TrinityEvents] approval_granted: ${entityType}/${entityId} approved by ${approvedBy} in ${workspaceId}`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] approval_granted handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -1996,7 +1974,6 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `reconciliation_alert-${String(Date.now())}-${o.userId}`,
         }).catch(() => null);
         }
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId: workspaceId,
           entityType: 'finance',
@@ -2006,7 +1983,7 @@ export function initializeTrinityEventSubscriptions(): void {
           metadata: JSON.stringify({ discrepancy, amount, payload }),
           createdAt: new Date(),
         }).catch(() => null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] reconciliation_alert handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -2035,7 +2012,6 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `subscription_payment_blocked-${String(Date.now())}-${o.userId}`,
         }).catch(() => null);
         }
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId: workspaceId,
           entityType: 'billing',
@@ -2045,7 +2021,7 @@ export function initializeTrinityEventSubscriptions(): void {
           metadata: JSON.stringify({ reason, payload }),
           createdAt: new Date(),
         }).catch(() => null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] subscription_payment_blocked handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -2075,7 +2051,6 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `content_moderation_alert-${String(Date.now())}-${o.userId}`,
         }).catch(() => null);
         }
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId: workspaceId,
           entityType: 'moderation',
@@ -2085,7 +2060,7 @@ export function initializeTrinityEventSubscriptions(): void {
           metadata: JSON.stringify({ flagType, userId, payload }),
           createdAt: new Date(),
         }).catch(() => null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] content_moderation_alert handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -2101,7 +2076,6 @@ export function initializeTrinityEventSubscriptions(): void {
         const jobName = payload?.jobName || metadata?.jobName || 'unknown_job';
         const error = payload?.error || metadata?.error || 'Unknown error';
         const targetWs = workspaceId && workspaceId !== 'platform' ? workspaceId : null;
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId: 'platform',
           entityType: 'scheduler',
@@ -2127,7 +2101,7 @@ export function initializeTrinityEventSubscriptions(): void {
             } as any).catch(() => null);
           }
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] scheduler_job_failed handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -2158,7 +2132,6 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `coverage_gap_detected-${String(Date.now())}-${m.userId}`,
         }).catch(() => null);
         }
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId: workspaceId,
           entityType: 'shift',
@@ -2168,7 +2141,7 @@ export function initializeTrinityEventSubscriptions(): void {
           metadata: JSON.stringify({ shiftId, shiftDate, site, payload }),
           createdAt: new Date(),
         }).catch(() => null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] coverage_gap_detected handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -2185,7 +2158,6 @@ export function initializeTrinityEventSubscriptions(): void {
         const { sql: sqlOp } = await import('drizzle-orm');
         const employeeId = payload?.employeeId || metadata?.employeeId;
         const employeeName = payload?.employeeName || metadata?.employeeName || 'Employee';
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId: workspaceId,
           entityType: 'employee',
@@ -2208,7 +2180,7 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `employee_terminated-${String(Date.now())}-${o.userId}`,
         }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] employee_terminated handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -2225,7 +2197,6 @@ export function initializeTrinityEventSubscriptions(): void {
         const { sql: sqlOp } = await import('drizzle-orm');
         const employeeId = payload?.employeeId || metadata?.employeeId;
         const employeeName = payload?.employeeName || metadata?.employeeName || 'New Employee';
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId: workspaceId,
           entityType: 'employee',
@@ -2248,7 +2219,7 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `employee_hired-${String(Date.now())}-${m.userId}`,
         }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] employee_hired handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -2296,7 +2267,7 @@ export function initializeTrinityEventSubscriptions(): void {
             } as any).catch(() => null);
           }
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] manual_override_submitted handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -2316,7 +2287,6 @@ export function initializeTrinityEventSubscriptions(): void {
         log.info(`[TrinityEvents] incident_report_updated — incident=${incidentId}, severity=${newSeverity}, workspace=${workspaceId}`);
 
         const { sql: sqlOp } = await import('drizzle-orm');
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId: workspaceId,
           entityType: 'incident',
@@ -2326,7 +2296,7 @@ export function initializeTrinityEventSubscriptions(): void {
           metadata: JSON.stringify({ incidentId, newSeverity, updatedBy, payload }),
           createdAt: new Date(),
         }).catch(() => null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] incident_report_updated handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -2354,7 +2324,6 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `alert-${Date.now()}-${o.userId}`
           }).catch(() => null);
         }
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId: workspaceId,
           entityType: 'approval_gate',
@@ -2365,7 +2334,7 @@ export function initializeTrinityEventSubscriptions(): void {
           createdAt: new Date(),
         }).catch(() => null);
         log.info(`[TrinityEvents] approval_escalated: ${payload?.actionName} → level ${payload?.newLevel} in ${workspaceId}`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] approval_escalated handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -2391,7 +2360,6 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `alert-${Date.now()}-${o.userId}`
           }).catch(() => null);
         }
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(auditLogs).values({
           workspaceId: workspaceId,
           entityType: 'approval_gate',
@@ -2402,7 +2370,7 @@ export function initializeTrinityEventSubscriptions(): void {
           createdAt: new Date(),
         }).catch(() => null);
         log.info(`[TrinityEvents] approval_expired: ${payload?.actionName} gate timed out in ${workspaceId}`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] approval_expired handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -2433,7 +2401,7 @@ export function initializeTrinityEventSubscriptions(): void {
           } as any).catch(() => null);
         }
         log.info(`[TrinityEvents] workspace_bank_disconnected — payroll ACH suspended for workspace ${workspaceId}`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] workspace_bank_disconnected handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -2455,7 +2423,7 @@ export function initializeTrinityEventSubscriptions(): void {
           metadata: { employeeId: metadata?.employeeId, transferId: metadata?.transferId, amount: metadata?.amount },
           createdAt: new Date(),
         }).catch(() => null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] payroll_transfer_initiated handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -2492,14 +2460,13 @@ export function initializeTrinityEventSubscriptions(): void {
       // Trigger compliance certification check for newly activated officer
       try {
         const { helpaiOrchestrator } = await import('./helpai/platformActionHub');
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await helpaiOrchestrator.executeAction({
           actionId: 'compliance.check_officer_certs',
           workspaceId,
           userId: activatedBy || 'trinity',
           payload: { employeeId, triggeredBy: 'officer_activated_event' },
         }).catch(() => null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] officer_activated: compliance check failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -2543,7 +2510,6 @@ export function initializeTrinityEventSubscriptions(): void {
           .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
         if (ws?.ownerId) {
           await NotificationDeliveryService.send({
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             type: 'document_signed_notification',
             workspaceId,
             recipientUserId: ws.ownerId,
@@ -2554,7 +2520,7 @@ export function initializeTrinityEventSubscriptions(): void {
             },
           }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] document_fully_signed archive failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
@@ -2594,7 +2560,6 @@ export function initializeTrinityEventSubscriptions(): void {
           .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
         if (ws?.ownerId) {
           await NotificationDeliveryService.send({
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             type: 'sop_acknowledgment_requested',
             workspaceId,
             recipientUserId: ws.ownerId,
@@ -2605,7 +2570,7 @@ export function initializeTrinityEventSubscriptions(): void {
             },
           }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] sop_updated_acknowledgment_required handler failed:', err?.message);
       }
     },
@@ -2659,7 +2624,6 @@ export function initializeTrinityEventSubscriptions(): void {
             .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
           if (ws?.ownerId) {
             await NotificationDeliveryService.send({
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               type: 'disciplinary_final_warning_executed',
               workspaceId,
               recipientUserId: ws.ownerId,
@@ -2671,7 +2635,7 @@ export function initializeTrinityEventSubscriptions(): void {
             }).catch(() => null);
           }
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] disciplinary activation handler failed:', err?.message);
       }
     },
@@ -2685,12 +2649,10 @@ export function initializeTrinityEventSubscriptions(): void {
       try {
         const { workspaceId, metadata } = event;
         const [ws] = await db.select({ ownerId: workspaces.ownerId, name: workspaces.name })
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
         if (ws?.ownerId) {
           await NotificationDeliveryService.send({
             type: 'inbound_opportunity_notification',
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId,
             recipientUserId: ws.ownerId,
             channel: 'in_app',
@@ -2700,7 +2662,7 @@ export function initializeTrinityEventSubscriptions(): void {
             },
           }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] proposal_won handler failed:', err?.message);
       }
     },
@@ -2713,12 +2675,10 @@ export function initializeTrinityEventSubscriptions(): void {
         const { workspaceId, metadata } = event;
         log.info(`[TrinityEvents] proposal_lost workspaceId=${workspaceId} proposalId=${metadata?.proposalId} reason=${metadata?.lostReason || 'unspecified'}`);
         const [ws] = await db.select({ ownerId: workspaces.ownerId })
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
         if (ws?.ownerId) {
           await NotificationDeliveryService.send({
             type: 'inbound_opportunity_notification',
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId,
             recipientUserId: ws.ownerId,
             channel: 'in_app',
@@ -2728,7 +2688,7 @@ export function initializeTrinityEventSubscriptions(): void {
             },
           }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] proposal_lost handler failed:', err?.message);
       }
     },
@@ -2740,12 +2700,10 @@ export function initializeTrinityEventSubscriptions(): void {
       try {
         const { workspaceId, metadata } = event;
         const [ws] = await db.select({ ownerId: workspaces.ownerId })
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
         if (ws?.ownerId) {
           await NotificationDeliveryService.send({
             type: 'inbound_opportunity_notification',
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId,
             recipientUserId: ws.ownerId,
             channel: 'in_app',
@@ -2755,7 +2713,7 @@ export function initializeTrinityEventSubscriptions(): void {
             },
           }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] bid_submitted handler failed:', err?.message);
       }
     },
@@ -2768,12 +2726,10 @@ export function initializeTrinityEventSubscriptions(): void {
       try {
         const { workspaceId, metadata } = event;
         const [ws] = await db.select({ ownerId: workspaces.ownerId })
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
         if (ws?.ownerId) {
           await NotificationDeliveryService.send({
             type: 'inbound_opportunity_notification',
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId,
             recipientUserId: ws.ownerId,
             channel: 'in_app',
@@ -2784,7 +2740,7 @@ export function initializeTrinityEventSubscriptions(): void {
           }).catch(() => null);
         }
         log.info(`[TrinityEvents] contract_proposal_sent — workspace=${workspaceId} contract=${metadata?.contractId}`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] contract_proposal_sent handler failed:', err?.message);
       }
     },
@@ -2811,12 +2767,10 @@ export function initializeTrinityEventSubscriptions(): void {
 
         // Notify org owner
         const [ws] = await db.select({ ownerId: workspaces.ownerId })
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
         if (ws?.ownerId) {
           await NotificationDeliveryService.send({
             type: 'inbound_opportunity_notification',
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId,
             recipientUserId: ws.ownerId,
             channel: 'in_app',
@@ -2833,7 +2787,7 @@ export function initializeTrinityEventSubscriptions(): void {
             html: `<h2>Proposal Accepted</h2><p>${clientName || 'A client'} has signed your proposal "${metadata?.proposalTitle || contractId}".${contractValue ? ` Contract value: <strong>$${Number(contractValue).toLocaleString()}</strong>.` : ''}</p><p>Log in to begin client onboarding and schedule deployment.</p>`,
           }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] contract_proposal_accepted handler failed:', err?.message);
       }
     },
@@ -2848,7 +2802,6 @@ export function initializeTrinityEventSubscriptions(): void {
         if (metadata?.supervisorUserId) {
           await NotificationDeliveryService.send({
             type: 'staffing_status_update',
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId,
             recipientUserId: metadata.supervisorUserId as string,
             channel: 'in_app',
@@ -2858,7 +2811,7 @@ export function initializeTrinityEventSubscriptions(): void {
             },
           }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] dar_verified handler failed:', err?.message);
       }
     },
@@ -2873,7 +2826,6 @@ export function initializeTrinityEventSubscriptions(): void {
         if (metadata?.submittedByUserId) {
           await NotificationDeliveryService.send({
             type: 'staffing_status_update',
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId,
             recipientUserId: metadata.submittedByUserId as string,
             channel: 'in_app',
@@ -2883,7 +2835,7 @@ export function initializeTrinityEventSubscriptions(): void {
             },
           }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] dar_sent_to_client handler failed:', err?.message);
       }
     },
@@ -2895,12 +2847,10 @@ export function initializeTrinityEventSubscriptions(): void {
       try {
         const { workspaceId, metadata } = event;
         const [ws] = await db.select({ ownerId: workspaces.ownerId })
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
         if (ws?.ownerId) {
           await NotificationDeliveryService.send({
             type: 'inbound_opportunity_notification',
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId,
             recipientUserId: ws.ownerId,
             channel: 'in_app',
@@ -2910,7 +2860,7 @@ export function initializeTrinityEventSubscriptions(): void {
             },
           }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] rms_case_opened handler failed:', err?.message);
       }
     },
@@ -2925,7 +2875,6 @@ export function initializeTrinityEventSubscriptions(): void {
         if (metadata?.assignedToUserId) {
           await NotificationDeliveryService.send({
             type: 'staffing_status_update',
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId,
             recipientUserId: metadata.assignedToUserId as string,
             channel: 'in_app',
@@ -2935,7 +2884,7 @@ export function initializeTrinityEventSubscriptions(): void {
             },
           }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] rms_case_closed handler failed:', err?.message);
       }
     },
@@ -2949,12 +2898,10 @@ export function initializeTrinityEventSubscriptions(): void {
         log.info(`[TrinityEvents] incident_supervisor_signed workspaceId=${workspaceId} incidentId=${metadata?.incidentId} signedBy=${metadata?.supervisorId}`);
         // Advance to payroll/compliance verification step
         const [ws] = await db.select({ ownerId: workspaces.ownerId })
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
         if (ws?.ownerId) {
           await NotificationDeliveryService.send({
             type: 'staffing_status_update',
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId,
             recipientUserId: ws.ownerId,
             channel: 'in_app',
@@ -2964,7 +2911,7 @@ export function initializeTrinityEventSubscriptions(): void {
             },
           }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] incident_supervisor_signed handler failed:', err?.message);
       }
     },
@@ -2978,12 +2925,10 @@ export function initializeTrinityEventSubscriptions(): void {
         log.info(`[TrinityEvents] bolo_created workspaceId=${workspaceId} boloId=${metadata?.boloId} subject=${metadata?.subject}`);
         // Notify workspace owner and broadcast message
         const [ws] = await db.select({ ownerId: workspaces.ownerId })
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
         if (ws?.ownerId) {
           await NotificationDeliveryService.send({
             type: 'staffing_status_update',
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId,
             recipientUserId: ws.ownerId,
             channel: 'in_app',
@@ -2993,7 +2938,7 @@ export function initializeTrinityEventSubscriptions(): void {
             },
           }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] bolo_created handler failed:', err?.message);
       }
     },
@@ -3006,12 +2951,10 @@ export function initializeTrinityEventSubscriptions(): void {
         const { workspaceId, metadata } = event;
         log.info(`[TrinityEvents] evidence_created workspaceId=${workspaceId} evidenceId=${metadata?.evidenceId} caseId=${metadata?.caseId} collectedBy=${metadata?.collectedByUserId}`);
         const [ws] = await db.select({ ownerId: workspaces.ownerId })
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           .from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
         if (ws?.ownerId) {
           await NotificationDeliveryService.send({
             type: 'inbound_opportunity_notification',
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId,
             recipientUserId: ws.ownerId,
             channel: 'in_app',
@@ -3021,7 +2964,7 @@ export function initializeTrinityEventSubscriptions(): void {
             },
           }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] evidence_created handler failed:', err?.message);
       }
     },
@@ -3037,7 +2980,6 @@ export function initializeTrinityEventSubscriptions(): void {
         if (metadata?.supervisorUserId) {
           await NotificationDeliveryService.send({
             type: 'staffing_status_update',
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId,
             recipientUserId: metadata.supervisorUserId as string,
             channel: 'in_app',
@@ -3047,7 +2989,7 @@ export function initializeTrinityEventSubscriptions(): void {
             },
           }).catch(() => null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] visitor_checked_in handler failed:', err?.message);
       }
     },
@@ -3063,7 +3005,7 @@ export function initializeTrinityEventSubscriptions(): void {
         if (workspaceId) {
           broadcastToWorkspace(workspaceId, { type: 'broadcast_list_updated', action: 'created', broadcastId: event.metadata?.broadcastId });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] broadcast.created push failed:', err?.message);
       }
     },
@@ -3078,7 +3020,7 @@ export function initializeTrinityEventSubscriptions(): void {
         if (workspaceId) {
           broadcastToWorkspace(workspaceId, { type: 'broadcast_list_updated', action: 'updated', broadcastId: event.metadata?.broadcastId });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] broadcast.updated push failed:', err?.message);
       }
     },
@@ -3093,7 +3035,7 @@ export function initializeTrinityEventSubscriptions(): void {
         if (workspaceId) {
           broadcastToWorkspace(workspaceId, { type: 'broadcast_list_updated', action: 'deleted', broadcastId: event.metadata?.broadcastId });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] broadcast.deleted push failed:', err?.message);
       }
     },
@@ -3107,7 +3049,7 @@ export function initializeTrinityEventSubscriptions(): void {
         const { workspaceId, metadata } = event;
         if (!workspaceId) return;
         log.warn(`[TrinityEvents] [CONSCIENCE] SRA enforcement action logged — workspace: ${workspaceId}, severity: ${metadata?.severity}, finding: ${metadata?.findingId}`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] sra_enforcement_action handler failed:', err?.message);
       }
     },
@@ -3139,7 +3081,7 @@ export function initializeTrinityEventSubscriptions(): void {
           },
         });
         log.info(`[TrinityEvents] contract_executed win logged for workspace ${workspaceId}: ${payload?.title}`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn(`[TrinityEvents] contract_executed thalamic_log insert failed: ${err?.message}`);
       }
     },
@@ -3343,7 +3285,7 @@ export function initializeTrinityEventSubscriptions(): void {
           priorityScore: requiresImmediateResponse ? 10 : 8,
           signalPayload: { employeeId, missedCount, level, requiresImmediateResponse },
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] lone_worker_missed_checkin handler error:', err?.message);
       }
     },
@@ -3356,7 +3298,7 @@ export function initializeTrinityEventSubscriptions(): void {
         const { workspaceId, metadata } = event;
         if (!workspaceId) return;
         log.info(`[TrinityEvents] lone_worker_session_started: employee=${metadata?.employeeId} session=${metadata?.sessionId} ws=${workspaceId}`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] lone_worker_session_started handler error:', err?.message);
       }
     },
@@ -3369,7 +3311,7 @@ export function initializeTrinityEventSubscriptions(): void {
         const { workspaceId, metadata } = event;
         if (!workspaceId) return;
         log.info(`[TrinityEvents] lone_worker_session_ended: ws=${workspaceId} duration=${metadata?.durationMinutes}min`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] lone_worker_session_ended handler error:', err?.message);
       }
     },
@@ -3406,7 +3348,7 @@ export function initializeTrinityEventSubscriptions(): void {
           priorityScore: 7,
           signalPayload: { alertId, resolvedBy },
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] panic_alert_resolved handler error:', err?.message);
       }
     },
@@ -3446,7 +3388,7 @@ export function initializeTrinityEventSubscriptions(): void {
           priorityScore: 9,
           signalPayload: { employeeId, certificationType: (metadata as any)?.certificationType, expiredAt: new Date().toISOString() },
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] compliance_cert_expired handler error:', err?.message);
       }
     },
@@ -3476,7 +3418,7 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `compliance-${employeeId}-${mgr.userId}`
           });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] training_expired handler error:', err?.message);
       }
     },
@@ -3503,7 +3445,7 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `deadline_approaching-${Date.now()}-${mgr.userId}`
           });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] training_expiring handler error:', err?.message);
       }
     },
@@ -3533,7 +3475,7 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `action_required-${employeeId}-${mgr.userId}`
           });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] compliance_onboarding_overdue handler error:', err?.message);
       }
     },
@@ -3573,7 +3515,7 @@ export function initializeTrinityEventSubscriptions(): void {
           priorityScore: 9,
           signalPayload: { shiftId, siteName, escalatedAt: new Date().toISOString() },
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] shift_calloff_escalated handler error:', err?.message);
       }
     },
@@ -3602,7 +3544,7 @@ export function initializeTrinityEventSubscriptions(): void {
           relatedEntityId: shiftId,
           idempotencyKey: `request_approved-${shiftId}-${emp.userId}`
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] shift_swap_approved handler error:', err?.message);
       }
     },
@@ -3631,7 +3573,7 @@ export function initializeTrinityEventSubscriptions(): void {
           relatedEntityId: shiftId,
           idempotencyKey: `request_denied-${shiftId}-${emp.userId}`
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] shift_swap_denied handler error:', err?.message);
       }
     },
@@ -3668,7 +3610,7 @@ export function initializeTrinityEventSubscriptions(): void {
           priorityScore: 8,
           signalPayload: { canceledAt: new Date().toISOString() },
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] subscription_canceled handler error:', err?.message);
       }
     },
@@ -3706,7 +3648,7 @@ export function initializeTrinityEventSubscriptions(): void {
           priorityScore: 8,
           signalPayload: { invoiceId, clientName, amount, daysOverdue },
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] invoice_overdue_escalated handler error:', err?.message);
       }
     },
@@ -3734,7 +3676,7 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `trial_expiry_warning-${Date.now()}-${mgr.userId}`
           });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] trial_ending_soon handler error:', err?.message);
       }
     },
@@ -3761,7 +3703,7 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `payroll_payment_method-${Date.now()}-${mgr.userId}`
           });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] plaid_bank_connected handler error:', err?.message);
       }
     },
@@ -3793,7 +3735,7 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `deadline_approaching-${contractId}-${mgr.userId}`
           });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] contract_renewal_due handler error:', err?.message);
       }
     },
@@ -3823,7 +3765,7 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `dar_required-${darId}-${mgr.userId}`
           });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] dar_submitted handler error:', err?.message);
       }
     },
@@ -3854,7 +3796,7 @@ export function initializeTrinityEventSubscriptions(): void {
             idempotencyKey: `notification-${incidentId}-${mgr.userId}`
           });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn('[TrinityEvents] incident_created (notify) handler error:', err?.message);
       }
     },

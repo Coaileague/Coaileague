@@ -34,10 +34,10 @@ interface AuditEntry {
     name?: string;
   };
   changes?: {
-    before?: Record<string, any>;
-    after?: Record<string, any>;
+    before?: Record<string, unknown>;
+    after?: Record<string, unknown>;
   };
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   ipAddress?: string;
   userAgent?: string;
   orgId?: number;
@@ -64,7 +64,7 @@ interface ComplianceReport {
   generatedAt: Date;
   status: 'compliant' | 'non_compliant' | 'partial';
   findings: ComplianceFinding[];
-  summary: Record<string, any>;
+  summary: Record<string, unknown>;
 }
 
 interface ComplianceFinding {
@@ -127,7 +127,7 @@ class AuditTrailExportService {
     options: {
       target?: AuditEntry['target'];
       changes?: AuditEntry['changes'];
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
       ipAddress?: string;
       userAgent?: string;
       orgId?: number;

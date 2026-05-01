@@ -6,7 +6,6 @@
  */
 
 import { db } from '../../db';
-// @ts-expect-error — TS migration: fix in refactoring sprint
 import { aiContext, type AiContext, type InsertAiContext } from '@shared/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import type { LoadContextParams, UpsertContextParams, MonitoringContext } from './types';

@@ -142,7 +142,7 @@ export async function runDecayCycle(): Promise<number> {
     const affected = (result as any).rowCount ?? 0;
     log.info(`[Hebbian] Decay cycle complete — ${affected} edges weakened`);
     return affected;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[Hebbian] Decay cycle failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     return 0;
   }

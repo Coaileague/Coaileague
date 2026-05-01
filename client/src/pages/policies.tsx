@@ -61,7 +61,7 @@ export default function PoliciesPage() {
       setShowCreateDialog(false);
       form.reset();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to create policy", variant: "destructive" });
     },
   });
@@ -74,7 +74,7 @@ export default function PoliciesPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/policies'] });
       toast({ title: "Success", description: "Policy published successfully" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to publish policy", variant: "destructive" });
     },
   });
@@ -91,7 +91,7 @@ export default function PoliciesPage() {
       toast({ title: "Success", description: "Policy acknowledged successfully" });
       setShowAcknowledgeDialog(false);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to acknowledge policy", variant: "destructive" });
     },
   });
@@ -106,9 +106,9 @@ export default function PoliciesPage() {
   };
 
   // @ts-expect-error — TS migration: fix in refactoring sprint
-  const publishedPolicies = policies.filter((p: any) => p.status === 'published');
+  const publishedPolicies = policies.filter((p) => p.status === 'published');
   // @ts-expect-error — TS migration: fix in refactoring sprint
-  const draftPolicies = policies.filter((p: any) => p.status === 'draft');
+  const draftPolicies = policies.filter((p) => p.status === 'draft');
 
   if (isLoading) {
     return (
@@ -162,7 +162,7 @@ export default function PoliciesPage() {
               </CardContent>
             </Card>
           ) : (
-            publishedPolicies.map((policy: any) => (
+            publishedPolicies.map((policy) => (
               <Card key={policy.id} data-testid={`card-policy-${policy.id}`}>
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
@@ -219,7 +219,7 @@ export default function PoliciesPage() {
               </CardContent>
             </Card>
           ) : (
-            draftPolicies.map((policy: any) => (
+            draftPolicies.map((policy) => (
               <Card key={policy.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">

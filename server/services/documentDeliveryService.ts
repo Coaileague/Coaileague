@@ -114,7 +114,6 @@ export class DocumentDeliveryService {
         for (const emp of workspaceEmployees) {
           if (!emp.email || emp.id === subjectEmployeeId) continue;
           const role = emp.workspaceRole || '';
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           if (role === 'manager' || role === 'department_manager' || role === 'dept_manager') {
             primary.push(this.toRecipient(emp));
             break;
@@ -248,14 +247,13 @@ export class DocumentDeliveryService {
         const { sendAutomationEmail } = await import('./emailService');
         await sendAutomationEmail({
           to: recipient.email,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           subject: `Disciplinary Report - ${params.employeeName} - ${severityLabels[params.severity]}`,
           html: this.buildDisciplinaryTemplate(params, recipient, severityColors[params.severity], severityLabels[params.severity]),
           category: 'disciplinary_report',
           workspaceId,
         });
         emailsSent++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         errors.push(`Failed to send to ${recipient.email}: ${(err instanceof Error ? err.message : String(err))}`);
       }
     }
@@ -296,14 +294,13 @@ export class DocumentDeliveryService {
         const { sendAutomationEmail } = await import('./emailService');
         await sendAutomationEmail({
           to: recipient.email,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           subject: `Field Training Report - ${params.traineeName} - ${params.passed ? 'PASSED' : 'NEEDS IMPROVEMENT'}`,
           html: this.buildTrainingReportTemplate(params, recipient),
           category: 'training_report',
           workspaceId,
         });
         emailsSent++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         errors.push(`Failed to send to ${recipient.email}: ${(err instanceof Error ? err.message : String(err))}`);
       }
     }
@@ -342,14 +339,13 @@ export class DocumentDeliveryService {
         const { sendAutomationEmail } = await import('./emailService');
         await sendAutomationEmail({
           to: recipient.email,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           subject: `Promotion Approval Required - ${params.employeeName} (${params.currentRole} → ${params.proposedRole})`,
           html: this.buildPromotionTemplate(params, recipient),
           category: 'promotion_form',
           workspaceId,
         });
         emailsSent++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         errors.push(`Failed to send to ${recipient.email}: ${(err instanceof Error ? err.message : String(err))}`);
       }
     }
@@ -381,14 +377,13 @@ export class DocumentDeliveryService {
       const { sendAutomationEmail } = await import('./emailService');
       await sendAutomationEmail({
         to: params.clientEmail,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         subject: `Proposal: ${params.proposalTitle} - Ready for Review`,
         html: this.buildContractProposalTemplate(params),
         category: 'contract_proposal',
         workspaceId,
       });
       emailsSent++;
-    } catch (err: any) {
+    } catch (err: unknown) {
       errors.push(`Failed to send proposal to ${params.clientEmail}: ${(err instanceof Error ? err.message : String(err))}`);
     }
 
@@ -428,7 +423,6 @@ export class DocumentDeliveryService {
         const { sendAutomationEmail } = await import('./emailService');
         await sendAutomationEmail({
           to: recipient.email,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           subject: isNewHire
             ? `Welcome to the Team! Your Onboarding Package`
             : `New Hire Onboarding - ${params.employeeName} Starting ${params.startDate}`,
@@ -439,7 +433,7 @@ export class DocumentDeliveryService {
           workspaceId,
         });
         emailsSent++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         errors.push(`Failed to send to ${recipient.email}: ${(err instanceof Error ? err.message : String(err))}`);
       }
     }

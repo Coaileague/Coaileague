@@ -148,7 +148,6 @@ const STATUS_CONFIG: Record<string, { label: string; icon: React.ReactNode; colo
 const pageConfig: CanvasPageConfig = {
   title: "Document Requests",
   description: "Mass-send or individually send HR documents to employees — I-9, W-4, W-9, drug testing, guard card updates, and full onboarding packets",
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   icon: Send,
   actions: [],
 };
@@ -180,7 +179,6 @@ export default function HrDocumentRequests() {
   });
 
   const sendMutation = useMutation<SendResponse, Error, { employeeIds: string[]; documentTypes: string[]; notes?: string }>({
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     mutationFn: (body) => apiRequest("POST", "/api/hr/document-requests/send", body),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/document-requests"] });
@@ -193,7 +191,7 @@ export default function HrDocumentRequests() {
       setSelectedDocTypes(new Set());
       setNotes("");
     },
-    onError: (err: any) => {
+    onError: (err) => {
       const msg = err?.response?.data?.message || err?.message || "Failed to send requests";
       toast({ title: "Send Failed", description: msg, variant: "destructive" });
     },

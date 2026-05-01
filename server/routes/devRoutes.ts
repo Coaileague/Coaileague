@@ -72,7 +72,7 @@ router.post("/demo-tenant-seed", requirePlatformAdmin, async (_req: Authenticate
     const result = await seedDemoTenant();
     if (!result.success) return res.status(500).json(result);
     res.json(result);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[DevRoutes] demo-tenant-seed failed:', err?.message);
     res.status(500).json({ error: err?.message || 'Demo tenant seed failed' });
   }
@@ -89,7 +89,7 @@ router.post("/compliance-snapshot/:workspaceId", requirePlatformAdmin, async (re
     const { snapshotAndMonitor } = await import("../services/complianceScoreMonitor");
     const result = await snapshotAndMonitor(req.params.workspaceId);
     res.json(result);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[DevRoutes] compliance-snapshot failed:', err?.message);
     res.status(500).json({ error: err?.message || 'Compliance snapshot failed' });
   }
@@ -106,7 +106,7 @@ router.post("/seed-multi-state-regulatory", requirePlatformAdmin, async (_req: A
     const { seedMultiStateRegulatory } = await import("../services/multiStateRegulatorySeed");
     const result = await seedMultiStateRegulatory();
     res.json(result);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[DevRoutes] multi-state seed failed:', err?.message);
     res.status(500).json({ error: err?.message || 'Multi-state seed failed' });
   }
@@ -125,7 +125,7 @@ router.post("/retention-scan", requirePlatformAdmin, async (_req: AuthenticatedR
     const { runRetentionScan } = await import("../services/retentionPolicyService");
     const result = await runRetentionScan();
     res.json(result);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[DevRoutes] retention-scan failed:', err?.message);
     res.status(500).json({ error: err?.message || 'Retention scan failed' });
   }

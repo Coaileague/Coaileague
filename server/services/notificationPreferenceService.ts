@@ -200,7 +200,7 @@ export async function shouldDeliver(params: {
 /**
  * Render a template body by substituting {{variable}} placeholders with data.
  */
-export function renderTemplate(template: string, data: Record<string, any>): string {
+export function renderTemplate(template: string, data: Record<string, unknown>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
     return data[key] !== undefined ? String(data[key]) : `{{${key}}}`;
   });
@@ -261,7 +261,7 @@ export async function createTemplate(params: {
   subject?: string;
   bodyTemplate: string;
   createdBy: string;
-}): Promise<any> {
+}): Promise<unknown> {
   // Validate template variables (check for malformed syntax)
   const vars = extractTemplateVariables(params.bodyTemplate);
   if (params.bodyTemplate.includes('{{') && vars.length === 0) {
@@ -322,7 +322,7 @@ export async function listTemplates(workspaceId: string): Promise<any[]> {
 /**
  * Preview a template rendered with sample data.
  */
-export function previewTemplate(bodyTemplate: string, sampleData?: Record<string, any>): string {
+export function previewTemplate(bodyTemplate: string, sampleData?: Record<string, unknown>): string {
   const defaults: Record<string, string> = {
     first_name: 'Jane',
     last_name: 'Smith',

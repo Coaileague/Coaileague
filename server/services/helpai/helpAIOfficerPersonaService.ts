@@ -83,7 +83,7 @@ export async function getOfficerPersona(
       certStatus,
       reliabilityScore,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[OfficerPersona] Failed to load persona (non-fatal):', err?.message);
     return null;
   }
@@ -166,7 +166,7 @@ export async function updateOfficerProfile(opts: {
     const now = new Date();
 
     if (existing) {
-      const updates: Record<string, any> = {
+      const updates: Record<string, unknown> = {
         lastInteractionAt: now,
         totalInteractions: (existing.totalInteractions ?? 0) + 1,
         updatedAt: now,
@@ -207,7 +207,7 @@ export async function updateOfficerProfile(opts: {
         commonRequests: opts.requestTypes ? JSON.stringify(opts.requestTypes) : null,
       });
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[OfficerPersona] Profile update failed (non-fatal):', err?.message);
   }
 }

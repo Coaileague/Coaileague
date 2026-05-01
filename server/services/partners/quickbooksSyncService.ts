@@ -12,7 +12,6 @@ import {
   users,
   billingServices,
   InsertPartnerDataMapping,
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   InsertPartnerSyncLog,
 } from '@shared/schema';
 import { createNotification } from '../notificationService';
@@ -252,7 +251,6 @@ export class QuickBooksSyncService {
   private async createSyncLog(
     data: Omit<InsertPartnerSyncLog, 'id' | 'createdAt'>
   ): Promise<string> {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [log] = await db.insert(partnerSyncLogs).values({
       workspaceId: 'system',
       ...data,
@@ -644,7 +642,6 @@ export class QuickBooksSyncService {
           // a partial write leaves an employee with no QB mapping (sync gap).
           const newEmployee = await db.transaction(async (tx) => {
             const [newEmp] = await tx.insert(employees)
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               .values({
                 workspaceId,
                 userId: userInfo.userId, // Link to existing user
@@ -718,7 +715,6 @@ export class QuickBooksSyncService {
             await this.createOrUpdateMapping(
               workspaceId, connectionId, 'employee',
               newEmp.id, qboEmployee.Id, qboEmployee.DisplayName,
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               qboEmployee.SyncToken, email, 1.0, userId, tx
             );
             return newEmp;
@@ -1256,7 +1252,7 @@ export class QuickBooksSyncService {
     // Prefer ShipAddr (service location) over BillAddr for scheduling
     const addr = qboCustomer.ShipAddr || qboCustomer.BillAddr;
     
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       quickbooksClientId: qboCustomer.Id,
       qboSyncToken: qboCustomer.SyncToken,
       lastQboSyncAt: new Date(),
@@ -1553,7 +1549,6 @@ export class QuickBooksSyncService {
           await db.update(employees)
             .set({ 
               userId: user.id,
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               workspaceRole: this.mapUserRoleToWorkspaceRole(userRole),
               organizationalTitle: this.mapRoleToOrgTitle(userRole),
             })
@@ -1569,7 +1564,7 @@ export class QuickBooksSyncService {
   }
 
   private mapUserRoleToWorkspaceRole(userRole: string): 'org_owner' | 'co_owner' | 'manager' | 'department_manager' | 'supervisor' | 'staff' | 'employee' | 'contractor' | 'viewer' {
-    const roleMap: Record<string, any> = {
+    const roleMap: Record<string, unknown> = {
       'org_owner': 'org_owner',
       'co_owner': 'co_owner',
       'manager': 'manager',
@@ -1643,7 +1638,6 @@ export class QuickBooksSyncService {
           partnerEntityName,
           syncToken,
           matchEmail,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           matchConfidence: confidence,
           syncStatus: 'synced',
           lastSyncAt: new Date(),
@@ -1651,7 +1645,6 @@ export class QuickBooksSyncService {
         })
         .where(eq(partnerDataMappings.id, existing.id));
     } else {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await client.insert(partnerDataMappings).values({
         workspaceId,
         partnerConnectionId: connectionId,
@@ -1689,7 +1682,6 @@ export class QuickBooksSyncService {
       .where(
         and(
           eq(partnerManualReviewQueue.workspaceId, workspaceId),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           eq(partnerManualReviewQueue.partnerEntityId, partnerEntityId),
           eq(partnerManualReviewQueue.status, 'pending')
         )
@@ -1788,7 +1780,6 @@ export class QuickBooksSyncService {
     const requestId = this.generateInvoiceRequestId(
       realmId,
       weekEnding,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       clientMapping.partnerEntityId,
       lineItems
     );
@@ -1815,7 +1806,6 @@ export class QuickBooksSyncService {
 
     const [idempotencyRecord] = existingRequest 
       ? [existingRequest]
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       : await db.insert(partnerInvoiceIdempotency).values({
           workspaceId,
           partnerConnectionId: connection.id,
@@ -1871,7 +1861,6 @@ export class QuickBooksSyncService {
           status: 'completed',
           partnerInvoiceId: response.Invoice.Id,
           partnerInvoiceNumber: trinityDocNumber,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           responsePayload: { syncToken: response.Invoice.SyncToken },
           updatedAt: new Date(),
         })
@@ -1883,9 +1872,7 @@ export class QuickBooksSyncService {
       await db.update(partnerInvoiceIdempotency)
         .set({
           status: 'failed',
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           lastError: (error instanceof Error ? error.message : String(error)),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           attempts: (existingRequest?.attempts || 0) + 1,
           lastAttemptAt: new Date(),
           updatedAt: new Date(),
@@ -2163,7 +2150,6 @@ export class QuickBooksSyncService {
     }
 
     if (resolution === 'linked_existing' && selectedCoaileagueEntityId) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const [mapping] = await db.insert(partnerDataMappings).values({
         workspaceId: item.workspaceId,
         partnerConnectionId: item.partnerConnectionId,
@@ -2399,7 +2385,7 @@ export class QuickBooksSyncService {
   ): Promise<{
     action: 'RETRY' | 'FIX_DATA' | 'ESCALATE' | 'ABORT';
     reasoning: string;
-    modifications?: Record<string, any>;
+    modifications?: Record<string, unknown>;
     suggestedFix?: string;
     shouldRetry: boolean;
     retryDelayMs?: number;

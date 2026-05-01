@@ -69,7 +69,6 @@ async function logEscalation(
   recipient: string
 ) {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await universalAudit({
       workspaceId,
       action: `invoice.collections_tier${tier}` as any,
@@ -126,7 +125,7 @@ async function resolvePortalUrl(inv: OverdueInvoice, clientEmail: string): Promi
     const domain = (process.env.APP_BASE_URL || '');
     const base = domain ? `https://${domain}` : '';
     return `${base}/portal/client/${portal.accessToken}`;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[OverdueCollections] resolvePortalUrl failed — falling back to ID-based URL:', (err instanceof Error ? err.message : String(err)));
     const fallbackDomain = (process.env.APP_BASE_URL || '');
     const fallbackBase = fallbackDomain ? `https://${fallbackDomain}` : '';
@@ -346,7 +345,7 @@ export async function runOverdueCollectionsSweep(): Promise<CollectionsResult> {
         if (clientEmail) await runTier1(invWithDays, clientEmail, clientName, wsName);
         result.tier1Sent++;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       result.errors.push(`Invoice ${inv.invoiceNumber}: ${(err instanceof Error ? err.message : String(err))}`);
     }
   }

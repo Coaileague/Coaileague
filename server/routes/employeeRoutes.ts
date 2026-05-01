@@ -45,11 +45,11 @@ const FINANCIAL_FIELDS_SENSITIVE = [
 ] as const;
 
 function stripFinancialFields(
-  employee: Record<string, any>,
+  employee: Record<string, unknown>,
   callerRole: string,
   callerPlatformRole: string,
   callerUserId: string,
-): Record<string, any> {
+): Record<string, unknown> {
   if (!employee) return employee;
   const isOwnerLevel = ['org_owner', 'co_owner'].includes(callerRole);
   const isPlatformStaff = ['root_admin', 'deputy_admin', 'sysop',
@@ -350,7 +350,6 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
 
         if (targetUser) {
           await tx.insert(platformRoles).values({
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             workspaceId: PLATFORM_WORKSPACE_ID,
             userId: targetUser.id,
             role: platformRole,
@@ -374,7 +373,6 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
     if (employee.email) {
       const existingUser = await storage.getUserByEmail(employee.email);
       if (existingUser && !employee.userId) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         updatedEmployee = await storage.updateEmployee(employee.id, workspaceId, {
           userId: existingUser.id,
         });
@@ -392,7 +390,6 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
     scheduleNonBlocking('employee.ai-brain-event-hired', async () => {
       const { postDatabaseEventToAIBrain } = await import('../services/ai-brain/workboardService');
       postDatabaseEventToAIBrain({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         eventType: 'employee_hired',
         workspaceId,
         userId: req.user?.id || 'system',
@@ -698,7 +695,6 @@ router.patch('/:id', async (req: AuthenticatedRequest, res) => {
       (async () => {
         try {
           const { helpaiOrchestrator } = await import('../services/helpai/platformActionHub');
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           await helpaiOrchestrator.executeAction('settings.propagate_pay_rate_change', {
             employeeId: req.params.id,
             workspaceId,
@@ -716,7 +712,6 @@ router.patch('/:id', async (req: AuthenticatedRequest, res) => {
       (async () => {
         try {
           const { helpaiOrchestrator } = await import('../services/helpai/platformActionHub');
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           await helpaiOrchestrator.executeAction('settings.propagate_license_expiry', {
             employeeId: req.params.id,
             workspaceId,
@@ -847,7 +842,6 @@ router.patch('/me/contact-info', async (req: AuthenticatedRequest, res) => {
     const userId = req.user?.id || req.user?.id;
 
     // Scope to the authenticated workspace — prevents cross-tenant mutation
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const employee = await storage.getEmployeeByUserId(userId, req.workspaceId);
 
     if (!employee) {

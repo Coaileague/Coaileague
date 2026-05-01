@@ -61,7 +61,7 @@ export interface WorkflowStartParams {
   workflowName: string;
   triggeredBy?: string | null;
   triggerSource?: string; // 'sms_calloff' | 'voice_calloff' | 'cron' | 'chat' | ...
-  triggerData?: Record<string, any>;
+  triggerData?: Record<string, unknown>;
   userId?: string | null;
 }
 
@@ -122,7 +122,7 @@ export async function logWorkflowStart(
       workspaceId: params.workspaceId,
       startedAt,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[workflowLogger] Non-fatal: start insert failed', {
       workflow: params.workflowName,
       error: err?.message,
@@ -173,7 +173,7 @@ export async function logWorkflowStep(
         metadata: { ...currentMeta, trail } as any,
       })
       .where(eq(auditLogs.id, record.id));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[workflowLogger] Non-fatal: step update failed', {
       workflow: record.workflowName,
       step,
@@ -243,7 +243,7 @@ export async function logWorkflowComplete(
         } as any,
       })
       .where(eq(auditLogs.id, record.id));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[workflowLogger] Non-fatal: complete update failed', {
       workflow: record.workflowName,
       error: err?.message,
@@ -258,7 +258,7 @@ function sanitizeForLog<T extends Record<string, any> | null | undefined>(
   value: T,
 ): T {
   if (!value || typeof value !== 'object') return value;
-  const out: Record<string, any> = Array.isArray(value) ? [...value] : { ...value };
+  const out: Record<string, unknown> = Array.isArray(value) ? [...value] : { ...value };
   for (const k of Object.keys(out)) {
     if (SENSITIVE_KEYS.some((sk) => k.toLowerCase().includes(sk))) {
       out[k] = '[REDACTED]';

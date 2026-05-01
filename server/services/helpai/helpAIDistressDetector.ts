@@ -233,7 +233,7 @@ export async function notifySupervisorOfDistress(opts: {
     });
 
     log.info(`[DistressDetector] Supervisor notified — officer:${opts.officerId} level:${opts.level}`);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[DistressDetector] Supervisor notification failed (non-fatal):', err?.message);
   }
 }

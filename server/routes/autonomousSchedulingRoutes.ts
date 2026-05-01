@@ -326,7 +326,6 @@ export function registerAutonomousSchedulingRoutes(app: Express) {
 
       res.json({
         success: deleted,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         message: deleted ? 'Template deleted' : 'Template not found',
       });
 

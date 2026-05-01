@@ -87,7 +87,7 @@ export default function PayrollDeductionsPage() {
       form.reset();
       refetch();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "✗ Error", description: error.message, variant: "destructive" });
     },
   });
@@ -101,7 +101,7 @@ export default function PayrollDeductionsPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/payroll/deductions'] });
       refetch();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "✗ Error", description: error.message, variant: "destructive" });
     },
   });

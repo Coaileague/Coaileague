@@ -273,7 +273,7 @@ async function runTrinityVisionAnalysis(
       reasoningText: String(parsed.reasoning || ''),
       ocrText: parsed.ocr_text ? String(parsed.ocr_text) : undefined,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[VisualCompliance] Vision analysis threw:', err?.message);
     return { status: 'flagged', confidenceScore: 0, reasoningText: `Analysis error: ${err?.message}` };
   }

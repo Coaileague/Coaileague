@@ -182,9 +182,7 @@ router.get('/magic-link/verify', async (req: Request, res) => {
           claims: {
             sub: result.user.id,
             email: result.user.email,
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             first_name: result.user.firstName,
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             last_name: result.user.lastName,
           },
           expires_at: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60),
@@ -337,7 +335,7 @@ router.patch('/profile', mutationLimiter, async (req: any, res) => {
 
     if (updatedUser) {
       try {
-        const employeeSync: Record<string, any> = {
+        const employeeSync: Record<string, unknown> = {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           updatedAt: new Date(),
@@ -463,7 +461,6 @@ router.post('/mfa/setup', async (req: AuthenticatedRequest, res) => {
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const userEmail = req.user?.email || '';
 
     if (!userEmail) {

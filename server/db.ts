@@ -163,7 +163,6 @@ pool.on('connect', (client) => {
   const _origQuery = client.query.bind(client);
   (client as any).query = function slowQueryWrapper(...args: any[]) {
     const start = Date.now();
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const result = _origQuery(...args);
     const captureSlowQuery = (duration: number) => {
       if (duration >= 500) {
@@ -190,10 +189,9 @@ const _originalConnect = pool.connect.bind(pool);
     throw new Error('[CircuitBreaker] DB circuit is open — skipping connection attempt');
   }
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const client = await _originalConnect(...args);
     return client;
-  } catch (err: any) {
+  } catch (err: unknown) {
     recordDbFailure(err?.message);
     throw err;
   }
@@ -217,7 +215,7 @@ export async function probeDbConnection(): Promise<boolean> {
     } finally {
       client.release();
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     recordDbFailure(err?.message);
     return false;
   }
@@ -251,7 +249,7 @@ export async function withRetry<T>(
       const result = await operation();
       recordDbSuccess();
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       lastError = error;
       recordDbFailure();
       
@@ -292,7 +290,7 @@ export async function checkDatabaseHealth(): Promise<boolean> {
     await db.execute(sql`SELECT 1`);
     recordDbSuccess();
     return true;
-  } catch (error: any) {
+  } catch (error: unknown) {
     recordDbFailure();
     log.error('Database health check failed', { error: error?.message });
     return false;
@@ -304,7 +302,7 @@ process.on('SIGTERM', async () => {
   try {
     await pool.end();
     log.info('Pool closed gracefully');
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Error closing pool', { error: err?.message });
   }
 });
@@ -314,7 +312,7 @@ process.on('SIGINT', async () => {
   try {
     await pool.end();
     log.info('Pool closed gracefully');
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Error closing pool', { error: err?.message });
   }
 });

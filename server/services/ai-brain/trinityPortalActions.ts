@@ -37,12 +37,9 @@ function mkAction(actionId: string, fn: (params: any) => Promise<any>): ActionHa
     description: `Trinity portal action: ${actionId}`,
     handler: async (req: ActionRequest): Promise<ActionResult> => {
       try {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const data = await fn(req.params || {});
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         return { success: true, data };
-      } catch (err: any) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
+      } catch (err: unknown) {
         return { success: false, error: (err instanceof Error ? err.message : String(err)) };
       }
     },
@@ -83,7 +80,6 @@ export function registerPortalActions(): void {
       .limit(10);
 
     // Count outstanding invoices
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const outstanding = recentInvoices.filter(i => ['sent', 'overdue', 'partial'].includes(i.status));
 
     // Portal access token status
@@ -174,7 +170,6 @@ export function registerPortalActions(): void {
       .where(and(
         eq(employeeDocuments.workspaceId, workspaceId),
         eq(employeeDocuments.employeeId, employeeId),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         eq(employeeDocuments.status, 'pending'),
       ))
       .limit(10);
@@ -189,7 +184,6 @@ export function registerPortalActions(): void {
       upcomingShifts,
       pendingDocuments: pendingDocs,
       shiftsNext7Days: upcomingShifts.length,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       pendingSignatures: pendingDocs.filter(d => d.documentType === 'signature_required').length,
     };
   }));

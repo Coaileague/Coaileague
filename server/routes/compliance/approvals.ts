@@ -125,7 +125,6 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
         dueDate: dueDate ? new Date(dueDate) : undefined
       }).returning();
 
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await tx.insert(complianceAuditTrail).values({
         workspaceId,
         entityType: 'approval',
@@ -229,7 +228,6 @@ router.post("/:approvalId/decide", requireAuth, async (req: Request, res: Respon
           .where(eq(complianceDocuments.id, upd.documentId));
       }
 
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await tx.insert(complianceAuditTrail).values({
         workspaceId,
         entityType: 'approval',

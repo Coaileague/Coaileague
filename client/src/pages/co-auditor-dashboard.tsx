@@ -122,7 +122,7 @@ function NdaGate({
       toast({ title: "NDA accepted", description: "Portal access unlocked." });
       onAccepted();
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Could not record acceptance", description: err?.message, variant: "destructive" });
     },
   });
@@ -242,7 +242,7 @@ function WorkspaceDrawer({
       setSubject(""); setBody(""); setSeverity('warning');
       qc.invalidateQueries({ queryKey: ["/api/auditor/notifications", workspaceId] });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Failed to flag", description: err?.message, variant: "destructive" });
     },
   });
@@ -505,7 +505,7 @@ export default function CoAuditorDashboard() {
       qc.invalidateQueries({ queryKey: ["/api/auditor/me/audits"] });
       qc.invalidateQueries({ queryKey: ["/api/auditor/me/workspaces"] });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Request failed", description: err?.message, variant: "destructive" });
     },
   });

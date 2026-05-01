@@ -834,7 +834,6 @@ router.get('/my-certificates', async (req: AuthenticatedRequest, res) => {
     const [emp] = await db
       .select({ id: employees.id })
       .from(employees)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .where(and(eq(employees.workspaceId, workspaceId), eq(employees.userId, userId)))
       .limit(1);
 

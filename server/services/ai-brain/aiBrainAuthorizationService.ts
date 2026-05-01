@@ -221,7 +221,7 @@ class AIBrainAuthorizationService {
       }
       const count = (rows as any[]).length ?? 0;
       log.info(`Reloaded ${count} active workspace pause(s) from DB`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('Failed to reload workspace pauses from DB (non-blocking):', (err instanceof Error ? err.message : String(err)));
     }
   }
@@ -248,7 +248,7 @@ class AIBrainAuthorizationService {
           log.info('Global kill switch is NOT active (confirmed from DB)');
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('Failed to reload kill switch state from DB (non-blocking):', (err instanceof Error ? err.message : String(err)));
     }
   }
@@ -449,12 +449,10 @@ class AIBrainAuthorizationService {
       const userRecord = user[0];
       const role = (userRecord as any).platformRole as string;
       
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (!SUPPORT_ROLES.includes(role)) {
         return {
           valid: false,
           role,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           reason: `User is ${role}, requires one of [${SUPPORT_ROLES.join(', ')}]`
         };
       }
@@ -467,7 +465,6 @@ class AIBrainAuthorizationService {
 
   requiresSupportRole(category: string): boolean {
     const requiredRoles = AI_BRAIN_AUTHORITY_ROLES[category] || [];
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     return SUPPORT_ROLES.some(role => requiredRoles.includes(role));
   }
 
@@ -526,7 +523,7 @@ class AIBrainAuthorizationService {
     userRole: string;
     actionId: string;
     category: string;
-    parameters?: Record<string, any>;
+    parameters?: Record<string, unknown>;
     result?: any;
     error?: string;
   }): Promise<void> {
@@ -559,7 +556,6 @@ class AIBrainAuthorizationService {
       role: userRole,
       level: ROLE_HIERARCHY[userRole] || 0,
       accessible_categories: this.getAccessibleCategories(userRole),
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       is_support_staff: SUPPORT_ROLES.includes(userRole)
     };
   }
@@ -599,7 +595,7 @@ class AIBrainAuthorizationService {
     requesterId: string;
     requesterRole: string;
     targetEntity: string;
-    parameters: Record<string, any>;
+    parameters: Record<string, unknown>;
     reason: string;
   }): Promise<{ approved: boolean; approvalId?: string; reason?: string }> {
     const actionDetails = AIBrainAuthorizationService.DESTRUCTIVE_ACTIONS[data.actionType];
@@ -660,7 +656,6 @@ class AIBrainAuthorizationService {
         return { success: false, fullyApproved: false, reason: `Approval already ${approval.status}` };
       }
 
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (new Date() > approval.expiresAt) {
         await db.update(governanceApprovals).set({ status: 'expired', updatedAt: new Date() }).where(eq(governanceApprovals.id, approvalId));
         return { success: false, fullyApproved: false, reason: 'Approval request has expired' };
@@ -690,7 +685,6 @@ class AIBrainAuthorizationService {
         approvedAt: new Date().toISOString(),
       }];
 
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const fullyApproved = updatedApprovals.length >= approval.requiredApprovals;
       
       await db.update(governanceApprovals).set({ 
@@ -731,7 +725,6 @@ class AIBrainAuthorizationService {
 
       await db.update(governanceApprovals).set({ 
         status: 'rejected',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         rejectedBy: rejecterId,
         rejectionReason: reason,
         updatedAt: new Date(),
@@ -777,7 +770,6 @@ class AIBrainAuthorizationService {
         return { valid: false, reason: `Approval status is ${approval.status}, not approved` };
       }
 
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (new Date() > approval.expiresAt) {
         await db.update(governanceApprovals).set({ status: 'expired', updatedAt: new Date() }).where(eq(governanceApprovals.id, approvalId));
         return { valid: false, reason: 'Approval has expired' };
@@ -808,12 +800,10 @@ class AIBrainAuthorizationService {
       const approvals = await db.select().from(governanceApprovals)
         .where(and(
           eq(governanceApprovals.status, 'pending'),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           lt(now, governanceApprovals.expiresAt)
         ))
         .orderBy(desc(governanceApprovals.createdAt));
       
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       return approvals.map(approval => {
         const actionDetails = AIBrainAuthorizationService.DESTRUCTIVE_ACTIONS[approval.actionType];
         const approvalsArray = (approval.approvals as Array<any>) || [];
@@ -850,10 +840,8 @@ class AIBrainAuthorizationService {
       
       return {
         found: true,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         status: approval.status,
         approvals: approvalsArray.length,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         required: approval.requiredApprovals,
       };
     } catch (error) {
@@ -957,7 +945,7 @@ setTimeout(async () => {
     }
     aiBrainAuthorizationService.loadPausesFromDB();
     aiBrainAuthorizationService.loadKillSwitchFromDB();
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[AIBrainAuth] Startup pause reload failed (non-blocking):', err?.message);
   }
 }, 120000);

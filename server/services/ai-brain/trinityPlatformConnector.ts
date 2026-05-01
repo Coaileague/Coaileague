@@ -46,7 +46,7 @@ export interface ServiceEventPayload {
   action: string;
   workspaceId?: string;
   userId?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   severity?: 'info' | 'warning' | 'error' | 'critical';
   requiresAction?: boolean;
 }
@@ -132,7 +132,6 @@ class TrinityPlatformConnector {
           ...payload.data,
         },
         priority: this.mapSeverityToPriority(payload.severity),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         visibility: payload.requiresAction ? 'manager' : 'system',
       };
 
@@ -199,7 +198,6 @@ class TrinityPlatformConnector {
         ...payload.data,
       },
       priority: payload.success ? 3 : 1,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       visibility: payload.success ? 'system' : 'manager',
     };
 
@@ -226,10 +224,8 @@ class TrinityPlatformConnector {
   ): Promise<void> {
     try {
       await trinityMemoryService.shareInsight({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         sourceAgent: `${domain}_service`,
         insightType: 'pattern',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceScope: insight.workspaceId,
         title: insight.title,
         content: insight.content,
@@ -332,7 +328,7 @@ class TrinityPlatformConnector {
   /**
    * Get diagnostics for the platform connector
    */
-  getDiagnostics(): Record<string, any> {
+  getDiagnostics(): Record<string, unknown> {
     const statuses = this.getConnectionStatus();
     const healthyCount = statuses.filter(s => s.isHealthy).length;
     const totalEvents = statuses.reduce((sum, s) => sum + s.eventCount, 0);

@@ -141,7 +141,7 @@ export function handleStaff(params: {
       ) +
       `<Redirect method="POST">${baseUrl}/api/voice/staff-menu?${qs}</Redirect>`
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[staffExtension/handleStaff] Error:', err?.message);
     return twiml(say('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }
@@ -187,7 +187,7 @@ export function handleClockInStep1(params: {
       ) +
       say('No entry received. Goodbye.')
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[staffExtension/handleClockInStep1] Error:', err?.message);
     return twiml(say('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }
@@ -222,7 +222,7 @@ export function handleCollectPin(params: {
       ) +
       say('No PIN received. Goodbye.')
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[staffExtension/handleCollectPin] Error:', err?.message);
     return twiml(say('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }
@@ -516,7 +516,6 @@ export async function processClockIn(params: {
       const { NotificationDeliveryService } = await import('../../notificationDeliveryService');
       await Promise.allSettled(managers.map(m =>
         NotificationDeliveryService.send({
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           type: 'clock_in_notification',
           workspaceId,
           recipientUserId: m.userId,
@@ -595,7 +594,7 @@ export function handleClockOutStep1(params: {
       ) +
       say('No entry received. Goodbye.')
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[staffExtension/handleClockOutStep1] Error:', err?.message);
     return twiml(say('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }
@@ -628,7 +627,7 @@ export function handleCollectClockOutPin(params: {
       ) +
       say('No PIN received. Goodbye.')
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[staffExtension/handleCollectClockOutPin] Error:', err?.message);
     return twiml(say('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }
@@ -689,7 +688,7 @@ export async function processClockOut(params: {
     return lang === 'es'
       ? twiml(say(`Salida registrada, ${emp.firstName}. Referencia ${ref.split('').join(' ')}. Gracias por su turno. Adiós.`, 'es'))
       : twiml(say(`Clocked out, ${emp.firstName}. Reference ${ref.split('').join(' ')}. Thanks for your shift. Goodbye.`));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[staffExtension/processClockOut] Error:', err?.message);
     return twiml(say('We encountered an error processing your clock-out. Please try again. Goodbye.'));
   }
@@ -728,7 +727,7 @@ export function handleCallOff(params: {
       `<Record action="${baseUrl}/api/voice/recording-done?ext=calloff&lang=en" maxLength="120" playBeep="true" />` +
       say('Your call-off has been recorded. A supervisor has been notified. Goodbye.')
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[staffExtension/handleCallOff] Error:', err?.message);
     return twiml(say('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }
@@ -767,7 +766,7 @@ export function handleStaffSupport(params: {
       `<Record action="${baseUrl}/api/voice/recording-done?ext=staff-support&lang=en" maxLength="180" playBeep="true" />` +
       say('Your message has been received. We will follow up with you shortly. Goodbye.')
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[staffExtension/handleStaffSupport] Error:', err?.message);
     return twiml(say('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }

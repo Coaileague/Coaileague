@@ -1026,7 +1026,7 @@ class ChatServerHubClass {
           )
         );
       return result[0]?.count || 0;
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.warn(`[ChatServerHub] Error getting participant count (non-fatal):`, error?.message || 'unknown');
       return 0;
     }
@@ -1647,10 +1647,10 @@ class ChatServerHubClass {
                 });
               }
             }
-          } catch (routeErr: any) {
+          } catch (routeErr: unknown) {
             log.warn('[ChatServerHub] Voice transcript routing failed (non-fatal):', routeErr?.message);
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn('[ChatServerHub] Voice transcription failed (non-fatal):', err?.message);
         }
       });

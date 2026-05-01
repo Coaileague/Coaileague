@@ -607,7 +607,7 @@ class AutonomousFixPipelineService {
         message: `Fix applied successfully${commitHash ? ` (commit: ${commitHash.substring(0, 7)})` : ''}`,
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(`[AutonomousFix] Error executing fix:`, error);
       this.activeFixes.delete(spec.findingId);
       
@@ -673,7 +673,6 @@ class AutonomousFixPipelineService {
       const spec: FixSpecification = {
         findingId: approval.gapFindingId || '',
         title: approval.title,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         approach: approval.description,
         patches: proposedChanges,
         affectedFiles: (approval as any).affectedFiles || [],
@@ -693,7 +692,7 @@ class AutonomousFixPipelineService {
       }
 
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(`[AutonomousFix] Error executing approved fix:`, error);
       return {
         success: false,
@@ -976,7 +975,7 @@ class AutonomousFixPipelineService {
           cwd: this.projectRoot,
           timeout: this.config.validationTimeout,
         });
-      } catch (tscError: any) {
+      } catch (tscError: unknown) {
         const output = (tscError.stdout || '') + (tscError.stderr || '');
         
         // Check if new errors were introduced in our files
@@ -998,7 +997,7 @@ class AutonomousFixPipelineService {
               cwd: this.projectRoot,
               timeout: 30000,
             });
-          } catch (e: any) {
+          } catch (e: unknown) {
             if (!errors.some(err => err.includes(file))) {
               errors.push(`Syntax error in ${file}`);
             }
@@ -1010,7 +1009,7 @@ class AutonomousFixPipelineService {
         passed: errors.length === 0,
         errors,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[AutonomousFix] Validation error:', error);
       return {
         passed: false,
@@ -1201,7 +1200,7 @@ class AutonomousFixPipelineService {
             results.errors.push(`${finding.id}: ${result.message}`);
             log.error(`[AutonomousFix] Failed to fix ${finding.id}: ${result.message}`);
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
           results.errors.push(`${finding.id}: ${(error instanceof Error ? error.message : String(error))}`);
           log.error(`[AutonomousFix] Error processing finding ${finding.id}:`, error);
         }
@@ -1220,7 +1219,7 @@ class AutonomousFixPipelineService {
       });
 
       return results;
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[AutonomousFix] Error in processOutstandingFindings:', error);
       results.errors.push((error instanceof Error ? error.message : String(error)));
       return results;

@@ -148,7 +148,7 @@ export default function ManagerDashboard() {
                 <QueueLoadingState label="time-off requests" />
               ) : pendingTimeOff && pendingTimeOff.length > 0 ? (
                 <div className="space-y-2">
-                  {pendingTimeOff.slice(0, 5).map((request: any) => (
+                  {pendingTimeOff.slice(0, 5).map((request) => (
                     <div key={request.id} className="p-3 border rounded-lg hover-elevate">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex-1">
@@ -195,7 +195,7 @@ export default function ManagerDashboard() {
                 <QueueLoadingState label="timesheet edits" />
               ) : pendingTimesheetEdits && pendingTimesheetEdits.length > 0 ? (
                 <div className="space-y-2">
-                  {pendingTimesheetEdits.slice(0, 5).map((request: any) => (
+                  {pendingTimesheetEdits.slice(0, 5).map((request) => (
                     <div key={request.id} className="p-3 border rounded-lg hover-elevate">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex-1">
@@ -240,7 +240,7 @@ export default function ManagerDashboard() {
                 <QueueLoadingState label="shift actions" />
               ) : pendingShifts && pendingShifts.length > 0 ? (
                 <div className="space-y-2">
-                  {pendingShifts.slice(0, 5).map((request: any) => (
+                  {pendingShifts.slice(0, 5).map((request) => (
                     <div key={request.id} className="p-3 border rounded-lg hover-elevate">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex-1">
@@ -285,7 +285,7 @@ export default function ManagerDashboard() {
                 <QueueLoadingState label="expense approvals" />
               ) : pendingExpenses && pendingExpenses.length > 0 ? (
                 <div className="space-y-2">
-                  {pendingExpenses.slice(0, 5).map((expense: any) => (
+                  {pendingExpenses.slice(0, 5).map((expense) => (
                     <div key={expense.id} className="p-3 border rounded-lg hover-elevate">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex-1">
@@ -330,7 +330,7 @@ export default function ManagerDashboard() {
                 <QueueLoadingState label="I-9 compliance alerts" />
               ) : expiringI9 && expiringI9.length > 0 ? (
                 <div className="space-y-2">
-                  {expiringI9.slice(0, 10).map((record: any) => (
+                  {expiringI9.slice(0, 10).map((record) => (
                     <div key={record.id} className="p-3 border border-red-200 rounded-lg hover-elevate bg-red-50/50 dark:bg-red-950/20">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex-1">

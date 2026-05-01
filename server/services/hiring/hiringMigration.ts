@@ -73,7 +73,7 @@ export async function runHiringMigration(): Promise<void> {
     `);
 
     log.info('[HiringMigration] Schema migration complete');
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[HiringMigration] Error:', (err instanceof Error ? err.message : String(err)));
   }
 }

@@ -394,7 +394,7 @@ export default function VoiceSettingsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentCalls.map((call: any) => (
+                  {recentCalls.map((call) => (
                     <tr key={call.id} data-testid={`row-call-${call.id}`} className="border-b last:border-0">
                       <td className="py-2 pr-4 font-mono text-xs">{call.callerNumber || '—'}</td>
                       <td className="py-2 pr-4">{call.extensionLabel || '—'}</td>

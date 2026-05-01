@@ -64,7 +64,7 @@ identityPinRouter.post('/pin/owner/set', requireAuth, async (req: AuthenticatedR
     });
 
     return res.json({ success: true, message: 'Owner identification PIN saved' });
-  } catch (err: any) {
+  } catch (err: unknown) {
     const msg = err?.message || 'Failed to set owner PIN';
     if (msg.startsWith('INVALID_PIN')) return res.status(400).json({ error: 'INVALID_PIN', message: msg });
     if (msg.startsWith('PIN_TARGET_NOT_FOUND')) return res.status(404).json({ error: 'NOT_FOUND', message: msg });
@@ -92,7 +92,7 @@ identityPinRouter.delete('/pin/owner', requireAuth, async (req: AuthenticatedReq
     });
 
     return res.json({ success: true, message: 'Owner PIN cleared' });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[OwnerPin] clear failed:', err?.message);
     return res.status(500).json({ error: 'INTERNAL_ERROR' });
   }
@@ -108,7 +108,7 @@ identityPinRouter.get('/pin/owner/status', requireAuth, async (req: Authenticate
       workspaceId,
     });
     return res.json(status);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[OwnerPin] status failed:', err?.message);
     return res.status(500).json({ error: 'INTERNAL_ERROR' });
   }
@@ -121,7 +121,6 @@ const CLIENT_PIN_ROLES = ['manager', 'department_manager', 'org_admin', 'org_own
 identityPinRouter.post(
   '/pin/client/:clientId/set',
   requireAuth,
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   requireWorkspaceRole(CLIENT_PIN_ROLES),
   async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -141,7 +140,7 @@ identityPinRouter.post(
       });
 
       return res.json({ success: true, message: 'Client PIN saved' });
-    } catch (err: any) {
+    } catch (err: unknown) {
       const msg = err?.message || 'Failed to set client PIN';
       if (msg.startsWith('INVALID_PIN')) return res.status(400).json({ error: 'INVALID_PIN', message: msg });
       if (msg.startsWith('PIN_TARGET_NOT_FOUND')) return res.status(404).json({ error: 'NOT_FOUND', message: msg });
@@ -154,7 +153,6 @@ identityPinRouter.post(
 identityPinRouter.delete(
   '/pin/client/:clientId',
   requireAuth,
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   requireWorkspaceRole(CLIENT_PIN_ROLES),
   async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -172,7 +170,7 @@ identityPinRouter.delete(
       });
 
       return res.json({ success: true, message: 'Client PIN cleared' });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[ClientPin] clear failed:', err?.message);
       return res.status(500).json({ error: 'INTERNAL_ERROR' });
     }
@@ -182,7 +180,6 @@ identityPinRouter.delete(
 identityPinRouter.get(
   '/pin/client/:clientId/status',
   requireAuth,
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   requireWorkspaceRole(CLIENT_PIN_ROLES),
   async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -196,7 +193,7 @@ identityPinRouter.get(
         workspaceId,
       });
       return res.json(status);
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('[ClientPin] status failed:', err?.message);
       return res.status(500).json({ error: 'INTERNAL_ERROR' });
     }
@@ -244,7 +241,7 @@ identityPinRouter.get('/pin/client/self/status', requireAuth, async (req: Authen
       workspaceId: resolved.workspaceId,
     });
     return res.json({ ...status, clientId: resolved.clientId });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[ClientPin] self status failed:', err?.message);
     return res.status(500).json({ error: 'INTERNAL_ERROR' });
   }
@@ -267,7 +264,7 @@ identityPinRouter.post('/pin/client/self/set', requireAuth, async (req: Authenti
       actorPlatformRole: req.platformRole ?? null,
     });
     return res.json({ success: true, message: 'Client PIN saved' });
-  } catch (err: any) {
+  } catch (err: unknown) {
     const msg = err?.message || 'Failed to set client PIN';
     if (msg.startsWith('INVALID_PIN')) return res.status(400).json({ error: 'INVALID_PIN', message: msg });
     if (msg.startsWith('PIN_TARGET_NOT_FOUND')) return res.status(404).json({ error: 'NOT_FOUND', message: msg });
@@ -291,7 +288,7 @@ identityPinRouter.delete('/pin/client/self', requireAuth, async (req: Authentica
       actorPlatformRole: req.platformRole ?? null,
     });
     return res.json({ success: true, message: 'Client PIN cleared' });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[ClientPin] self clear failed:', err?.message);
     return res.status(500).json({ error: 'INTERNAL_ERROR' });
   }
@@ -344,7 +341,7 @@ identityPinRouter.get('/pin/employee/self/status', requireAuth, async (req: Auth
       employeeId: resolved.employeeId,
       employeeNumber: resolved.employeeNumber,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[EmployeePin] self status failed:', err?.message);
     return res.status(500).json({ error: 'INTERNAL_ERROR' });
   }
@@ -371,7 +368,7 @@ identityPinRouter.post('/pin/employee/self/set', requireAuth, async (req: Authen
       message: 'Clock-in PIN saved',
       employeeNumber: resolved.employeeNumber,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     const msg = err?.message || 'Failed to set employee PIN';
     if (msg.startsWith('INVALID_PIN')) return res.status(400).json({ error: 'INVALID_PIN', message: msg });
     if (msg.startsWith('PIN_TARGET_NOT_FOUND')) return res.status(404).json({ error: 'NOT_FOUND', message: msg });
@@ -395,7 +392,7 @@ identityPinRouter.delete('/pin/employee/self', requireAuth, async (req: Authenti
       actorPlatformRole: req.platformRole ?? null,
     });
     return res.json({ success: true, message: 'Clock-in PIN cleared' });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[EmployeePin] self clear failed:', err?.message);
     return res.status(500).json({ error: 'INTERNAL_ERROR' });
   }
@@ -426,7 +423,7 @@ identityPinRouter.post('/verify-with-pin', pinVerifyLimiter, async (req: Request
       workspaceId: result.workspaceId,
       name: result.name,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[IdentityPin] verify-with-pin failed:', err?.message);
     return res.status(500).json({ valid: false, error: 'INTERNAL_ERROR' });
   }

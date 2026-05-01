@@ -292,7 +292,7 @@ employmentVerifyRouter.get(
           );
 
           log.info(`[EmploymentVerify] Billed ${feeCents} cents to ${workspaceId} for ${refNum}`);
-        } catch (billingErr: any) {
+        } catch (billingErr: unknown) {
           log.warn('[EmploymentVerify] Billing failed (non-blocking):', billingErr?.message);
         }
       });
@@ -331,7 +331,7 @@ employmentVerifyRouter.get(
         refNum,
         employeeNumber: emp.employee_number,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[EmploymentVerify] approve error: ${err?.message}`);
       await logActionAudit({
         actionId: 'employment_verification.approve',
@@ -428,7 +428,7 @@ employmentVerifyRouter.get(
         message: 'Request denied; requester notified.',
         refNum,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[EmploymentVerify] deny error: ${err?.message}`);
       await logActionAudit({
         actionId: 'employment_verification.deny',

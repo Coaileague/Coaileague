@@ -41,25 +41,25 @@ export default function GateDutyPage() {
 
   // Mutations
   const logVehicleMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/gate-duty/vehicles", data),
+    mutationFn: (data) => apiRequest("POST", "/api/gate-duty/vehicles", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/gate-duty"] });
       setIsVehicleModalOpen(false);
       toast({ title: "Success", description: "Vehicle entry logged" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Failed to log vehicle", description: error.message || "Please try again.", variant: "destructive" });
     },
   });
 
   const logPersonnelMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/gate-duty/personnel", data),
+    mutationFn: (data) => apiRequest("POST", "/api/gate-duty/personnel", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/gate-duty"] });
       setIsPersonnelModalOpen(false);
       toast({ title: "Success", description: "Personnel entry logged" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Failed to log personnel", description: error.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -70,7 +70,7 @@ export default function GateDutyPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/gate-duty"] });
       toast({ title: "Success", description: "Vehicle exit logged" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Failed to log vehicle exit", description: error.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -81,7 +81,7 @@ export default function GateDutyPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/gate-duty"] });
       toast({ title: "Success", description: "Personnel exit logged" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Failed to log personnel exit", description: error.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -93,19 +93,19 @@ export default function GateDutyPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/gate-duty"] });
       toast({ title: "Vehicle Flagged", description: "The vehicle has been flagged." });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Failed to flag vehicle", description: error.message || "Please try again.", variant: "destructive" });
     },
   });
 
   const startShiftMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/gate-duty/shift-report", data),
+    mutationFn: (data) => apiRequest("POST", "/api/gate-duty/shift-report", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/gate-duty/shift-report"] });
       setIsShiftModalOpen(false);
       toast({ title: "Shift Started", description: "Gate duty shift has begun" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Failed to start shift", description: error.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -116,7 +116,7 @@ export default function GateDutyPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/gate-duty/shift-report"] });
       toast({ title: "Shift Closed", description: "Gate duty shift has ended" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Failed to close shift", description: error.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -141,7 +141,7 @@ export default function GateDutyPage() {
                 <DialogHeader>
                   <DialogTitle>Start Gate Duty Shift</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={(e: any) => {
+                <form onSubmit={(e) => {
                   e.preventDefault();
                   const formData = new FormData(e.currentTarget);
                   startShiftMutation.mutate({
@@ -332,7 +332,7 @@ export default function GateDutyPage() {
                 <DialogHeader>
                   <DialogTitle>Log Vehicle Entry</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={(e: any) => {
+                <form onSubmit={(e) => {
                   e.preventDefault();
                   const formData = new FormData(e.currentTarget);
                   logVehicleMutation.mutate({
@@ -457,7 +457,7 @@ export default function GateDutyPage() {
                 <DialogHeader>
                   <DialogTitle>Log Person Entry</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={(e: any) => {
+                <form onSubmit={(e) => {
                   e.preventDefault();
                   const formData = new FormData(e.currentTarget);
                   logPersonnelMutation.mutate({

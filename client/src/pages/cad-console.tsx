@@ -200,7 +200,7 @@ function GeofenceAlertStrip({ departures, onAcknowledge }: { departures: any[]; 
       </div>
       {expanded && (
         <div className="border-t border-ds-gold/20 divide-y divide-ds-gold/10">
-          {departures.map((dep: any) => {
+          {departures.map((dep) => {
             const mins = minutesSince(dep.departed_at);
             return (
               <div key={dep.id} className="p-2.5 space-y-2">
@@ -275,7 +275,7 @@ export default function CADConsole() {
 
     bus.send({ type: 'join_dispatch_updates' });
 
-    const unsubAll = bus.subscribeAll((data: any) => {
+    const unsubAll = bus.subscribeAll((data) => {
       const type = data.type || '';
       if (type.startsWith("cad:") || type.startsWith("trinity:")) {
         invalidate();
@@ -306,49 +306,49 @@ export default function CADConsole() {
   }, [workspaceId, bus]);
 
   const createCall = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/cad/calls", { ...data, workspaceId, createdBy: user?.id }),
+    mutationFn: (data) => apiRequest("POST", "/api/cad/calls", { ...data, workspaceId, createdBy: user?.id }),
     onSuccess: () => { invalidate(); setShowNewCall(false); toast({ title: "Call for service created" }); },
-    onError: (e: any) => toast({ title: "Error", description: e?.message || 'Something went wrong. Please try again.', variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e?.message || 'Something went wrong. Please try again.', variant: "destructive" }),
   });
 
   const createUnit = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/cad/units", { ...data, workspaceId }),
+    mutationFn: (data) => apiRequest("POST", "/api/cad/units", { ...data, workspaceId }),
     onSuccess: () => { invalidate(); setShowNewUnit(false); toast({ title: "Unit registered" }); },
-    onError: (e: any) => toast({ title: "Error", description: e?.message || 'Something went wrong. Please try again.', variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e?.message || 'Something went wrong. Please try again.', variant: "destructive" }),
   });
 
   const dispatchUnit = useMutation({
     mutationFn: ({ callId, unitId }: { callId: string; unitId: string }) =>
       apiRequest("POST", `/api/cad/calls/${callId}/dispatch`, { unitId, workspaceId, dispatchedBy: user?.id, dispatchedByName: user?.firstName }),
     onSuccess: () => { invalidate(); setDispatchCallId(null); toast({ title: "Unit dispatched" }); },
-    onError: (e: any) => toast({ title: "Error", description: e?.message || 'Something went wrong. Please try again.', variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e?.message || 'Something went wrong. Please try again.', variant: "destructive" }),
   });
 
   const onScene = useMutation({
     mutationFn: (callId: string) => apiRequest("POST", `/api/cad/calls/${callId}/on-scene`, { workspaceId }),
     onSuccess: () => { invalidate(); toast({ title: "Unit on scene" }); },
-    onError: (e: any) => toast({ title: "Error", description: e?.message || 'Something went wrong. Please try again.', variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e?.message || 'Something went wrong. Please try again.', variant: "destructive" }),
   });
 
   const resolveCall = useMutation({
     mutationFn: ({ callId, notes }: { callId: string; notes: string }) =>
       apiRequest("POST", `/api/cad/calls/${callId}/resolve`, { workspaceId, resolutionNotes: notes, closedBy: user?.firstName }),
     onSuccess: () => { invalidate(); setSelectedCallId(null); toast({ title: "Call resolved" }); },
-    onError: (e: any) => toast({ title: "Error", description: e?.message || 'Something went wrong. Please try again.', variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e?.message || 'Something went wrong. Please try again.', variant: "destructive" }),
   });
 
   const changeUnitStatus = useMutation({
     mutationFn: ({ unitId, status }: { unitId: string; status: string }) =>
       apiRequest("PATCH", `/api/cad/units/${unitId}/status`, { status, workspaceId }),
     onSuccess: () => invalidate(),
-    onError: (e: any) => toast({ title: "Error", description: e?.message || 'Something went wrong. Please try again.', variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e?.message || 'Something went wrong. Please try again.', variant: "destructive" }),
   });
 
   const acknowledgeDeparture = useMutation({
     mutationFn: ({ id, note }: { id: string; note: string }) =>
       apiRequest("POST", `/api/cad/geofence-departures/${id}/acknowledge`, { acknowledgedBy: user?.firstName, note, workspaceId }),
     onSuccess: () => { invalidate(); toast({ title: "Departure acknowledged" }); },
-    onError: (e: any) => toast({ title: "Error", description: e?.message || 'Something went wrong. Please try again.', variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e?.message || 'Something went wrong. Please try again.', variant: "destructive" }),
   });
 
   function NewCallForm() {
@@ -409,18 +409,18 @@ export default function CADConsole() {
     );
   }
 
-  const activeCalls = calls.data?.calls?.filter((c: any) => ["pending","dispatched","on_scene"].includes(c.status)) || [];
+  const activeCalls = calls.data?.calls?.filter((c) => ["pending","dispatched","on_scene"].includes(c.status)) || [];
   const allUnits = units.data?.units || [];
-  const availableUnits = allUnits.filter((u: any) => u.current_status === "available");
-  const dispatchedUnits = allUnits.filter((u: any) => u.current_status === "dispatched");
-  const onSceneUnits = allUnits.filter((u: any) => u.current_status === "on_scene");
+  const availableUnits = allUnits.filter((u) => u.current_status === "available");
+  const dispatchedUnits = allUnits.filter((u) => u.current_status === "dispatched");
+  const onSceneUnits = allUnits.filter((u) => u.current_status === "on_scene");
   const scheduledOfficers = scheduleView.data?.officers || [];
   const activeDepartures = departures.data?.departures || [];
 
   const officerCounts = {
-    active: scheduledOfficers.filter((o: any) => o.fieldState === "active_on_site").length,
-    scheduled: scheduledOfficers.filter((o: any) => o.fieldState === "scheduled_not_in").length,
-    departed: scheduledOfficers.filter((o: any) => o.fieldState === "geofence_departed").length,
+    active: scheduledOfficers.filter((o) => o.fieldState === "active_on_site").length,
+    scheduled: scheduledOfficers.filter((o) => o.fieldState === "scheduled_not_in").length,
+    departed: scheduledOfficers.filter((o) => o.fieldState === "geofence_departed").length,
     availableUnits: availableUnits.length,
     dispatchedUnits: dispatchedUnits.length,
     onSceneUnits: onSceneUnits.length,
@@ -489,11 +489,10 @@ export default function CADConsole() {
         {activeView === 'board' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full overflow-auto pr-1">
             <div className="lg:col-span-2 space-y-6">
-              <DsSectionCard title="Pending Calls" actions={<DsBadge color="danger">{activeCalls.filter((c:any) => c.status === 'pending').length}</DsBadge>}>
+              <DsSectionCard title="Pending Calls" actions={<DsBadge color="danger">{activeCalls.filter((c) => c.status === 'pending').length}</DsBadge>}>
                 <div className="space-y-3">
-                  {activeCalls.filter((c:any) => c.status === 'pending').map((call:any) => (
+                  {activeCalls.filter((c) => c.status === 'pending').map((call) => (
                     <DsSectionCard key={call.id} className="bg-ds-navy-light/50 border-ds-danger/20" 
-                      // @ts-expect-error — TS migration: fix in refactoring sprint
                       title={<span className="font-mono text-ds-gold">{call.call_number}</span>}
                       actions={<DsBadge color="danger">PRIORITY {call.priority}</DsBadge>}
                     >
@@ -504,7 +503,7 @@ export default function CADConsole() {
                       </div>
                     </DsSectionCard>
                   ))}
-                  {activeCalls.filter((c:any) => c.status === 'pending').length === 0 && (
+                  {activeCalls.filter((c) => c.status === 'pending').length === 0 && (
                      <DsEmptyState icon={CheckCircle} title="No Pending Calls" subtitle="All current calls have been dispatched." />
                   )}
                 </div>
@@ -513,7 +512,7 @@ export default function CADConsole() {
             <div className="space-y-6">
                <DsSectionCard title="Active Units">
                  <div className="space-y-2">
-                   {allUnits.map((unit:any) => (
+                   {allUnits.map((unit) => (
                      <div key={unit.id} className="flex items-center justify-between p-2 rounded bg-ds-navy-light">
                         <div className="min-w-0">
                           <p className="font-mono text-ds-gold truncate">{unit.unit_identifier}</p>
@@ -533,7 +532,7 @@ export default function CADConsole() {
 
         {activeView === 'officers' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 h-full overflow-auto pr-1">
-             {scheduledOfficers.map((off: any) => (
+             {scheduledOfficers.map((off) => (
               <DsSectionCard key={off.employeeId} title={off.employeeName} actions={
                 <DsBadge color={off.fieldState === 'active_on_site' ? 'success' : off.fieldState === 'geofence_departed' ? 'danger' : 'info'}>
                   {off.fieldState.replace(/_/g, ' ')}
@@ -567,7 +566,7 @@ export default function CADConsole() {
         <UniversalModalContent>
           <UniversalModalHeader><UniversalModalTitle>Dispatch Unit</UniversalModalTitle></UniversalModalHeader>
           <div className="space-y-2 p-4">
-            {availableUnits.map((u: any) => (
+            {availableUnits.map((u) => (
               <DsButton key={u.id} variant="outline" className="w-full justify-between" onClick={() => dispatchUnit.mutate({ callId: dispatchCallId!, unitId: u.id })}>
                 {u.unit_identifier} - {u.employee_name}
                 <Send className="w-4 h-4" />

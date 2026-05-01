@@ -54,7 +54,7 @@ async function summarizeWithTriad(params: {
         return { summary: result.text.trim(), modelUsed: 'gemini' };
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[TrinityVoiceActions] Non-critical error in voice action', { error: err.message });
   }
 
@@ -63,7 +63,7 @@ async function summarizeWithTriad(params: {
   try {
     const tierRow = await pool.query('SELECT subscription_tier FROM workspaces WHERE id = $1 LIMIT 1', [workspaceId]);
     workspaceTier = tierRow.rows[0]?.subscription_tier ?? 'starter';
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[TrinityVoiceActions] Non-critical error in voice action', { error: err.message });
   }
 
@@ -86,7 +86,7 @@ async function summarizeWithTriad(params: {
       );
       if (text) return { summary: text, modelUsed: 'claude' };
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[TrinityVoiceActions] Non-critical error in voice action', { error: err.message });
   }
 
@@ -109,7 +109,7 @@ async function summarizeWithTriad(params: {
       );
       if (text) return { summary: text, modelUsed: 'openai' };
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[TrinityVoiceActions] Non-critical error in voice action', { error: err.message });
   }
 

@@ -126,7 +126,7 @@ export async function sendEmployeePaymentMethodNotifications(): Promise<{ notifi
 
         const payrollInfoRows = Array.isArray(payrollInfoRowsResult) ? payrollInfoRowsResult : [];
 
-        const payrollInfoByEmployee: Record<string, any> = {};
+        const payrollInfoByEmployee: Record<string, unknown> = {};
         for (const info of payrollInfoRows) {
           if (info?.employeeId) {
             payrollInfoByEmployee[info.employeeId] = info;
@@ -193,7 +193,7 @@ export async function sendEmployeePaymentMethodNotifications(): Promise<{ notifi
         log.warn('Failed to notify employees for payroll run', { runId: run.id, error: msg, stack });
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('Employee payment notification scan failed', { error: (err instanceof Error ? err.message : String(err)) });
   }
 

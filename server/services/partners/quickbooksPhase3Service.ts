@@ -51,7 +51,7 @@ export const qbPhase3 = {
 
       log.info(`[QB Phase3] Sync ${entityType}: ${itemCount} items for ${workspaceId}`);
       return { success: true, entityType, itemCount, receiptId };
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[QB Phase3] Sync failed: ${err?.message}`);
       return { success: false, entityType, itemCount: 0, error: err?.message };
     }

@@ -64,7 +64,7 @@ export async function runWeeklyBriefSweep(): Promise<WeeklyBriefResult> {
   let workspaces: string[];
   try {
     workspaces = await listActiveWorkspaces();
-  } catch (err: any) {
+  } catch (err: unknown) {
     result.errors.push(`workspaces:${err?.message}`);
     return result;
   }
@@ -77,7 +77,7 @@ export async function runWeeklyBriefSweep(): Promise<WeeklyBriefResult> {
       const sent = await sendWeeklyBriefForWorkspace(workspaceId, 'cron');
       result.workspacesBriefed++;
       result.deliveries += sent;
-    } catch (err: any) {
+    } catch (err: unknown) {
       result.errors.push(`${workspaceId}:${err?.message}`);
       log.warn(`[weeklyBrief] workspace ${workspaceId} failed:`, err?.message);
     }
@@ -113,7 +113,7 @@ export async function sendWeeklyBriefForWorkspace(
         idempotencyKey: `weeklybrief-${workspaceId}-${o.userId}-${weekKey}`,
       });
       delivered++;
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn(`[weeklyBrief] in-app send failed for ${o.userId}:`, err?.message);
     }
 
@@ -133,7 +133,7 @@ export async function sendWeeklyBriefForWorkspace(
           },
           idempotencyKey: `weeklybrief-email-${workspaceId}-${o.userId}-${weekKey}`,
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.warn(`[weeklyBrief] email send failed for ${o.userId}:`, err?.message);
       }
     }
@@ -148,7 +148,7 @@ export async function sendWeeklyBriefForWorkspace(
       severity: 'low',
       metadata: { workflow: WORKFLOW_NAME, snapshot: snap, triggerSource },
     } as any);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[weeklyBrief] event publish failed (non-fatal):', err?.message);
   }
 
@@ -375,7 +375,7 @@ async function fetchOwnerRecipients(workspaceId: string): Promise<OwnerRecipient
       [workspaceId],
     );
     return r.rows.map((row: any) => ({ userId: row.user_id, email: row.email || null }));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[weeklyBrief] owner lookup failed:', err?.message);
     return [];
   }
@@ -423,7 +423,7 @@ async function recordBriefed(
         JSON.stringify(snapshot),
       ],
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[weeklyBrief] audit write failed (non-fatal):', err?.message);
   }
 }

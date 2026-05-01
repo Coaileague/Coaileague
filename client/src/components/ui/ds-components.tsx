@@ -16,7 +16,6 @@
  */
 
 import { cn } from '@/lib/utils';
-// @ts-expect-error — TS migration: fix in refactoring sprint
 import type { ReactNode, LucideIcon, ButtonHTMLAttributes } from 'react';
 
 // ─── CSS helpers ─────────────────────────────────────────────────────────────

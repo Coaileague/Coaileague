@@ -49,7 +49,7 @@ export interface AutomationJobEvent {
     skipped?: number;
     failed?: number;
     message?: string;
-    details?: Record<string, any>;
+    details?: Record<string, unknown>;
   };
   error?: string;
   retryCount: number;
@@ -135,7 +135,7 @@ class AutomationEventsService {
       skipped?: number;
       failed?: number;
       message?: string;
-      details?: Record<string, any>;
+      details?: Record<string, unknown>;
     }
   ): void {
     const event = this.recentEvents.get(jobId);

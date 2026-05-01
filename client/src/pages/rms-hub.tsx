@@ -63,7 +63,7 @@ function timeAgo(ts: string) {
 }
 
 // Smart Site/Client Selector
-function SiteSelector({ workspaceId, onSelect }: { workspaceId: string | undefined; onSelect: (site: any) => void }) {
+function SiteSelector({ workspaceId, onSelect }: { workspaceId: string | undefined; onSelect: (site) => void }) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<any>(null);
   const [search, setSearch] = useState("");
@@ -112,7 +112,7 @@ function SiteSelector({ workspaceId, onSelect }: { workspaceId: string | undefin
             {sites.isLoading && <div className="p-2 text-sm text-muted-foreground text-center">Loading sites...</div>}
             <CommandEmpty>No sites found.</CommandEmpty>
             <CommandGroup>
-              {filtered.slice(0, 30).map((site: any) => (
+              {filtered.slice(0, 30).map((site) => (
                 <CommandItem
                   key={site.id}
                   value={site.id}
@@ -187,13 +187,13 @@ function QuickSubmitIncident({ workspaceId, onComplete }: { workspaceId: string 
   }, []);
 
   const mutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/rms/incidents", { ...data, workspaceId }),
-    onSuccess: (d: any) => {
+    mutationFn: (data) => apiRequest("POST", "/api/rms/incidents", { ...data, workspaceId }),
+    onSuccess: (d) => {
       queryClient.invalidateQueries({ queryKey: ["/api/rms/incidents", { workspaceId }] });
       toast({ title: "Quick-submit successful", description: d.report_number });
       onComplete();
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   return (
@@ -358,23 +358,23 @@ export default function RMSHub() {
   }
 
   const createIncident = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/rms/incidents", { ...data, workspaceId }),
-    onSuccess: (d: any) => {
+    mutationFn: (data) => apiRequest("POST", "/api/rms/incidents", { ...data, workspaceId }),
+    onSuccess: (d) => {
       invalidateAll(); setShowCreateIncident(false);
       toast({ title: "Incident report created", description: d.report_number });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const createDAR = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/rms/dars", { ...data, workspaceId }),
+    mutationFn: (data) => apiRequest("POST", "/api/rms/dars", { ...data, workspaceId }),
     onSuccess: () => { invalidateAll(); setShowCreateDAR(false); toast({ title: "DAR submitted" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const createVisitor = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/rms/visitors", { ...data, workspaceId }),
-    onSuccess: (d: any) => {
+    mutationFn: (data) => apiRequest("POST", "/api/rms/visitors", { ...data, workspaceId }),
+    onSuccess: (d) => {
       invalidateAll(); setShowCreateVisitor(false);
       if (d.boloMatch) {
         toast({ title: "BOLO MATCH DETECTED", description: `Visitor name matches an active BOLO alert. Dispatch notified.`, variant: "destructive" });
@@ -382,115 +382,115 @@ export default function RMSHub() {
         toast({ title: "Visitor checked in" });
       }
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const checkoutVisitor = useMutation({
     mutationFn: (id: string) => apiRequest("POST", `/api/rms/visitors/${id}/checkout`, { checkedOutBy: user?.firstName, workspaceId }),
     onSuccess: () => { invalidateAll(); toast({ title: "Visitor checked out" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const preRegisterVisitor = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/rms/visitors/pre-register", { ...data, workspaceId }),
+    mutationFn: (data) => apiRequest("POST", "/api/rms/visitors/pre-register", { ...data, workspaceId }),
     onSuccess: () => { invalidateAll(); setShowPreRegisterVisitor(false); toast({ title: "Visitor pre-registered" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const deleteVisitor = useMutation({
     mutationFn: (id: string) => apiRequest("DELETE", `/api/rms/visitors/${id}`, { workspaceId }),
     onSuccess: () => { invalidateAll(); toast({ title: "Visitor record deleted" }); setShowVisitorDetail(null); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const updateVisitor = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest("PUT", `/api/rms/visitors/${id}`, { ...data, workspaceId }),
     onSuccess: () => { invalidateAll(); toast({ title: "Visitor updated" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const createCase = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/rms/cases", { ...data, workspaceId }),
+    mutationFn: (data) => apiRequest("POST", "/api/rms/cases", { ...data, workspaceId }),
     onSuccess: () => { invalidateAll(); setShowCreateCase(false); toast({ title: "Case created" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const createKey = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/rms/key-control", { ...data, workspaceId }),
+    mutationFn: (data) => apiRequest("POST", "/api/rms/key-control", { ...data, workspaceId }),
     onSuccess: () => { invalidateAll(); setShowCreateKey(false); toast({ title: "Key checked out" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const returnKey = useMutation({
     mutationFn: (id: string) => apiRequest("POST", `/api/rms/key-control/${id}/return`, { returnedTo: user?.firstName, workspaceId }),
     onSuccess: () => { invalidateAll(); toast({ title: "Key returned" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const createLF = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/rms/lost-found", { ...data, workspaceId }),
+    mutationFn: (data) => apiRequest("POST", "/api/rms/lost-found", { ...data, workspaceId }),
     onSuccess: () => { invalidateAll(); setShowCreateLF(false); toast({ title: "Item logged" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const createTrespass = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/rms/trespass", { ...data, workspaceId }),
+    mutationFn: (data) => apiRequest("POST", "/api/rms/trespass", { ...data, workspaceId }),
     onSuccess: () => { invalidateAll(); setShowCreateTrespass(false); toast({ title: "Trespass notice issued" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const createBOLO = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/rms/bolo", { ...data, workspaceId }),
+    mutationFn: (data) => apiRequest("POST", "/api/rms/bolo", { ...data, workspaceId }),
     onSuccess: () => { invalidateAll(); setShowCreateBOLO(false); toast({ title: "BOLO alert created" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const deactivateBOLO = useMutation({
     mutationFn: (id: string) => apiRequest("PATCH", `/api/rms/bolo/${id}`, { isActive: false, workspaceId }),
     onSuccess: () => { invalidateAll(); toast({ title: "BOLO deactivated" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const polishNarrative = useMutation({
     mutationFn: (id: string) => apiRequest("POST", `/api/rms/incidents/${id}/ai-narrative`, { workspaceId }),
-    onSuccess: (d: any) => { toast({ title: "AI narrative ready" }); setViewIncident((v: any) => v ? { ...v, ai_narrative: d.aiNarrative } : v); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onSuccess: (d) => { toast({ title: "AI narrative ready" }); setViewIncident((v) => v ? { ...v, ai_narrative: d.aiNarrative } : v); },
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const createEvidence = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/rms/evidence", { ...data, workspaceId }),
+    mutationFn: (data) => apiRequest("POST", "/api/rms/evidence", { ...data, workspaceId }),
     onSuccess: () => { invalidateAll(); setShowCreateEvidence(false); toast({ title: "Evidence item logged" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const transferCustody = useMutation({
     mutationFn: ({ evidenceId, data }: { evidenceId: string; data: any }) => apiRequest("POST", `/api/rms/evidence/${evidenceId}/transfer`, { ...data, workspaceId }),
     onSuccess: () => { invalidateAll(); queryClient.invalidateQueries({ queryKey: ["/api/rms/evidence", selectedEvidenceId, "custody"] }); toast({ title: "Custody transferred" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const submitDar = useMutation({
     mutationFn: (id: string) => apiRequest("POST", `/api/rms/dars/${id}/submit`, { workspaceId }),
     onSuccess: () => { invalidateAll(); toast({ title: "DAR submitted for review" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const verifyDar = useMutation({
     mutationFn: (id: string) => apiRequest("POST", `/api/rms/dars/${id}/verify`, { verifierId: user?.id, verifierName: user?.firstName, workspaceId }),
     onSuccess: () => { invalidateAll(); toast({ title: "DAR verified" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const sendDarToClient = useMutation({
     mutationFn: ({ id, email }: { id: string; email: string }) => apiRequest("POST", `/api/rms/dars/${id}/send-to-client`, { recipientEmail: email, workspaceId }),
     onSuccess: () => { invalidateAll(); toast({ title: "DAR sent to client" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const generateDarPdf = useMutation({
     mutationFn: (id: string) => apiRequest("POST", `/api/rms/dars/${id}/generate-pdf`, { workspaceId }),
     onSuccess: () => { invalidateAll(); toast({ title: "PDF generated" }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const trackReportAction = useMutation({
@@ -499,7 +499,7 @@ export default function RMSHub() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rms/reports/audit-summary", { workspaceId }] });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const uploadPhoto = useMutation({
@@ -508,7 +508,7 @@ export default function RMSHub() {
       queryClient.invalidateQueries({ queryKey: ["/api/rms/incidents", { workspaceId }] });
       toast({ title: "Photo uploaded", description: "Photo has been attached successfully." });
     },
-    onError: (e: any) => toast({ title: "Upload failed", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Upload failed", description: e.message, variant: "destructive" }),
   });
 
   // Incident form with site selector + GPS + quick templates
@@ -1190,7 +1190,7 @@ export default function RMSHub() {
                     </div>
 
                     <div className="divide-y divide-[var(--ds-border)] -mx-5 -mb-5">
-                      {visitors.data?.visitors?.map((vis: any) => {
+                      {visitors.data?.visitors?.map((vis) => {
                         const isOverdue = vis.expected_departure && !vis.checked_out_at && new Date(vis.expected_departure) < new Date();
                         const isActive = !vis.checked_out_at;
                         
@@ -1319,7 +1319,7 @@ export default function RMSHub() {
                     </div>
 
                     <div className="divide-y divide-[var(--ds-border)] -mx-5 -mb-5">
-                      {visitors.data?.visitors?.map((vis: any) => {
+                      {visitors.data?.visitors?.map((vis) => {
                         const isOverdue = vis.expected_departure && !vis.checked_out_at && new Date(vis.expected_departure) < new Date();
                         const isActive = !vis.checked_out_at;
                         
@@ -1402,7 +1402,7 @@ export default function RMSHub() {
                         }
                       >
                         <div className="divide-y divide-[var(--ds-border)] -mx-5 -mb-5">
-                          {incidents.data?.incidents?.map((inc: any) => (
+                          {incidents.data?.incidents?.map((inc) => (
                             <DsDataRow 
                               key={inc.id} 
                               interactive 
@@ -1660,7 +1660,7 @@ export default function RMSHub() {
   );
 }
 
-function CaseForm({ onSubmit, onCancel, isPending, workspaceId }: { onSubmit: (d: any) => void; onCancel: () => void; isPending: boolean; workspaceId: string | undefined }) {
+function CaseForm({ onSubmit, onCancel, isPending, workspaceId }: { onSubmit: (d) => void; onCancel: () => void; isPending: boolean; workspaceId: string | undefined }) {
   const [selectedSite, setSelectedSite] = useState<any>(null);
   const [f, setF] = useState({ title: "", category: "investigation", priority: "medium", description: "", siteName: "", siteId: "", assignedToName: "" });
   return (
@@ -1689,7 +1689,7 @@ function CaseForm({ onSubmit, onCancel, isPending, workspaceId }: { onSubmit: (d
   );
 }
 
-function KeyForm({ onSubmit, onCancel, isPending, workspaceId }: { onSubmit: (d: any) => void; onCancel: () => void; isPending: boolean; workspaceId: string | undefined }) {
+function KeyForm({ onSubmit, onCancel, isPending, workspaceId }: { onSubmit: (d) => void; onCancel: () => void; isPending: boolean; workspaceId: string | undefined }) {
   const [selectedSite, setSelectedSite] = useState<any>(null);
   const [f, setF] = useState({ keyIdentifier: "", keyDescription: "", checkedOutByName: "", purpose: "", siteName: "", siteId: "" });
   return (
@@ -1709,7 +1709,7 @@ function KeyForm({ onSubmit, onCancel, isPending, workspaceId }: { onSubmit: (d:
   );
 }
 
-function LFForm({ onSubmit, onCancel, isPending, workspaceId }: { onSubmit: (d: any) => void; onCancel: () => void; isPending: boolean; workspaceId: string | undefined }) {
+function LFForm({ onSubmit, onCancel, isPending, workspaceId }: { onSubmit: (d) => void; onCancel: () => void; isPending: boolean; workspaceId: string | undefined }) {
   const [selectedSite, setSelectedSite] = useState<any>(null);
   const [f, setF] = useState({ description: "", category: "", foundLocation: "", foundByName: "", siteName: "", siteId: "", storageLocation: "" });
   return (
@@ -1730,7 +1730,7 @@ function LFForm({ onSubmit, onCancel, isPending, workspaceId }: { onSubmit: (d: 
   );
 }
 
-function TrespassForm({ onSubmit, onCancel, isPending, workspaceId }: { onSubmit: (d: any) => void; onCancel: () => void; isPending: boolean; workspaceId: string | undefined }) {
+function TrespassForm({ onSubmit, onCancel, isPending, workspaceId }: { onSubmit: (d) => void; onCancel: () => void; isPending: boolean; workspaceId: string | undefined }) {
   const [selectedSite, setSelectedSite] = useState<any>(null);
   const [f, setF] = useState({ subjectName: "", reason: "", siteName: "", siteId: "", issuedByName: "", isPermanent: false, policeNotified: false });
   return (
@@ -1755,7 +1755,7 @@ function TrespassForm({ onSubmit, onCancel, isPending, workspaceId }: { onSubmit
 
 function EvidenceTransferForm({ evidenceId, onTransfer, isPending }: {
   evidenceId: string;
-  onTransfer: (data: any) => void;
+  onTransfer: (data) => void;
   isPending: boolean;
 }) {
   const [f, setF] = useState({ transferredFromName: "", transferredToName: "", method: "handoff", notes: "", policeCaseNumber: "" });

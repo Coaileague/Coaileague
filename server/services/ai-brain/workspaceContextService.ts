@@ -358,7 +358,6 @@ class WorkspaceContextServiceImpl {
       }).from(systemAuditLogs).where(
         and(
           eq(systemAuditLogs.workspaceId, workspaceId),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           gte(systemAuditLogs.timestamp, since)
         )
       );

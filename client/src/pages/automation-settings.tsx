@@ -281,7 +281,7 @@ export default function AutomationSettings() {
       });
       queryClient.invalidateQueries({ queryKey: ['/api/automation/trinity/settings'] });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Save Failed",
         description: error.message || "Failed to save automation settings",

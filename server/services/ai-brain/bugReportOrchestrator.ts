@@ -138,7 +138,6 @@ class BugReportOrchestrator {
       title: 'Bug Report Received',
       description: `New ${report.type} report: ${report.title}`,
       metadata: { reportId, type: report.type, analysisQueued },
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       severity: 'info',
       isNew: true
     }).catch((err) => log.warn('[bugReportOrchestrator] Fire-and-forget failed:', err));
@@ -165,7 +164,6 @@ class BugReportOrchestrator {
       const prompt = this.buildAnalysisPrompt(report);
 
       const response = await geminiClient.generate({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         tier: 'pro',
         prompt,
         systemInstruction: `You are Trinity, an expert AI system analyst for the CoAIleague platform.
@@ -197,14 +195,13 @@ Always prioritize user safety and data integrity.`,
         title: 'Bug Analysis Complete',
         description: `Analysis for report ${reportId}: ${analysis.severity} severity, ${analysis.category} issue`,
         metadata: { reportId, severity: analysis.severity, category: analysis.category },
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         severity: analysis.severity === 'critical' ? 'error' : 'info',
         isNew: true
       }).catch((err) => log.warn('[bugReportOrchestrator] Fire-and-forget failed:', err));
 
       return analysis;
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(`[BugReportOrchestrator] Analysis error for ${reportId}:`, error);
       
       const fallbackAnalysis: BugAnalysis = {
@@ -344,7 +341,6 @@ Always prioritize user safety and data integrity.`,
         severity: analysis.severity,
         patchCount: request.patches.length
       },
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       severity: analysis.severity === 'critical' ? 'error' : 'warning',
       isNew: true
     }).catch((err) => log.warn('[bugReportOrchestrator] Fire-and-forget failed:', err));
@@ -401,7 +397,6 @@ Always prioritize user safety and data integrity.`,
           title: 'Hotfix Applied Successfully',
           description: `Bug fix committed: ${result.commitHash}`,
           metadata: { remediationId: request.id, commitHash: result.commitHash },
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           severity: 'info',
           isNew: true
         }).catch((err) => log.warn('[bugReportOrchestrator] Fire-and-forget failed:', err));
@@ -413,7 +408,7 @@ Always prioritize user safety and data integrity.`,
         return { success: false, error: request.error };
       }
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error(`[BugReportOrchestrator] Remediation execution failed:`, err);
       request.status = 'failed';
       request.error = (err instanceof Error ? err.message : String(err));

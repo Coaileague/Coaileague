@@ -301,7 +301,7 @@ function FieldRenderer({
 }: {
   field: TemplateField;
   value: any;
-  onChange: (v: any) => void;
+  onChange: (v) => void;
   error?: string;
   disabled?: boolean;
 }) {
@@ -499,7 +499,7 @@ export function UniversalFormRenderer({
         toast({ title: "Submission Error", description: result.error ?? "Unknown error", variant: "destructive" });
       }
     },
-    onError: async (err: any) => {
+    onError: async (err) => {
       let msg = "Submission failed";
       try {
         const j = await err.response?.json?.();

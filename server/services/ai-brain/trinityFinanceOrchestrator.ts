@@ -234,7 +234,6 @@ async function buildFinancialSnapshot(workspaceId: string): Promise<FinancialSna
           eq(timeEntries.workspaceId, workspaceId),
           eq(timeEntries.status, 'approved'),
           isNull(timeEntries.billedAt),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           gte(timeEntries.date, sixtyDaysAgo.toISOString().split('T')[0])
         )
       ),
@@ -343,9 +342,7 @@ async function buildFinancialSnapshot(workspaceId: string): Promise<FinancialSna
       and(
         eq(timeEntries.workspaceId, workspaceId),
         eq(timeEntries.status, 'pending'),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         gte(timeEntries.date, periodStart.toISOString().split('T')[0]),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         lte(timeEntries.date, periodEnd.toISOString().split('T')[0])
       )
     )
@@ -362,9 +359,7 @@ async function buildFinancialSnapshot(workspaceId: string): Promise<FinancialSna
       and(
         eq(timeEntries.workspaceId, workspaceId),
         eq(timeEntries.status, 'approved'),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         gte(timeEntries.date, periodStart.toISOString().split('T')[0]),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         lte(timeEntries.date, periodEnd.toISOString().split('T')[0])
       )
     );
@@ -392,7 +387,6 @@ async function buildFinancialSnapshot(workspaceId: string): Promise<FinancialSna
   let qbSnapshot: FinancialSnapshot['qbSnapshot'] = null;
   if (modeInfo.qbConnected) {
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const { trinityQuickBooksSnapshotService } = await import('./trinityQuickBooksSnapshot');
       const snap = await trinityQuickBooksSnapshotService.getFinancialSnapshot(workspaceId);
 
@@ -587,7 +581,7 @@ async function runDraftPayroll(workspaceId: string, requestedBy: string, overrid
       status: result.payrollRunId ? 'draft' : 'failed',
       summary: `Payroll draft created for ${employeeCount} employee(s) covering ${periodStart} → ${periodEnd}. Estimated gross: $${totalGross.toFixed(2)}. Mode: ${modeLabel}.`,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     return {
       mode: modeInfo.mode,
       payrollRunId: null,
@@ -623,7 +617,7 @@ async function pushToQuickBooks(workspaceId: string, params: { type: 'invoice' |
         message: result.success ? `Invoice synced to QuickBooks successfully.` : `QB sync failed: ${result.error}`,
         qbEntityId: result.qbInvoiceId,
       };
-    } catch (e: any) {
+    } catch (e: unknown) {
       return { success: false, message: `QB invoice push error: ${e.message}` };
     }
   }
@@ -667,7 +661,6 @@ async function buildReconciliationReport(workspaceId: string): Promise<{
 
   if (modeInfo.qbConnected) {
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const { trinityQuickBooksSnapshotService } = await import('./trinityQuickBooksSnapshot');
       const snap = await trinityQuickBooksSnapshotService.getFinancialSnapshot(workspaceId);
 
@@ -691,7 +684,7 @@ async function buildReconciliationReport(workspaceId: string): Promise<{
         discrepancies.push(`QB sync has ${snap.syncHealth.errorCount} error(s): ${snap.syncHealth.recentErrors.slice(0, 2).join('; ')}`);
         recommendations.push('Check the QB review queue and resolve pending sync errors.');
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       discrepancies.push(`Could not fetch QB snapshot: ${e.message}`);
     }
   } else {
@@ -754,7 +747,7 @@ export function registerFinanceOrchestratorActions(): void {
         // Default: action=status (or no action) → get connection status
         const result = await detectFinanceMode(workspaceId);
         return ok(req.actionId, `Finance mode: ${result.mode}. ${result.recommendation}`, result, start);
-      } catch (e: any) {
+      } catch (e: unknown) {
         return fail(req.actionId, e.message, null, start);
       }
     },
@@ -781,7 +774,7 @@ export function registerFinanceOrchestratorActions(): void {
           `Data quality: ${snapshot.dataQuality.score}/100${snapshot.dataQuality.warnings.length > 0 ? ' — ' + snapshot.dataQuality.warnings.join('; ') : ''}`,
         ].join('\n');
         return ok(req.actionId, summary, snapshot, start);
-      } catch (e: any) {
+      } catch (e: unknown) {
         return fail(req.actionId, e.message, null, start);
       }
     },
@@ -803,7 +796,7 @@ export function registerFinanceOrchestratorActions(): void {
         return result.drafted > 0
           ? ok(req.actionId, result.summary, result, start)
           : ok(req.actionId, result.summary, result, start);
-      } catch (e: any) {
+      } catch (e: unknown) {
         return fail(req.actionId, e.message, null, start);
       }
     },
@@ -828,7 +821,7 @@ export function registerFinanceOrchestratorActions(): void {
         return result.status === 'draft'
           ? ok(req.actionId, result.summary, result, start)
           : fail(req.actionId, result.summary, result, start);
-      } catch (e: any) {
+      } catch (e: unknown) {
         return fail(req.actionId, e.message, null, start);
       }
     },
@@ -851,7 +844,7 @@ export function registerFinanceOrchestratorActions(): void {
         return result.success
           ? ok(req.actionId, result.message, result, start)
           : fail(req.actionId, result.message, result, start);
-      } catch (e: any) {
+      } catch (e: unknown) {
         return fail(req.actionId, e.message, null, start);
       }
     },
@@ -874,7 +867,7 @@ export function registerFinanceOrchestratorActions(): void {
           ? 'Financial records are consistent. No discrepancies found.'
           : `Found ${report.discrepancies.length} discrepancy/discrepancies: ${report.discrepancies[0]}`;
         return ok(req.actionId, summary, report, start);
-      } catch (e: any) {
+      } catch (e: unknown) {
         return fail(req.actionId, e.message, null, start);
       }
     },

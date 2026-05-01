@@ -318,7 +318,6 @@ class HotpatchCadenceController {
       where: eq(users.id, userId),
     });
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (!user || !['root_admin', 'support'].includes(user.role)) {
       log.info(`[HotpatchCadence] Override denied for user ${userId} - insufficient role`);
       return false;
@@ -369,7 +368,7 @@ class AutomationApprovalGate {
       type: string;
       affectedRecords: number;
       estimatedImpact: string;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
     }
   ): Promise<GovernanceCheckResult> {
     const riskWeight = GOVERNANCE_CONFIG.domainRiskWeights[domain];
@@ -498,7 +497,6 @@ class AutomationApprovalGate {
   ): Promise<string> {
     const approvalId = `approval-${domain}-${Date.now()}`;
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(aiWorkflowApprovals).values({
       id: approvalId,
       title: `${domain.charAt(0).toUpperCase() + domain.slice(1)} Automation Approval Required`,
@@ -533,7 +531,6 @@ class AutomationApprovalGate {
     const approvers = await db.query.employees.findMany({
       where: and(
         eq(employees.workspaceId, workspaceId),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         inArray(employees.workspaceRole, [...APPROVER_ROLES])
       ),
     });
@@ -611,7 +608,7 @@ class TrinityOrchestrationGovernanceService {
       type: string;
       affectedRecords: number;
       estimatedImpact: string;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
     }
   ): Promise<GovernanceCheckResult> {
     return automationApprovalGate.evaluate(domain, workspaceId, actionDetails);
@@ -651,7 +648,6 @@ export function registerOrchestrationGovernanceActions() {
     category: 'automation',
     description: 'Evaluate if an automation action should auto-execute or require human approval (99/1 pattern)',
     requiredRoles: ['support_agent', 'support_manager', 'sysop', 'root_admin'],
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     handler: async (params: {
       domain: AutomationDomain;
       workspaceId: string;
@@ -673,7 +669,6 @@ export function registerOrchestrationGovernanceActions() {
     category: 'automation',
     description: 'Check if hotpatches can be applied (daily limit + maintenance window)',
     requiredRoles: ['support_agent', 'support_manager', 'sysop', 'root_admin'],
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     handler: async () => {
       return await service.checkHotpatchWindow();
     },
@@ -697,7 +692,6 @@ export function registerOrchestrationGovernanceActions() {
     category: 'automation',
     description: 'Force override the daily hotpatch limit (requires support role)',
     requiredRoles: ['sysop', 'deputy_admin', 'root_admin', 'support_agent'],
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     handler: async (params: { userId: string; reason: string }) => {
       const success = await service.overrideHotpatchLimit(params.userId, params.reason);
       return { success, message: success ? 'Override granted' : 'Override denied - insufficient permissions' };
@@ -710,7 +704,6 @@ export function registerOrchestrationGovernanceActions() {
     category: 'analytics',
     description: 'Get telemetry statistics for Gemini tier usage across automation domains',
     requiredRoles: ['support_agent', 'support_manager', 'sysop', 'root_admin'],
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     handler: async () => {
       return service.getGeminiTelemetry();
     },

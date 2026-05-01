@@ -27,7 +27,7 @@ export interface SimulationStep {
   name: string;
   status: 'success' | 'warning' | 'error' | 'skipped';
   durationMs: number;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
   warnings: string[];
   errors: string[];
 }
@@ -270,7 +270,7 @@ export async function runWeeklySimulation(): Promise<WeeklySimulationReport> {
           seededEntryIds.push(entryId);
           seededEntries++;
           totalHoursSeeded += hours;
-        } catch (err: any) {
+        } catch (err: unknown) {
           step2Warnings.push(`Failed to seed entry for ${employee.firstName} ${employee.lastName}: ${err.message}`);
         }
       }
@@ -335,7 +335,7 @@ export async function runWeeklySimulation(): Promise<WeeklySimulationReport> {
     if (billableResult.totalBillableAmount === 0 && billableResult.entriesProcessed > 0) {
       criticalIssues.push('Entries exist but total billable amount is $0 - missing billing rates');
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     step3Errors.push(`Billable hours aggregation failed: ${err.message}`);
     criticalIssues.push(`Invoice pipeline broken: ${err.message}`);
     console.error(`  ERROR: ${err.message}`);
@@ -409,7 +409,7 @@ export async function runWeeklySimulation(): Promise<WeeklySimulationReport> {
     if (weeklyResult.warnings.length > 0) {
       step4Warnings.push(...weeklyResult.warnings.slice(0, 5));
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     step4Errors.push(`Invoice generation failed: ${err.message}`);
     criticalIssues.push(`Invoice generation broken: ${err.message}`);
     console.error(`  ERROR: ${err.message}`);
@@ -459,7 +459,7 @@ export async function runWeeklySimulation(): Promise<WeeklySimulationReport> {
       step5Warnings.push('No entries processed for payroll - entries may already be payrolled or not approved');
       gaps.push('Payroll hours aggregation returned 0 entries');
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     step5Errors.push(`Payroll hours aggregation failed: ${err.message}`);
     criticalIssues.push(`Payroll pipeline broken: ${err.message}`);
     console.error(`  ERROR: ${err.message}`);
@@ -602,7 +602,7 @@ export async function runWeeklySimulation(): Promise<WeeklySimulationReport> {
       }
       console.log(`  Cleaned up ${generatedInvoices.length} simulated invoices`);
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     step7Warnings.push(`Cleanup partially failed: ${err.message}`);
     console.warn(`  WARNING: ${err.message}`);
   }

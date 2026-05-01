@@ -355,7 +355,6 @@ export async function runAnvilOperationalSeed(): Promise<{ success: boolean; mes
         const earnings   = { regularPay: gross };
         // Converted to Drizzle ORM: ON CONFLICT
         await db.insert(payStubs).values({
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           id: "anvil-stub-" + String(idx).padStart(4,"0"),
           workspaceId: WS,
           payrollRunId: run.runId,

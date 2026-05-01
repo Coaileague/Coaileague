@@ -241,7 +241,7 @@ function TopoffDialog({
       queryClient.invalidateQueries({ queryKey: ["/api/admin/financial/health"] });
       onClose();
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Failed", description: err.message, variant: "destructive" });
     },
   });

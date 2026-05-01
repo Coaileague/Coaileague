@@ -42,7 +42,6 @@ export async function triggerAIScheduleGeneration(
     }
 
     // Check if AI scheduling is available
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const isAvailable = await scheduleSmartAI(workspaceId);
     
     if (!isAvailable) {

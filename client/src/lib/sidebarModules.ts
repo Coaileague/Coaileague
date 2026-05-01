@@ -259,7 +259,6 @@ export const roleCapabilities: Record<WorkspaceRole, Capability[]> = {
 /**
  * Tier Hierarchy (1 = lowest, 4 = highest)
  */
-// @ts-expect-error — TS migration: fix in refactoring sprint
 export const tierHierarchy: Record<SubscriptionTier, number> = {
   enterprise: 4,
   professional: 3,
@@ -449,7 +448,6 @@ export const sidebarModules: SidebarModule[] = [
         href: '/gate-duty',
         icon: DoorOpen,
         description: 'Gate access control and vehicle/personnel entry logs',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         capabilities: ['manage_compliance'],
         familyId: 'operations',
         isPrimary: false,

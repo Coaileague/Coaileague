@@ -32,7 +32,7 @@ async function test(name: string, fn: () => Promise<void>) {
   try {
     await fn();
     results.push({ name, passed: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     results.push({ name, passed: false, error: err.message });
   }
 }

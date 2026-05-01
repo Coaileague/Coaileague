@@ -79,7 +79,7 @@ export default function TrinityChat() {
 
   useEffect(() => {
     if (!bus) return;
-    const unsub = bus.subscribeAll((data: any) => {
+    const unsub = bus.subscribeAll((data) => {
       if (data.type === 'trinity_thinking' && data.phase) {
         if (data.sessionId && sessionId && data.sessionId !== sessionId) return;
         setThoughtPhase(data.phase);
@@ -119,7 +119,7 @@ export default function TrinityChat() {
       ]);
       queryClient.invalidateQueries({ queryKey: ['/api/trinity/chat/history'] });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       setThoughtPhase(null);
       toast({ title: 'Error', description: error.message || 'Failed to send message', variant: 'destructive' });
     },
@@ -134,7 +134,7 @@ export default function TrinityChat() {
       queryClient.invalidateQueries({ queryKey: ['/api/trinity/chat/settings'] });
       toast({ title: 'Settings Updated', description: 'Your preferences have been saved' });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: 'Error', description: error.message || 'Failed to update settings', variant: 'destructive' });
     },
   });
@@ -154,7 +154,7 @@ export default function TrinityChat() {
       const response = await apiRequest('GET', `/api/trinity/chat/session/${session.id}/messages`);
       const data = await response.json();
       setSessionId(session.id);
-      setMessages(data.messages.map((m: any) => ({
+      setMessages(data.messages.map((m) => ({
         id: m.id, role: m.role, content: m.content, createdAt: new Date(m.createdAt),
       })));
       setHistoryOpen(false);

@@ -55,7 +55,7 @@ export function CameraCapture({ onCapture, onCancel, preferredFacing = "environm
           setIsLoading(false);
         };
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setIsLoading(false);
       let errorMessage = "Failed to access camera.";
       

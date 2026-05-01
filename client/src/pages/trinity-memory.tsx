@@ -63,7 +63,6 @@ export default function TrinityMemoryPage() {
   const summaryCards = [
     {
       label: "Memory Usage",
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       value: health?.memoryUsagePercent ? `${Math.round(health.memoryUsagePercent)}%` : "--",
       icon: Cpu,
       color: "text-blue-500",
@@ -76,16 +75,13 @@ export default function TrinityMemoryPage() {
     },
     {
       label: "Confidence",
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       value: health?.avgConfidence ? `${Math.round(health.avgConfidence * 100)}%` : "--",
       icon: Activity,
       color: "text-green-500",
     },
     {
       label: "Last Optimization",
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       value: health?.lastOptimized
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         ? new Date(health.lastOptimized).toLocaleDateString()
         : "Never",
       icon: Clock,
@@ -156,11 +152,8 @@ export default function TrinityMemoryPage() {
                   <CardContent className="space-y-4">
                     <div className="space-y-3">
                       {[
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         { label: "Heap Usage", value: health.heapUsedPercent, id: "heap-usage" },
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         { label: "Cache Utilization", value: health.cacheUtilization, id: "cache-usage" },
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         { label: "Context Window", value: health.contextWindowUsage, id: "context-window" },
                       ].map(metric => (
                         <div key={metric.id} className="flex items-center gap-3" data-testid={`metric-${metric.id}`}>
@@ -183,13 +176,9 @@ export default function TrinityMemoryPage() {
                   <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {[
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         { label: "Active Sessions", value: health.activeSessions || 0 },
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         { label: "Cached Entries", value: health.cachedEntries || 0 },
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         { label: "Avg Latency", value: `${health.avgLatencyMs || 0}ms` },
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         { label: "Uptime", value: health.uptimeHours ? `${health.uptimeHours}h` : "--" },
                       ].map(item => (
                         <div key={item.label} className="text-center">
@@ -232,10 +221,8 @@ export default function TrinityMemoryPage() {
                         { label: "Total Entities", value: knowledge.totalEntities || 0 },
                         { label: "Relationships", value: knowledge.totalRelationships || 0 },
                         { label: "Categories", value: knowledge.categories || 0 },
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         { label: "Avg Confidence", value: knowledge.avgConfidence ? `${Math.round(knowledge.avgConfidence * 100)}%` : "--" },
                         { label: "Stale Entries", value: knowledge.staleEntries || 0 },
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         { label: "Last Updated", value: knowledge.lastUpdated ? new Date(knowledge.lastUpdated).toLocaleDateString() : "--" },
                       ].map(item => (
                         <div key={item.label} className="text-center p-3 rounded-md border">

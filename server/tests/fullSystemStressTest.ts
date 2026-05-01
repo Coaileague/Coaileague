@@ -84,7 +84,7 @@ async function phase1_database_integrity() {
         details: `Exists, ${cnt} rows`,
         severity: 'critical'
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       record({
         name: `Table ${table}`,
         phase: 'DB_INTEGRITY',
@@ -235,37 +235,37 @@ async function phase3_core_entity_queries() {
   try {
     const [u] = await db.select().from(users).limit(1);
     record({ name: 'User Query', phase: 'CORE_CRUD', passed: !!u, details: u ? `User: ${u.email || u.id}` : 'No users', severity: 'critical' });
-  } catch (e: any) { record({ name: 'User Query', phase: 'CORE_CRUD', passed: false, details: e.message, severity: 'critical' }); }
+  } catch (e: unknown) { record({ name: 'User Query', phase: 'CORE_CRUD', passed: false, details: e.message, severity: 'critical' }); }
 
   try {
     const members = await db.select().from(workspaceMembers).where(eq(workspaceMembers.workspaceId, ws.id)).limit(5);
     record({ name: 'Workspace Members Query', phase: 'CORE_CRUD', passed: true, details: `${members.length} members in workspace (table accessible, workspace-scoped)`, severity: 'critical' });
-  } catch (e: any) { record({ name: 'Workspace Members Query', phase: 'CORE_CRUD', passed: false, details: e.message, severity: 'critical' }); }
+  } catch (e: unknown) { record({ name: 'Workspace Members Query', phase: 'CORE_CRUD', passed: false, details: e.message, severity: 'critical' }); }
 
   try {
     const emps = await db.select().from(employees).where(eq(employees.workspaceId, ws.id)).limit(5);
     record({ name: 'Employee Query (Workspace Scoped)', phase: 'CORE_CRUD', passed: true, details: `${emps.length} employees found`, severity: 'critical' });
-  } catch (e: any) { record({ name: 'Employee Query', phase: 'CORE_CRUD', passed: false, details: e.message, severity: 'critical' }); }
+  } catch (e: unknown) { record({ name: 'Employee Query', phase: 'CORE_CRUD', passed: false, details: e.message, severity: 'critical' }); }
 
   try {
     const clientList = await db.select().from(clients).where(eq(clients.workspaceId, ws.id)).limit(5);
     record({ name: 'Client Query (Workspace Scoped)', phase: 'CORE_CRUD', passed: true, details: `${clientList.length} clients found`, severity: 'critical' });
-  } catch (e: any) { record({ name: 'Client Query', phase: 'CORE_CRUD', passed: false, details: e.message, severity: 'critical' }); }
+  } catch (e: unknown) { record({ name: 'Client Query', phase: 'CORE_CRUD', passed: false, details: e.message, severity: 'critical' }); }
 
   try {
     const shiftList = await db.select().from(shifts).where(eq(shifts.workspaceId, ws.id)).limit(5);
     record({ name: 'Shift Query (Workspace Scoped)', phase: 'CORE_CRUD', passed: true, details: `${shiftList.length} shifts found`, severity: 'critical' });
-  } catch (e: any) { record({ name: 'Shift Query', phase: 'CORE_CRUD', passed: false, details: e.message, severity: 'critical' }); }
+  } catch (e: unknown) { record({ name: 'Shift Query', phase: 'CORE_CRUD', passed: false, details: e.message, severity: 'critical' }); }
 
   try {
     const entries = await db.select().from(timeEntries).where(eq(timeEntries.workspaceId, ws.id)).limit(5);
     record({ name: 'Time Entry Query (Workspace Scoped)', phase: 'CORE_CRUD', passed: true, details: `${entries.length} time entries found`, severity: 'high' });
-  } catch (e: any) { record({ name: 'Time Entry Query', phase: 'CORE_CRUD', passed: false, details: e.message, severity: 'high' }); }
+  } catch (e: unknown) { record({ name: 'Time Entry Query', phase: 'CORE_CRUD', passed: false, details: e.message, severity: 'high' }); }
 
   try {
     const invList = await db.select().from(invoices).where(eq(invoices.workspaceId, ws.id)).limit(5);
     record({ name: 'Invoice Query (Workspace Scoped)', phase: 'CORE_CRUD', passed: true, details: `${invList.length} invoices found`, severity: 'critical' });
-  } catch (e: any) { record({ name: 'Invoice Query', phase: 'CORE_CRUD', passed: false, details: e.message, severity: 'critical' }); }
+  } catch (e: unknown) { record({ name: 'Invoice Query', phase: 'CORE_CRUD', passed: false, details: e.message, severity: 'critical' }); }
 
   const schemaFiles = fs.readdirSync('shared/schema').filter(f => f.endsWith('.ts'));
   record({
@@ -397,7 +397,7 @@ async function phase5_billing_credits() {
       details: credits ? `Balance: ${credits.currentBalance}, Tier: ${credits.tier}` : 'No credit account',
       severity: 'critical'
     });
-  } catch (e: any) { record({ name: 'Credit Account', phase: 'BILLING', passed: false, details: e.message, severity: 'critical' }); }
+  } catch (e: unknown) { record({ name: 'Credit Account', phase: 'BILLING', passed: false, details: e.message, severity: 'critical' }); }
 
   try {
     // @ts-expect-error — creditTransactions table removed, wrapped in try/catch
@@ -409,7 +409,7 @@ async function phase5_billing_credits() {
       details: `${txns.length} recent transactions`,
       severity: 'high'
     });
-  } catch (e: any) { record({ name: 'Credit Transaction History', phase: 'BILLING', passed: false, details: e.message, severity: 'high' }); }
+  } catch (e: unknown) { record({ name: 'Credit Transaction History', phase: 'BILLING', passed: false, details: e.message, severity: 'high' }); }
 
   const cmSrc = fs.readFileSync('server/services/billing/tokenManager.ts', 'utf-8');
 
@@ -578,24 +578,24 @@ async function phase7_communications() {
     const msgs = await db.select({ cnt: count() }).from(chatMessages);
     const msgCount = Number(msgs[0]?.cnt || 0);
     record({ name: 'Chat Messages in DB', phase: 'COMMS', passed: true, details: `${msgCount} messages`, severity: 'high' });
-  } catch (e: any) { record({ name: 'Chat Messages', phase: 'COMMS', passed: false, details: e.message, severity: 'high' }); }
+  } catch (e: unknown) { record({ name: 'Chat Messages', phase: 'COMMS', passed: false, details: e.message, severity: 'high' }); }
 
   try {
     const convs = await db.select({ cnt: count() }).from(chatConversations);
     const convCount = Number(convs[0]?.cnt || 0);
     record({ name: 'Chat Conversations in DB', phase: 'COMMS', passed: true, details: `${convCount} conversations`, severity: 'high' });
-  } catch (e: any) { record({ name: 'Chat Conversations', phase: 'COMMS', passed: false, details: e.message, severity: 'high' }); }
+  } catch (e: unknown) { record({ name: 'Chat Conversations', phase: 'COMMS', passed: false, details: e.message, severity: 'high' }); }
 
   try {
     const rooms = await db.select().from(supportRooms).limit(5);
     record({ name: 'Support Rooms Active', phase: 'COMMS', passed: rooms.length > 0, details: `${rooms.length} support rooms`, severity: 'high' });
-  } catch (e: any) { record({ name: 'Support Rooms', phase: 'COMMS', passed: false, details: e.message, severity: 'high' }); }
+  } catch (e: unknown) { record({ name: 'Support Rooms', phase: 'COMMS', passed: false, details: e.message, severity: 'high' }); }
 
   try {
     const notifs = await db.select({ cnt: count() }).from(notifications);
     const notifCount = Number(notifs[0]?.cnt || 0);
     record({ name: 'Notifications in DB', phase: 'COMMS', passed: notifCount > 0, details: `${notifCount} notifications`, severity: 'high' });
-  } catch (e: any) { record({ name: 'Notifications', phase: 'COMMS', passed: false, details: e.message, severity: 'high' }); }
+  } catch (e: unknown) { record({ name: 'Notifications', phase: 'COMMS', passed: false, details: e.message, severity: 'high' }); }
 
   const emailSrc = fs.readFileSync('server/email.ts', 'utf-8');
   const hasCanSpam = emailSrc.includes('sendCanSpamCompliantEmail');
@@ -654,13 +654,13 @@ async function phase8_compliance() {
     const docs = await db.select({ cnt: count() }).from(complianceDocuments);
     const docCount = Number(docs[0]?.cnt || 0);
     record({ name: 'Compliance Documents Table', phase: 'COMPLIANCE', passed: true, details: `${docCount} documents tracked`, severity: 'high' });
-  } catch (e: any) { record({ name: 'Compliance Documents', phase: 'COMPLIANCE', passed: false, details: e.message, severity: 'high' }); }
+  } catch (e: unknown) { record({ name: 'Compliance Documents', phase: 'COMPLIANCE', passed: false, details: e.message, severity: 'high' }); }
 
   try {
     const alerts = await db.select({ cnt: count() }).from(complianceAlerts);
     const alertCount = Number(alerts[0]?.cnt || 0);
     record({ name: 'Compliance Alerts Table', phase: 'COMPLIANCE', passed: true, details: `${alertCount} alerts`, severity: 'high' });
-  } catch (e: any) { record({ name: 'Compliance Alerts', phase: 'COMPLIANCE', passed: false, details: e.message, severity: 'high' }); }
+  } catch (e: unknown) { record({ name: 'Compliance Alerts', phase: 'COMPLIANCE', passed: false, details: e.message, severity: 'high' }); }
 
   const stateReqExists = fs.existsSync('server/services/compliance/stateRequirements.ts') ||
     fs.existsSync('server/routes/compliance/states.ts');
@@ -737,7 +737,7 @@ async function phase9_trinity_ai() {
     const decisions = await db.select({ cnt: count() }).from(trinityDecisionLog);
     const cnt = Number(decisions[0]?.cnt || 0);
     record({ name: 'Decision Log Table Active', phase: 'TRINITY_AI', passed: true, details: `${cnt} decision log entries`, severity: 'high' });
-  } catch (e: any) { record({ name: 'Decision Log Table', phase: 'TRINITY_AI', passed: false, details: e.message, severity: 'high' }); }
+  } catch (e: unknown) { record({ name: 'Decision Log Table', phase: 'TRINITY_AI', passed: false, details: e.message, severity: 'high' }); }
 
   const gatewayExists = fs.existsSync('server/services/ai-brain/providers/resilientAIGateway.ts');
   let hasFallback = false;
@@ -1017,7 +1017,7 @@ async function phase14_production_readiness() {
       details: 'Database responding to queries',
       severity: 'critical'
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     record({ name: 'Database Connectivity', phase: 'PRODUCTION', passed: false, details: e.message, severity: 'critical' });
   }
 
@@ -1030,7 +1030,7 @@ async function phase14_production_readiness() {
       details: `Table accessible, ${stripeEvents[0]?.cnt || 0} events recorded`,
       severity: 'critical'
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     record({ name: 'Processed Stripe Events Table', phase: 'PRODUCTION', passed: false, details: e.message, severity: 'critical' });
   }
 }
@@ -1066,7 +1066,7 @@ export async function runFullSystemStressTest(): Promise<TestResult[]> {
     console.log(`\n--- ${phase.name} ---`);
     try {
       await phase.fn();
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(`Phase error: ${e.message}`);
       record({ name: `${phase.name} (CRASH)`, phase: 'SYSTEM', passed: false, details: e.message, severity: 'critical' });
     }

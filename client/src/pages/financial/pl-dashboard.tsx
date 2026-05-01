@@ -662,7 +662,6 @@ export default function PLDashboard() {
     id: "pl-dashboard",
     title: "P&L Revenue Recognition",
     subtitle: "ASC 606 revenue scheduling, deferred revenue, and financial forecasting",
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     category: "workspace",
     headerActions: (
       <Button variant="outline" size="sm" onClick={() => window.location.reload()}>

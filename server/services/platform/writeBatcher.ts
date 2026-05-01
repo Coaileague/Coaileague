@@ -125,7 +125,7 @@ const notificationBatcher = new WriteBatcher<{
   type: string;
   title: string;
   message: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   priority?: string;
 }>(
   'notifications',
@@ -145,7 +145,6 @@ const notificationBatcher = new WriteBatcher<{
       createdAt: now,
     }));
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(notifications).values(values);
     log.info(`[WriteBatcher:notifications] Flushed ${items.length} notifications`);
   }
@@ -158,7 +157,7 @@ const auditLogBatcher = new WriteBatcher<{
   action: string;
   entityType: string;
   entityId?: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   ipAddress?: string;
 }>(
   'auditLogs',
@@ -187,7 +186,7 @@ const auditLogBatcher = new WriteBatcher<{
 const eventBatcher = new WriteBatcher<{
   workspaceId: string;
   eventType: string;
-  eventData: Record<string, any>;
+  eventData: Record<string, unknown>;
   source?: string;
 }>(
   'events',

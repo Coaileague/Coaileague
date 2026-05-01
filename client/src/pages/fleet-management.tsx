@@ -138,7 +138,7 @@ export default function FleetManagement() {
       setShowAddDialog(false);
       setVehicleForm(EMPTY_VEHICLE);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to add vehicle", variant: "destructive" });
     },
   });
@@ -152,7 +152,7 @@ export default function FleetManagement() {
       toast({ title: "Vehicle Removed", description: "Vehicle has been removed from the fleet." });
       setSelectedVehicle(null);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to remove vehicle", variant: "destructive" });
     },
   });
@@ -368,7 +368,6 @@ export default function FleetManagement() {
               <Skeleton key={i} className="h-16 w-full rounded-md" />
             ))}
           </div>
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         ) : vehicles.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed rounded-lg">
             <Car className="h-12 w-12 text-muted-foreground mb-4" />

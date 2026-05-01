@@ -73,7 +73,7 @@ async function emitSchedulingEvent(
              'swap_requested' | 'swap_approved' | 'swap_rejected' | 'swap_cancelled' |
              'shift_duplicated' | 'week_duplicated' | 'conflict_detected',
   workspaceId: string,
-  metadata: Record<string, any>
+  metadata: Record<string, unknown>
 ): Promise<void> {
   try {
     // Use human-readable messages as fallbacks when AI enrichment fails

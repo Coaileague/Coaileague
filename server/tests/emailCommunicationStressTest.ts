@@ -91,7 +91,7 @@ async function test(name: string, fn: () => Promise<void>) {
   try {
     await fn();
     if (!results.find(r => r.name === name)) pass(name);
-  } catch (e: any) {
+  } catch (e: unknown) {
     fail(name, e.message || String(e));
   }
 }
@@ -161,7 +161,7 @@ const emailTemplates = {
     subject: `Important: Offboarding Information`,
     html: `<div><h2>Offboarding Information</h2><p>${data.employeeName}, your ${data.terminationType} effective ${data.terminationDate}. Contact HR: ${data.hrContactEmail}</p></div>`,
   }),
-  reportDelivery: (data: { clientName: string; reportNumber: string; reportName: string; submittedBy: string; submittedDate: string; reportData: Record<string, any>; attachmentCount?: number }) => ({
+  reportDelivery: (data: { clientName: string; reportNumber: string; reportName: string; submittedBy: string; submittedDate: string; reportData: Record<string, unknown>; attachmentCount?: number }) => ({
     subject: `Report Delivery: ${data.reportName} [${data.reportNumber}]`,
     html: `<div><h2>Report Delivered</h2><p>${data.clientName}, report "${data.reportName}" [${data.reportNumber}] submitted by ${data.submittedBy} on ${data.submittedDate}.${data.attachmentCount ? ` Attachments: ${data.attachmentCount}` : ''}</p></div>`,
   }),

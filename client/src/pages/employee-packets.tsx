@@ -99,7 +99,7 @@ export default function EmployeePackets() {
       setCreateOpen(false);
       setForm({ packetType: "unarmed", recipientName: "", recipientEmail: "", notes: "" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const voidMutation = useMutation({

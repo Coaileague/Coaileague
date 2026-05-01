@@ -99,7 +99,7 @@ export default function AssistedOnboarding() {
         toast({ title: "Error", description: data.error || "Failed to create workspace", variant: "destructive" });
       }
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to create workspace", variant: "destructive" });
     },
   });
@@ -113,7 +113,7 @@ export default function AssistedOnboarding() {
       toast({ title: "Success", description: "Workspace marked as ready for handoff" });
       queryClient.invalidateQueries({ queryKey: ["/api/support/assisted-onboarding/list"] });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
@@ -134,7 +134,7 @@ export default function AssistedOnboarding() {
         toast({ title: "Error", description: data.error, variant: "destructive" });
       }
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });

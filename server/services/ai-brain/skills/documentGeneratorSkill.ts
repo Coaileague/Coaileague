@@ -100,7 +100,7 @@ class DocumentGeneratorSkill extends BaseSkill {
           generationTimeMs: Date.now() - startTime,
         },
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logs.push(`Document generation failed: ${(error instanceof Error ? error.message : String(error))}`);
       return {
         success: false,
@@ -111,7 +111,7 @@ class DocumentGeneratorSkill extends BaseSkill {
   }
 
   private async gatherData(params: DocumentGenerationParams, logs: string[]): Promise<Record<string, any>> {
-    const data: Record<string, any> = {};
+    const data: Record<string, unknown> = {};
     const wsId = params.workspaceId;
 
     try {
@@ -186,7 +186,7 @@ class DocumentGeneratorSkill extends BaseSkill {
 
   private async buildSections(
     params: DocumentGenerationParams,
-    rawData: Record<string, any>,
+    rawData: Record<string, unknown>,
     logs: string[]
   ): Promise<DocumentSection[]> {
     const sections: DocumentSection[] = [];
@@ -290,7 +290,7 @@ class DocumentGeneratorSkill extends BaseSkill {
   private async generateSectionContent(
     sectionTitle: string,
     documentType: string,
-    context: Record<string, any>,
+    context: Record<string, unknown>,
     workspaceId: string,
   ): Promise<string> {
     try {
@@ -319,13 +319,13 @@ Requirements:
       });
 
       return result.text || `${sectionTitle}: Please edit this section with your specific content.`;
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.warn(`[DocumentGenerator] Section generation failed for "${sectionTitle}": ${e?.message}`);
       return `${sectionTitle}: Please edit this section with your specific content.`;
     }
   }
 
-  private buildExecutiveSummary(params: DocumentGenerationParams, data: Record<string, any>): string {
+  private buildExecutiveSummary(params: DocumentGenerationParams, data: Record<string, unknown>): string {
     const parts: string[] = [];
     parts.push(`${params.documentType.charAt(0).toUpperCase() + params.documentType.slice(1)}: ${params.title}`);
 
@@ -361,7 +361,7 @@ Requirements:
     return groups;
   }
 
-  private countDataPoints(data: Record<string, any>): number {
+  private countDataPoints(data: Record<string, unknown>): number {
     let count = 0;
     for (const value of Object.values(data)) {
       if (Array.isArray(value)) count += value.length;

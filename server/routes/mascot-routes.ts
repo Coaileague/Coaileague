@@ -48,7 +48,7 @@ const AI_BRAIN_AUTHORITIES = ['gemini', 'helpai', 'mascot', 'bot', 'root_admin']
 async function reportMascotError(
   action: string, 
   error: string, 
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ): Promise<void> {
   const errorId = `mascot-error-${Date.now()}`;
   
@@ -88,7 +88,7 @@ async function reportMascotError(
 async function executeMascotAction<T>(
   action: string,
   executor: () => Promise<T>,
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ): Promise<MascotActionResult> {
   try {
     const result = await executor();
@@ -840,7 +840,7 @@ router.get('/personalized-greeting', requireTrinityAccess, async (req, res) => {
   
   const result = await executeMascotAction('mascot.personalized_greeting', async () => {
     // Gather comprehensive user and org context
-    let context: Record<string, any> = {
+    let context: Record<string, unknown> = {
       user: null,
       workspace: null,
       pendingIssues: [],
@@ -860,7 +860,6 @@ router.get('/personalized-greeting', requireTrinityAccess, async (req, res) => {
         firstName: users.firstName,
         lastName: users.lastName,
         role: users.role
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       }).from(users).where(eq(users.id, userId)).limit(1);
       context.user = user;
       
@@ -873,7 +872,6 @@ router.get('/personalized-greeting', requireTrinityAccess, async (req, res) => {
         const unreadResult = await db.select({ count: count() })
           .from(notifications)
           .where(and(
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             eq(notifications.userId, userId),
             eq(notifications.isRead, false)
           ));
@@ -1998,7 +1996,6 @@ router.patch('/holiday/profiles/:id', requireTrinityAccess, async (req, res) => 
     const { id } = req.params;
     const updateData = req.body;
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const profile = await storage.updateMascotMotionProfile(id, updateData);
     
     if (!profile) {

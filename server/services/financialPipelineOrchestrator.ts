@@ -470,7 +470,7 @@ export async function onPayrollApproved(payrollRunId: string, workspaceId: strin
           ? `Internal payroll executed: ${internalResult.processedEntries} entries, $${internalResult.totalNetPay.toFixed(2)} net pay, ${internalResult.stripePayouts} Stripe payouts, ${internalResult.pendingManualPayments} manual payments`
           : `Internal payroll partially failed: ${internalResult.errors.join('; ')}`,
       };
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.error('[FinancialPipeline] Internal payroll execution failed:', e);
       await recordOperationResult(workspaceId, 'payroll', false);
       return {

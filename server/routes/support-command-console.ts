@@ -1374,7 +1374,7 @@ supportCommandRouter.post('/test/platform-downtime-countdown', requireSupportRol
 /**
  * Log support staff actions for audit trail
  */
-async function logSupportAction(userId: string, action: string, details: Record<string, any>) {
+async function logSupportAction(userId: string, action: string, details: Record<string, unknown>) {
   try {
     await db.insert(systemAuditLogs).values({
       workspaceId: 'system',

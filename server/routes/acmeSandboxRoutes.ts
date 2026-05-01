@@ -62,7 +62,7 @@ acmeSandboxRouter.post('/run', refuseInProd, async (req: Request, res: Response)
       telemetry: result.telemetry,
       telemetryFiles: result.telemetryFiles,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[ACME-Sandbox] /run failed', err);
     res.status(500).json({ ok: false, error: err?.message ?? String(err) });
   }
@@ -73,7 +73,7 @@ acmeSandboxRouter.get('/telemetry', async (_req: Request, res: Response) => {
     const file = path.join(ARTIFACT_ROOT, 'telemetry', 'latest.json');
     const body = await fs.readFile(file, 'utf8');
     res.type('application/json').send(body);
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(404).json({ ok: false, error: 'No telemetry yet — run POST /api/sandbox/acme/run first' });
   }
 });
@@ -83,7 +83,7 @@ acmeSandboxRouter.get('/artifacts', async (req: Request, res: Response) => {
     const wsId = (req.query.workspaceId as string) || 'demo-workspace-00000000';
     const items = await listFakeArtifacts(wsId);
     res.json({ ok: true, count: items.length, items });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ ok: false, error: err?.message });
   }
 });
@@ -97,7 +97,7 @@ acmeSandboxRouter.get('/artifacts/:id', async (req: Request, res: Response) => {
     }
     const body = await fs.readFile(a.diskPath);
     res.type(a.mimeType).send(body);
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ ok: false, error: err?.message });
   }
 });
@@ -109,7 +109,7 @@ acmeSandboxRouter.post('/auditor/seed', refuseInProd, async (req: Request, res: 
       || `${req.protocol}://${req.get('host')}`;
     const seed = await seedRegulatoryAuditor({ workspaceId, baseUrl });
     res.json({ ok: true, auditor: seed });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ ok: false, error: err?.message });
   }
 });
@@ -120,7 +120,7 @@ acmeSandboxRouter.get('/webhook-log', async (req: Request, res: Response) => {
     const limit = Math.min(parseInt(String(req.query.limit ?? '50'), 10) || 50, 200);
     const rows = await listWebhookLog(wsId, limit);
     res.json({ ok: true, count: rows.length, rows });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ ok: false, error: err?.message });
   }
 });

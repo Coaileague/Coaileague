@@ -213,7 +213,6 @@ async function processTrinityIntakeAction(
   collectedData: Record<string, unknown>
 ): Promise<void> {
   try {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await universalAuditService.log({
       workspaceId,
       actorId: 'trinity-system-actor-000000000000',

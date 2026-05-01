@@ -77,14 +77,11 @@ export default function CompanyReports() {
     onSuccess: (data) => {
       // Trigger download
       const link = document.createElement('a');
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       link.href = data.downloadUrl;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       link.download = data.filename;
       link.click();
       toast({
         title: "Report Exported",
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         description: `${data.filename} is ready for download`,
       });
     },

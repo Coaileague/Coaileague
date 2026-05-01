@@ -103,7 +103,7 @@ class TrinityScheduledScansService {
           const { trinityProactiveScanner } = await import('./trinityProactiveScanner');
           const result = await trinityProactiveScanner.runDailyScan(ws.id);
           log.info(`${SCAN_LABEL} Daily scan done [${ws.id}]: ${result.alerts.length} alerts, ${result.escalations?.length ?? 0} escalations`);
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.error(`${SCAN_LABEL} Daily scan failed for workspace ${ws.id}: ${(err instanceof Error ? err.message : String(err))}`);
           await notifyScanFailure(ws.id, 'Daily', (err instanceof Error ? err.message : String(err)));
         }
@@ -139,7 +139,7 @@ class TrinityScheduledScansService {
           const { trinityProactiveScanner } = await import('./trinityProactiveScanner');
           await trinityProactiveScanner.runWeeklyScan(ws.id);
           log.info(`${SCAN_LABEL} Weekly scan done [${ws.id}]`);
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.error(`${SCAN_LABEL} Weekly scan failed for workspace ${ws.id}: ${(err instanceof Error ? err.message : String(err))}`);
           await notifyScanFailure(ws.id, 'Weekly', (err instanceof Error ? err.message : String(err)));
         }
@@ -184,7 +184,7 @@ class TrinityScheduledScansService {
           const { trinityProactiveScanner } = await import('./trinityProactiveScanner');
           await trinityProactiveScanner.runMonthlyCycle(ws.id);
           log.info(`${SCAN_LABEL} Monthly cycle done [${ws.id}]`);
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.error(`${SCAN_LABEL} Monthly cycle failed for workspace ${ws.id}: ${(err instanceof Error ? err.message : String(err))}`);
           await notifyScanFailure(ws.id, 'Monthly', (err instanceof Error ? err.message : String(err)));
         }
@@ -221,7 +221,7 @@ async function notifyScanFailure(workspaceId: string, scanType: 'Daily' | 'Weekl
         log.error(`${SCAN_LABEL} Failed to send scan failure notification to ${userId}: ${notifErr.message}`);
       })
     ));
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`${SCAN_LABEL} notifyScanFailure helper error: ${(err instanceof Error ? err.message : String(err))}`);
   }
 }
@@ -235,7 +235,7 @@ async function getActiveWorkspaces(): Promise<Array<{ id: string }>> {
       .from(workspaces);
     // Exclude the internal system workspace from tenant scans
     return all.filter(w => w.id !== 'system' && w.id !== PLATFORM_WORKSPACE_ID);
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`${SCAN_LABEL} Failed to fetch active workspaces: ${(err instanceof Error ? err.message : String(err))}`);
     return [];
   }

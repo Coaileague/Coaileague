@@ -25,7 +25,7 @@ export default function DeputyAdminDashboard() {
     queryKey: ["/api/email/inbox", { folder: "inbox", limit: 5 }],
     staleTime: 60000,
   });
-  const unreadCount = emailData?.emails?.filter((e: any) => !e.is_read).length ?? 0;
+  const unreadCount = emailData?.emails?.filter((e) => !e.is_read).length ?? 0;
   const totalEmails = emailData?.total ?? 0;
 
   return (

@@ -37,7 +37,7 @@ export interface SpanLog {
   timestamp: number;
   level: 'info' | 'warn' | 'error' | 'debug';
   message: string;
-  fields?: Record<string, any>;
+  fields?: Record<string, unknown>;
 }
 
 export interface TraceContext {
@@ -46,7 +46,7 @@ export interface TraceContext {
   currentSpanId: string;
   spans: Map<string, Span>;
   startTime: number;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export interface TraceOptions {
@@ -216,7 +216,7 @@ class DistributedTracingService {
   /**
    * Add a log entry to a span
    */
-  logToSpan(span: Span, level: SpanLog['level'], message: string, fields?: Record<string, any>): void {
+  logToSpan(span: Span, level: SpanLog['level'], message: string, fields?: Record<string, unknown>): void {
     if (!span || !span.logs) return;
 
     span.logs.push({

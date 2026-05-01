@@ -43,7 +43,6 @@ executionTrackerRouter.get('/executions', requireAuth, async (req: Request, res:
     const platformRole = (req.user)?.platformRole as PlatformRole;
     
     if (!hasPlatformWideAccess(platformRole)) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const { role, error } = await resolveWorkspaceForUser(userId, workspaceId);
       if (error || !role) {
         return res.status(403).json({ error: 'You do not have access to this workspace' });
@@ -77,7 +76,6 @@ executionTrackerRouter.get('/executions/:id', requireAuth, async (req: Request, 
     const platformRole = (req.user)?.platformRole as PlatformRole;
     
     if (!hasPlatformWideAccess(platformRole)) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const { role, error } = await resolveWorkspaceForUser(userId, execution.workspaceId);
       if (error || !role) {
         return res.status(403).json({ error: 'You do not have access to this execution' });
@@ -103,7 +101,6 @@ executionTrackerRouter.get('/pending-verifications', requireAuth, async (req: Re
     const platformRole = (req.user)?.platformRole as PlatformRole;
     
     if (!hasPlatformWideAccess(platformRole)) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const { role, error } = await resolveWorkspaceForUser(userId, workspaceId);
       if (error || !role) {
         return res.status(403).json({ error: 'You do not have access to this workspace' });
@@ -134,7 +131,6 @@ executionTrackerRouter.post('/executions/:id/verify', requireAuth, async (req: R
     // Verify user has verification rights for this workspace
     // Platform staff with platform-wide access can verify any execution
     if (!hasPlatformWideAccess(platformRole)) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const { role, error } = await resolveWorkspaceForUser(userId, execution.workspaceId);
       if (error || !role) {
         return res.status(403).json({ error: 'You do not have access to this execution' });
@@ -183,7 +179,6 @@ executionTrackerRouter.post('/executions/:id/reject', requireAuth, async (req: R
     // Verify user has rejection rights for this workspace
     // Platform staff with platform-wide access can reject any execution
     if (!hasPlatformWideAccess(platformRole)) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const { role, error } = await resolveWorkspaceForUser(userId, execution.workspaceId);
       if (error || !role) {
         return res.status(403).json({ error: 'You do not have access to this execution' });
@@ -223,7 +218,6 @@ executionTrackerRouter.get('/stats', requireAuth, async (req: Request, res: Resp
     const platformRole = (req.user)?.platformRole as PlatformRole;
     
     if (!hasPlatformWideAccess(platformRole)) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const { role, error } = await resolveWorkspaceForUser(userId, workspaceId);
       if (error || !role) {
         return res.status(403).json({ error: 'You do not have access to this workspace' });

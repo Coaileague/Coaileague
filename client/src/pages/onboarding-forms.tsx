@@ -1229,7 +1229,7 @@ export default function OnboardingFormsPage() {
   }, [draftData]);
 
   const saveDraftMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/onboarding-forms/save-draft", data),
+    mutationFn: (data) => apiRequest("POST", "/api/onboarding-forms/save-draft", data),
     onSuccess: () => {
       toast({ title: "Progress saved", description: "You can safely close this window and continue later." });
     },
@@ -1239,7 +1239,7 @@ export default function OnboardingFormsPage() {
   });
 
   const submitMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/onboarding-forms/submit", data),
+    mutationFn: (data) => apiRequest("POST", "/api/onboarding-forms/submit", data),
     onSuccess: () => {
       setSubmitted(true);
       queryClient.invalidateQueries({ queryKey: ["/api/onboarding-forms/draft"] });

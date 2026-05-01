@@ -54,7 +54,7 @@ export function UnassignedShiftsPanel({
       setSelectedEmployeeId('');
       toast({ title: 'Shift assigned successfully' });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ variant: 'destructive', title: 'Assignment failed', description: error.message });
     },
   });
@@ -68,7 +68,7 @@ export function UnassignedShiftsPanel({
       queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
       toast({ title: 'Trinity AI assigned best match', description: 'Shift filled successfully' });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ variant: 'destructive', title: 'Auto-fill failed', description: error.message });
     },
   });

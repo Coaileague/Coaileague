@@ -628,7 +628,6 @@ export function ClientsTable({ workspaceId }: ClientsTableProps) {
     },
   });
 
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const rawClients = data?.clients || [];
   const total = data?.total || 0;
   const pageCount = data?.pageCount || 0;
@@ -637,10 +636,10 @@ export function ClientsTable({ workspaceId }: ClientsTableProps) {
   const clients = useMemo(() => {
     let filtered = rawClients;
     if (clientTierFilter !== 'all') {
-      filtered = filtered.filter((c: any) => (c.strategicTier || 'standard') === clientTierFilter);
+      filtered = filtered.filter((c) => (c.strategicTier || 'standard') === clientTierFilter);
     }
     if (clientCategoryFilter !== 'all') {
-      filtered = filtered.filter((c: any) => (c.category || 'other') === clientCategoryFilter);
+      filtered = filtered.filter((c) => (c.category || 'other') === clientCategoryFilter);
     }
     return filtered;
   }, [rawClients, clientTierFilter, clientCategoryFilter]);
@@ -648,7 +647,7 @@ export function ClientsTable({ workspaceId }: ClientsTableProps) {
   const clientGroups = useMemo(() => {
     if (clientGroupBy === 'none') return [{ label: '', items: clients }];
     const groups: Record<string, ClientWithInvoiceCount[]> = {};
-    clients.forEach((c: any) => {
+    clients.forEach((c) => {
       let key = 'Unassigned';
       if (clientGroupBy === 'company') key = c.companyName || 'No Company';
       else if (clientGroupBy === 'category') {
@@ -663,7 +662,6 @@ export function ClientsTable({ workspaceId }: ClientsTableProps) {
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([label, items]) => ({ label, items }));
   }, [clients, clientGroupBy]);
 
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   if (!isLoading && (!data || !data.clients || data.clients.length === 0) && !params.search) {
     return (
       <Card data-testid="card-no-clients">
@@ -786,53 +784,29 @@ export function ClientsTable({ workspaceId }: ClientsTableProps) {
   }
 
   const handleClose = () => {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (editFormData.firstName !== (selectedClient?.firstName || "") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.lastName !== (selectedClient?.lastName || "") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.companyName !== (selectedClient?.companyName || "") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.category !== (selectedClient?.category || "other") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.email !== (selectedClient?.email || "") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.phone !== (selectedClient?.phone || "") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.address !== (selectedClient?.address || "") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.addressLine2 !== (selectedClient?.addressLine2 || "") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.city !== (selectedClient?.city || "") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.state !== (selectedClient?.state || "") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.postalCode !== (selectedClient?.postalCode || "") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.notes !== (selectedClient?.notes || "") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.billableRate !== (selectedClient?.billableRate?.toString() || "") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.billingCycle !== (selectedClient?.billingCycle || "monthly") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.paymentTermsDays !== (selectedClient?.paymentTermsDays?.toString() || "") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.preferredPaymentMethod !== (selectedClient?.preferredPaymentMethod || "check") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.autoSendInvoice !== (selectedClient?.autoSendInvoice ?? true) ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.pocName !== (selectedClient?.pocName || "") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.pocTitle !== (selectedClient?.pocTitle || "") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.pocPhone !== (selectedClient?.pocPhone || "") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.pocEmail !== (selectedClient?.pocEmail || "") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.apContactName !== (selectedClient?.apContactName || "") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.apContactEmail !== (selectedClient?.apContactEmail || "") ||
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         editFormData.apContactPhone !== (selectedClient?.apContactPhone || "")) {
       if (!confirm('You have unsaved changes. Discard them?')) return;
     }

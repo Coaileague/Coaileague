@@ -284,7 +284,7 @@ export default function Billing() {
     queryKey: ["/api/billing/upsell/addon-plans"],
     enabled: !!user,
     queryFn: () => apiFetch('/api/billing/upsell/addon-plans', AddonPlanListResponse),
-    select: (data: any) => data?.plans ?? data ?? [],
+    select: (data) => data?.plans ?? data ?? [],
   });
 
   // Fetch active workspace add-ons
@@ -292,7 +292,7 @@ export default function Billing() {
     queryKey: ["/api/billing/upsell/addons"],
     enabled: !!user,
     queryFn: () => apiFetch('/api/billing/upsell/addons', AddonPlanListResponse),
-    select: (data: any) => data?.addons ?? data ?? [],
+    select: (data) => data?.addons ?? data ?? [],
   });
 
 
@@ -849,7 +849,7 @@ export default function Billing() {
                 </div>
               ) : Array.isArray(activeAddons) && activeAddons.length > 0 ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mobile-cols-1">
-                  {activeAddons.map((addon: any) => (
+                  {activeAddons.map((addon) => (
                     <div key={addon.id} className="flex items-center gap-3 p-3 rounded-md border mobile-compact-p" data-testid={`addon-active-${addon.id}`}>
                       <Zap className="h-5 w-5 text-primary" />
                       <div className="flex-1 min-w-0">
@@ -1073,7 +1073,7 @@ export default function Billing() {
                 </div>
               ) : Array.isArray(invoices) && invoices.length > 0 ? (
                 <div className="space-y-3">
-                  {invoices.map((invoice: any) => (
+                  {invoices.map((invoice) => (
                     <div 
                       key={invoice.id} 
                       className="flex items-center justify-between p-4 rounded-md border hover-elevate mobile-flex-col mobile-gap-3 cursor-pointer"
@@ -1382,8 +1382,8 @@ export default function Billing() {
                 </div>
               ) : Array.isArray(addons) && addons.length > 0 ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mobile-cols-1">
-                  {addons.map((addon: any) => {
-                    const isActive = Array.isArray(activeAddons) && activeAddons.some((a: any) => a.addonId === addon.id);
+                  {addons.map((addon) => {
+                    const isActive = Array.isArray(activeAddons) && activeAddons.some((a) => a.addonId === addon.id);
                     return (
                       <Card key={addon.id} className={isActive ? "border-primary bg-muted/5" : ""} data-testid={`addon-${addon.id}`}>
                         <CardHeader>

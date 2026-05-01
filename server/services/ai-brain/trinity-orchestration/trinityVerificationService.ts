@@ -66,7 +66,6 @@ class ClaudeVerificationService {
     const creditsForVerification = 15;
 
     const preAuth = await aiTokenGateway.preAuthorize(
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       params.context.workspaceId,
       params.context.userId,
       featureKey
@@ -114,7 +113,6 @@ class ClaudeVerificationService {
       const creditsUsed = creditsForVerification;
 
       await aiTokenGateway.finalizeBilling(
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         params.context.workspaceId,
         params.context.userId,
         featureKey,

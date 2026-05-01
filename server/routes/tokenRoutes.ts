@@ -24,7 +24,7 @@ router.get('/balance', requireAuth, ensureWorkspaceAccess, async (req: Authentic
       overageTokens: state?.overageTokens ?? 0,
       periodEnd: state?.periodEnd,
     });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/tokens/usage — per-feature token usage
@@ -33,7 +33,7 @@ router.get('/usage', requireAuth, ensureWorkspaceAccess, async (req: Authenticat
     const limit = parseInt(req.query.limit as string) || 50;
     const history = await tokenManager.getUsageHistory(req.workspaceId!, limit);
     res.json({ usage: history, period: '30d' });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/tokens/tiers — all tier token allocations
@@ -46,7 +46,7 @@ router.get('/state', requireAuth, ensureWorkspaceAccess, async (req: Authenticat
   try {
     const state = await tokenManager.getWorkspaceState(req.workspaceId!);
     res.json(state ?? { workspaceId: req.workspaceId, tokenBalance: 0 });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: unknown) { res.status(500).json({ error: err.message }); }
 });
 
 export default router;

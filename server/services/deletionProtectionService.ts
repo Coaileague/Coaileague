@@ -168,9 +168,7 @@ class DeletionProtectionService {
     // Check for active billing
     if (config.checkBilling) {
       const billingBlocks = await this.checkActiveBilling(request.entityType, request.entityId);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (billingBlocks.length > 0) {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         blockingEntities.push(...billingBlocks);
       }
     }
@@ -269,7 +267,6 @@ class DeletionProtectionService {
           .from(timeEntries)
           .where(and(
             eq(timeEntries.employeeId, entityId),
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             eq(timeEntries.approvalStatus, 'pending')
           ));
         

@@ -117,7 +117,6 @@ class WorkflowApprovalService {
 
       const [approval] = await db
         .insert(aiWorkflowApprovals)
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .values({
           workspaceId: 'system',
           gapFindingId: finding.id?.toString(),
@@ -183,7 +182,6 @@ class WorkflowApprovalService {
 
       const [approval] = await db
         .insert(aiWorkflowApprovals)
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         .values({
           workspaceId: 'system',
           workOrderId: params.workOrderId,
@@ -469,7 +467,6 @@ class WorkflowApprovalService {
           .innerJoin(employees, eq(employees.userId, users.id))
           .where(and(
             eq(employees.workspaceId, targetWorkspaceId),
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             inArray(employees.workspaceRole, [...APPROVER_ROLES, ROLES.SUPERVISOR])
           ));
       }
@@ -495,7 +492,6 @@ class WorkflowApprovalService {
       // Filter users based on role hierarchy
       const eligibleUsers = supportUsers.filter(user => {
         const platformRoleIndex = SUPPORT_ROLES.indexOf(user.role || '');
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const requiredRoleIndex = SUPPORT_ROLES.indexOf(approval.requiredRole || 'support_manager');
         const hasWorkspaceAuthority = ['org_owner', 'co_owner', 'manager', 'supervisor'].includes(user.workspaceRole || '');
         

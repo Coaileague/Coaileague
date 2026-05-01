@@ -60,7 +60,7 @@ export const alternativeStrategyService = {
 
       log.debug(`[AlternativeStrategy] Generated ${strategies.length} strategies for shift ${shiftId}`);
       return strategies;
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn(`[AlternativeStrategy] Failed: ${err?.message}`);
       return [];
     }

@@ -12,7 +12,7 @@ interface SecureRequestDialogProps {
   requestType: 'authenticate' | 'document' | 'photo' | 'signature' | 'info';
   requestedBy: string;
   requestMessage?: string;
-  onSubmit: (data: any) => void;
+  onSubmit: (data) => void;
 }
 
 export function SecureRequestDialog({

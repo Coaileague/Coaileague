@@ -65,7 +65,7 @@ export class TrinityEmailProcessor {
         default:
           await this.handleMainInboxEmail(storedEmail, workspace, sender);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.error('Error processing inbound email:', err?.message);
     }
   }
@@ -164,7 +164,7 @@ export class TrinityEmailProcessor {
     return result.rows[0] || null;
   }
 
-  async storeInboundEmail(emailData: InboundEmailData, workspaceId: string, sender: any): Promise<any> {
+  async storeInboundEmail(emailData: InboundEmailData, workspaceId: string, sender: any): Promise<unknown> {
     const result = await pool.query(
       `INSERT INTO inbound_emails
        (workspace_id, from_email, from_name, to_email, subject, body_text, body_html,
@@ -203,7 +203,7 @@ export class TrinityEmailProcessor {
         originalMessageId: params.originalMessageId,
       });
       log.info(`Trinity replied to ${params.toAddress} from ${params.fromAddress}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[TrinityEmailProcessor] replyToEmail via NDS failed:', err?.message);
     }
   }
@@ -268,7 +268,7 @@ export class TrinityEmailProcessor {
         rawPayload: {},
       };
       await processInboundEmail(parsed);
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn('[trinityEmailProcessor] _delegateToFullPipeline failed (non-fatal):', err?.message);
     }
   }
@@ -297,7 +297,7 @@ export class TrinityEmailProcessor {
             data.position || 'Security Officer',
           ]
         );
-      } catch (e: any) {
+      } catch (e: unknown) {
         log.warn('create_candidate insert failed:', e.message);
       }
     }

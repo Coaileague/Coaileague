@@ -29,7 +29,7 @@ export const trinityWebSocketService = {
     }
     try {
       _broadcastFn(workspaceId, event);
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn(`[TrinityWS] Broadcast failed: ${err?.message}`);
     }
   },

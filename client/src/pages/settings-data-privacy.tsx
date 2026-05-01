@@ -58,7 +58,7 @@ export default function SettingsDataPrivacyPage(): JSX.Element {
       URL.revokeObjectURL(url);
       toast({ title: "Export complete", description: "Download started." });
       setConfirmOpen(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: "Export failed", description: err?.message || "Try again.", variant: "destructive" });
     } finally {
       setPending(false);

@@ -365,7 +365,6 @@ export class FinancialLedgerService {
       .where(
         and(
           eq(payrollRuns.workspaceId, workspaceId),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           eq(payrollRuns.status, 'pending_review'),
           lte(payrollRuns.periodEnd, asOf)
         )

@@ -114,7 +114,7 @@ export function useChatManagerWebSocketBridge() {
 
     const liveMessageTypes = ['new_message', 'chat_message', 'private_message'];
 
-    unsubs.push(bus.subscribeAll((data: any) => {
+    unsubs.push(bus.subscribeAll((data) => {
       if (liveMessageTypes.includes(data.type)) {
         const conversationId = data.conversationId || data.message?.conversationId || data.roomId || data.chatroomId;
         if (!conversationId) return;

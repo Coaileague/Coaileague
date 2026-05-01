@@ -20,7 +20,7 @@ import { isStripeConfigured, getStripe } from './stripeClient';
 const log = createLogger('billingReconciliation');
 
 class BillingReconciliationService {
-  async getDailyUsageSummary(workspaceId: string, date?: Date): Promise<any> {
+  async getDailyUsageSummary(workspaceId: string, date?: Date): Promise<unknown> {
     const targetDate = date || new Date();
     const dayStart = new Date(targetDate);
     dayStart.setUTCHours(0, 0, 0, 0);
@@ -57,7 +57,7 @@ class BillingReconciliationService {
     };
   }
 
-  async getMonthlyUsageSummary(workspaceId: string, year?: number, month?: number): Promise<any> {
+  async getMonthlyUsageSummary(workspaceId: string, year?: number, month?: number): Promise<unknown> {
     const usage = await aiMeteringService.getCurrentPeriodUsage(workspaceId);
     if (!usage) {
       return {
@@ -93,7 +93,7 @@ class BillingReconciliationService {
     };
   }
 
-  async reconcileCredits(workspaceId: string): Promise<any> {
+  async reconcileCredits(workspaceId: string): Promise<unknown> {
     const usage = await aiMeteringService.getCurrentPeriodUsage(workspaceId);
     const billing = await orgBillingService.getOrgBillingSummary(workspaceId);
 

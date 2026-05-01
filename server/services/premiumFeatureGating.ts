@@ -126,8 +126,8 @@ class PremiumFeatureGatingService {
     context: OrchestrationContext,
     step: OrchestrationStep,
     status: StepStatus,
-    inputPayload?: Record<string, any>,
-    outputPayload?: Record<string, any>,
+    inputPayload?: Record<string, unknown>,
+    outputPayload?: Record<string, unknown>,
     error?: string
   ): Promise<void> {
     try {
@@ -226,7 +226,6 @@ class PremiumFeatureGatingService {
       await this.logStep(orchContext, 'VALIDATE', 'started', { tier, featureId });
       
       const totalCreditsNeeded = feature.creditCost * units;
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const monthlyLimit = feature.monthlyLimits[tier] || 0;
       
       await this.logStep(orchContext, 'VALIDATE', 'completed', { 
@@ -340,7 +339,7 @@ class PremiumFeatureGatingService {
     featureId: string,
     units: number = 1,
     userId?: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): Promise<TokenUsageResult> {
     // Create orchestration context for 7-step logging
     const orchContext = this.createOrchestrationContext(
@@ -441,7 +440,6 @@ class PremiumFeatureGatingService {
         workspaceId,
         userId,
         featureKey: featureKeyForManager,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         featureName: feature.name,
         amountOverride: creditsToDeduct,
         description: `Premium: ${feature.name} (${units} units)`,
@@ -581,9 +579,7 @@ class PremiumFeatureGatingService {
         .where(and(
           eq(featureUsageEvents.workspaceId, workspaceId),
           eq(featureUsageEvents.featureKey, featureId),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           gte(featureUsageEvents.triggeredAt, startOfMonth),
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           lte(featureUsageEvents.triggeredAt, endOfMonth)
         ));
 
@@ -604,10 +600,9 @@ class PremiumFeatureGatingService {
     creditsUsed: number,
     units: number,
     userId?: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): Promise<void> {
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(featureUsageEvents).values({
         id: crypto.randomUUID(),
         workspaceId,

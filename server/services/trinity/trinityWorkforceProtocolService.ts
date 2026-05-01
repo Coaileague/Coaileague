@@ -449,7 +449,6 @@ class TrinityWorkforceProtocolService {
       .from(employeeDocuments)
       .where(and(
         eq(employeeDocuments.workspaceId, workspaceId),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         inArray(employeeDocuments.documentType, ['employee_handbook', 'handbook', 'policy'])
       ))
       .limit(5)

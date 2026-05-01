@@ -32,13 +32,12 @@ export function RecycledCreditsPanel() {
   });
 
   const triggerMutation = useMutation({
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     mutationFn: () => apiRequest("/api/platform/credits/recycled/trigger", { method: "POST" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/platform/credits/recycled"] });
       toast({ title: "Sweep complete", description: "Recycled token accounting complete." });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: "Sweep failed", description: err.message, variant: "destructive" });
     },
   });

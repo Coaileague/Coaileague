@@ -142,7 +142,7 @@ export async function analyzeSubtext(
       insight,
       recommendedAdjustment,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[SubtextDetector] Analysis failed (non-fatal):', err?.message);
     return {
       subtextScore: 0,

@@ -200,7 +200,7 @@ advancedSchedulingRouter.post('/swap-requests', requireAuth, async (req: Request
     } as any).returning();
 
     res.status(201).json({ success: true, swapRequest: created });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: err.message || 'Failed to create swap request' });
   }
 });
@@ -279,7 +279,7 @@ advancedSchedulingRouter.post('/swap-requests/:swapId/approve', requireAuth, asy
       .returning();
     if (!updated) return res.status(404).json({ error: 'Swap request not found' });
     res.json({ success: true, swapRequest: updated });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: err.message || 'Failed to approve swap request' });
   }
 });
@@ -300,7 +300,7 @@ advancedSchedulingRouter.post('/swap-requests/:swapId/reject', requireAuth, asyn
       .returning();
     if (!updated) return res.status(404).json({ error: 'Swap request not found' });
     res.json({ success: true, swapRequest: updated });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: err.message || 'Failed to reject swap request' });
   }
 });
@@ -418,7 +418,7 @@ advancedSchedulingRouter.post('/shifts/:shiftId/duplicate', requireManager, asyn
       updatedAt: new Date(),
     } as any).returning();
     res.json({ success: true, shift: created[0] });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: err.message || 'Failed to duplicate shift' });
   }
 });

@@ -295,7 +295,7 @@ export async function runComprehensiveDevSeed(): Promise<{ success: boolean; log
     info('COMPLETE! Full relational seed done.');
     return { success: true, log, counts };
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     info('FAILED: ' + err.message);
     console.error(err.stack);
     return { success: false, log, counts };

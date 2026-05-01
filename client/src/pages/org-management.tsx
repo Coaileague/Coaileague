@@ -314,7 +314,7 @@ export default function OrgManagement() {
       const res = await apiRequest('POST', endpoint, body);
       return res.json();
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       if (data.success === false) {
         toast({ title: 'Action Failed', description: data.message || 'Support action was not completed.', variant: 'destructive' });
         return;
@@ -338,7 +338,7 @@ export default function OrgManagement() {
       const res = await apiRequest('POST', '/api/support/actions/refund-credits', { workspaceId, amount, reason });
       return res.json();
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       if (data.success === false) {
         toast({ title: 'Refund Failed', description: data.errorMessage || 'Could not process credit refund.', variant: 'destructive' });
         return;
@@ -360,7 +360,7 @@ export default function OrgManagement() {
       const res = await apiRequest('POST', '/api/support/actions/issue-discount', { workspaceId, discountPercent: pct, reason });
       return res.json();
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       if (data.success === false) {
         toast({ title: 'Discount Failed', description: data.error || 'Could not issue discount.', variant: 'destructive' });
         return;
@@ -389,7 +389,7 @@ export default function OrgManagement() {
       setRoleAssignDialog(false);
       setRoleAssignData({ userId: "", role: "support_agent", reason: "" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to assign role", variant: "destructive" });
     },
   });
@@ -403,7 +403,7 @@ export default function OrgManagement() {
       setRoleRevokeTarget(null);
       setRevokeReason("");
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to revoke role", variant: "destructive" });
     },
   });

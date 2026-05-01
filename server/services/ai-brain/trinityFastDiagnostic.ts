@@ -165,7 +165,7 @@ async function collectNotificationMetrics(): Promise<Record<string, any>> {
 
 async function analyzeWithGemini(
   healthSummary: PlatformHealthSummary,
-  metrics: Record<string, any>,
+  metrics: Record<string, unknown>,
   tier: GeminiModelTier,
   workspaceId?: string
 ): Promise<{ analysis: string; findings: DiagnosticFinding[]; recommendations: string[] }> {

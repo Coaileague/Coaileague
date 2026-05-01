@@ -223,7 +223,7 @@ router.patch("/channels/:id", async (req: AuthenticatedRequest, res) => {
       return res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
     }
 
-    const updateData: Record<string, any> = { updatedAt: new Date() };
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
     for (const [key, value] of Object.entries(parsed.data)) {
       if (value !== undefined) updateData[key] = value;
     }

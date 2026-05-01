@@ -41,7 +41,7 @@ interface GenerateOptions {
     form_id: string;
     submitted_by_name?: string | null;
     submitted_by_email?: string | null;
-    data: Record<string, any>;
+    data: Record<string, unknown>;
     signature_data?: string | null;
     signature_type?: string | null;
     typed_name?: string | null;
@@ -314,7 +314,7 @@ export async function generateAndStorePdf(opts: GenerateOptions): Promise<string
 
     log.info(`PDF generated for submission ${submission.id} → ${gcsPath} (${pdfBuf.length} bytes)`);
     return gcsPath;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`PDF generation failed for submission ${opts.submission.id}:`, err?.message);
     return null;
   }

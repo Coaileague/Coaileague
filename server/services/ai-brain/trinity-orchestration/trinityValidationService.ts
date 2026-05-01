@@ -23,7 +23,7 @@ export interface ClaudeRequest {
   task: string;
   taskType?: string;
   context: AIActionContext;
-  trinityData?: Record<string, any>;
+  trinityData?: Record<string, unknown>;
   trinityInsights?: Array<{ insight: string; timestamp: Date }>;
   maxTokens?: number;
   temperature?: number;
@@ -78,7 +78,6 @@ class ClaudeService {
     const featureKey = 'trinity_analysis';
 
     const preAuth = await aiTokenGateway.preAuthorize(
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       params.context.workspaceId,
       params.context.userId,
       featureKey
@@ -129,7 +128,6 @@ class ClaudeService {
       const tokensUsed = inputTokens + outputTokens;
 
       await aiTokenGateway.finalizeBilling(
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         params.context.workspaceId,
         params.context.userId,
         featureKey,
@@ -138,7 +136,6 @@ class ClaudeService {
 
       import('../../billing/aiMeteringService').then(({ aiMeteringService }) => {
         aiMeteringService.recordAiCall({
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           workspaceId: params.context.workspaceId,
           modelName: 'claude-sonnet-4-6',
           callType: params.taskType || featureKey,
@@ -206,7 +203,6 @@ class ClaudeService {
     const creditsUsed = 5;
 
     const preAuth = await aiTokenGateway.preAuthorize(
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       params.context.workspaceId,
       params.context.userId,
       featureKey
@@ -250,7 +246,6 @@ Keep your response focused and under 500 words.`;
     const content = data.content?.[0]?.text || '';
 
     await aiTokenGateway.finalizeBilling(
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       params.context.workspaceId,
       params.context.userId,
       featureKey,
@@ -358,20 +353,13 @@ Remember: You and Trinity are partners working together to help this security co
   private calculateCreditsForTask(task: string): number {
     const taskLower = task.toLowerCase();
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (taskLower.includes('rfp')) return TOKEN_COSTS.trinity_rfp_response || 35;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (taskLower.includes('capability')) return TOKEN_COSTS.trinity_capability_statement || 30;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (taskLower.includes('compliance')) return TOKEN_COSTS.trinity_analysis || 25;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (taskLower.includes('contract')) return TOKEN_COSTS.trinity_analysis || 25;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (taskLower.includes('strategic')) return TOKEN_COSTS.trinity_strategic || 30;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (taskLower.includes('executive')) return TOKEN_COSTS.trinity_executive || 35;
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     return TOKEN_COSTS.trinity_analysis || 25;
   }
 }

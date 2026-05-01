@@ -51,7 +51,7 @@ async function ensureTable(): Promise<void> {
         ON trinity_shift_offers(shift_id) WHERE status = 'accepted';
     `);
     bootstrapped = true;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[ShiftOffer] Table bootstrap failed (non-fatal):', err?.message);
   }
 }
@@ -100,7 +100,7 @@ export async function sendShiftOffers(params: ShiftOfferParams): Promise<{
         changeType: 'action',
         metadata: { channel: 'sms_outbound', reason: 'subscription_inactive' },
       });
-    } catch (auditErr: any) {
+    } catch (auditErr: unknown) {
       log.warn('[ShiftOffer] Gate audit failed (non-fatal):', auditErr?.message);
     }
     return { offered: 0, errors: ['SUBSCRIPTION_INACTIVE'] };
@@ -135,7 +135,7 @@ export async function sendShiftOffers(params: ShiftOfferParams): Promise<{
         clientName = r.client_name || '';
         description = clip(r.description || r.title || '', 120);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       // Schema variation between deployments — ignore silently and just use the params.
       log.info('[ShiftOffer] Shift detail lookup skipped (schema variant):', e?.message);
     }
@@ -181,14 +181,14 @@ export async function sendShiftOffers(params: ShiftOfferParams): Promise<{
         );
 
         offered++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         errors.push(`${officer.id}: ${err.message}`);
       }
     }
 
     log.info(`[ShiftOffer] Sent ${offered} shift offers for shift ${shiftId}`);
     return { offered, errors };
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error('[ShiftOffer] Error sending shift offers:', err.message);
     return { offered: 0, errors: [err.message] };
   }
@@ -255,7 +255,7 @@ export async function acceptShiftOffer(params: {
         [officer.id, offer.shift_id, workspaceId]
       );
       claimed = (claimResult.rowCount ?? 0) > 0;
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.warn('[ShiftOffer] Shift claim update failed:', e.message);
     }
 
@@ -280,7 +280,7 @@ export async function acceptShiftOffer(params: {
           WHERE id = $1`,
         [offer.id]
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (String(err?.code) === '23505') {
         // Another concurrent YES already marked an offer for this shift accepted.
         await pool.query(
@@ -327,7 +327,7 @@ export async function acceptShiftOffer(params: {
           ]
         );
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.warn('[ShiftOffer] Supervisor notification failed (non-fatal):', e.message);
     }
 
@@ -338,7 +338,7 @@ export async function acceptShiftOffer(params: {
       `Your supervisor has been notified. Reply STOP to opt out of shift offers. ` +
       `Text us anytime if you need support. — Trinity`
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     // 23505 = unique_violation against trinity_shift_offers_one_accepted_per_shift.
     // Means two officers replied YES simultaneously; this one lost the race.
     if (err?.code === '23505') {
@@ -373,7 +373,7 @@ export async function declineShiftOffer(params: {
     if ((updated.rowCount ?? 0) === 0) return null;
 
     return `No problem, ${v.firstName}! We'll reach out when another opportunity comes up. — Trinity`;
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn('[ShiftOffer] Decline error:', err.message);
     return null;
   }

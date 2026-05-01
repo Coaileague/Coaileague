@@ -19,7 +19,7 @@ export interface FormSubmission {
   templateCategory: string;
   submittedBy: string;
   submitterName: string;
-  formData: Record<string, any>;
+  formData: Record<string, unknown>;
   photos: string[];
   signatureData?: string;
   status: 'draft' | 'submitted' | 'pending_review' | 'approved' | 'rejected' | 'completed';
@@ -35,7 +35,7 @@ export interface FormSubmission {
 function rowToSubmission(row: typeof customFormSubmissions.$inferSelect): FormSubmission {
   const raw = (row as any).formData || {};
   const meta = raw._meta || {};
-  const cleanFormData: Record<string, any> = {};
+  const cleanFormData: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(raw)) {
     if (k !== '_meta') cleanFormData[k] = v;
   }
@@ -67,7 +67,7 @@ class FormWorkflowService {
     templateId: string;
     submittedBy: string;
     submitterName: string;
-    formData: Record<string, any>;
+    formData: Record<string, unknown>;
     photos?: string[];
     signatureData?: string;
   }): Promise<{ submissionId: string; pipelineDocId: string; status: string }> {
@@ -381,7 +381,6 @@ class FormWorkflowService {
 
       if (employees.length > 0) {
         const emp = employees[0];
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         await db.insert(employeeDocuments).values({
           workspaceId: submission.workspaceId,
           employeeId: emp.id,

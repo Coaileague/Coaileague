@@ -36,7 +36,6 @@ import type { SiteBriefing } from "@shared/schema";
 const pageConfig: CanvasPageConfig = {
   title: "Site Briefing Hub",
   subtitle: "Emergency contacts, access codes, and site instructions for every location",
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   icon: Shield,
 };
 
@@ -155,7 +154,7 @@ function BriefingForm({ briefing, onClose }: { briefing?: SiteBriefing; onClose:
   });
 
   const mutation = useMutation({
-    mutationFn: (data: any) =>
+    mutationFn: (data) =>
       briefing
         ? apiRequest("PATCH", `/api/site-briefings/${briefing.id}`, data)
         : apiRequest("POST", "/api/site-briefings", data),

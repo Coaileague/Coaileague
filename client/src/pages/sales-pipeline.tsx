@@ -80,7 +80,7 @@ function AddLeadDialog({ onCreated }: { onCreated: () => void }) {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/sales/pipeline/leads", data),
+    mutationFn: (data) => apiRequest("POST", "/api/sales/pipeline/leads", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sales/pipeline/leads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/sales/pipeline/pipeline/analytics"] });

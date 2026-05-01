@@ -21,7 +21,7 @@ interface CreateApprovalRequest {
   requestType: string;
   title: string;
   description?: string;
-  requestPayload?: Record<string, any>;
+  requestPayload?: Record<string, unknown>;
   priority?: RequestPriority;
   expiresAt?: Date;
   estimatedTokens?: number;

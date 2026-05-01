@@ -216,7 +216,6 @@ export class SubscriptionManager {
       const customerId = await this.ensureStripeCustomer(workspaceId);
 
       // Get pricing for tier
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const pricing = TIER_PRICING[tier];
       const priceId = billingCycle === 'yearly' ? pricing.stripeYearlyPriceId : pricing.stripePriceId;
 
@@ -359,7 +358,6 @@ export class SubscriptionManager {
         throw new Error('No active subscription to modify');
       }
 
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const pricing = TIER_PRICING[newTier];
       const priceId = billingCycle === 'yearly' ? pricing.stripeYearlyPriceId : pricing.stripePriceId;
 
@@ -433,7 +431,6 @@ export class SubscriptionManager {
 
     // Default to the tier-specific seat overage price if not provided
     const tier = workspace.subscriptionTier as SubscriptionTier;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const pricing = TIER_PRICING[tier];
     const effectivePriceId = priceId || (pricing as any).seatOveragePriceId;
 
@@ -738,7 +735,6 @@ export class SubscriptionManager {
               stripeSubscriptionId: null,
               // Reset billing cycle fields — stale period data causes phantom invoice
               // generation and incorrect "days remaining" in the billing dashboard.
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               currentPeriodEnd: null,
               billingCycleDay: null,
             })
@@ -842,7 +838,6 @@ export class SubscriptionManager {
     }
 
     const tier = workspace.subscriptionTier as SubscriptionTier;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const pricing = TIER_PRICING[tier];
 
     let stripeSubscription: Stripe.Subscription | null = null;

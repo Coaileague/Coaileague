@@ -159,12 +159,12 @@ async function backfillMissingIds(): Promise<{
       try {
         await identityService.ensureOrgIdentifiers(r.id, r.name || 'Organization');
         wsCount++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         failed++;
         log.warn(`[IdentityBackfill] Workspace ${r.id} backfill failed: ${err?.message?.slice(0, 200)}`);
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[IdentityBackfill] Workspace scan failed: ${err?.message}`);
   }
 
@@ -180,12 +180,12 @@ async function backfillMissingIds(): Promise<{
       try {
         await identityService.attachEmployeeExternalId(r.id, r.workspace_id);
         empCount++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         failed++;
         log.warn(`[IdentityBackfill] Employee ${r.id} backfill failed: ${err?.message?.slice(0, 200)}`);
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[IdentityBackfill] Employee scan failed: ${err?.message}`);
   }
 
@@ -201,12 +201,12 @@ async function backfillMissingIds(): Promise<{
       try {
         await identityService.attachClientExternalId(r.id, r.workspace_id);
         cliCount++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         failed++;
         log.warn(`[IdentityBackfill] Client ${r.id} backfill failed: ${err?.message?.slice(0, 200)}`);
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.error(`[IdentityBackfill] Client scan failed: ${err?.message}`);
   }
 
@@ -239,7 +239,7 @@ export async function ensureIdentityIntegrity(): Promise<void> {
 
   try {
     await ensurePinColumns();
-  } catch (err: any) {
+  } catch (err: unknown) {
     failed++;
     log.error(`[identityIntegrity] Failed to ensure PIN columns: ${err?.message}`);
   }
@@ -248,7 +248,7 @@ export async function ensureIdentityIntegrity(): Promise<void> {
     try {
       await pool.query(idx.sql);
       indexOk++;
-    } catch (err: any) {
+    } catch (err: unknown) {
       failed++;
       // Typical failure: a duplicate pre-existing row. Log and continue —
       // the backfill pass below may resolve it, but a manual review is
@@ -265,12 +265,12 @@ export async function ensureIdentityIntegrity(): Promise<void> {
       try {
         await ensureTrigger(t);
         triggerOk++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         failed++;
         log.error(`[identityIntegrity] Failed to install trigger ${t.name}: ${err?.message}`);
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     failed++;
     log.error(`[identityIntegrity] Failed to install trigger function: ${err?.message}`);
   }

@@ -108,7 +108,7 @@ export default function ApplicantVisualCompliance() {
         toast({ title: 'Photo flagged', description: data.artifact.reasoningText ?? 'Trinity flagged this photo. Please review and re-upload.', variant: 'destructive', duration: 6000 });
       }
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: 'Upload failed', description: err?.message ?? 'Please try again.', variant: 'destructive' });
     },
     onSettled: () => setUploadingSlot(null),
@@ -126,7 +126,7 @@ export default function ApplicantVisualCompliance() {
     e.target.value = ''; // Reset input for re-upload
   };
 
-  const slots: Slot[] = (slotsData?.slots ?? []).map((s: any) => ({
+  const slots: Slot[] = (slotsData?.slots ?? []).map((s) => ({
     type:  s.type,
     label: s.label,
     icon:  SLOT_ICONS[s.type] ?? <Camera className="h-5 w-5" />,

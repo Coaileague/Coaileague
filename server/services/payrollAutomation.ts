@@ -1239,7 +1239,7 @@ export class PayrollAutomationEngine {
             const warning = `1099-NEC APPROACHING: Contractor ${employeeSummary.employeeName} has $${newYtdTotal.toFixed(2)} YTD in ${calendarYear} — approaching $600 threshold.`;
             allWarnings.push(warning);
           }
-        } catch (thresholdErr: any) {
+        } catch (thresholdErr: unknown) {
           log.warn(`[AI Payroll™] 1099 threshold check failed for ${employeeSummary.employeeName}:`, thresholdErr.message);
         }
       } else {
@@ -1522,7 +1522,7 @@ export class PayrollAutomationEngine {
           })),
         },
       });
-    } catch (auditErr: any) {
+    } catch (auditErr: unknown) {
       log.warn('[AI Payroll™] overtime_calculated audit log failed (non-fatal):', auditErr?.message);
     }
 
@@ -1559,7 +1559,6 @@ export class PayrollAutomationEngine {
           affectedEmployeeIds: Array.from(manualEditNotesMap.keys()),
           affectedEmployeeNames: affectedNames,
           totalAffected: manualEditNotesMap.size,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           severity: 'audit_flag',
         },
       }).catch((err) => log.warn('[payrollAutomation] Fire-and-forget failed:', err));
@@ -1582,7 +1581,6 @@ export class PayrollAutomationEngine {
       calculations,
       timeEntryIds: allTimeEntryIds, // Return for marking as payrolled after approval
       warnings: allWarnings, // Surface warnings to caller
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       errors: allErrors, // Explicit hard-block errors — zero-rate employees, data integrity failures
       hasBlockedEmployees: zeroRateEmployees.length > 0, // True if any employees were blocked due to missing rates
       zeroRateEmployees, // Employees with hours but $0 gross pay
@@ -1813,7 +1811,7 @@ export async function amendPayrollEntry(
 
     const originalSnapshot = { ...entry };
 
-    const updateFields: Record<string, any> = {
+    const updateFields: Record<string, unknown> = {
       updatedAt: new Date(),
       notes: `${entry.notes || ''}\n[AMENDED ${new Date().toISOString()}] by ${userId}: ${amendments.reason}` +
         `\nOriginal values: gross=${entry.grossPay}, net=${entry.netPay}, regHrs=${entry.regularHours}, otHrs=${entry.overtimeHours}`,
@@ -1976,7 +1974,7 @@ export async function executePayrollEntry(
 
         log.warn(`[InternalPayroll] Stripe payout failed for ${employeeId}: ${payoutResult.error}, falling back to manual`);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       log.warn(`[InternalPayroll] Stripe Connect error for ${employeeId}:`, (err instanceof Error ? err.message : String(err)));
     }
   }
@@ -2018,7 +2016,7 @@ export async function executePayrollEntry(
         error: achResult.reason,
       };
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Non-fatal — fall through to manual if Plaid ACH fails
     log.warn(`[InternalPayroll] Plaid ACH transfer failed for ${employeeId} (falling back to manual):`, (err instanceof Error ? err.message : String(err)));
   }
@@ -2026,7 +2024,6 @@ export async function executePayrollEntry(
 
   try {
     const { payrollPayouts } = await import('@shared/schema');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await db.insert(payrollPayouts).values({
       workspaceId,
       payrollRunId: entry.payrollRunId,
@@ -2151,13 +2148,12 @@ export async function executeInternalPayroll(
     platformEventBus.publish({
       type: 'payroll_run_disbursing',
       workspaceId,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       payrollRunId,
       transferCount: entries.length,
       nachaCount: 0,
     }).catch((err) => log.warn('[payrollAutomation] Fire-and-forget failed:', err));
     logAudit('STATUS_UPDATE', `Payroll run status set to 'disbursing' — initiating ${entries.length} transfers`);
-  } catch (err: any) {
+  } catch (err: unknown) {
     logAudit('STATUS_UPDATE_WARN', `Could not set disbursing status: ${(err instanceof Error ? err.message : String(err))}`);
   }
 
@@ -2248,7 +2244,7 @@ export async function executeInternalPayroll(
         errors.push(`${entry.employeeId}: ${result.error}`);
         logAudit('PAYOUT_FAILED', `Failed for ${entry.employeeId}: ${result.error}`);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       failedEntries++;
       errors.push(`${entry.employeeId}: ${(err instanceof Error ? err.message : String(err))}`);
       logAudit('PAYOUT_ERROR', `Error processing ${entry.employeeId}: ${(err instanceof Error ? err.message : String(err))}`);
@@ -2271,7 +2267,7 @@ export async function executeInternalPayroll(
       );
 
       logAudit('JOURNAL_ENTRIES', `Created ${journalEntriesCreated} journal entries, employer taxes: $${totalEmployerTaxes.toFixed(2)}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       logAudit('JOURNAL_ERROR', `Failed to create journal entries: ${(err instanceof Error ? err.message : String(err))}`);
       errors.push(`Journal entries failed: ${(err instanceof Error ? err.message : String(err))}`);
     }
@@ -2287,7 +2283,7 @@ export async function executeInternalPayroll(
     'pending';
 
   try {
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       status: finalStatus,
       disbursementStatus: finalDisbursementStatus,
       disbursedAt: (automatedPayouts > 0 || pendingManualPayments > 0) ? new Date() : undefined,
@@ -2306,7 +2302,7 @@ export async function executeInternalPayroll(
       .where(eq(payrollRuns.id, payrollRunId));
 
     logAudit('STATUS_UPDATE', `Payroll run status updated to '${finalStatus}', disbursement: '${finalDisbursementStatus}'`);
-  } catch (err: any) {
+  } catch (err: unknown) {
     logAudit('STATUS_UPDATE_ERROR', `Failed to update payroll run status: ${(err instanceof Error ? err.message : String(err))}`);
     errors.push(`Status update failed: ${(err instanceof Error ? err.message : String(err))}`);
   }
@@ -2337,7 +2333,7 @@ export async function executeInternalPayroll(
         timestamp: new Date().toISOString(),
       },
     });
-  } catch (pubErr: any) {
+  } catch (pubErr: unknown) {
     log.warn('[InternalPayroll] Event publish failed (non-critical):', pubErr?.message);
   }
 

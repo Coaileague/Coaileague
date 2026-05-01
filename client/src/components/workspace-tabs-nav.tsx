@@ -291,7 +291,6 @@ export function WorkspaceTabsNav() {
   // Get sidebar families with RBAC filtering (includes position-derived capabilities)
   const rawFamilies = isLoading 
     ? [] 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     : selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff, positionCapabilities);
   
   // Filter out mobileOnly routes on desktop

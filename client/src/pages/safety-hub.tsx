@@ -73,9 +73,9 @@ export default function SafetyHub() {
   });
 
   const createGeofence = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/safety/geofences", { ...data, workspaceId }),
+    mutationFn: (data) => apiRequest("POST", "/api/safety/geofences", { ...data, workspaceId }),
     onSuccess: () => { invalidate(); setShowNewZone(false); toast({ title: "Geofence zone created" }); },
-    onError: (e: any) => toast({ title: "Create Failed", description: e?.message || 'Something went wrong. Please try again.', variant: "destructive" }),
+    onError: (e) => toast({ title: "Create Failed", description: e?.message || 'Something went wrong. Please try again.', variant: "destructive" }),
   });
 
   const deleteGeofence = useMutation({
@@ -107,12 +107,12 @@ export default function SafetyHub() {
   });
 
   const createSLA = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/safety/sla", { ...data, workspaceId }),
+    mutationFn: (data) => apiRequest("POST", "/api/safety/sla", { ...data, workspaceId }),
     onSuccess: () => { invalidate(); setShowNewSLA(false); toast({ title: "SLA contract created" }); },
-    onError: (e: any) => toast({ title: "Create Failed", description: e?.message || 'Something went wrong. Please try again.', variant: "destructive" }),
+    onError: (e) => toast({ title: "Create Failed", description: e?.message || 'Something went wrong. Please try again.', variant: "destructive" }),
   });
 
-  const activePanics = panics.data?.alerts?.filter((a: any) => a.status === "active") || [];
+  const activePanics = panics.data?.alerts?.filter((a) => a.status === "active") || [];
 
   const tabs = [
     { id: "panic", label: "SOS / Panic" },
@@ -206,7 +206,7 @@ export default function SafetyHub() {
               {activePanics.length} Active SOS Alert{activePanics.length > 1 ? "s" : ""}
             </div>
             <div className="space-y-2">
-              {activePanics.map((a: any) => (
+              {activePanics.map((a) => (
                 <div key={a.id} className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-lg bg-black/20 border border-[var(--ds-danger)]/30">
                   <div>
                     <p className="font-bold text-[var(--ds-text-primary)]">{a.employee_name}</p>
@@ -249,7 +249,7 @@ export default function SafetyHub() {
               <DsEmptyState icon={AlertTriangle} title="No Alerts" subtitle="No panic alerts on record." />
             ) : (
               <div className="space-y-1">
-                {panics.data?.alerts?.map((a: any) => (
+                {panics.data?.alerts?.map((a) => (
                   <DsDataRow key={a.id} data-testid={`row-panic-${a.id}`}>
                     <div className={['w-8 h-8 rounded-full flex items-center justify-center shrink-0', a.status === "active" ? "bg-[var(--ds-danger)]/20 text-[var(--ds-danger)] animate-pulse" : 
                       a.status === "acknowledged" ? "bg-[var(--ds-warning)]/20 text-[var(--ds-warning)]" : 
@@ -299,7 +299,7 @@ export default function SafetyHub() {
               <DsEmptyState icon={MapPin} title="No Zones" subtitle="No geofence zones configured." action={<DsButton onClick={() => setShowNewZone(true)}>Create One</DsButton>} />
             ) : (
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-                {geofences.data?.zones?.map((z: any) => (
+                {geofences.data?.zones?.map((z) => (
                   <DsSectionCard key={z.id} className="border-[var(--ds-border)] bg-[rgba(0,0,0,0.1)]">
                     <div className="flex gap-4">
                       <div className="w-20 h-20 rounded-lg bg-[var(--ds-navy-light)] flex items-center justify-center shrink-0 border border-[var(--ds-border)] relative overflow-hidden">
@@ -344,7 +344,7 @@ export default function SafetyHub() {
               <DsEmptyState icon={Shield} title="No Contracts" subtitle="No SLA contracts configured." />
             ) : (
               <div className="space-y-1">
-                {slaContracts.data?.contracts?.map((c: any) => (
+                {slaContracts.data?.contracts?.map((c) => (
                   <DsDataRow key={c.id} data-testid={`row-sla-${c.id}`}>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -375,7 +375,7 @@ export default function SafetyHub() {
               <DsEmptyState icon={FileWarning} title="Clean Slate" subtitle="No breaches logged." />
             ) : (
               <div className="space-y-1">
-                {slaBreaches.data?.breaches?.map((b: any) => (
+                {slaBreaches.data?.breaches?.map((b) => (
                   <DsDataRow key={b.id} data-testid={`row-breach-${b.id}`}>
                     <div className="w-8 h-8 rounded-full bg-[var(--ds-danger)]/10 text-[var(--ds-danger)] flex items-center justify-center shrink-0">
                       <FileWarning size={16} />

@@ -50,7 +50,7 @@ export interface NotificationDiagnosticResult {
 
 export interface ComponentHealth {
   status: 'healthy' | 'degraded' | 'critical' | 'unknown';
-  metrics: Record<string, any>;
+  metrics: Record<string, unknown>;
   lastChecked: Date;
 }
 
@@ -182,7 +182,7 @@ async function collectClearOperationMetrics(): Promise<Record<string, any>> {
 // DIAGNOSTIC ANALYSIS
 // ============================================================================
 
-async function analyzeScrollIssues(metrics: Record<string, any>): Promise<NotificationIssue[]> {
+async function analyzeScrollIssues(metrics: Record<string, unknown>): Promise<NotificationIssue[]> {
   const issues: NotificationIssue[] = [];
   
   // Check for potential overflow issues based on notification counts
@@ -206,7 +206,7 @@ async function analyzeScrollIssues(metrics: Record<string, any>): Promise<Notifi
   return issues;
 }
 
-async function analyzeClearOperationIssues(metrics: Record<string, any>): Promise<NotificationIssue[]> {
+async function analyzeClearOperationIssues(metrics: Record<string, unknown>): Promise<NotificationIssue[]> {
   const issues: NotificationIssue[] = [];
   
   // Check if acknowledgment system is working
@@ -246,7 +246,7 @@ async function analyzeClearOperationIssues(metrics: Record<string, any>): Promis
 
 async function performGeminiRootCauseAnalysis(
   issues: NotificationIssue[],
-  metrics: Record<string, any>,
+  metrics: Record<string, unknown>,
   workspaceId?: string
 ): Promise<{ analysis: string; recommendations: string[] }> {
   if (issues.length === 0) {
@@ -285,7 +285,6 @@ Format as a clear diagnostic report.`;
       featureKey: 'notification_diagnostics',
       systemPrompt: 'You are Trinity, an expert AI diagnostic agent.',
       userMessage: prompt,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       modelTier: 'diagnostics'
     });
     

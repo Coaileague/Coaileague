@@ -80,7 +80,7 @@ export default function LaborLawConfigPage() {
   const allRulesQuery = useQuery<LaborRule[]>({
     queryKey: ["/api/breaks/rules"],
     queryFn: () => secureFetch("/api/breaks/rules"),
-    select: (data: any) => (Array.isArray(data) ? data : data?.rules || []),
+    select: (data) => (Array.isArray(data) ? data : data?.rules || []),
   });
 
   const workspaceRulesQuery = useQuery({

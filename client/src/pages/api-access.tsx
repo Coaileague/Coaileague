@@ -78,7 +78,7 @@ export default function ApiAccess() {
       const res = await apiRequest('POST', '/api/enterprise-features/api-keys', data);
       return res;
     },
-    onSuccess: async (response: any) => {
+    onSuccess: async (response) => {
       const data = typeof response.json === 'function' ? await response.json() : response;
       queryClient.invalidateQueries({ queryKey: ['/api/enterprise-features/api-keys'] });
       if (data.rawKey) {
@@ -86,7 +86,7 @@ export default function ApiAccess() {
       }
       toast({ title: "API Key Created", description: "Your new API key has been generated." });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to create API key", variant: "destructive" });
     },
   });
@@ -100,7 +100,7 @@ export default function ApiAccess() {
       toast({ title: "Key Revoked", description: "API key has been deactivated." });
       if (selectedKeyId) setSelectedKeyId(null);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to revoke key", variant: "destructive" });
     },
   });

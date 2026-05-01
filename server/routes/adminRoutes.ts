@@ -119,7 +119,6 @@ router.patch('/workspace/:workspaceId', async (req: AuthenticatedRequest, res) =
 
     const updated = await storage.updateWorkspace(workspaceId, validated);
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     log.info(`[AUDIT] Platform staff ${req.user.id} (${req.platformRole}) updated workspace ${workspaceId}`);
     
     res.json(updated);
@@ -213,7 +212,7 @@ router.get('/identity/resolve', async (req: AuthenticatedRequest, res) => {
             [m.orgId],
           );
           workspace = rows[0] || null;
-        } catch (e: any) {
+        } catch (e: unknown) {
           log.warn(`[identity/resolve] workspace enrich failed for ${m.orgId}: ${e?.message}`);
         }
       }
@@ -239,7 +238,7 @@ router.get('/identity/resolve', async (req: AuthenticatedRequest, res) => {
           );
           pinSet = !!rows[0]?.client_pin_hash;
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         log.warn(`[identity/resolve] pin-status lookup failed for ${m.entityType} ${m.entityId}: ${e?.message}`);
       }
 
@@ -298,7 +297,7 @@ router.post('/identity/rewrite', async (req: AuthenticatedRequest, res) => {
     });
 
     res.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     const msg = error?.message || 'Failed to rewrite identity';
     log.error('Error rewriting identity code:', msg);
     if (msg.startsWith('IDENTITY_OVERRIDE_FORBIDDEN')) {
@@ -333,7 +332,6 @@ router.get('/platform/activities', async (req, res) => {
       user: (event as any).actorName || (event as any).actorId || 'System',
       action: (event as any).payload?.description || `${(event as any).eventType}: ${(event as any).aggregateType}`,
       workspace: event.workspaceId || 'Platform',
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       type: mapEventTypeToActivityType(event.eventType),
     }));
     res.json(liveActivities);
@@ -398,23 +396,19 @@ router.post('/platform/roles', async (req: AuthenticatedRequest, res) => {
 
     await db
       .update(platformRoles)
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       .set({ revokedAt: new Date(), revokedBy: req.user.id, revokedReason: reason || 'Role changed by platform admin' })
       .where(and(eq(platformRoles.userId, userId), isNull(platformRoles.revokedAt)));
 
     if (role === 'none') {
       await storage.createAuditLog({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         userId: req.user.id,
         workspaceId: null,
         action: 'platform_role_removed',
         entityType: 'platform_role',
         entityId: userId,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         details: {
           targetUserId: userId,
           targetEmail: user.email,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           removedBy: req.user.email,
           reason: reason || 'Role removed by platform admin',
         },
@@ -427,30 +421,24 @@ router.post('/platform/roles', async (req: AuthenticatedRequest, res) => {
     const [newRole] = await db
       .insert(platformRoles)
       .values({
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: PLATFORM_WORKSPACE_ID,
         userId,
         role,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         grantedBy: req.user.id,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         grantedReason: reason || `Role assigned by ${req.user.email || 'platform admin'}`,
       })
       .returning();
 
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user.id,
       workspaceId: null,
       action: 'platform_role_assigned',
       entityType: 'platform_role',
       entityId: newRole.id,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       details: {
         targetUserId: userId,
         targetEmail: user.email,
         role,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         assignedBy: req.user.email,
         reason: reason || 'Role assigned by platform admin',
       },
@@ -459,7 +447,6 @@ router.post('/platform/roles', async (req: AuthenticatedRequest, res) => {
 
     const { broadcastPlatformUpdateGlobal } = await import('../websocket');
     broadcastPlatformUpdateGlobal({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       type: 'platform_role_changed',
       title: 'Platform Role Updated',
       message: `${user.email} has been assigned the ${role} role`,
@@ -661,7 +648,6 @@ router.post('/support/change-role', async (req: AuthenticatedRequest, res) => {
     const adminUserId = req.user?.id;
 
     const adminSupport = await import('../adminSupport');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const result = await adminSupport.changeUserRole(employeeId, newRole, adminUserId);
     res.json(result);
   } catch (error) {
@@ -725,14 +711,12 @@ router.post('/support/sessions/start', async (req: AuthenticatedRequest, res) =>
       adminUserId,
       workspaceId,
       scope,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       reason: reason || 'Support access',
       isOrgFrozen: false,
     });
 
     await storage.createSupportAuditLog({
       sessionId: session.id,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       adminUserId,
       workspaceId,
       action: 'session_started',
@@ -788,14 +772,12 @@ router.post('/support/sessions/end', async (req: AuthenticatedRequest, res) => {
 
     await storage.createSupportAuditLog({
       sessionId: activeSession.id,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       adminUserId,
       workspaceId: activeSession.workspaceId,
       action: 'session_ended',
       severity: 'read',
       metadata: { 
         duration: endedSession?.endedAt 
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           ? new Date(endedSession.endedAt).getTime() - new Date(activeSession.startedAt).getTime()
           : 0,
         actionCount: actionsSummary.length,
@@ -809,7 +791,6 @@ router.post('/support/sessions/end', async (req: AuthenticatedRequest, res) => {
       session: endedSession,
       summary: {
         duration: endedSession?.endedAt 
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           ? Math.round((new Date(endedSession.endedAt).getTime() - new Date(activeSession.startedAt).getTime()) / 1000 / 60) 
           : 0,
         actionCount: actionsSummary.length,
@@ -876,7 +857,6 @@ router.post('/support/sessions/freeze', async (req: AuthenticatedRequest, res) =
 
     await storage.createSupportAuditLog({
       sessionId: activeSession.id,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       adminUserId,
       workspaceId: activeSession.workspaceId,
       action: freeze ? 'org_frozen' : 'org_unfrozen',
@@ -1147,7 +1127,6 @@ router.post('/support/delete-client', async (req: AuthenticatedRequest, res) => 
     
     await storage.deleteClient(clientId, workspaceId);
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: adminUserId!,
       workspaceId: workspaceId || null,
       action: 'support_delete_client',
@@ -1174,19 +1153,16 @@ router.post('/support/process-payment', async (req: AuthenticatedRequest, res) =
     const { invoiceId, workspaceId, amount, method, note } = req.body;
     const adminUserId = req.user;
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const invoice = await storage.getInvoice(invoiceId);
     if (!invoice || invoice.workspaceId !== workspaceId) {
       return res.status(404).json({ message: "Invoice not found in specified workspace" });
     }
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await storage.updateInvoice(invoiceId, {
       status: 'paid',
       paidDate: new Date().toISOString(),
     });
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: adminUserId!,
       workspaceId: workspaceId || null,
       action: 'support_process_payment',
@@ -1215,19 +1191,16 @@ router.post('/support/force-clear-invoice', async (req: AuthenticatedRequest, re
     const { invoiceId, workspaceId, reason } = req.body;
     const adminUserId = req.user;
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const invoice = await storage.getInvoice(invoiceId);
     if (!invoice || invoice.workspaceId !== workspaceId) {
       return res.status(404).json({ message: "Invoice not found in specified workspace" });
     }
     
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await storage.updateInvoice(invoiceId, {
       status: 'paid',
       paidDate: new Date().toISOString(),
     });
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: adminUserId!,
       workspaceId: workspaceId || null,
       action: 'support_force_clear_invoice',
@@ -1257,13 +1230,11 @@ router.post('/support/reset-chat', async (req: AuthenticatedRequest, res) => {
     const conversations = await storage.getChatConversationsByWorkspace(workspaceId);
     
     for (const conv of conversations) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await storage.updateChatConversation(conv.id, {
         status: 'closed',
       });
     }
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: adminUserId!,
       workspaceId: workspaceId || null,
       action: 'support_reset_chat',
@@ -1291,7 +1262,6 @@ router.post('/support/force-close-service', async (req: AuthenticatedRequest, re
     const adminUserId = req.user;
     
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: adminUserId!,
       workspaceId: workspaceId || null,
       action: 'support_force_close_service',
@@ -1319,10 +1289,8 @@ router.post('/support/update-subscription', async (req: AuthenticatedRequest, re
     const adminUserId = req.user;
 
     const adminSupport = await import('../adminSupport');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const result = await adminSupport.updateSubscriptionTier(workspaceId, newTier, adminUserId);
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: adminUserId!,
       workspaceId: workspaceId || null,
       action: 'support_update_subscription',
@@ -1362,7 +1330,6 @@ router.post('/bot/execute-command', async (req: AuthenticatedRequest, res) => {
 
     const result = await botCommandExecutor.executeCommand({
       botId,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       commandedBy: req.user!,
       action,
       reason,
@@ -1442,7 +1409,6 @@ router.get('/support/org/:orgId/employees', async (req: AuthenticatedRequest, re
     const { orgId } = req.params;
     const employeesList = await storage.getEmployeesByWorkspace(orgId);
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
@@ -1468,7 +1434,6 @@ router.get('/support/org/:orgId/shifts', async (req: AuthenticatedRequest, res) 
     const end = endDate ? new Date(endDate as string) : undefined;
     const shiftsList = await storage.getShiftsByWorkspace(orgId, start, end);
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
@@ -1491,7 +1456,6 @@ router.get('/support/org/:orgId/time-entries', async (req: AuthenticatedRequest,
     const { orgId } = req.params;
     const timeEntries = await storage.getTimeEntriesByWorkspace(orgId);
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
@@ -1514,7 +1478,6 @@ router.get('/support/org/:orgId/invoices', async (req: AuthenticatedRequest, res
     const { orgId } = req.params;
     const invoices = await storage.getInvoicesByWorkspace(orgId);
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
@@ -1537,7 +1500,6 @@ router.get('/support/org/:orgId/clients', async (req: AuthenticatedRequest, res)
     const { orgId } = req.params;
     const clientsList = await storage.getClientsByWorkspace(orgId);
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
@@ -1560,7 +1522,6 @@ router.get('/support/org/:orgId/tickets', async (req: AuthenticatedRequest, res)
     const { orgId } = req.params;
     const orgTickets = await storage.getSupportTickets(orgId);
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
@@ -1604,7 +1565,6 @@ router.get('/support/org/:orgId/overview', async (req: AuthenticatedRequest, res
     ]);
     const workspace = await storage.getWorkspace(orgId);
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
@@ -1643,7 +1603,6 @@ router.patch('/support/org/:orgId/employees/:employeeId', async (req: Authentica
     }
     const updated = await storage.updateEmployee(employeeId, orgId, updates);
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
@@ -1701,7 +1660,6 @@ router.get('/support/platform-search', async (req: AuthenticatedRequest, res) =>
       }
     }
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
@@ -1742,7 +1700,6 @@ router.get('/support/org/:orgId/documents', async (req: AuthenticatedRequest, re
       allDocs = results.flat();
     }
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
@@ -1765,7 +1722,6 @@ router.get('/support/org/:orgId/payroll', async (req: AuthenticatedRequest, res)
     const { orgId } = req.params;
     const payrollRuns = await storage.getPayrollRunsByWorkspace(orgId);
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
@@ -1792,7 +1748,6 @@ router.get('/support/org/:orgId/expenses', async (req: AuthenticatedRequest, res
     if (employeeId) filters.employeeId = employeeId as string;
     const expenses = await storage.getExpensesByWorkspace(orgId, Object.keys(filters).length > 0 ? filters : undefined);
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
@@ -1818,7 +1773,6 @@ router.get('/support/org/:orgId/pto', async (req: AuthenticatedRequest, res) => 
     if (status) filters.status = status as string;
     const ptoRequests = await storage.getPtoRequestsByWorkspace(orgId, Object.keys(filters).length > 0 ? filters : undefined);
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
@@ -1845,7 +1799,6 @@ router.get('/support/org/:orgId/disputes', async (req: AuthenticatedRequest, res
     if (disputeType) filters.disputeType = disputeType as string;
     const disputes = await storage.getDisputesByWorkspace(orgId, Object.keys(filters).length > 0 ? filters : undefined);
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
@@ -1871,7 +1824,6 @@ router.get('/support/org/:orgId/chat-history', async (req: AuthenticatedRequest,
     if (status) filters.status = status as string;
     const conversations = await storage.getChatConversationsByWorkspace(orgId, Object.keys(filters).length > 0 ? filters : undefined);
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
@@ -1894,7 +1846,6 @@ router.get('/support/org/:orgId/performance-reviews', async (req: AuthenticatedR
     const { orgId } = req.params;
     const reviews = await storage.getPerformanceReviewsByWorkspace(orgId);
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
@@ -1917,7 +1868,6 @@ router.get('/support/org/:orgId/benefits', async (req: AuthenticatedRequest, res
     const { orgId } = req.params;
     const benefits = await storage.getEmployeeBenefitsByWorkspace(orgId);
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
@@ -1946,7 +1896,6 @@ router.get('/support/org/:orgId/audit-logs', async (req: AuthenticatedRequest, r
       .limit(limit)
       .offset(offset);
     await storage.createAuditLog({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       userId: req.user!,
       userEmail: req.userEmail || 'support-staff',
       userRole: req.platformRole || 'support',
@@ -2105,7 +2054,6 @@ router.get('/users/:userId/audit-logs', async (req: AuthenticatedRequest, res) =
       [userId, parseInt(limit as string), parseInt(offset as string)]
     );
     // CATEGORY C — Raw SQL retained: COUNT( | Tables: audit_logs | Verified: 2026-03-23
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const [countRow] = await typedPool(
       `SELECT COUNT(*) FROM audit_logs
        WHERE user_id = $1 AND action IS NOT NULL AND action != ''
@@ -2147,7 +2095,6 @@ router.post('/invoices/bulk-resend', async (req: AuthenticatedRequest, res) => {
   try {
     const { bulkResendUndeliveredInvoices } = await import('../services/billing/invoiceResendService');
     const { dryRun = true } = req.body;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const result = await bulkResendUndeliveredInvoices(!!dryRun, req.user.id);
     res.json({ dryRun: !!dryRun, result });
   } catch (err: unknown) {
@@ -2208,7 +2155,6 @@ router.post('/compliance/notify-pending', async (req: AuthenticatedRequest, res)
         actionUrl: '/compliance-scenarios',
         relatedEntityType: 'compliance',
         metadata: { pendingCount: count, reason: 'post_email_fix_notification', notifiedAt: new Date().toISOString() },
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         createdBy: req.user.id,
         idempotencyKey: `system-${Date.now()}-${owner.userId}`
       });

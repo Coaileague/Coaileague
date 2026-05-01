@@ -63,7 +63,7 @@ export default function HiringSettingsPage() {
       qc.invalidateQueries({ queryKey: ["/api/workspace/hiring-settings"] });
       toast({ title: "Hiring settings saved", description: "Trinity will use these rules on the next application." });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({
         title: "Failed to save",
         description: err?.message || "Please try again.",

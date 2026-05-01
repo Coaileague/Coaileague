@@ -90,7 +90,7 @@ export default function MultiCompanyPage() {
   });
 
   const addSubsidiaryMutation = useMutation({
-    mutationFn: async (values: any) => {
+    mutationFn: async (values) => {
       await apiRequest("POST", "/api/multi-company/relationships", values);
     },
     onSuccess: () => {
@@ -99,7 +99,7 @@ export default function MultiCompanyPage() {
       setIsAddModalOpen(false);
       toast({ title: "Subsidiary added successfully" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Failed to add subsidiary", description: error.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -113,19 +113,19 @@ export default function MultiCompanyPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/multi-company/consolidated/dashboard"] });
       toast({ title: "Subsidiary removed" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Failed to remove subsidiary", description: error.message || "Please try again.", variant: "destructive" });
     },
   });
 
   const broadcastMutation = useMutation({
-    mutationFn: async (values: any) => {
+    mutationFn: async (values) => {
       await apiRequest("POST", "/api/multi-company/policy/broadcast", values);
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       toast({ title: "Policy broadcast initiated", description: `Sent to ${data.subsidiaryCount} subsidiaries` });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Failed to broadcast policy", description: error.message || "Please try again.", variant: "destructive" });
     },
   });

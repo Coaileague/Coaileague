@@ -395,7 +395,6 @@ Return ONLY valid JSON array with this exact structure:
       });
 
       // Log email send
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(emailSends).values({
         templateId,
         toEmail,
@@ -475,7 +474,6 @@ Return ONLY valid JSON array with this exact structure:
 
       const newRfp = await db.insert(rfps).values({
         ...validatedData,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId,
       }).returning();
       const rfpRecord = newRfp[0];
@@ -516,7 +514,7 @@ Return ONLY valid JSON array with this exact structure:
               }).where(eq(rfps.id, rfpId));
               log.info(`[RFP] AI content generated for RFP ${rfpId}`);
             }
-          } catch (err: any) {
+          } catch (err: unknown) {
             log.warn(`[RFP] AI generation failed (non-blocking): ${err.message}`);
           }
         })();
@@ -587,7 +585,7 @@ Return ONLY valid JSON array with this exact structure:
             }).where(and(eq(rfps.id, id), eq(rfps.workspaceId, workspaceId)));
             log.info(`[RFP] AI content regenerated for RFP ${id}`);
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           log.warn(`[RFP] AI regeneration failed (non-blocking): ${err.message}`);
         }
       })();

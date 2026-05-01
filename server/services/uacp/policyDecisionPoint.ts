@@ -33,14 +33,14 @@ export interface AccessSubject {
   entityId: string;
   role?: string;
   workspaceId?: string;
-  attributes?: Record<string, any>;
+  attributes?: Record<string, unknown>;
 }
 
 export interface AccessResource {
   resourceType: 'action' | 'domain' | 'endpoint' | 'data';
   resourceId: string;
   action: string; // 'read', 'write', 'delete', 'execute'
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface AccessContext {
@@ -58,8 +58,8 @@ export interface AccessDecision {
   effect: PolicyEffect;
   reason: string;
   matchedPolicies: string[];
-  attributes: Record<string, any>;
-  constraints?: Record<string, any>;
+  attributes: Record<string, unknown>;
+  constraints?: Record<string, unknown>;
   auditId?: string;
   requiresApproval?: boolean;
   approvalId?: string;
@@ -68,7 +68,7 @@ export interface AccessDecision {
 class PolicyDecisionPoint {
   private static instance: PolicyDecisionPoint;
   private policyCache: Map<string, { policy: any; cachedAt: number }> = new Map();
-  private attributeCache: Map<string, { attributes: Record<string, any>; cachedAt: number }> = new Map();
+  private attributeCache: Map<string, { attributes: Record<string, unknown>; cachedAt: number }> = new Map();
   private readonly CACHE_TTL_MS = 60000; // 1 minute cache
 
   static getInstance(): PolicyDecisionPoint {
@@ -208,7 +208,7 @@ class PolicyDecisionPoint {
       return { ...cached.attributes, ...subject.attributes };
     }
 
-    const attributes: Record<string, any> = {
+    const attributes: Record<string, unknown> = {
       entityType: subject.entityType,
       entityId: subject.entityId,
       workspaceId: subject.workspaceId,
@@ -426,12 +426,12 @@ class PolicyDecisionPoint {
     subject: AccessSubject,
     resource: AccessResource,
     context: AccessContext,
-    attributes: Record<string, any>
+    attributes: Record<string, unknown>
   ): AccessDecision {
     const matchedPolicies: string[] = [];
     let finalEffect: PolicyEffect = 'allow'; // Default allow if no policies match
     let requiresApproval = false;
-    const constraints: Record<string, any> = {};
+    const constraints: Record<string, unknown> = {};
 
     for (const policy of policies) {
       // Check if policy matches the resource pattern
@@ -513,7 +513,7 @@ class PolicyDecisionPoint {
    */
   private evaluateContextConstraints(
     context: AccessContext,
-    attributes: Record<string, any>
+    attributes: Record<string, unknown>
   ): { allowed: boolean; reason: string } {
     // Check risk score
     if (context.riskScore !== undefined && context.riskScore > 80) {
@@ -540,7 +540,7 @@ class PolicyDecisionPoint {
     return regex.test(resourceId);
   }
 
-  private matchesSubjectConditions(conditions: any, subject: AccessSubject, attributes: Record<string, any>): boolean {
+  private matchesSubjectConditions(conditions: any, subject: AccessSubject, attributes: Record<string, unknown>): boolean {
     if (!conditions || Object.keys(conditions).length === 0) return true;
 
     for (const [key, value] of Object.entries(conditions)) {
@@ -572,7 +572,7 @@ class PolicyDecisionPoint {
 
   private createDenyDecision(
     reason: string, 
-    attributes: Record<string, any>, 
+    attributes: Record<string, unknown>, 
     matchedPolicies: string[] = [],
     subject?: AccessSubject,
     resource?: AccessResource
@@ -660,7 +660,7 @@ class PolicyDecisionPoint {
     entityType: EntityType;
     entityId: string;
     role?: string;
-    attributes: Record<string, any>;
+    attributes: Record<string, unknown>;
     activePolicies: number;
     status: string;
   }> {

@@ -289,7 +289,7 @@ export default function TxServiceAgreement() {
       toast({ title: "Contract created", description: "Send it to the client for signature." });
       setLocation("/clients");
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const previewContent = generateContractContent(form, orgName);

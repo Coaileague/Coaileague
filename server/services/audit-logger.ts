@@ -40,7 +40,7 @@ export interface EventPayload {
   eventType: string;
   aggregateId: string;
   aggregateType: string;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   changes?: { before: any; after: any };
 }
 
@@ -97,7 +97,6 @@ export class AuditLogger {
 
       // Create audit event
       const auditEvent: InsertAuditLog = {
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         eventType,
         userId: actorId,
         actorType,
@@ -175,7 +174,7 @@ export class AuditLogger {
       operationType: string;
       entityType: string;
       entityId: string;
-      payload: Record<string, any>;
+      payload: Record<string, unknown>;
     }
   ): Promise<string> {
     try {
@@ -240,7 +239,7 @@ export class AuditLogger {
       operationType: string;
       entityType: string;
       entityId: string;
-      payload: Record<string, any>;
+      payload: Record<string, unknown>;
     },
     action: () => Promise<T>
   ): Promise<T> {
@@ -300,7 +299,7 @@ export class AuditLogger {
       targetEntityId: string;
       changes?: { before: any; after: any };
       reason?: string;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
     },
     requestContext?: {
       ipAddress?: string;
@@ -346,7 +345,7 @@ export class AuditLogger {
       actionType: string;
       targetEntityType: string;
       targetEntityId: string;
-      payload: Record<string, any>;
+      payload: Record<string, unknown>;
       workspaceId?: string | null;
     }
   ): Promise<{ eventId: string; actionHash: string }> {
@@ -426,7 +425,7 @@ export class AuditLogger {
       actionType: string;
       targetEntityType: string;
       targetEntityId: string;
-      payload: Record<string, any>;
+      payload: Record<string, unknown>;
       workspaceId?: string | null;
     }
   ): Promise<string> {
@@ -461,7 +460,7 @@ export class AuditLogger {
     failure: {
       type: string;
       description: string;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
     }
   ): Promise<string> {
     const eventId = await this.logEvent(

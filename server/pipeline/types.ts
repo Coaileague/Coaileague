@@ -46,7 +46,7 @@ export interface ProcessedContent {
   generatedAt?: Date;
   processingNotes: string[];
   aiConfidence?: number;
-  extractedData?: Record<string, any>;
+  extractedData?: Record<string, unknown>;
 }
 
 export interface ApprovalInfo {
@@ -72,7 +72,7 @@ export interface RoutingDestination {
   status: 'pending' | 'sent' | 'failed';
   sentAt?: Date;
   error?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface StorageInfo {
@@ -105,7 +105,7 @@ export interface PipelineDocument {
   updatedAt: Date;
   completedAt?: Date;
   
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   tags: string[];
   
   auditLog: PipelineAuditEntry[];

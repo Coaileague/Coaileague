@@ -59,7 +59,7 @@ interface ServiceUsageRecord {
   workspaceId: string;
   serviceType: PlatformServiceType;
   quantity: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   timestamp: Date;
 }
 
@@ -120,7 +120,7 @@ export class PlatformServicesMeter {
   async trackEmail(
     workspaceId: string,
     emailType: 'transactional' | 'marketing' | 'inbound' | 'attachment' | 'staffing' | 'employee' | 'payroll' | 'invoice' | 'digest',
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): Promise<void> {
     const serviceTypeMap: Record<string, PlatformServiceType> = {
       'transactional': 'email_transactional',
@@ -154,7 +154,7 @@ export class PlatformServicesMeter {
     workspaceId: string,
     smsType: 'notification' | 'shift_reminder' | 'clock_reminder' | 'verification' | 'escalation' | 'inbound',
     segments: number = 1,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): Promise<void> {
     const serviceTypeMap: Record<string, PlatformServiceType> = {
       'notification': 'sms_notification',
@@ -215,7 +215,6 @@ export class PlatformServicesMeter {
             
             const chargeResult = await tokenManager.recordUsage(
               workspace.id,
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               'SYSTEM',
               'platform_infrastructure',
               infraFees.total,
@@ -314,7 +313,6 @@ export class PlatformServicesMeter {
 
           await tokenManager.recordUsage(
             workspaceId,
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             'SYSTEM',
             'platform_services',
             totalCredits,
@@ -380,7 +378,6 @@ export class PlatformServicesMeter {
    */
   async canUseService(workspaceId: string, serviceType: PlatformServiceType): Promise<boolean> {
     const creditCost = TOKEN_COSTS[serviceType as keyof typeof TOKEN_COSTS] || 1;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const check = await tokenManager.checkTokens(workspaceId, null, creditCost);
     return check.hasAllowance;
   }
@@ -393,7 +390,7 @@ export const platformServicesMeter = new PlatformServicesMeter();
 export async function trackEmailUsage(
   workspaceId: string,
   emailType: 'transactional' | 'marketing' | 'inbound' | 'attachment' | 'staffing' | 'employee' | 'payroll' | 'invoice' | 'digest',
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): Promise<void> {
   return platformServicesMeter.trackEmail(workspaceId, emailType, metadata);
 }
@@ -402,7 +399,7 @@ export async function trackSMSUsage(
   workspaceId: string,
   smsType: 'notification' | 'shift_reminder' | 'clock_reminder' | 'verification' | 'escalation' | 'inbound',
   segments?: number,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): Promise<void> {
   return platformServicesMeter.trackSMS(workspaceId, smsType, segments, metadata);
 }

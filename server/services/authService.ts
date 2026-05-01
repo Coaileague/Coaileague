@@ -172,7 +172,7 @@ export class AuthService {
 
       if (!isValid) {
         const newAttempts = (user.loginAttempts || 0) + 1;
-        const updates: Record<string, any> = { loginAttempts: newAttempts };
+        const updates: Record<string, unknown> = { loginAttempts: newAttempts };
 
         if (newAttempts >= MAX_LOGIN_ATTEMPTS) {
           updates.lockedUntil = new Date(Date.now() + LOCKOUT_DURATION_MINUTES * 60 * 1000);

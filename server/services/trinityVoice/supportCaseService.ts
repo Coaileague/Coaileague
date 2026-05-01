@@ -310,7 +310,7 @@ export async function notifyHumanAgents(params: {
           emailsSent++;
           log.info(`[SupportCase] Email dispatched to agent ${agent.name} <${agent.email}>`);
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         errors.push(`Email to ${agent.email}: ${e?.message}`);
       }
     }
@@ -327,7 +327,7 @@ export async function notifyHumanAgents(params: {
         });
         smsSent++;
         log.info(`[SupportCase] SMS dispatched to agent ${agent.name}`);
-      } catch (e: any) {
+      } catch (e: unknown) {
         errors.push(`SMS to ${agent.phone}: ${e?.message}`);
       }
     }

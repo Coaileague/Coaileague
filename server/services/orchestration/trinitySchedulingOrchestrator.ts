@@ -38,8 +38,8 @@ export interface SchedulingMutation {
   id: string;
   type: SchedulingMutationType;
   description: string;
-  beforeState?: Record<string, any>;
-  afterState?: Record<string, any>;
+  beforeState?: Record<string, unknown>;
+  afterState?: Record<string, unknown>;
   employeeId?: string;
   employeeName?: string;
   shiftId?: string;
@@ -53,8 +53,8 @@ export interface SchedulingMutation {
   dbOperation?: {
     table: 'shifts';
     action: 'insert' | 'update' | 'delete';
-    data?: Record<string, any>;
-    where?: Record<string, any>;
+    data?: Record<string, unknown>;
+    where?: Record<string, unknown>;
   };
 }
 
@@ -265,7 +265,6 @@ class TrinitySchedulingOrchestratorService {
     const mutations = this.pendingSessions.get(executionId);
     if (!mutations || mutations.length === 0) {
       const execution = await automationExecutionTracker.getExecution(executionId);
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       if (execution?.outputPayload?.pendingMutations) {
         const storedMutations = (execution as any).outputPayload.pendingMutations as SchedulingMutation[];
         return this.applyMutationsToDatabase(storedMutations, executionId);

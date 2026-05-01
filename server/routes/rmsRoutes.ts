@@ -901,7 +901,7 @@ rmsRouter.get("/reports/audit-summary", requireAuth as any, ensureWorkspaceAcces
       }
       summaries = Array.from(seen.values());
     }
-    const byReportId: Record<string, any> = {};
+    const byReportId: Record<string, unknown> = {};
     for (const s of summaries) {
       byReportId[s.report_id] = {
         openCount: Number(s.open_count || 0),

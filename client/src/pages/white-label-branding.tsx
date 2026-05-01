@@ -68,7 +68,7 @@ export default function WhiteLabelBranding() {
         description: "Your branding settings are now active on the dashboard.",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to save branding settings",
@@ -95,7 +95,7 @@ export default function WhiteLabelBranding() {
       queryClient.invalidateQueries({ queryKey: ["/api/workspace/branding"] });
       queryClient.invalidateQueries({ queryKey: ["/api/workspace/current"] });
       toast({ title: "Logo Uploaded", description: "Your logo is live on the dashboard header." });
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: "Upload Failed", description: err.message || "Could not upload logo", variant: "destructive" });
     } finally {
       setIsUploading(false);

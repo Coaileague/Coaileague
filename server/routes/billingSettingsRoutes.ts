@@ -58,7 +58,7 @@ router.post("/workspace", requireManager, async (req: AuthenticatedRequest, res)
       'autoGenerateInvoices', 'invoicePrefix', 'invoiceNumberStart', 'invoiceProvider',
       'payrollProvider', 'qbAutoSync',
     ];
-    const merged: Record<string, any> = { ...current, workspaceId, updatedAt: new Date().toISOString() };
+    const merged: Record<string, unknown> = { ...current, workspaceId, updatedAt: new Date().toISOString() };
     for (const field of allowedSettingsFields) {
       if (req.body[field] !== undefined) merged[field] = req.body[field];
     }
@@ -121,7 +121,7 @@ router.patch("/workspace", requireManager, async (req: AuthenticatedRequest, res
       'qbAutoSync',
     ];
 
-    const updates: Record<string, any> = { ...current, updatedAt: new Date().toISOString() };
+    const updates: Record<string, unknown> = { ...current, updatedAt: new Date().toISOString() };
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) updates[field] = req.body[field];
     }
@@ -334,7 +334,7 @@ router.patch("/clients/:clientId", requireManager, async (req: AuthenticatedRequ
       return res.status(400).json({ message: "paymentTerms cannot be null or undefined" });
     }
 
-    const merged: Record<string, any> = { ...existing[0], updatedAt: new Date() };
+    const merged: Record<string, unknown> = { ...existing[0], updatedAt: new Date() };
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) merged[field] = req.body[field];
     }
@@ -577,7 +577,6 @@ router.patch('/seat-hard-cap', async (req: any, res) => {
     `);
 
     try {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       const { universalAuditService } = await import('../services/universalAuditService');
       await universalAuditService.log({
         workspaceId,

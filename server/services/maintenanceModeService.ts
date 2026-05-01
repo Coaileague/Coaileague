@@ -255,7 +255,6 @@ export const maintenanceModeService = {
     const maintenanceFlag = await trinityRuntimeFlagsService.getFlagByKey(MAINTENANCE_FLAG_KEY);
     
     if (!maintenanceFlag) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(trinityRuntimeFlags).values({
         key: MAINTENANCE_FLAG_KEY,
         description: 'Platform maintenance mode - blocks auth and API writes when active',
@@ -275,7 +274,6 @@ export const maintenanceModeService = {
     const windowFlag = await trinityRuntimeFlagsService.getFlagByKey(MAINTENANCE_WINDOW_KEY);
     
     if (!windowFlag) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       await db.insert(trinityRuntimeFlags).values({
         key: MAINTENANCE_WINDOW_KEY,
         description: 'Maintenance window configuration and status',

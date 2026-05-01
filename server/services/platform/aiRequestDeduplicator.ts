@@ -64,7 +64,7 @@ class AIRequestDeduplicator {
   /**
    * Generate a hash for a prompt to detect duplicates
    */
-  private hashPrompt(prompt: string, context?: Record<string, any>): string {
+  private hashPrompt(prompt: string, context?: Record<string, unknown>): string {
     const data = JSON.stringify({ prompt: prompt.trim(), context: context || {} });
     return crypto.createHash('sha256').update(data).digest('hex').substring(0, 16);
   }
@@ -80,7 +80,7 @@ class AIRequestDeduplicator {
     executor: () => Promise<{ result: T; tokenCount?: number }>,
     options: {
       workspaceId?: string;
-      context?: Record<string, any>;
+      context?: Record<string, unknown>;
       cacheTTL?: number;
       skipCache?: boolean;
     } = {}
@@ -161,7 +161,6 @@ class AIRequestDeduplicator {
       const batchResults = await this.execute<R[]>(
         batchKey,
         JSON.stringify(batch),
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         async () => batchExecutor(batch),
         {
           workspaceId: options.workspaceId,
@@ -185,7 +184,7 @@ class AIRequestDeduplicator {
     tokenCount: number = 0,
     options: {
       workspaceId?: string;
-      context?: Record<string, any>;
+      context?: Record<string, unknown>;
       ttl?: number;
     } = {}
   ): void {

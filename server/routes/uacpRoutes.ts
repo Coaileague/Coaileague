@@ -153,7 +153,6 @@ router.get('/access-summary/:entityType/:entityId', requireAdminAccess, async (r
     const summary = await policyDecisionPoint.getAccessSummary(
       entityType as EntityType,
       entityId,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       user.currentWorkspaceId
     );
 
@@ -176,7 +175,6 @@ router.get('/access-summary/:entityType/:entityId', requireAdminAccess, async (r
 router.get('/agents', requireAdminAccess, async (req, res) => {
   try {
     const user = req.user;
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const agents = await agentIdentityService.listAgents(user.currentWorkspaceId);
     res.json({ agents });
 
@@ -240,7 +238,6 @@ router.post('/agents', requireAdminAccess, async (req, res) => {
       name,
       description,
       entityType,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       workspaceId: isGlobal ? undefined : user.currentWorkspaceId,
       isGlobal: isGlobal || false,
       role,
@@ -250,7 +247,6 @@ router.post('/agents', requireAdminAccess, async (req, res) => {
       missionObjective,
       riskProfile,
       maxAutonomyLevel,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       createdBy: user.id,
     });
 
@@ -276,7 +272,6 @@ router.patch('/agents/:agentId', requireAdminAccess, async (req, res) => {
     const { agentId } = req.params;
     const updates = req.body;
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const result = await agentIdentityService.updateAgentAccess(agentId, updates, user.id);
 
     if (!result.success) {
@@ -309,7 +304,6 @@ router.post('/agents/:agentId/suspend', requireAdminAccess, async (req, res) => 
       return res.status(400).json({ error: 'Suspension reason required' });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const result = await agentIdentityService.suspendAgent(agentId, user.id, reason);
 
     if (!result.success) {
@@ -333,7 +327,6 @@ router.post('/agents/:agentId/reactivate', requireAdminAccess, async (req, res) 
     const user = req.user;
     const { agentId } = req.params;
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const result = await agentIdentityService.reactivateAgent(agentId, user.id);
 
     if (!result.success) {
@@ -430,24 +423,20 @@ router.post('/attributes', requireAdminAccess, async (req, res) => {
     const [attribute] = await db.insert(entityAttributes).values({
       entityType,
       entityId,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       workspaceId: user.currentWorkspaceId,
       attributeName,
       attributeValue: String(attributeValue),
       attributeType: attributeType || 'string',
       expiresAt: expiresAt ? new Date(expiresAt) : null,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       createdBy: user.id,
     }).returning();
 
     // Invalidate PDP cache
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     policyDecisionPoint.invalidateCache(user.currentWorkspaceId);
 
     res.status(201).json({ attribute });
 
   } catch (error: unknown) {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (error.code === '23505') { // Unique violation
       return res.status(409).json({ error: 'Attribute already exists for this entity' });
     }
@@ -470,7 +459,6 @@ router.delete('/attributes/:id', requireAdminAccess, async (req, res) => {
       .set({ isActive: false, updatedAt: new Date() })
       .where(and(eq(entityAttributes.id, req.params.id), eq(entityAttributes.workspaceId, workspaceId)));
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     policyDecisionPoint.invalidateCache(user.currentWorkspaceId);
 
     res.json({ deleted: true });
@@ -540,7 +528,6 @@ router.post('/policies', requireAdminAccess, async (req, res) => {
     const [policy] = await db.insert(accessPolicies).values({
       name,
       description,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       workspaceId: isGlobal ? null : user.currentWorkspaceId,
       isGlobal: isGlobal || false,
       effect: effect || 'deny',
@@ -553,7 +540,6 @@ router.post('/policies', requireAdminAccess, async (req, res) => {
       maxTransactionAmount: maxTransactionAmount ? String(maxTransactionAmount) : null,
       validFrom: validFrom ? new Date(validFrom) : null,
       validUntil: validUntil ? new Date(validUntil) : null,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       createdBy: user.id,
     }).returning();
 
@@ -719,7 +705,6 @@ router.patch('/users/:userId/role', requireAdminAccess, async (req, res) => {
 
     // Anti-escalation: actor cannot assign a role at or above their own level.
     const { WORKSPACE_ROLE_HIERARCHY } = await import('../rbac');
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const actorLevel = WORKSPACE_ROLE_HIERARCHY[actor.role] ?? 0;
     const targetRoleLevel = WORKSPACE_ROLE_HIERARCHY[role] ?? 0;
     if (targetRoleLevel >= actorLevel) {
@@ -738,7 +723,6 @@ router.patch('/users/:userId/role', requireAdminAccess, async (req, res) => {
 
     // Workspace scope: actor can only manage users in their own workspace.
     // Prevents cross-tenant role manipulation.
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (targetUser.currentWorkspaceId !== actor.currentWorkspaceId) {
       return res.status(403).json({ error: 'You can only manage users within your own workspace' });
     }
@@ -767,13 +751,10 @@ router.patch('/users/:userId/role', requireAdminAccess, async (req, res) => {
         eventType: 'role_changed',
         priority: 'high',
         actorType: 'human',
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         actorId: actor.id,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         actorRole: actor.role,
         targetType: 'human',
         targetId: userId,
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         workspaceId: actor.currentWorkspaceId,
         changeDetails: {
           action: 'change_role',
@@ -785,7 +766,6 @@ router.patch('/users/:userId/role', requireAdminAccess, async (req, res) => {
       });
     });
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     policyDecisionPoint.invalidateCache(actor.currentWorkspaceId);
 
     res.json({ 
@@ -816,7 +796,6 @@ router.post('/seed-agents', requireAdminAccess, async (req, res) => {
       return res.status(403).json({ error: 'Only platform admins can seed agents' });
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     await agentIdentityService.seedPlatformAgents(user.id);
 
     res.json({ message: 'Platform agents seeded successfully' });

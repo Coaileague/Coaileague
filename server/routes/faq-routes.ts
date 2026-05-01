@@ -54,7 +54,6 @@ export function registerFaqRoutes(app: Express) {
     const { category, search, limit = 50, includeUnpublished } = req.query;
     
     // Use canonical staff detection from rbac.ts
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const showUnpublished = isPlatformStaff(req.user) && includeUnpublished === 'true';
 
     // Build base query with all records
@@ -111,7 +110,6 @@ app.get('/api/helpos/faqs/:id', requireAuth, async (req: AuthenticatedRequest, r
     }
 
     // Block access to unpublished FAQs for non-staff users (use canonical staff check)
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     if (!faq[0].isPublished && !isPlatformStaff(req.user)) {
       return res.status(404).json({ message: 'FAQ not found' });
     }
@@ -157,7 +155,6 @@ app.post('/api/helpos/faqs', requirePlatformStaff, async (req: AuthenticatedRequ
       }
     }
 
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const newFaq = await db.insert(helposFaqs).values({
       category: validatedData.category,
       question: validatedData.question,
@@ -315,7 +312,6 @@ app.post('/api/helpos/faqs/search/semantic', readLimiter, requireAuth, async (re
     }
 
     // Use canonical staff detection from rbac.ts
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     const canSearchUnpublished = isPlatformStaff(req.user);
 
     const wsId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId || null;
@@ -574,7 +570,6 @@ app.post('/api/helpos/faqs/bulk-import', requirePlatformStaff, async (req: Authe
     for (const faq of faqs) {
       try {
         // Validate FAQ structure
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const validated = insertHelposFaqSchema.omit({ id: true }).parse({
           category: faq.category || 'general',
           question: faq.question,
@@ -593,7 +588,6 @@ app.post('/api/helpos/faqs/bulk-import', requirePlatformStaff, async (req: Authe
         });
 
         // Create FAQ
-        // @ts-expect-error — TS migration: fix in refactoring sprint
         const [created] = await db.insert(helposFaqs).values({
           ...validated,
           embeddingVector: JSON.stringify(embeddingResponse.data[0].embedding),
@@ -871,7 +865,6 @@ Rank these FAQs by relevance to the user's query. Return only valid JSON.`;
       const { tokenManager } = await import('../services/billing/tokenManager');
       await (tokenManager as any).deductSupportPoolCredits('faq_search', 'FAQ AI Search', wsId || undefined);
     } catch (billingErr: unknown) {
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       log.warn('[FAQ] Support pool billing failed (non-blocking):', billingErr.message);
     }
 

@@ -479,10 +479,8 @@ class TrinityNotificationBridge {
           type: 'system',
               title: payload.title,
               message: payload.message,
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               workspaceId: payload.targetAudience.workspaceId || undefined,
               userId: userId,
-              // @ts-expect-error — TS migration: fix in refactoring sprint
               severity: payload.priority === 'critical' ? 'critical' : payload.priority === 'high' ? 'high' : 'medium',
               source: 'trinity_notification_bridge',
               metadata: {
@@ -827,7 +825,6 @@ class TrinityNotificationBridge {
         version: '1.0.0',
         metadata: {
           issues,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           severity: this.consecutiveFailures >= 3 ? 'critical' : 'warning',
         },
       });

@@ -137,7 +137,7 @@ async function createSession(params: {
   };
 }
 
-async function updateSessionState(sessionId: string, state: string, extra: Record<string, any> = {}): Promise<void> {
+async function updateSessionState(sessionId: string, state: string, extra: Record<string, unknown> = {}): Promise<void> {
   await db.update(helpaiSessions)
     .set({ state, updatedAt: new Date(), ...extra })
     .where(eq(helpaiSessions.id, sessionId));
@@ -150,8 +150,8 @@ async function logAction(sessionId: string, params: {
   userId?: string;
   botSummoned?: string;
   commandUsed?: string;
-  inputPayload?: Record<string, any>;
-  outputPayload?: Record<string, any>;
+  inputPayload?: Record<string, unknown>;
+  outputPayload?: Record<string, unknown>;
 }): Promise<void> {
   await db.insert(helpaiActionLog).values({
     sessionId,
@@ -223,7 +223,7 @@ async function runTest(name: string, fn: () => Promise<void>): Promise<void> {
     await fn();
     results.push({ name, passed: true, duration: Date.now() - start });
     console.log(`  ✅ PASS  ${name} (${Date.now() - start}ms)`);
-  } catch (err: any) {
+  } catch (err: unknown) {
     results.push({ name, passed: false, error: err.message, duration: Date.now() - start });
     console.error(`  ❌ FAIL  ${name}: ${err.message}`);
   }

@@ -237,7 +237,7 @@ function StepEditorDialog({ open, onOpenChange, step, onSave, reportTemplates }:
                   <SelectValue placeholder="Select a custom form template" />
                 </SelectTrigger>
                 <SelectContent>
-                  {reportTemplates?.map((template: any) => (
+                  {reportTemplates?.map((template) => (
                     <SelectItem key={template.id} value={template.id}>
                       {template.title}
                     </SelectItem>
@@ -420,12 +420,12 @@ export default function AIHiringWorkflowBuilder() {
     setIsEditorOpen(true);
   };
 
-  const handleEditStep = (step: any) => {
+  const handleEditStep = (step) => {
     setEditingStep(step);
     setIsEditorOpen(true);
   };
 
-  const handleSaveStep = (stepData: any) => {
+  const handleSaveStep = (stepData) => {
     if (editingStep) {
       // Update existing step
       setSteps(steps.map(s => s.id === editingStep.id ? { ...stepData, id: editingStep.id, sequence: editingStep.sequence } : s));
@@ -500,7 +500,7 @@ export default function AIHiringWorkflowBuilder() {
       });
       navigate('/dashboard');
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Save failed",
         description: error.message || "Failed to save workflow template",

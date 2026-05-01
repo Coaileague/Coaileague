@@ -421,10 +421,8 @@ function SwapRequestCard({
   onCancel,
   isLoading,
 }: SwapRequestCardProps) {
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const requestingEmployee = employees.find(e => e.id === request.requestingEmployeeId);
   const targetEmployee = employees.find(e => e.id === request.targetEmployeeId);
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const isOwnRequest = request.requestingEmployeeId === currentUserId;
 
   const getInitials = (name: string) => {

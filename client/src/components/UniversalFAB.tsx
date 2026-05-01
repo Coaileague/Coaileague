@@ -163,7 +163,7 @@ export function UniversalFAB() {
       });
       setIsExpanded(false);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       const code = error?.code;
       if (code === "NO_SHIFT_TODAY") {
         toast({

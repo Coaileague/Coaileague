@@ -117,7 +117,6 @@ router.post('/upload', requireAuth, async (req: AuthenticatedRequest, res) => {
         contentType,
         metadata: {
           workspaceId,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           uploadedBy: req.user.id,
           timestamp: new Date().toISOString(),
           originalFileName: sanitizedName,
@@ -167,11 +166,8 @@ router.post('/send', requireAuth, async (req: AuthenticatedRequest, res) => {
     const { formatUserDisplayNameForChat } = await import('../utils/formatUserDisplayName');
     const pmSenderPlatformRole = await storage.getUserPlatformRole(userId);
     const senderName = formatUserDisplayNameForChat({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       firstName: req.user.firstName,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       lastName: req.user.lastName,
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       email: req.user.email || undefined,
       platformRole: pmSenderPlatformRole || undefined,
     });

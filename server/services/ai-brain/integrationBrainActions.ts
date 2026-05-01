@@ -167,7 +167,6 @@ export function registerIntegrationBrainActions(): void {
           success: result.success,
           actionId: request.actionId,
           data: result.connection,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           message: result.success ? 'Integration connected successfully' : result.error,
           executionTimeMs: Date.now() - startTime
         };
@@ -220,7 +219,6 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: result.success,
           actionId: request.actionId,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           message: result.success ? 'Integration disconnected successfully' : result.error,
           executionTimeMs: Date.now() - startTime
         };
@@ -273,7 +271,6 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: result.success,
           actionId: request.actionId,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           message: result.success ? 'Credentials updated successfully' : result.error,
           executionTimeMs: Date.now() - startTime
         };
@@ -332,7 +329,6 @@ export function registerIntegrationBrainActions(): void {
           success: result.success,
           actionId: request.actionId,
           data: result.success ? { keyId: result.keyId, apiKey: result.apiKey } : undefined,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           message: result.success ? 'API key created successfully. Save this key securely - it will only be shown once.' : result.error,
           executionTimeMs: Date.now() - startTime
         };
@@ -431,7 +427,6 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: result.success,
           actionId: request.actionId,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           message: result.success ? 'API key revoked successfully' : result.error,
           executionTimeMs: Date.now() - startTime
         };
@@ -674,7 +669,6 @@ export function registerIntegrationBrainActions(): void {
           success: result.success,
           actionId: request.actionId,
           data: result.partner,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           message: result.success ? `Partner "${partner.name}" created successfully` : result.error,
           executionTimeMs: Date.now() - startTime
         };
@@ -722,7 +716,6 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: result.success,
           actionId: request.actionId,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           message: result.success ? 'Partner updated successfully' : result.error,
           executionTimeMs: Date.now() - startTime
         };
@@ -771,7 +764,6 @@ export function registerIntegrationBrainActions(): void {
           success: result.success,
           actionId: request.actionId,
           data: { affectedWorkspaces: result.affectedWorkspaces },
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           message: result.success 
             ? `Partner suspended. ${result.affectedWorkspaces} workspace(s) affected.` 
             : result.error,
@@ -821,7 +813,6 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: result.success,
           actionId: request.actionId,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           message: result.success ? 'Partner reactivated successfully' : result.error,
           executionTimeMs: Date.now() - startTime
         };
@@ -869,7 +860,6 @@ export function registerIntegrationBrainActions(): void {
         return {
           success: result.success,
           actionId: request.actionId,
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           message: result.success ? 'Partner deleted permanently' : result.error,
           executionTimeMs: Date.now() - startTime
         };

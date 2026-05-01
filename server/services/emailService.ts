@@ -744,7 +744,7 @@ export class EmailService {
       }).returning();
       
       return event.id;
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[EmailService] Failed to log email event:', (error instanceof Error ? error.message : String(error)));
       throw error;
     }
@@ -768,7 +768,7 @@ export class EmailService {
           sentAt: status === 'sent' ? new Date() : null,
         })
         .where(eq(emailEvents.id, eventId));
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('[EmailService] Failed to update email event:', (error instanceof Error ? error.message : String(error)));
     }
   }
@@ -861,7 +861,7 @@ export class EmailService {
         await this.updateEmailEvent(job.eventId, 'sent', result.data?.id);
         this.retryQueue.delete(job.id);
         log.info(`[EmailService] Retry successful: ${job.emailType} to ${job.recipientEmail}`);
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Schedule next retry
         job.retryCount++;
         job.nextRetryAt = this.getNextRetryTime(job.retryCount);
@@ -904,7 +904,7 @@ export class EmailService {
   async sendTemplatedEmail(
     to: string,
     templateName: string,
-    data: Record<string, any>,
+    data: Record<string, unknown>,
     workspaceId?: string
   ): Promise<EmailResult> {
     const subject = data.subject || `${PLATFORM.name}: ${templateName.replace(/_/g, ' ')}`;
@@ -2438,7 +2438,7 @@ export class EmailService {
           params.workspaceId
         );
         results.push(r);
-      } catch (err: any) {
+      } catch (err: unknown) {
         results.push({ success: false, error: (err instanceof Error ? err.message : String(err)) });
       }
     }

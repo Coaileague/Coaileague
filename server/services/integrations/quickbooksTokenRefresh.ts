@@ -209,7 +209,7 @@ class QuickBooksTokenRefreshDaemon {
         try {
           await quickbooksOAuthService.refreshAccessToken(creds.id);
           return { success: true, data: { refreshed: true } };
-        } catch (err: any) {
+        } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : String(err);
           // refreshAccessToken() throws with 'must reconnect' on invalid_grant or expired token
           const isPermanent = msg.includes('must reconnect') || msg.includes('expired');
@@ -297,7 +297,7 @@ class QuickBooksTokenRefreshDaemon {
       this.credentialsCache.delete(creds.workspaceId);
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(`[QB TokenRefresh] Error refreshing token for workspace ${creds.workspaceId}:`, error);
       
       const failedAttempts = ((creds as any).metadata?.failedRefreshAttempts || 0) + 1;
@@ -386,7 +386,7 @@ class QuickBooksTokenRefreshDaemon {
       }
       
       return this.refreshCredentials(connection as StoredCredentials);
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
         error: (error instanceof Error ? error.message : String(error)),

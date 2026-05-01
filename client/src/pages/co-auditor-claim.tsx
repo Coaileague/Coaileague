@@ -29,7 +29,7 @@ export default function CoAuditorClaim() {
       const body = await res.json();
       if (!body.ok) { setError(body.error || "Failed to claim invite"); setSubmitting(false); return; }
       setLocation("/co-auditor/dashboard");
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e?.message || "Failed to claim invite");
       setSubmitting(false);
     }

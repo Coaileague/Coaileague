@@ -238,7 +238,7 @@ export default function EndUserControls() {
       setRoleAssignDialog(false);
       setRoleAssignData({ userId: "", role: "support_agent", reason: "" });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to assign role", variant: "destructive" });
     },
   });
@@ -252,7 +252,7 @@ export default function EndUserControls() {
       setRoleRevokeTarget(null);
       setRevokeReason("");
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to revoke role", variant: "destructive" });
     },
   });
@@ -277,7 +277,7 @@ export default function EndUserControls() {
       setActionDialog(null);
       setActionReason("");
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to suspend workspace", variant: "destructive" });
     },
   });
@@ -290,7 +290,7 @@ export default function EndUserControls() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/end-users/workspace", selectedWorkspace] });
       setActionDialog(null);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to unsuspend workspace", variant: "destructive" });
     },
   });
@@ -309,7 +309,7 @@ export default function EndUserControls() {
       setActionDialog(null);
       setActionReason("");
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to toggle Trinity™", variant: "destructive" });
     },
   });
@@ -321,7 +321,7 @@ export default function EndUserControls() {
       toast({ title: "Access Updated", description: "User access configuration has been updated" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/end-users/workspace", selectedWorkspace] });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({ title: "Error", description: error.message || "Failed to update access", variant: "destructive" });
     },
   });

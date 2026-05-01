@@ -231,7 +231,7 @@ Respond with JSON only:
    */
   async parseManualEntry(params: {
     workspaceId: string;
-    formData: Record<string, any>;
+    formData: Record<string, unknown>;
     entryType: 'employee' | 'team' | 'schedule' | 'bulk_text';
   }): Promise<ExtractedData> {
     const { workspaceId, formData, entryType } = params;
@@ -525,7 +525,7 @@ Only include arrays that have data. If no data found for a category, omit that a
     const result: Partial<ExtractedData> = {};
 
     const transformedRows = data.map(row => {
-      const transformed: Record<string, any> = {};
+      const transformed: Record<string, unknown> = {};
       for (const [source, target] of Object.entries(mapping)) {
         if (row[source] !== undefined) {
           transformed[target] = row[source];
@@ -770,7 +770,7 @@ Only include arrays that have data. If no data found for a category, omit that a
       fileName?: string;
       spreadsheetData?: Record<string, any>[];
       spreadsheetHeaders?: string[];
-      manualData?: Record<string, any>;
+      manualData?: Record<string, unknown>;
     };
   }): Promise<{
     success: boolean;
@@ -841,7 +841,7 @@ Only include arrays that have data. If no data found for a category, omit that a
       fileName?: string;
       spreadsheetData?: Record<string, any>[];
       spreadsheetHeaders?: string[];
-      manualData?: Record<string, any>;
+      manualData?: Record<string, unknown>;
       entryType?: 'employee' | 'team' | 'schedule' | 'bulk_text';
     };
     extractionType: 'employees' | 'teams' | 'schedules' | 'auto';
@@ -1102,7 +1102,7 @@ Respond with JSON only:
       fileName?: string;
       spreadsheetData?: Record<string, any>[];
       spreadsheetHeaders?: string[];
-      manualData?: Record<string, any>;
+      manualData?: Record<string, unknown>;
       entryType?: 'employee' | 'team' | 'schedule' | 'bulk_text';
     };
     extractionType: 'employees' | 'teams' | 'schedules' | 'auto';

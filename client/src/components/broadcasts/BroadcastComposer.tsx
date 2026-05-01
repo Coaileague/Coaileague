@@ -203,7 +203,6 @@ export function BroadcastComposer({ open, onOpenChange, isPlatformLevel = false 
                     <button
                       key={type.value}
                       type="button"
-                      // @ts-expect-error — TS migration: fix in refactoring sprint
                       onClick={() => form.setValue('type', type.value)}
                       className={cn(
                         "flex items-center gap-2 p-3 rounded-lg border text-left transition-all",
@@ -284,7 +283,6 @@ export function BroadcastComposer({ open, onOpenChange, isPlatformLevel = false 
                       <button
                         key={target.value}
                         type="button"
-                        // @ts-expect-error — TS migration: fix in refactoring sprint
                         onClick={() => form.setValue('targetType', target.value)}
                         className={cn(
                           "flex items-center gap-3 p-3 rounded-lg border text-left transition-all",
@@ -377,7 +375,6 @@ export function BroadcastComposer({ open, onOpenChange, isPlatformLevel = false 
                 <Label>Action Button</Label>
                 <Select
                   value={watchActionType}
-                  // @ts-expect-error — TS migration: fix in refactoring sprint
                   onValueChange={(v) => form.setValue('actionType', v as BroadcastActionType)}
                 >
                   <SelectTrigger>

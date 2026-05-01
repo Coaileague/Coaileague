@@ -103,7 +103,7 @@ async function phase0_preflight() {
   try {
     await db.execute(sql`SELECT 1`);
     rec({ name: 'DB Connection', phase: 'PREFLIGHT', passed: true, details: 'Connected', severity: 'CRITICAL' });
-  } catch (e: any) {
+  } catch (e: unknown) {
     rec({ name: 'DB Connection', phase: 'PREFLIGHT', passed: false, details: e.message, severity: 'CRITICAL' });
     throw new Error('Cannot continue without DB');
   }
@@ -507,7 +507,7 @@ async function phase6_routes() {
         details: `${route.method} ${route.path} → ${resp.status}`,
         severity: resp.status >= 500 ? 'CRITICAL' : 'MEDIUM',
         value: resp.status });
-    } catch (e: any) {
+    } catch (e: unknown) {
       // Server not running locally — skip route tests
       rec({ name: route.label, phase: 'ROUTES', passed: false,
         details: `Server not reachable: ${e.message}`, severity: 'MEDIUM',
@@ -570,7 +570,7 @@ async function phase7_stripe() {
     await stripe.customers.del(customer.id);
     rec({ name: 'Cleanup Test Customer', phase: 'STRIPE',
       passed: true, details: 'Test customer deleted', severity: 'INFO' });
-  } catch (e: any) {
+  } catch (e: unknown) {
     rec({ name: 'Stripe Test Transaction', phase: 'STRIPE',
       passed: false, details: e.message, severity: 'HIGH' });
   }
@@ -618,7 +618,7 @@ async function phase8_plaid() {
         details: 'Plaid sandbox responds correctly — ACH payroll pipeline is accessible',
         severity: 'INFO' });
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     rec({ name: 'Plaid Sandbox', phase: 'PLAID', passed: false,
       details: e.message, severity: 'MEDIUM' });
   }
@@ -666,7 +666,7 @@ async function phase9_email() {
       passed: true,
       details: 'processStaffing() wired for staffing@ / ops@ / scheduling@ — triggers auto-fill',
       severity: 'INFO' });
-  } catch (e: any) {
+  } catch (e: unknown) {
     rec({ name: 'Email Send', phase: 'EMAIL', passed: false,
       details: e.message, severity: 'HIGH' });
   }
@@ -859,7 +859,7 @@ async function main() {
     await phase10_compliance();
     await phase11_trinity_math();
     await phase12_cleanup();
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('\n💀 SIMULATION ABORTED:', e.message);
     rec({ name: 'Simulation Abort', phase: 'FATAL', passed: false,
       details: e.message, severity: 'CRITICAL' });

@@ -26,7 +26,7 @@ export interface TrinityServiceEvent {
   service: string;
   action: string;
   workspaceId: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   timestamp: Date;
 }
 
@@ -343,7 +343,7 @@ export async function connectServiceToTrinity(
   serviceName: string,
   workspaceId: string,
   action: string,
-  data: Record<string, any>
+  data: Record<string, unknown>
 ): Promise<void> {
   await platformEventBus.publish({
     type: 'automation_completed',

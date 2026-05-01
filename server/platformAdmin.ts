@@ -22,7 +22,7 @@ import { eq, sql, and, or, desc, gte, isNotNull, lte } from "drizzle-orm";
 async function safeQuery<T>(fn: () => Promise<T>, label: string): Promise<T | undefined> {
   try {
     return await fn();
-  } catch (err: any) {
+  } catch (err: unknown) {
     log.warn(`[PlatformStats] Query failed (${label}):`, err?.message?.split('\n')[0] ?? String(err));
     return undefined;
   }
