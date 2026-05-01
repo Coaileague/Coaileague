@@ -1059,7 +1059,7 @@ router.delete('/tickets/:id', async (req: AuthenticatedRequest, res) => {
   }
 });
 
-router.delete('/performance-reviews/:id', requirePlatformStaff, async (req: any, res) => {
+router.delete('/performance-reviews/:id', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const workspaceId = req.workspaceId || req.session?.workspaceId;
@@ -1108,7 +1108,7 @@ router.delete('/performance-reviews/:id', requirePlatformStaff, async (req: any,
   }
 });
 
-router.patch('/performance-reviews/:id', requirePlatformStaff, async (req: any, res) => {
+router.patch('/performance-reviews/:id', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const { updates, explanation, notifyUserId } = req.body;
@@ -1172,7 +1172,7 @@ router.patch('/performance-reviews/:id', requirePlatformStaff, async (req: any, 
   }
 });
 
-router.delete('/employer-ratings/:id', requirePlatformStaff, async (req: any, res) => {
+router.delete('/employer-ratings/:id', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const workspaceId = req.workspaceId || req.session?.workspaceId;
@@ -1226,7 +1226,7 @@ router.delete('/employer-ratings/:id', requirePlatformStaff, async (req: any, re
   }
 });
 
-router.patch('/employer-ratings/:id', requirePlatformStaff, async (req: any, res) => {
+router.patch('/employer-ratings/:id', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const { updates, explanation, notifyWorkspaceId } = req.body;
@@ -1295,7 +1295,7 @@ router.patch('/employer-ratings/:id', requirePlatformStaff, async (req: any, res
   }
 });
 
-router.delete('/report-submissions/:id', requirePlatformStaff, async (req: any, res) => {
+router.delete('/report-submissions/:id', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const workspaceId = req.workspaceId || req.session?.workspaceId;

@@ -102,7 +102,7 @@ function createQuickCheck(
           latencyMs: result.latencyMs ?? (Date.now() - startTime),
           metadata: result.metadata,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           service: id,
           status: 'down',

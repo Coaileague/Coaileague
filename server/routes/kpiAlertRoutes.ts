@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { Router } from "express";
 import { requireAuth } from "../auth";
-import { requireOwner } from "../rbac";
+import { requireOwner, AuthenticatedRequest} from "../rbac";
 import { storage } from "../storage";
 import { createLogger } from '../lib/logger';
 const log = createLogger('KpiAlertRoutes');
@@ -9,7 +9,7 @@ const log = createLogger('KpiAlertRoutes');
 
 const router = Router();
 
-router.get('/', requireAuth, async (req: any, res) => {
+router.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -25,7 +25,7 @@ router.get('/', requireAuth, async (req: any, res) => {
   }
 });
 
-router.post('/', requireOwner, async (req: any, res) => {
+router.post('/', requireOwner, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -47,7 +47,7 @@ router.post('/', requireOwner, async (req: any, res) => {
   }
 });
 
-router.patch('/:id', requireOwner, async (req: any, res) => {
+router.patch('/:id', requireOwner, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -67,7 +67,7 @@ router.patch('/:id', requireOwner, async (req: any, res) => {
   }
 });
 
-router.delete('/:id', requireOwner, async (req: any, res) => {
+router.delete('/:id', requireOwner, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);

@@ -244,7 +244,7 @@ router.post("/work-orders/execute", requireAuth, async (req: AuthenticatedReques
   });
 
 // GET /api/ai-brain/status — runtime status of AI brain services
-router.get("/status", requireAuth, async (req: any, res) => {
+router.get("/status", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { getAISystemStatus } = await import("../services/ai-brain/providers/resilientAIGateway");
     const sysStatus = getAISystemStatus();
@@ -266,7 +266,7 @@ router.get("/status", requireAuth, async (req: any, res) => {
 });
 
 // GET /api/ai-brain/decisions — recent AI decisions/actions log
-router.get("/decisions", requireManager, async (req: any, res) => {
+router.get("/decisions", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
     const limit = Math.min(parseInt((req.query.limit as string) || '20'), 100);
@@ -286,7 +286,7 @@ router.get("/decisions", requireManager, async (req: any, res) => {
 });
 
 // GET /api/ai-brain/rules — current AI guardrails and rule configuration
-router.get("/rules", requireManager, async (req: any, res) => {
+router.get("/rules", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const { default: guardrails } = await import("@shared/config/aiBrainGuardrails");
     res.json({

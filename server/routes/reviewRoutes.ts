@@ -150,7 +150,7 @@ router.get("/api/report-templates", requireAuth, async (req: AuthenticatedReques
   }
 });
 
-router.post("/api/report-templates/:id/toggle", requireOwner, async (req: any, res) => {
+router.post("/api/report-templates/:id/toggle", requireOwner, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id || req.user?.claims?.sub;
@@ -165,7 +165,7 @@ router.post("/api/report-templates/:id/toggle", requireOwner, async (req: any, r
   }
 });
 
-router.post("/api/report-templates/seed-industry", requireOwner, async (req: any, res) => {
+router.post("/api/report-templates/seed-industry", requireOwner, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -188,7 +188,7 @@ router.post("/api/report-templates/seed-industry", requireOwner, async (req: any
 });
 
 // === Report Submissions ===
-router.get("/api/report-submissions", requireAuth, async (req: any, res) => {
+router.get("/api/report-submissions", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -209,7 +209,7 @@ router.get("/api/report-submissions", requireAuth, async (req: any, res) => {
   }
 });
 
-router.post("/api/report-submissions", requireAuth, async (req: any, res) => {
+router.post("/api/report-submissions", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -231,7 +231,7 @@ router.post("/api/report-submissions", requireAuth, async (req: any, res) => {
   }
 });
 
-router.patch("/api/report-submissions/:id", requireAuth, async (req: any, res) => {
+router.patch("/api/report-submissions/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const subUpdateSchema = z.object({
@@ -250,7 +250,7 @@ router.patch("/api/report-submissions/:id", requireAuth, async (req: any, res) =
   }
 });
 
-router.post("/api/report-submissions/:id/review", requireManager, async (req: any, res) => {
+router.post("/api/report-submissions/:id/review", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const reviewSchema = z.object({
@@ -276,7 +276,7 @@ router.post("/api/report-submissions/:id/review", requireManager, async (req: an
   }
 });
 
-router.post("/api/report-submissions/:id/send-to-client", requireManager, async (req: any, res) => {
+router.post("/api/report-submissions/:id/send-to-client", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id || req.user?.claims?.sub;
@@ -355,7 +355,7 @@ router.post("/api/report-submissions/:id/send-to-client", requireManager, async 
   }
 });
 
-router.post("/api/report-submissions/:id/generate-access", requireAuth, async (req: any, res) => {
+router.post("/api/report-submissions/:id/generate-access", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     

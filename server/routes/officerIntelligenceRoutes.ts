@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { AuthenticatedRequest } from '../rbac';
 import { sanitizeError } from '../middleware/errorHandler';
 import { officerIntelligenceService } from '../services/officers/officerIntelligenceService';
 import { createLogger } from '../lib/logger';
@@ -10,7 +11,7 @@ const router = Router();
  * GET /api/officers/:officerId/dashboard
  * Returns the AI-driven intelligence dashboard for a single officer.
  */
-router.get('/api/officers/:officerId/dashboard', async (req: any, res) => {
+router.get('/api/officers/:officerId/dashboard', async (req: AuthenticatedRequest, res) => {
   const { officerId } = req.params;
   const workspaceId = req.workspaceId;
 
@@ -36,7 +37,7 @@ router.get('/api/officers/:officerId/dashboard', async (req: any, res) => {
  * NOTE: this route must be registered before /:officerId/dashboard so that
  * 'dashboards' is not captured as an officerId parameter.
  */
-router.get('/api/officers/dashboards/all', async (req: any, res) => {
+router.get('/api/officers/dashboards/all', async (req: AuthenticatedRequest, res) => {
   const workspaceId = req.workspaceId;
 
   if (!workspaceId) {

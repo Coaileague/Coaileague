@@ -1,7 +1,7 @@
 import { PLATFORM } from '../config/platformConfig';
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Request, Response } from 'express';
-import { requireManager } from '../rbac';
+import { requireManager, AuthenticatedRequest} from '../rbac';
 import { z } from 'zod';
 import {
   generateEmployeeICalFeed,
@@ -37,12 +37,12 @@ function parsePeriodParams(query: any): { start: Date; end: Date } {
   return { start, end };
 }
 
-router.get('/ledger/chart-of-accounts', requireManager, (req: any, res: Response) => {
+router.get('/ledger/chart-of-accounts', requireManager, (req: AuthenticatedRequest, res: Response) => {
   const accounts = financialLedgerService.getChartOfAccounts();
   res.json({ accounts });
 });
 
-router.get('/ledger/journal-entries', requireManager, async (req: any, res: Response) => {
+router.get('/ledger/journal-entries', requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
@@ -54,7 +54,7 @@ router.get('/ledger/journal-entries', requireManager, async (req: any, res: Resp
   }
 });
 
-router.get('/ledger/pl-report', requireManager, async (req: any, res: Response) => {
+router.get('/ledger/pl-report', requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
@@ -66,7 +66,7 @@ router.get('/ledger/pl-report', requireManager, async (req: any, res: Response) 
   }
 });
 
-router.get('/ledger/balance-sheet', requireManager, async (req: any, res: Response) => {
+router.get('/ledger/balance-sheet', requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
@@ -78,7 +78,7 @@ router.get('/ledger/balance-sheet', requireManager, async (req: any, res: Respon
   }
 });
 
-router.get('/dashboard/revenue-per-guard-hour', requireManager, async (req: any, res: Response) => {
+router.get('/dashboard/revenue-per-guard-hour', requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
@@ -90,7 +90,7 @@ router.get('/dashboard/revenue-per-guard-hour', requireManager, async (req: any,
   }
 });
 
-router.get('/dashboard/labor-cost-ratio', requireManager, async (req: any, res: Response) => {
+router.get('/dashboard/labor-cost-ratio', requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
@@ -102,7 +102,7 @@ router.get('/dashboard/labor-cost-ratio', requireManager, async (req: any, res: 
   }
 });
 
-router.get('/dashboard/profit-margins', requireManager, async (req: any, res: Response) => {
+router.get('/dashboard/profit-margins', requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
@@ -114,7 +114,7 @@ router.get('/dashboard/profit-margins', requireManager, async (req: any, res: Re
   }
 });
 
-router.get('/dashboard/ar-aging', requireManager, async (req: any, res: Response) => {
+router.get('/dashboard/ar-aging', requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
@@ -125,7 +125,7 @@ router.get('/dashboard/ar-aging', requireManager, async (req: any, res: Response
   }
 });
 
-router.get('/dashboard/employer-tax-liabilities', requireManager, async (req: any, res: Response) => {
+router.get('/dashboard/employer-tax-liabilities', requireManager, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
@@ -141,7 +141,7 @@ router.get('/dashboard/employer-tax-liabilities', requireManager, async (req: an
   }
 });
 
-router.post('/ical/subscribe', async (req: any, res: Response) => {
+router.post('/ical/subscribe', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.userId;
     const workspaceId = req.workspaceId;

@@ -289,7 +289,7 @@ class AIOrchestrationService {
         result.fallbacksUsed = fallbacksUsed;
         return result;
 
-      } catch (error: any) {
+      } catch (error : unknown) {
         log.error(`[AIOrchestra] Model ${model.modelName} failed:`, (error instanceof Error ? error.message : String(error)));
         
         await db.insert(aiExecutionLog).values({

@@ -24,7 +24,7 @@ const log = createLogger('LeaderRoutes');
 
 const router = Router();
 
-router.get("/leaders/stats", requireAuth, requireLeader, async (req: any, res) => {
+router.get("/leaders/stats", requireAuth, requireLeader, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     
@@ -111,7 +111,7 @@ router.get("/leaders/stats", requireAuth, requireLeader, async (req: any, res) =
   }
 });
 
-router.get("/leaders/pending-tasks", requireAuth, requireLeader, async (req: any, res) => {
+router.get("/leaders/pending-tasks", requireAuth, requireLeader, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     
@@ -214,7 +214,7 @@ router.get("/leaders/pending-tasks", requireAuth, requireLeader, async (req: any
   }
 });
 
-router.get("/leaders/recent-actions", requireAuth, requireLeader, async (req: any, res) => {
+router.get("/leaders/recent-actions", requireAuth, requireLeader, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const limit = Math.min(Math.max(1, parseInt(req.query.limit as string) || 50), 500);
@@ -227,7 +227,7 @@ router.get("/leaders/recent-actions", requireAuth, requireLeader, async (req: an
   }
 });
 
-router.post("/leaders/reset-password", requireAuth, requireLeader, async (req: any, res) => {
+router.post("/leaders/reset-password", requireAuth, requireLeader, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const leaderId = req.user?.id;
@@ -291,7 +291,7 @@ router.post("/leaders/reset-password", requireAuth, requireLeader, async (req: a
   }
 });
 
-router.post("/leaders/unlock-account", requireAuth, requireLeader, async (req: any, res) => {
+router.post("/leaders/unlock-account", requireAuth, requireLeader, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const leaderId = req.user?.id;
@@ -341,7 +341,7 @@ router.post("/leaders/unlock-account", requireAuth, requireLeader, async (req: a
   }
 });
 
-router.patch("/leaders/update-contact", requireAuth, requireLeader, async (req: any, res) => {
+router.patch("/leaders/update-contact", requireAuth, requireLeader, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const leaderId = req.user?.id;
@@ -399,7 +399,7 @@ router.patch("/leaders/update-contact", requireAuth, requireLeader, async (req: 
   }
 });
 
-router.post("/leaders/escalate", requireAuth, requireLeader, async (req: any, res) => {
+router.post("/leaders/escalate", requireAuth, requireLeader, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const requestorId = req.user?.id;
@@ -475,7 +475,7 @@ router.post("/leaders/escalate", requireAuth, requireLeader, async (req: any, re
   }
 });
 
-router.get("/leaders/escalations", requireAuth, requireLeader, async (req: any, res) => {
+router.get("/leaders/escalations", requireAuth, requireLeader, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     
@@ -487,7 +487,7 @@ router.get("/leaders/escalations", requireAuth, requireLeader, async (req: any, 
   }
 });
 
-router.patch("/leaders/escalations/:id/status", requireAuth, async (req: any, res) => {
+router.patch("/leaders/escalations/:id/status", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const { status, resolution } = req.body;

@@ -227,7 +227,7 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
             }
           });
         }
-      } catch (error: any) {
+      } catch (error : unknown) {
         issues.push({
           id: crypto.randomUUID(),
           domain: 'notifications',
@@ -282,7 +282,7 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
             }
           });
         }
-      } catch (error: any) {
+      } catch (error : unknown) {
         // Table may not exist, that's ok
       }
       return { healthy: issues.length === 0, issues };
@@ -328,7 +328,7 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
             }
           });
         }
-      } catch (error: any) {
+      } catch (error : unknown) {
         // Session table may not exist
       }
       return { healthy: issues.length === 0, issues };
@@ -377,7 +377,7 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
             autoFixable: false
           });
         }
-      } catch (error: any) {
+      } catch (error : unknown) {
         issues.push({
           id: crypto.randomUUID(),
           domain: 'database',
@@ -443,7 +443,7 @@ const DOMAIN_SUBAGENTS: DomainSubagent[] = [
             }
           });
         }
-      } catch (error: any) {
+      } catch (error : unknown) {
         // Subagent health check failed gracefully - AI Brain is still operational
         log.info('[AIBrainDiagnostician] Subagent health check skipped:', (error instanceof Error ? error.message : String(error)));
       }
@@ -528,7 +528,7 @@ Format as structured analysis. Be specific about file names, functions, and exac
       recommendations: [],
       geminiInsight: response.text || 'Analysis unavailable'
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     return {
       issuesDetected: [],
       patterns: [],
@@ -688,7 +688,7 @@ class HotpatchExecutor {
       }
       
       execution.status = 'success';
-    } catch (error: any) {
+    } catch (error : unknown) {
       execution.status = 'failed';
       execution.result = (error instanceof Error ? error.message : String(error));
     }
@@ -752,7 +752,7 @@ class UniversalDiagnosticOrchestrator {
         try {
           const result = await subagent.healthCheckFn();
           return { domain: subagent.domain, ...result };
-        } catch (error: any) {
+        } catch (error : unknown) {
           return {
             domain: subagent.domain,
             healthy: false,

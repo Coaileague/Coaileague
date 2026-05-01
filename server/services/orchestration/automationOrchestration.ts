@@ -292,7 +292,7 @@ class AutomationOrchestrationService {
             );
           }
           break;
-        } catch (retryErr: any) {
+        } catch (retryErr : unknown) {
           processLastError = retryErr;
           const classified = classifyPipelineError(retryErr);
 
@@ -392,7 +392,7 @@ class AutomationOrchestrationService {
         } : undefined,
       };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       const durationMs = Date.now() - startTime;
 
       // DUPLICATE_ORCHESTRATION is a deduplication guard, not a real failure.

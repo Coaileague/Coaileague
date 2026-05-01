@@ -18,6 +18,7 @@
  */
 
 import { Router, Response } from 'express';
+import { AuthenticatedRequest } from '../../rbac';
 import { db } from '../../db';
 import { sraFindings, sraFindingMessages, sraAuditLog } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
@@ -54,7 +55,7 @@ async function recordCompanyResponse(
   message: string,
   attachments: unknown[],
   actionType: string,
-  req: any
+  req: AuthenticatedRequest
 ): Promise<void> {
   await db.insert(sraFindingMessages).values({
     findingId,
@@ -79,7 +80,7 @@ async function recordCompanyResponse(
 // ── GET /api/sra/company/findings ────────────────────────────────────────────
 // List all SRA findings raised against the authenticated workspace.
 
-router.get('/findings', async (req: any, res: Response) => {
+router.get('/findings', async (req: AuthenticatedRequest, res: Response) => {
   const workspaceId = req.workspaceId;
   if (!workspaceId) return res.status(403).json({ success: false, error: 'Workspace context required.' });
 
@@ -112,7 +113,7 @@ router.get('/findings', async (req: any, res: Response) => {
 // ── GET /api/sra/company/findings/:id ────────────────────────────────────────
 // Get a single finding with its message thread.
 
-router.get('/findings/:id', async (req: any, res: Response) => {
+router.get('/findings/:id', async (req: AuthenticatedRequest, res: Response) => {
   const { id: findingId } = req.params;
   const workspaceId = req.workspaceId;
   if (!workspaceId) return res.status(403).json({ success: false, error: 'Workspace context required.' });
@@ -135,7 +136,7 @@ router.get('/findings/:id', async (req: any, res: Response) => {
 
 // ── POST /api/sra/company/findings/:id/acknowledge ───────────────────────────
 
-router.post('/findings/:id/acknowledge', async (req: any, res: Response) => {
+router.post('/findings/:id/acknowledge', async (req: AuthenticatedRequest, res: Response) => {
   const findingId = req.params.id;
   const workspaceId = req.workspaceId;
   const userId = req.userId;
@@ -159,7 +160,7 @@ router.post('/findings/:id/acknowledge', async (req: any, res: Response) => {
 
 // ── POST /api/sra/company/findings/:id/remediation-evidence ──────────────────
 
-router.post('/findings/:id/remediation-evidence', async (req: any, res: Response) => {
+router.post('/findings/:id/remediation-evidence', async (req: AuthenticatedRequest, res: Response) => {
   const findingId = req.params.id;
   const workspaceId = req.workspaceId;
   const userId = req.userId;
@@ -189,7 +190,7 @@ router.post('/findings/:id/remediation-evidence', async (req: any, res: Response
 
 // ── POST /api/sra/company/findings/:id/payment-confirmation ──────────────────
 
-router.post('/findings/:id/payment-confirmation', async (req: any, res: Response) => {
+router.post('/findings/:id/payment-confirmation', async (req: AuthenticatedRequest, res: Response) => {
   const findingId = req.params.id;
   const workspaceId = req.workspaceId;
   const userId = req.userId;
@@ -215,7 +216,7 @@ router.post('/findings/:id/payment-confirmation', async (req: any, res: Response
 
 // ── POST /api/sra/company/findings/:id/appeal ────────────────────────────────
 
-router.post('/findings/:id/appeal', async (req: any, res: Response) => {
+router.post('/findings/:id/appeal', async (req: AuthenticatedRequest, res: Response) => {
   const findingId = req.params.id;
   const workspaceId = req.workspaceId;
   const userId = req.userId;
@@ -245,7 +246,7 @@ router.post('/findings/:id/appeal', async (req: any, res: Response) => {
 
 // ── POST /api/sra/company/findings/:id/extension ─────────────────────────────
 
-router.post('/findings/:id/extension', async (req: any, res: Response) => {
+router.post('/findings/:id/extension', async (req: AuthenticatedRequest, res: Response) => {
   const findingId = req.params.id;
   const workspaceId = req.workspaceId;
   const userId = req.userId;

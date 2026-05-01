@@ -692,7 +692,7 @@ class ApprovalGateEnforcementService {
         target: approvalGates.id,
         set: { gateData: gateJson, updatedAt: sql`now()` },
       });
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[ApprovalGate] Failed to persist gate:', (error instanceof Error ? error.message : String(error)));
     }
   }
@@ -728,7 +728,7 @@ class ApprovalGateEnforcementService {
         log.info(`[ApprovalGate] Recovered ${gates.length} pending gate(s) from DB on startup`);
       }
       return gates;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.warn('[ApprovalGate] Could not load pending gates from DB:', (error instanceof Error ? error.message : String(error)));
       return [];
     }

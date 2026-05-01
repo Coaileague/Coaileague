@@ -207,7 +207,7 @@ function registerTrinityRecoveryHandler(): void {
         log.warn(`[Infrastructure] Trinity recovery job failed for proposal ${proposalId}: ${result.error}`);
         return { success: false, error: result.error };
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[Infrastructure] Trinity recovery job error for proposal ${proposalId}:`, error);
       return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }

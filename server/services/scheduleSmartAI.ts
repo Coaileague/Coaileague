@@ -237,7 +237,7 @@ Assign employees to shifts. Return valid JSON only.`;
     let parsedResponse: unknown;
     try {
       parsedResponse = JSON.parse(cleanedResponse);
-    } catch (parseError: any) {
+    } catch (parseError : unknown) {
       // Attempt to repair truncated JSON by extracting valid assignments array
       const assignmentsMatch = cleanedResponse.match(/"assignments"\s*:\s*(\[[\s\S]*)/);
       if (assignmentsMatch) {
@@ -290,7 +290,7 @@ Assign employees to shifts. Return valid JSON only.`;
     }
     
     return validationResult.data;
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error("AI Scheduling™ AI error:", error);
     // Don't leak raw prompts to users - provide clean error message
     const userMessage = error.status === 400 

@@ -21,10 +21,10 @@ const log = createLogger('PlaidRoutes');
 
 const router = Router();
 
-function getWorkspaceId(req: any): string {
+function getWorkspaceId(req: AuthenticatedRequest): string {
   return req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId || '';
 }
-function getUserId(req: any): string {
+function getUserId(req: AuthenticatedRequest): string {
   return req.user?.id || '';
 }
 
@@ -59,7 +59,7 @@ router.get('/status', requireAuth, requireOwner, async (req, res) => {
       orgBankLast4,
       orgBankName,
     });
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error('[Plaid] Status error:', error?.message || error);
     res.status(500).json({ error: 'Failed to fetch Plaid status' });
   }
@@ -196,7 +196,7 @@ router.delete('/org-bank', requireAuth, requireOwner, async (req, res) => {
   }
 });
 
-router.post('/link-token/employee/:employeeId', requireAuth, async (req: any, res) => {
+router.post('/link-token/employee/:employeeId', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     if (!isPlaidConfigured()) {
       return res.status(503).json({ error: 'Plaid is not configured on this server' });

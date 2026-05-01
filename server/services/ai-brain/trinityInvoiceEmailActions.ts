@@ -74,7 +74,7 @@ export function registerInvoiceEmailActions() {
             await sendInvoiceWithEmail({ invoiceId, workspaceId, userId: request.userId });
             results.push({ invoiceId, success: true });
             sent++;
-          } catch (error: any) {
+          } catch (error : unknown) {
             results.push({ invoiceId, success: false, error: (error instanceof Error ? error.message : String(error)) });
             failed++;
           }
@@ -93,7 +93,7 @@ export function registerInvoiceEmailActions() {
           return createResult(request.actionId, true, result.message, {
             success: true, invoiceId, status: 'sent'
           }, start);
-        } catch (error: any) {
+        } catch (error : unknown) {
           return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
         }
       }
@@ -124,7 +124,7 @@ export function registerInvoiceEmailActions() {
           pdfAttached: true,
           timestamp: new Date().toISOString()
         }, start);
-      } catch (error: any) {
+      } catch (error : unknown) {
         return createResult(request.actionId, false, `Failed to send invoice email: ${(error instanceof Error ? error.message : String(error))}`, null, start);
       }
     }
@@ -158,7 +158,7 @@ export function registerInvoiceEmailActions() {
           });
           results.push({ invoiceId, success: true });
           sent++;
-        } catch (error: any) {
+        } catch (error : unknown) {
           results.push({ invoiceId, success: false, error: (error instanceof Error ? error.message : String(error)) });
           failed++;
         }
@@ -192,7 +192,7 @@ export function registerInvoiceEmailActions() {
           invoiceId,
           status: 'sent'
         }, start);
-      } catch (error: any) {
+      } catch (error : unknown) {
         return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
       }
     }
@@ -221,7 +221,7 @@ export function registerInvoiceEmailActions() {
           totalOverdueAmount,
           clients: result
         }, start);
-      } catch (error: any) {
+      } catch (error : unknown) {
         return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
       }
     }
@@ -285,7 +285,7 @@ export function registerInvoiceEmailActions() {
           sizeBytes: pdfBuffer.length,
           message: 'PDF buffer generated and logged'
         }, start);
-      } catch (error: any) {
+      } catch (error : unknown) {
         return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
       }
     }
@@ -311,7 +311,7 @@ export function registerInvoiceEmailActions() {
           return createResult(request.actionId, true, result.message, {
             success: true, invoiceId, status: 'sent'
           }, start);
-        } catch (error: any) {
+        } catch (error : unknown) {
           return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
         }
       }
@@ -326,7 +326,7 @@ export function registerInvoiceEmailActions() {
           return createResult(request.actionId, true, `Found ${overdueCount} overdue invoices`, {
             overdueCount, totalOverdueAmount, clients: result
           }, start);
-        } catch (error: any) {
+        } catch (error : unknown) {
           return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
         }
       }
@@ -342,7 +342,7 @@ export function registerInvoiceEmailActions() {
           invoice: result.invoice,
           paymentMethod
         }, start);
-      } catch (error: any) {
+      } catch (error : unknown) {
         return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
       }
     }
@@ -365,7 +365,7 @@ export function registerInvoiceEmailActions() {
         const processed = 'processed' in result ? result.processed : 1;
         
         return createResult(request.actionId, true, `Email orchestration complete: ${processed} emails processed`, result, start);
-      } catch (error: any) {
+      } catch (error : unknown) {
         return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
       }
     }
@@ -399,7 +399,7 @@ export function registerInvoiceEmailActions() {
           sent: result.success,
           messageId: (result as any).data?.data?.id
         }, start);
-      } catch (error: any) {
+      } catch (error : unknown) {
         return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);
       }
     }

@@ -271,7 +271,7 @@ router.post('/register-simple', authLimiter, async (req: Request, res) => {
   }
 });
 
-router.get('/user', async (req: any, res) => {
+router.get('/user', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.session?.userId;
     if (!userId) {
@@ -289,7 +289,7 @@ router.get('/user', async (req: any, res) => {
   }
 });
 
-router.patch('/profile', mutationLimiter, async (req: any, res) => {
+router.patch('/profile', mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     let userId: string | null = null;
     
@@ -369,7 +369,7 @@ router.patch('/profile', mutationLimiter, async (req: any, res) => {
 // Email Change Flow (Verified)
 // ============================================================
 
-router.post('/request-email-change', mutationLimiter, async (req: any, res) => {
+router.post('/request-email-change', mutationLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.session?.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
@@ -398,7 +398,7 @@ router.post('/request-email-change', mutationLimiter, async (req: any, res) => {
   }
 });
 
-router.post('/cancel-email-change', async (req: any, res) => {
+router.post('/cancel-email-change', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.session?.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
@@ -414,7 +414,7 @@ router.post('/cancel-email-change', async (req: any, res) => {
 });
 
 // GET endpoint: invoked from the verification link in the email
-router.get('/confirm-email-change', async (req: any, res) => {
+router.get('/confirm-email-change', async (req: AuthenticatedRequest, res) => {
   const token = req.query.token as string | undefined;
   const baseUrl = `${req.protocol}://${req.get('host')}`;
 
@@ -511,7 +511,7 @@ router.post('/mfa/enable', async (req: AuthenticatedRequest, res) => {
   }
 });
 
-router.post('/mfa/verify', async (req: any, res) => {
+router.post('/mfa/verify', async (req: AuthenticatedRequest, res) => {
   try {
     const { userId, token } = req.body;
 
@@ -606,7 +606,7 @@ router.post('/mfa/regenerate-backup-codes', async (req: AuthenticatedRequest, re
 
 // WS Auth Token — issues a 60-second one-time token for WebSocket authentication
 // Needed when session cookie lookup fails at WS connection time (DB hiccup, Replit env edge cases)
-async function issueWsToken(req: any, res: any) {
+async function issueWsToken(req: AuthenticatedRequest, res: any) {
   const userId = req.user?.id || req.session?.userId;
   const workspaceId = req.user?.workspaceId || req.session?.workspaceId || req.session?.currentWorkspaceId;
   const role = req.user?.role || req.session?.workspaceRole;

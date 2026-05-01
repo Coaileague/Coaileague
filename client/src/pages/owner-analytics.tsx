@@ -1028,7 +1028,7 @@ export default function OwnerAnalytics() {
                 <AlertTitle>QuickBooks Not Connected</AlertTitle>
                 <AlertDescription>
                   Connect your QuickBooks account to enable Financial Watchdog reconciliation.
-                  {/* @ts-ignore */}
+                  {/* @ts-expect-error — TS migration */}
                   <Button variant="link" className="p-0 h-auto ml-1" asChild>
                     <a href="/accounting-integrations">Connect QuickBooks</a>
                   </Button>

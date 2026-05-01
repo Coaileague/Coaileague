@@ -489,7 +489,7 @@ export async function importICalFile(
         result.importedShiftIds.push(newShift.id);
         result.eventsImported++;
 
-      } catch (eventError: any) {
+      } catch (eventError : unknown) {
         result.eventsFailed++;
         result.errors.push(`Failed to import event "${event.summary}": ${eventError.message}`);
       }
@@ -526,7 +526,7 @@ export async function importICalFile(
       },
     });
 
-  } catch (parseError: any) {
+  } catch (parseError : unknown) {
     result.errors.push(`Failed to parse iCal file: ${parseError.message}`);
     
     await db.update(calendarImports)

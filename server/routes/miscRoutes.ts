@@ -695,7 +695,7 @@ router.get("/api/device/profile", requireAuth, async (req: AuthenticatedRequest,
   }
 });
 
-router.get("/api/identity/me", requireAuth, async (req: any, res) => {
+router.get("/api/identity/me", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     if (!userId) {
@@ -846,7 +846,7 @@ router.get("/api/business-categories", requireAuth, async (req: AuthenticatedReq
   }
 });
 
-router.get("/api/premium-features", async (req: any, res) => {
+router.get("/api/premium-features", async (req: AuthenticatedRequest, res) => {
   try {
     const { PREMIUM_FEATURES, CREDIT_PACKAGES } = await import("@shared/config/premiumFeatures");
 
@@ -861,7 +861,7 @@ router.get("/api/premium-features", async (req: any, res) => {
   }
 });
 
-router.get("/api/premium-features/:featureId/check", requireAuth, async (req: any, res) => {
+router.get("/api/premium-features/:featureId/check", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const { featureId } = req.params;
@@ -1819,7 +1819,7 @@ const scheduleSmartAIRequestSchema = z.object({
     .optional(),
 });
 
-router.get("/api/shift-templates", requireAuth, async (req: any, res) => {
+router.get("/api/shift-templates", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const workspace = (await storage.getWorkspaceByOwnerId(userId)) || (await storage.getWorkspaceByMembership(userId));
@@ -1836,7 +1836,7 @@ router.get("/api/shift-templates", requireAuth, async (req: any, res) => {
   }
 });
 
-router.post("/api/shift-templates", requireAuth, async (req: any, res) => {
+router.post("/api/shift-templates", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const workspace = (await storage.getWorkspaceByOwnerId(userId)) || (await storage.getWorkspaceByMembership(userId));
@@ -1856,7 +1856,7 @@ router.post("/api/shift-templates", requireAuth, async (req: any, res) => {
   }
 });
 
-router.delete("/api/shift-templates/:id", requireAuth, async (req: any, res) => {
+router.delete("/api/shift-templates/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
@@ -1957,7 +1957,7 @@ router.get("/api/billing/subscription", requireAuth, async (req: AuthenticatedRe
 const safetyCheckStore = new Map<string, any[]>(); // keyed by workspaceId
 
 // GET /api/safety-checks/recent — Recent safety check submissions for this workspace
-router.get("/api/safety-checks/recent", requireAuth, async (req: any, res) => {
+router.get("/api/safety-checks/recent", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.json([]);
@@ -1969,7 +1969,7 @@ router.get("/api/safety-checks/recent", requireAuth, async (req: any, res) => {
 });
 
 // POST /api/safety-checks — Submit a safety inspection check
-router.post("/api/safety-checks", requireAuth, async (req: any, res) => {
+router.post("/api/safety-checks", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const userId = req.userId || req.user?.id;

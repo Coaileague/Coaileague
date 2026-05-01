@@ -172,7 +172,7 @@ export class ServiceOrchestrationWatchdog {
     this.scanInterval = setInterval(async () => {
       try {
         await this.scanForOrphanServices();
-      } catch (error: any) {
+      } catch (error : unknown) {
         log.warn('[ServiceWatchdog] Scan failed (will retry):', error?.message || 'unknown');
       }
     }, this.SCAN_INTERVAL_MS);

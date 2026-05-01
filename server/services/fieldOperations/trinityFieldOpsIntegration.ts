@@ -361,7 +361,7 @@ export async function executeFieldOpsAction(request: ActionRequest): Promise<Act
       default:
         return { success: false, error: `Unknown action: ${actionId}` };
     }
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error(`[FieldOps] Action ${actionId} failed:`, error);
     return { success: false, error: (error instanceof Error ? error.message : String(error)) };
   }

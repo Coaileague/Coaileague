@@ -294,7 +294,7 @@ class AutomationRollbackService {
         entityId,
         restoredFields: safeFields,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       await db.insert(auditLogs).values({
         workspaceId,
         userId: performedBy.userId,

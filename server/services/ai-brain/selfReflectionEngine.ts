@@ -685,7 +685,7 @@ Provide a JSON response with:
         description: `Acknowledged revision (${revision.revisionType}): ${revision.description}`,
         timestamp: new Date(),
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[SelfReflectionEngine] Revision ${revision.revisionId} failed:`, (error instanceof Error ? error.message : String(error)));
       return {
         correctionId,

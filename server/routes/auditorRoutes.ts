@@ -42,7 +42,7 @@ import {
   listRegulatorNotificationsForWorkspace,
 } from '../services/auditor/auditorAccessService';
 
-import { requireAuth, requireManager , requireAuditor } from '../rbac';
+import { requireAuth, requireManager , requireAuditor, AuthenticatedRequest} from '../rbac';
 const log = createLogger('AuditorRoutes');
 export const auditorRouter = Router();
 
@@ -57,7 +57,7 @@ function getBaseUrl(req: Request): string {
 // pattern in the platform. We don't reuse the operator/employee session
 // because auditors have a separate identity surface and a separate threat
 // model (read-only, time-boxed, periodic re-auth).
-function requireAuditor(req: any, res: Response, next: NextFunction): void {
+function requireAuditor(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
   const auditorId = req.session?.auditorId;
   if (!auditorId) {
     res.status(401).json({ ok: false, error: 'Not signed in as auditor' });
@@ -70,7 +70,7 @@ function requireAuditor(req: any, res: Response, next: NextFunction): void {
 // An auditor is authenticated but they cannot see tenant data until they
 // have accepted the current NDA version. 403 NDA_REQUIRED is the signal
 // to the frontend to show the NDA-acceptance modal.
-async function requireNdaAccepted(req: any, res: Response, next: NextFunction): Promise<void> {
+async function requireNdaAccepted(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
   const auditorId = req.session?.auditorId;
   if (!auditorId) {
     res.status(401).json({ ok: false, error: 'Not signed in as auditor' });
@@ -173,14 +173,14 @@ auditorRouter.post('/login', async (req: Request, res: Response) => {
 
 // ─── 4. LOGOUT ────────────────────────────────────────────────────────────────
 
-auditorRouter.post('/logout', (req: any, res: Response) => {
+auditorRouter.post('/logout', (req: AuthenticatedRequest, res: Response) => {
   if (req.session?.auditorId) delete req.session.auditorId;
   res.json({ ok: true });
 });
 
 // ─── 5. ME ────────────────────────────────────────────────────────────────────
 
-auditorRouter.get('/me', requireAuditor, async (req: any, res: Response) => {
+auditorRouter.get('/me', requireAuditor, async (req: AuthenticatedRequest, res: Response) => {
   const auditorId = req.session.auditorId;
   const ndaAccepted = await hasAcceptedCurrentNda(auditorId).catch(() => false);
   res.json({
@@ -199,7 +199,7 @@ auditorRouter.get('/nda/current', requireAuditor, (_req: Request, res: Response)
   res.json({ ok: true, version: currentNdaVersion() });
 });
 
-auditorRouter.post('/nda/accept', requireAuditor, async (req: any, res: Response) => {
+auditorRouter.post('/nda/accept', requireAuditor, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const signatureName = typeof req.body?.signatureName === 'string'
       ? req.body.signatureName.trim()
@@ -223,7 +223,7 @@ auditorRouter.post('/nda/accept', requireAuditor, async (req: any, res: Response
 
 // ─── 6. LIST AUDITS ───────────────────────────────────────────────────────────
 
-auditorRouter.get('/me/audits', requireAuditor, requireNdaAccepted, async (req: any, res: Response) => {
+auditorRouter.get('/me/audits', requireAuditor, requireNdaAccepted, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const audits = await listAuditsForAuditor(req.session.auditorId);
     res.json({ ok: true, audits });
@@ -235,7 +235,7 @@ auditorRouter.get('/me/audits', requireAuditor, requireNdaAccepted, async (req: 
 
 // ─── 6b. MULTI-TENANT ROLLUP (Readiness Section 3) ───────────────────────────
 // Every workspace the auditor has ever been licensed to audit.
-auditorRouter.get('/me/workspaces', requireAuditor, requireNdaAccepted, async (req: any, res: Response) => {
+auditorRouter.get('/me/workspaces', requireAuditor, requireNdaAccepted, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const workspaces = await listWorkspacesForAuditor(req.session.auditorId);
     res.json({ ok: true, workspaces });
@@ -252,7 +252,7 @@ auditorRouter.get(
   '/compliance-score/:workspaceId',
   requireAuditor,
   requireNdaAccepted,
-  async (req: any, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response) => {
     try {
       const auditorId = req.session.auditorId;
       const workspaceId = req.params.workspaceId;
@@ -275,7 +275,7 @@ auditorRouter.get(
   '/compliance-trend/:workspaceId',
   requireAuditor,
   requireNdaAccepted,
-  async (req: any, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response) => {
     try {
       const auditorId = req.session.auditorId;
       const workspaceId = req.params.workspaceId;
@@ -300,7 +300,7 @@ auditorRouter.post(
   '/flag/:workspaceId',
   requireAuditor,
   requireNdaAccepted,
-  async (req: any, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response) => {
     try {
       const auditorId = req.session.auditorId;
       const workspaceId = req.params.workspaceId;
@@ -335,7 +335,7 @@ auditorRouter.get(
   '/notifications/:workspaceId',
   requireAuditor,
   requireNdaAccepted,
-  async (req: any, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response) => {
     try {
       const auditorId = req.session.auditorId;
       const workspaceId = req.params.workspaceId;
@@ -354,7 +354,7 @@ auditorRouter.get(
 
 // ─── 7. REQUEST NEW AUDIT ─────────────────────────────────────────────────────
 
-auditorRouter.post('/audits', requireAuditor, requireNdaAccepted, async (req: any, res: Response) => {
+auditorRouter.post('/audits', requireAuditor, requireNdaAccepted, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { workspaceId, licenseNumber, orderDocUrl, notes } = req.body || {};
     if (!workspaceId) return res.status(400).json({ ok: false, error: 'workspaceId required' });
@@ -371,7 +371,7 @@ auditorRouter.post('/audits', requireAuditor, requireNdaAccepted, async (req: an
 
 // ─── 8. CLOSE AUDIT ───────────────────────────────────────────────────────────
 
-auditorRouter.post('/audits/:id/close', requireAuditor, async (req: any, res: Response) => {
+auditorRouter.post('/audits/:id/close', requireAuditor, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const r = await closeAudit(req.params.id, req.session.auditorId);
     res.json({ ok: r.success });
@@ -383,7 +383,7 @@ auditorRouter.post('/audits/:id/close', requireAuditor, async (req: any, res: Re
 
 // ─── 9. EXTEND AUDIT ──────────────────────────────────────────────────────────
 
-auditorRouter.post('/audits/:id/extend', requireAuditor, async (req: any, res: Response) => {
+auditorRouter.post('/audits/:id/extend', requireAuditor, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const days = Math.min(parseInt(req.body?.days || '30', 10) || 30, 90);
     const r = await extendAudit(req.params.id, days);
@@ -398,7 +398,7 @@ auditorRouter.post('/audits/:id/extend', requireAuditor, async (req: any, res: R
 
 // ── Auditor Easy-Access Invite Endpoints ──────────────────────────────────────
 
-auditorRouter.post('/invite-link', requireManager, async (req: any, res) => {
+auditorRouter.post('/invite-link', requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const { email, name, agencyName, auditType, expiresInDays = 30 } = req.body;
     const workspaceId = req.user?.currentWorkspaceId;

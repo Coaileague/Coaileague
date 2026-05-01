@@ -232,7 +232,7 @@ class DurableJobQueueService {
 
       log.info(`[DurableJobQueue] Enqueued job ${jobId} of type ${definition.type}`);
       return jobId;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[DurableJobQueue] Failed to enqueue job:', error);
       throw error;
     }
@@ -331,7 +331,7 @@ class DurableJobQueueService {
       this.isProcessing = true;
       try {
         await this.processNextBatch();
-      } catch (error: any) {
+      } catch (error : unknown) {
         log.warn('[DurableJobQueue] Processing loop error (will retry):', error?.message || 'unknown');
       } finally {
         this.isProcessing = false;
@@ -427,7 +427,7 @@ class DurableJobQueueService {
       } else {
         await this.handleJobFailure(jobId, result.error || 'Unknown error', jobRow);
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       await this.handleJobFailure(jobId, (error instanceof Error ? error.message : String(error)), jobRow);
     }
   }

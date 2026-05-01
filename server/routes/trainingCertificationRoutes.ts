@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { AuthenticatedRequest } from '../rbac';
 import { pool } from "../db";
 import { platformActionHub } from "../services/helpai/platformActionHub";
 import { registerLegacyBootstrap } from "../services/legacyBootstrapRegistry";
@@ -123,7 +124,7 @@ platformActionHub.registerAction({
 // --- ROUTES ---
 
 // GET /api/training/curriculums
-router.get("/curriculums", async (req: any, res) => {
+router.get("/curriculums", async (req: AuthenticatedRequest, res) => {
   try {
     const result = await pool.query(
       "SELECT * FROM training_curriculums WHERE workspace_id = $1 AND is_active = true ORDER BY name ASC",
@@ -136,7 +137,7 @@ router.get("/curriculums", async (req: any, res) => {
 });
 
 // POST /api/training/curriculums
-router.post("/curriculums", async (req: any, res) => {
+router.post("/curriculums", async (req: AuthenticatedRequest, res) => {
   try {
     const { name, description, category, requiredRoles, totalHours } = req.body;
     const result = await pool.query(`
@@ -151,7 +152,7 @@ router.post("/curriculums", async (req: any, res) => {
 });
 
 // GET /api/training/curriculums/:id/modules
-router.get("/curriculums/:id/modules", async (req: any, res) => {
+router.get("/curriculums/:id/modules", async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
@@ -165,7 +166,7 @@ router.get("/curriculums/:id/modules", async (req: any, res) => {
 });
 
 // POST /api/training/curriculums/:id/modules
-router.post("/curriculums/:id/modules", async (req: any, res) => {
+router.post("/curriculums/:id/modules", async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const { title, contentUrl, estimatedMinutes, orderIndex, passingScore } = req.body;
@@ -181,7 +182,7 @@ router.post("/curriculums/:id/modules", async (req: any, res) => {
 });
 
 // POST /api/training/progress — update module progress
-router.post("/progress", async (req: any, res) => {
+router.post("/progress", async (req: AuthenticatedRequest, res) => {
   try {
     const { moduleId, status, score } = req.body;
     const officerId = req.user?.id;
@@ -204,7 +205,7 @@ router.post("/progress", async (req: any, res) => {
 });
 
 // GET /api/training/officer/progress — get current officer's progress
-router.get("/officer/progress", async (req: any, res) => {
+router.get("/officer/progress", async (req: AuthenticatedRequest, res) => {
   try {
     const officerId = req.user?.id;
     const result = await pool.query(`
@@ -221,7 +222,7 @@ router.get("/officer/progress", async (req: any, res) => {
 });
 
 // GET /api/training/certifications — list certifications
-router.get("/certifications", async (req: any, res) => {
+router.get("/certifications", async (req: AuthenticatedRequest, res) => {
   try {
     const result = await pool.query(`
       SELECT oc.*, e.name as officer_name, tc.name as curriculum_name
@@ -238,7 +239,7 @@ router.get("/certifications", async (req: any, res) => {
 });
 
 // GET /api/training/analytics — compliance overview (Business tier required)
-router.get("/analytics", async (req: any, res) => {
+router.get("/analytics", async (req: AuthenticatedRequest, res) => {
   try {
     const { getWorkspaceTier, hasTierAccess } = await import('../tierGuards');
     const wsTier = await getWorkspaceTier(req.workspaceId);

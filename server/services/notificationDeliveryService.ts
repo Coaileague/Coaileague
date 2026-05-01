@@ -259,7 +259,7 @@ export class NotificationDeliveryService {
         log.info(`[NotificationDeliveryService] Skipped delivery: user=${payload.recipientUserId} type=${payload.type} channel=${payload.channel} reason=${reason}`);
         return `skipped:${reason}`;
       }
-    } catch (prefErr: any) {
+    } catch (prefErr : unknown) {
       // Fail open — preference check error should never block delivery
       log.warn('[NotificationDeliveryService] Preference check failed (fail open):', prefErr?.message);
     }

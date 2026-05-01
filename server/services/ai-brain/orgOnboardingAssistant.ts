@@ -210,7 +210,7 @@ class OrgOnboardingAssistant {
         autoFixAvailable: false,
       });
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       diagnostics.push({
         category: 'database',
         status: 'error',
@@ -282,7 +282,7 @@ class OrgOnboardingAssistant {
         autoFixAvailable: false,
       });
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       diagnostics.push({
         category: 'files',
         status: 'error',
@@ -353,7 +353,7 @@ class OrgOnboardingAssistant {
         });
       }
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       diagnostics.push({
         category: 'permissions',
         status: 'error',
@@ -395,7 +395,7 @@ class OrgOnboardingAssistant {
         autoFixAvailable: false,
       });
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       diagnostics.push({
         category: 'routing',
         status: 'error',
@@ -463,7 +463,7 @@ class OrgOnboardingAssistant {
         });
       }
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       diagnostics.push({
         category: 'integration',
         status: 'error',
@@ -512,7 +512,7 @@ class OrgOnboardingAssistant {
         autoFixAvailable: false,
       });
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       diagnostics.push({
         category: 'integration',
         status: 'error',
@@ -556,7 +556,7 @@ class OrgOnboardingAssistant {
             failed.push(action);
             messages.push(`Unknown fix action: ${action}`);
         }
-      } catch (error: any) {
+      } catch (error : unknown) {
         failed.push(action);
         messages.push(`Failed to apply ${action}: ${(error instanceof Error ? error.message : String(error))}`);
       }

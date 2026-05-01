@@ -16,7 +16,7 @@ const log = createLogger('TrinitySchedulingRoutes');
 
 const router = Router();
 
-router.get('/insights', async (req: any, res) => {
+router.get('/insights', async (req: AuthenticatedRequest, res) => {
     try {
       const userId: string | undefined = req.user?.id || req.user?.claims?.sub || req.session?.userId;
       
@@ -195,7 +195,7 @@ router.post('/auto-fill', requireAuth, async (req: AuthenticatedRequest, res) =>
     }
   });
 
-router.post('/ask', async (req: any, res) => {
+router.post('/ask', async (req: AuthenticatedRequest, res) => {
     try {
       const userId: string | undefined = req.user?.id || req.user?.claims?.sub || req.session?.userId;
       
@@ -279,7 +279,7 @@ router.post('/ask', async (req: any, res) => {
  * created. Returns 409 with conflict details + recommended alternative times
  * when the proposed shift falls within an SLA blackout window.
  */
-router.post('/schedule-shift', async (req: any, res) => {
+router.post('/schedule-shift', async (req: AuthenticatedRequest, res) => {
   try {
     const userId: string | undefined = req.user?.id || req.user?.claims?.sub || req.session?.userId;
     if (!userId) {

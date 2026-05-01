@@ -301,7 +301,7 @@ router.get('/health', requireAuth, async (req: AuthenticatedRequest, res) => {
       // SSRF guard — validate the target URL before persisting it
       try {
         await validateWebhookUrl(targetUrl);
-      } catch (ssrfErr: any) {
+      } catch (ssrfErr : unknown) {
         return res.status(400).json({ message: `Invalid webhook URL: ${ssrfErr.message}` });
       }
       

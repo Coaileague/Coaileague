@@ -243,7 +243,7 @@ class AutomationGovernanceService {
       };
       this.policyCache.set(workspaceId, defaultPolicy);
       return defaultPolicy;
-    } catch (error: any) {
+    } catch (error : unknown) {
       // Only log schema mismatch errors once to prevent log spam
       const isSchemaError = error?.code === '42703'; // Column does not exist
       if (!this.schemaErrorLogged && isSchemaError) {

@@ -1,4 +1,5 @@
 import { sanitizeError } from '../middleware/errorHandler';
+import { AuthenticatedRequest } from '../rbac';
 import { Router } from "express";
 import { db } from "../db";
 import { shiftChatrooms, darReports } from "@shared/schema";
@@ -14,7 +15,7 @@ const log = createLogger('ShiftChatroomRoutes');
 
 const router = Router();
 
-router.get('/active', async (req: any, res) => {
+router.get('/active', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const activeChatrooms = await storage.getActiveShiftChatrooms(workspaceId);
@@ -25,7 +26,7 @@ router.get('/active', async (req: any, res) => {
   }
 });
 
-router.get('/by-shift/:shiftId', async (req: any, res) => {
+router.get('/by-shift/:shiftId', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const [chatroom] = await db.select()
@@ -46,7 +47,7 @@ router.get('/by-shift/:shiftId', async (req: any, res) => {
 });
 
 // These specific routes must be registered BEFORE /:shiftId/:timeEntryId to prevent shadowing
-router.get('/:chatroomId/premium-status', async (req: any, res) => {
+router.get('/:chatroomId/premium-status', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const { chatroomId } = req.params;
@@ -61,7 +62,7 @@ router.get('/:chatroomId/premium-status', async (req: any, res) => {
   }
 });
 
-router.get('/dar/:darId', async (req: any, res) => {
+router.get('/dar/:darId', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const userId = req.user?.id || req.user?.claims?.sub;
@@ -74,7 +75,7 @@ router.get('/dar/:darId', async (req: any, res) => {
   }
 });
 
-router.get('/:shiftId/:timeEntryId', async (req: any, res) => {
+router.get('/:shiftId/:timeEntryId', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
 
@@ -97,7 +98,7 @@ router.get('/:shiftId/:timeEntryId', async (req: any, res) => {
   }
 });
 
-router.post('/:conversationId/messages', async (req: any, res) => {
+router.post('/:conversationId/messages', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const workspaceId = req.workspaceId;
@@ -148,7 +149,7 @@ router.post('/:conversationId/messages', async (req: any, res) => {
   }
 });
 
-router.post('/:chatroomId/send', async (req: any, res) => {
+router.post('/:chatroomId/send', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const workspaceId = req.workspaceId;
@@ -188,7 +189,7 @@ router.post('/:chatroomId/send', async (req: any, res) => {
   }
 });
 
-router.post('/:chatroomId/enable-recording', async (req: any, res) => {
+router.post('/:chatroomId/enable-recording', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const workspaceId = req.workspaceId;
@@ -225,7 +226,7 @@ router.post('/:chatroomId/enable-recording', async (req: any, res) => {
   }
 });
 
-router.post('/:chatroomId/generate-transcript', async (req: any, res) => {
+router.post('/:chatroomId/generate-transcript', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const workspaceId = req.workspaceId;
@@ -290,7 +291,7 @@ async function appendAccessLog(darId: string, userId: string, action: string) {
 }
 
 // GET /dar/:darId/access-log — chain of custody audit trail
-router.get('/dar/:darId/access-log', async (req: any, res) => {
+router.get('/dar/:darId/access-log', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const dar = await fetchDAR(req.params.darId, workspaceId);
@@ -302,7 +303,7 @@ router.get('/dar/:darId/access-log', async (req: any, res) => {
 });
 
 // POST /dar/:darId/approve — manager approves DAR
-router.post('/dar/:darId/approve', async (req: any, res) => {
+router.post('/dar/:darId/approve', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const userId = req.user?.id || req.user?.claims?.sub;
@@ -349,7 +350,7 @@ router.post('/dar/:darId/approve', async (req: any, res) => {
 });
 
 // POST /dar/:darId/reject — manager rejects DAR
-router.post('/dar/:darId/reject', async (req: any, res) => {
+router.post('/dar/:darId/reject', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const userId = req.user?.id || req.user?.claims?.sub;
@@ -379,7 +380,7 @@ router.post('/dar/:darId/reject', async (req: any, res) => {
 });
 
 // POST /dar/:darId/escalate — escalate to org owner / senior management
-router.post('/dar/:darId/escalate', async (req: any, res) => {
+router.post('/dar/:darId/escalate', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const userId = req.user?.id || req.user?.claims?.sub;
@@ -411,7 +412,7 @@ router.post('/dar/:darId/escalate', async (req: any, res) => {
 });
 
 // POST /dar/:darId/request-changes — manager requests corrections from officer
-router.post('/dar/:darId/request-changes', async (req: any, res) => {
+router.post('/dar/:darId/request-changes', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const userId = req.user?.id || req.user?.claims?.sub;
@@ -441,7 +442,7 @@ router.post('/dar/:darId/request-changes', async (req: any, res) => {
 });
 
 // POST /dar/:darId/legal-hold — set or release legal hold (compliance/legal team)
-router.post('/dar/:darId/legal-hold', async (req: any, res) => {
+router.post('/dar/:darId/legal-hold', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const userId = req.user?.id || req.user?.claims?.sub;
@@ -487,7 +488,7 @@ router.post('/dar/:darId/legal-hold', async (req: any, res) => {
 
 // Manual report generation — managers can retrigger a shift report at any time
 // (covers extended shifts, late data entry, or missed auto-trigger windows)
-router.post('/:chatroomId/generate-report', async (req: any, res) => {
+router.post('/:chatroomId/generate-report', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const { chatroomId } = req.params;

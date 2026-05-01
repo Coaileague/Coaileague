@@ -327,7 +327,7 @@ router.get('/audit-logs', requireManager, requireProfessional, async (req: Authe
   }
 });
 
-router.post('/:id/generate-summary', requireAuth, async (req: any, res) => {
+router.post('/:id/generate-summary', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);

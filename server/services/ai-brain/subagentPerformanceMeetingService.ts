@@ -338,7 +338,7 @@ class SubagentPerformanceMeetingService {
       log.info(`[PerformanceMeeting] Meeting ${meetingId} completed in ${result.duration}ms. Score: ${averageScore.toFixed(2)}, Pass: ${passedCount}/${subagentReports.length}`);
 
       return result;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[PerformanceMeeting] Meeting failed: ${(error instanceof Error ? error.message : String(error))}`);
       throw error;
     }
@@ -537,7 +537,7 @@ Generate an optimization strategy in JSON format:
       });
 
       log.info(`[PerformanceMeeting] Optimization applied to ${report.subagentName}: ${strategy.strategy}`);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[PerformanceMeeting] Optimization failed for ${report.subagentName}: ${(error instanceof Error ? error.message : String(error))}`);
     }
   }

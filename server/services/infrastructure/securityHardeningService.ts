@@ -271,7 +271,7 @@ class SecurityHardeningService {
       // Calculate score
       scan.score = this.calculateSecurityScore(scan.findings);
       scan.status = 'completed';
-    } catch (error: any) {
+    } catch (error : unknown) {
       scan.status = 'failed';
       log.error('[SecurityHardening] Vulnerability scan failed:', error);
     }

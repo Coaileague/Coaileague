@@ -472,7 +472,7 @@ Provide the most accurate response, explaining any discrepancies.`,
           };
         }
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[CostOptimizedRouter] Error with ${provider}:`, (error instanceof Error ? error.message : String(error)));
       throw error;
     }

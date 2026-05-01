@@ -41,7 +41,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'high',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Policy evaluated', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -62,7 +62,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'medium',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Permissions checked', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -83,7 +83,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'medium',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Access audit complete', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -104,7 +104,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'high',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Threat detection complete', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -125,7 +125,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'critical',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Credentials rotated', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -146,7 +146,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'medium',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Compliance validated', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -201,7 +201,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'high',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Data migrated', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -236,7 +236,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'high',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Workspace provisioned', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -307,7 +307,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'low',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Progress tracked', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -385,7 +385,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'low',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Features recommended', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -412,7 +412,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'medium',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Knowledge query complete', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -433,7 +433,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'medium',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Metrics aggregated', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -454,7 +454,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'medium',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Quality check complete', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -475,7 +475,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'low',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'RL model tuned', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -496,7 +496,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'medium',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Learnings extracted', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -517,7 +517,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'low',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Cognitive metrics retrieved', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -544,7 +544,7 @@ export function registerDomainSupervisorActions(): void {
           priority: request.payload?.priority || 'normal',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Notification sent', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -565,7 +565,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'critical',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Alert broadcasted', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -586,7 +586,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'high',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'A2A message routed', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -607,7 +607,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'medium',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Agent team formed', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -628,7 +628,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'high',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Escalation created', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -649,7 +649,7 @@ export function registerDomainSupervisorActions(): void {
           priority: 'low',
         });
         return { success: result.success, actionId: request.actionId, data: result.data, message: result.error || 'Channel stats retrieved', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -687,7 +687,7 @@ export function registerDomainSupervisorActions(): void {
           domain: request.payload?.domain,
         });
         return { success: true, actionId: request.actionId, data: result, message: `Risk evaluation: ${result.verdict}`, executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -710,7 +710,7 @@ export function registerDomainSupervisorActions(): void {
           userId: request.userId,
         });
         return { success: true, actionId: request.actionId, data: result, message: `Hotpatch ${result.canDeploy ? 'approved' : 'blocked'}`, executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -743,7 +743,7 @@ export function registerDomainSupervisorActions(): void {
         await enhancedLLMJudge.initialize();
         const patterns = await enhancedLLMJudge.getBlockedPatterns();
         return { success: true, actionId: request.actionId, data: { patterns, count: patterns.length }, message: `${patterns.length} blocked patterns`, executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -770,7 +770,7 @@ export function registerDomainSupervisorActions(): void {
           domain: request.payload?.domain,
         }, request.payload?.errorMessage || 'Unknown error');
         return { success: true, actionId: request.actionId, message: 'Failure recorded for regression tracking', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -797,7 +797,7 @@ export function registerDomainSupervisorActions(): void {
           domain: request.payload?.domain,
         });
         return { success: true, actionId: request.actionId, message: 'Success recorded', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },
@@ -853,7 +853,7 @@ export function registerDomainSupervisorActions(): void {
       try {
         await domainLeadSupervisorService.persistTelemetry();
         return { success: true, actionId: request.actionId, message: 'Telemetry persisted', executionTimeMs: Date.now() - startTime };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return { success: false, actionId: request.actionId, message: (error instanceof Error ? error.message : String(error)), executionTimeMs: Date.now() - startTime };
       }
     },

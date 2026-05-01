@@ -1,6 +1,6 @@
 import express from 'express';
 import { pool } from '../db';
-import { requireAuth } from '../rbac';
+import { requireAuth, AuthenticatedRequest} from '../rbac';
 import { platformActionHub } from '../services/helpai/platformActionHub';
 import { platformEventBus } from '../services/platformEventBus';
 import { registerLegacyBootstrap } from '../services/legacyBootstrapRegistry';
@@ -162,7 +162,7 @@ platformActionHub.registerAction({
 });
 
 // Routes
-router.get('/stats', requireAuth, async (req: any, res) => {
+router.get('/stats', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const vehicleToday = await pool.query(
       "SELECT COUNT(*) FROM gate_vehicle_logs WHERE workspace_id = $1 AND entry_time > CURRENT_DATE",
@@ -196,7 +196,7 @@ router.get('/stats', requireAuth, async (req: any, res) => {
   }
 });
 
-router.get('/vehicles/current', requireAuth, async (req: any, res) => {
+router.get('/vehicles/current', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(
       "SELECT * FROM gate_vehicle_logs WHERE workspace_id = $1 AND exit_time IS NULL AND entry_time > CURRENT_DATE ORDER BY entry_time DESC",
@@ -208,7 +208,7 @@ router.get('/vehicles/current', requireAuth, async (req: any, res) => {
   }
 });
 
-router.get('/personnel/current', requireAuth, async (req: any, res) => {
+router.get('/personnel/current', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(
       "SELECT * FROM gate_personnel_logs WHERE workspace_id = $1 AND exit_time IS NULL AND entry_time > CURRENT_DATE ORDER BY entry_time DESC",
@@ -220,7 +220,7 @@ router.get('/personnel/current', requireAuth, async (req: any, res) => {
   }
 });
 
-router.get('/shift-report', requireAuth, async (req: any, res) => {
+router.get('/shift-report', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(
       "SELECT * FROM gate_shift_reports WHERE workspace_id = $1 AND status = 'open' LIMIT 1",
@@ -232,7 +232,7 @@ router.get('/shift-report', requireAuth, async (req: any, res) => {
   }
 });
 
-router.get('/vehicles', requireAuth, async (req: any, res) => {
+router.get('/vehicles', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const flagged = req.query.flagged === 'true';
     let sql = "SELECT * FROM gate_vehicle_logs WHERE workspace_id = $1";
@@ -248,7 +248,7 @@ router.get('/vehicles', requireAuth, async (req: any, res) => {
   }
 });
 
-router.post('/vehicles', requireAuth, async (req: any, res) => {
+router.post('/vehicles', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { licensePlate, vehicleMake, vehicleModel, vehicleColor, driverName, purpose, siteId, siteName, loggedByName } = req.body;
     const { rows } = await pool.query(
@@ -264,7 +264,7 @@ router.post('/vehicles', requireAuth, async (req: any, res) => {
   }
 });
 
-router.patch('/vehicles/:id/exit', requireAuth, async (req: any, res) => {
+router.patch('/vehicles/:id/exit', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(
       "UPDATE gate_vehicle_logs SET exit_time = NOW() WHERE id = $1 AND workspace_id = $2 RETURNING *",
@@ -276,7 +276,7 @@ router.patch('/vehicles/:id/exit', requireAuth, async (req: any, res) => {
   }
 });
 
-router.patch('/vehicles/:id/flag', requireAuth, async (req: any, res) => {
+router.patch('/vehicles/:id/flag', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { reason } = req.body;
     const { rows } = await pool.query(
@@ -299,7 +299,7 @@ router.patch('/vehicles/:id/flag', requireAuth, async (req: any, res) => {
   }
 });
 
-router.get('/personnel', requireAuth, async (req: any, res) => {
+router.get('/personnel', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(
       "SELECT * FROM gate_personnel_logs WHERE workspace_id = $1 ORDER BY entry_time DESC LIMIT 50",
@@ -311,7 +311,7 @@ router.get('/personnel', requireAuth, async (req: any, res) => {
   }
 });
 
-router.post('/personnel', requireAuth, async (req: any, res) => {
+router.post('/personnel', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { personName, personType, companyName, purpose, siteId, siteName, loggedByName, badgeNumber, escortRequired } = req.body;
     const { rows } = await pool.query(
@@ -327,7 +327,7 @@ router.post('/personnel', requireAuth, async (req: any, res) => {
   }
 });
 
-router.patch('/personnel/:id/exit', requireAuth, async (req: any, res) => {
+router.patch('/personnel/:id/exit', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(
       "UPDATE gate_personnel_logs SET exit_time = NOW() WHERE id = $1 AND workspace_id = $2 RETURNING *",
@@ -339,7 +339,7 @@ router.patch('/personnel/:id/exit', requireAuth, async (req: any, res) => {
   }
 });
 
-router.post('/shift-report', requireAuth, async (req: any, res) => {
+router.post('/shift-report', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { siteId, siteName, officerName, officerId } = req.body;
     const { rows } = await pool.query(
@@ -354,7 +354,7 @@ router.post('/shift-report', requireAuth, async (req: any, res) => {
   }
 });
 
-router.patch('/shift-report/:id/close', requireAuth, async (req: any, res) => {
+router.patch('/shift-report/:id/close', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows: reportRows } = await pool.query(
       "SELECT shift_start FROM gate_shift_reports WHERE id = $1 AND workspace_id = $2",

@@ -95,7 +95,7 @@ export class QuickBooksIntegration {
       quickbooksRateLimiter.completeRequest(realmId, environment, true);
       await quotaEnforcementService.recordQBApiUsage(workspaceId, realmId, 1);
       return { success: true, data };
-    } catch (error: any) {
+    } catch (error : unknown) {
       quickbooksRateLimiter.completeRequest(realmId, environment, false);
       
       if (error.status === 429) {
@@ -174,7 +174,7 @@ export class QuickBooksIntegration {
       log.info(`[QuickBooks] Batch completed: ${responses.filter(r => r.success).length}/${responses.length} succeeded`);
       
       return { success: allSuccess, responses };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[QuickBooks] Batch execution error:', error);
       return { success: false, responses: batchItems.map(b => ({ bId: b.bId, success: false, error: (error instanceof Error ? error.message : String(error)) })) };
     }

@@ -2058,7 +2058,7 @@ class SubagentSupervisor {
         await this.seedDefaultSubagents();
         await this.refreshSubagentCache();
         log.info(`[SubagentSupervisor] Seeded and cached ${this.subagentCache.size} subagents`);
-      } catch (error: any) {
+      } catch (error : unknown) {
         log.warn('[SubagentSupervisor] Deferred init failed (non-fatal):', error?.message || 'unknown');
       }
     }, 60000);
@@ -2081,7 +2081,7 @@ class SubagentSupervisor {
           log.info(`[SubagentSupervisor] Created subagent: ${subagent.name}`);
         }
         consecutiveFailures = 0;
-      } catch (error: any) {
+      } catch (error : unknown) {
         consecutiveFailures++;
         log.warn(`[SubagentSupervisor] Skipping subagent ${subagent.name} (failure ${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}):`, error?.message);
       }
@@ -2203,7 +2203,7 @@ class SubagentSupervisor {
           actionHandler(parameters),
           this.createTimeout(subagent.timeoutMs || 30000),
         ]);
-      } catch (error: any) {
+      } catch (error : unknown) {
         executeError = error;
       }
 
@@ -2328,7 +2328,7 @@ class SubagentSupervisor {
         creditDeductionFailed: !deductionResult.success,  // Flag for observability
       };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[SubagentSupervisor] Unexpected error in ${subagent.name}:`, error);
       const failureDurationMs = Date.now() - startTime;
       await this.completeTelemetry(telemetryId, 'failed', null, failureDurationMs, (error instanceof Error ? error.message : String(error)));
@@ -2418,7 +2418,7 @@ class SubagentSupervisor {
         
         try {
           return await Promise.race([executionPromise, timeoutPromise]);
-        } catch (error: any) {
+        } catch (error : unknown) {
           return {
             success: false,
             phase: 'execute' as const,
@@ -2711,7 +2711,7 @@ class SubagentSupervisor {
 
         try {
           return await Promise.race([executionPromise, timeoutPromise]);
-        } catch (error: any) {
+        } catch (error : unknown) {
           return {
             success: false,
             phase: 'execute' as const,
@@ -3946,7 +3946,7 @@ class SubagentSupervisor {
         data: result,
         summary: `Task completed in ${duration}ms using ${subagent.name}`
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[SubagentSupervisor] Fast mode execution error:', error);
       return {
         success: false,
@@ -4388,7 +4388,7 @@ class SubagentSupervisor {
         executionTimeMs: executionTime,
         timestamp: new Date().toISOString()
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       const executionTime = Date.now() - startTime;
       log.error(`[SubagentSupervisor] AI Brain execution failed (${executionTime}ms, tier: ${modelConfig.preferredTier}):`, (error instanceof Error ? error.message : String(error)));
       
@@ -4513,7 +4513,7 @@ class SubagentSupervisor {
 
       return report;
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[SubagentSupervisor] Parallel execution failed:`, error);
       
       // Mark job as failed

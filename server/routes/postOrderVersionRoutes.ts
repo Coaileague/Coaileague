@@ -334,7 +334,7 @@ router.post("/versions/:versionId/acknowledge", requireAuth, async (req: Authent
           pdfBuffer,
         });
         log.info(`[PostOrder] Acknowledgment vaulted — version ${version.version_number}, officer ${empId}`);
-      } catch (vaultErr: any) {
+      } catch (vaultErr : unknown) {
         log.warn(`[PostOrder] Vault PDF failed (non-fatal):`, vaultErr?.message);
       }
     });

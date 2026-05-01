@@ -107,7 +107,7 @@ class BrowserAutomationTool {
           log.info('[BrowserAutomation] Closing idle browser');
           await this.closeBrowser();
         }
-      } catch (error: any) {
+      } catch (error : unknown) {
         log.warn('[BrowserAutomation] Idle check failed (non-fatal):', error?.message || 'unknown');
       }
     }, 60000).unref();

@@ -471,7 +471,7 @@ class HRISIntegrationService {
 
       return { success: true, connectionId: connection.id };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[HRISIntegration] OAuth callback failed:`, error);
       trinityOrchestration.hris.oauthFailed('unknown', provider, (error instanceof Error ? error.message : String(error)));
       return { success: false, error: (error instanceof Error ? error.message : String(error)) };
@@ -624,7 +624,7 @@ class HRISIntegrationService {
             result.recordsSkipped += outboundResult.skipped;
           }
 
-        } catch (entityError: any) {
+        } catch (entityError : unknown) {
           result.errors.push(`${entityType}: ${entityError.message}`);
         }
       }
@@ -669,7 +669,7 @@ class HRISIntegrationService {
         skipped: result.recordsSkipped,
       });
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       result.errors.push((error instanceof Error ? error.message : String(error)));
       log.error(`[HRISIntegration] Sync failed:`, error);
       trinityOrchestration.hris.syncFailed(workspaceId, provider, correlationId, (error instanceof Error ? error.message : String(error)));

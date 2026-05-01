@@ -122,7 +122,7 @@ export class TrialManager {
       log.info(`[TrialManager] Started trial for workspace ${workspaceId}, ends ${trialEndsAt.toISOString()}`);
 
       return { success: true, trialEndsAt };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[TrialManager] Failed to start trial:', error);
       return { success: false, trialEndsAt: new Date(), error: (error instanceof Error ? error.message : String(error)) };
     }
@@ -387,7 +387,7 @@ export class TrialManager {
       log.info(`[TrialManager] Extended trial for ${workspaceId} by ${days} days to ${newEndsAt.toISOString()}`);
 
       return { success: true, newEndsAt };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[TrialManager] Failed to extend trial:', error);
       return { success: false, newEndsAt: new Date(), error: (error instanceof Error ? error.message : String(error)) };
     }

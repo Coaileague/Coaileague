@@ -264,7 +264,7 @@ class BackupService {
         metadata: { walPosition, verification: verificationResults },
       };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[BackupService] Backup ${backupId} failed:`, error);
       
       await db.update(backupRecords).set({

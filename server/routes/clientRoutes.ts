@@ -312,7 +312,7 @@ router.post('/', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest
          ON CONFLICT (client_id) DO NOTHING`,
         [workspaceId, client.id]
       );
-    } catch (crmErr: any) {
+    } catch (crmErr : unknown) {
       log.warn('[Client Creation] CRM pipeline initialization failed (non-blocking):', crmErr.message);
     }
 
@@ -659,7 +659,7 @@ router.post('/:id/deactivate', requireManagerOrPlatformStaff, async (req: Authen
           });
         }
         log.info(`[ClientDeactivate] Trinity verdict: ${result.verdict} — ${result.headline}`);
-      } catch (deliberationErr: any) {
+      } catch (deliberationErr : unknown) {
         log.warn('[ClientDeactivate] Deliberation failed (non-fatal):', deliberationErr?.message);
       }
     }
@@ -1035,7 +1035,7 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000).unref();
 
-function dockChatRateLimit(req: any, res: any, next: any) {
+function dockChatRateLimit(req: AuthenticatedRequest, res: any, next: any) {
   const ip = req.ip || req.connection?.remoteAddress || 'unknown';
   const now = Date.now();
   const windowMs = 60_000;
@@ -1052,7 +1052,7 @@ function dockChatRateLimit(req: any, res: any, next: any) {
   return next();
 }
 
-router.post('/dockchat/start', dockChatRateLimit, async (req: any, res: any) => {
+router.post('/dockchat/start', dockChatRateLimit, async (req: AuthenticatedRequest, res: any) => {
   try {
     const dockChatStartSchema = z.object({
       orgWorkspaceId: z.string().min(1, 'orgWorkspaceId required'),
@@ -1085,7 +1085,7 @@ router.post('/dockchat/start', dockChatRateLimit, async (req: any, res: any) => 
 });
 
 // Send a message in a DockChat session
-router.post('/dockchat/message', dockChatRateLimit, async (req: any, res: any) => {
+router.post('/dockchat/message', dockChatRateLimit, async (req: AuthenticatedRequest, res: any) => {
   try {
     const dockChatMsgSchema = z.object({
       sessionId: z.string().min(1, 'sessionId required'),
@@ -1105,7 +1105,7 @@ router.post('/dockchat/message', dockChatRateLimit, async (req: any, res: any) =
 });
 
 // Close session and generate structured report
-router.post('/dockchat/close', dockChatRateLimit, async (req: any, res: any) => {
+router.post('/dockchat/close', dockChatRateLimit, async (req: AuthenticatedRequest, res: any) => {
   try {
     const dockChatCloseSchema = z.object({
       sessionId: z.string().min(1, 'sessionId required'),

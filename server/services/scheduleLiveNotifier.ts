@@ -351,7 +351,7 @@ export async function onSchedulePublished(params: {
       }));
 
       log.info(`[ScheduleLive] Weekly schedule emails sent to ${shiftsByEmployee.size} employee(s) for week of ${params.weekStart}`);
-    } catch (emailErr: any) {
+    } catch (emailErr : unknown) {
       logNotifierError('[ScheduleLive] Weekly schedule email send failed (non-blocking)', emailErr);
     }
   });

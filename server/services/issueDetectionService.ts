@@ -254,7 +254,7 @@ export class IssueDetectionService {
           }
         }
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.info("AI analysis skipped (optional enhancement):", (error instanceof Error ? error.message : String(error)));
     }
 

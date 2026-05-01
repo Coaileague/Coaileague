@@ -88,7 +88,7 @@ async function handleLicenseQuery(req: ActionRequest): Promise<ActionResult> {
       summary,
       officers: statuses,
     }, start);
-  } catch (error: any) {
+  } catch (error : unknown) {
     return createResult('license.query', false, `License query failed: ${error.message}`, null, start);
   }
 }
@@ -162,7 +162,7 @@ async function handleLicenseAlert(req: ActionRequest): Promise<ActionResult> {
       isExpired,
       expirationDate: cert.expirationDate,
     }, start);
-  } catch (error: any) {
+  } catch (error : unknown) {
     return createResult('license.alert', false, `License alert failed: ${error.message}`, null, start);
   }
 }
@@ -210,7 +210,7 @@ async function handleLicenseUpdate(req: ActionRequest): Promise<ActionResult> {
     }).catch((err) => log.warn('[trinityLicenseActions] Fire-and-forget failed:', err));
 
     return createResult('license.update', true, `Certification ${certId} updated successfully`, updated, start);
-  } catch (error: any) {
+  } catch (error : unknown) {
     return createResult('license.update', false, `License update failed: ${error.message}`, null, start);
   }
 }
@@ -273,7 +273,7 @@ async function handleLicenseExport(req: ActionRequest): Promise<ActionResult> {
       generatedAt: new Date().toISOString(),
       filename: `dps-license-export-${new Date().toISOString().slice(0, 10)}.csv`,
     }, start);
-  } catch (error: any) {
+  } catch (error : unknown) {
     return createResult('license.export', false, `License export failed: ${error.message}`, null, start);
   }
 }

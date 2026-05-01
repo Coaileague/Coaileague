@@ -39,14 +39,14 @@ const ANALYTICS_TIER_OVERRIDES: Record<string, SubscriptionTier> = {
 };
 const DEFAULT_ANALYTICS_TIER: SubscriptionTier = 'professional';
 
-router.use((req: any, res: any, next: any) => {
+router.use((req: AuthenticatedRequest, res: any, next: any) => {
   const path = req.path;
   const requiredTier: SubscriptionTier = ANALYTICS_TIER_OVERRIDES[path] ?? DEFAULT_ANALYTICS_TIER;
   return requirePlan(requiredTier)(req, res, next);
 });
 
 // GET /api/analytics/stats — dashboard summary stats
-router.get("/stats", async (req: any, res) => {
+router.get("/stats", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId as string | undefined;
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
@@ -354,7 +354,7 @@ router.get("/incident-heatmap", async (req, res) => {
   }
 });
 
-router.get("/client-profitability", async (req: any, res) => {
+router.get("/client-profitability", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = (req.workspaceId || req.user?.workspaceId) as string | undefined;
     if (!workspaceId) {
@@ -500,7 +500,7 @@ router.get("/client-profitability", async (req: any, res) => {
   }
 });
 
-router.get("/turnover", async (req: any, res) => {
+router.get("/turnover", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = (req.workspaceId || req.user?.workspaceId) as string | undefined;
     if (!workspaceId) {
@@ -668,7 +668,7 @@ router.get("/turnover", async (req: any, res) => {
 });
 
 // GET /api/analytics/workforce — workforce metrics summary
-router.get("/workforce", async (req: any, res) => {
+router.get("/workforce", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
@@ -705,7 +705,7 @@ router.get("/workforce", async (req: any, res) => {
 });
 
 // GET /api/analytics/financial — financial summary metrics
-router.get("/financial", async (req: any, res) => {
+router.get("/financial", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
@@ -737,7 +737,7 @@ router.get("/financial", async (req: any, res) => {
 });
 
 // GET /api/analytics/predictive — predictive risk and trend signals
-router.get("/predictive", async (req: any, res) => {
+router.get("/predictive", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
@@ -788,7 +788,7 @@ router.get("/predictive", async (req: any, res) => {
 });
 
 // GET /api/analytics/forecast — 6-month historical + 3-month projected revenue and payroll
-router.get("/forecast", async (req: any, res) => {
+router.get("/forecast", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
@@ -894,7 +894,7 @@ function getPeriodDates(period: string): { start: Date; end: Date } {
 }
 
 // GET /api/analytics/dashboard — comprehensive dashboard metrics
-router.get("/dashboard", async (req: any, res) => {
+router.get("/dashboard", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
@@ -965,7 +965,7 @@ router.get("/dashboard", async (req: any, res) => {
 });
 
 // GET /api/analytics/time-usage — time usage breakdown
-router.get("/time-usage", async (req: any, res) => {
+router.get("/time-usage", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
@@ -1035,7 +1035,7 @@ router.get("/time-usage", async (req: any, res) => {
 });
 
 // GET /api/analytics/scheduling — scheduling metrics
-router.get("/scheduling", async (req: any, res) => {
+router.get("/scheduling", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
@@ -1089,7 +1089,7 @@ router.get("/scheduling", async (req: any, res) => {
 });
 
 // GET /api/analytics/revenue — revenue and billing metrics
-router.get("/revenue", async (req: any, res) => {
+router.get("/revenue", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
@@ -1177,7 +1177,7 @@ router.get("/revenue", async (req: any, res) => {
 });
 
 // GET /api/analytics/employee-performance — employee performance metrics
-router.get("/employee-performance", async (req: any, res) => {
+router.get("/employee-performance", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
@@ -1251,7 +1251,7 @@ router.get("/employee-performance", async (req: any, res) => {
 });
 
 // GET /api/analytics/insights — AI-generated insights and anomalies
-router.get("/insights", async (req: any, res) => {
+router.get("/insights", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
@@ -1348,7 +1348,7 @@ router.get("/insights", async (req: any, res) => {
 });
 
 // GET /api/analytics/platform/credit-report — cross-workspace AI credit report for platform staff
-router.get("/platform/credit-report", requirePlatformStaff, async (req: any, res) => {
+router.get("/platform/credit-report", requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
   try {
     const platformRole = req.user?.platformRole as string | undefined;
     const allowedRoles = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'compliance_officer'];
@@ -1450,7 +1450,7 @@ router.get("/platform/credit-report", requirePlatformStaff, async (req: any, res
 });
 
 // GET /api/analytics/heatmap — staffing intensity grid (7 days × 24 hours)
-router.get("/heatmap", async (req: any, res) => {
+router.get("/heatmap", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId as string | undefined;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
@@ -1539,7 +1539,7 @@ router.get("/heatmap", async (req: any, res) => {
 });
 
 // GET /api/analytics/heatmap/ai-analysis — Trinity AI heatmap insight analysis
-router.get("/heatmap/ai-analysis", async (req: any, res) => {
+router.get("/heatmap/ai-analysis", async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId as string | undefined;
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });

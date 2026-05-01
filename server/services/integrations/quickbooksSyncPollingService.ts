@@ -136,7 +136,7 @@ class QuickBooksSyncPollingService {
         try {
           const result = await this.syncConnection(connection, 'incremental');
           results.push(result);
-        } catch (error: any) {
+        } catch (error : unknown) {
           log.error(`[QuickBooksSyncPolling] Error syncing ${connection.workspaceId}:`, (error instanceof Error ? error.message : String(error)));
           results.push({
             workspaceId: connection.workspaceId,
@@ -160,7 +160,7 @@ class QuickBooksSyncPollingService {
         metadata: { action: 'quickbooks.incremental_sync_complete', connectionsProcessed: connections.length },
       }).catch((err) => log.warn('[quickbooksSyncPollingService] Fire-and-forget failed:', err));
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[QuickBooksSyncPolling] Incremental sync failed:', (error instanceof Error ? error.message : String(error)));
     }
 
@@ -188,7 +188,7 @@ class QuickBooksSyncPollingService {
           results.push(result);
           
           await new Promise(resolve => setTimeout(resolve, 5000));
-        } catch (error: any) {
+        } catch (error : unknown) {
           log.error(`[QuickBooksSyncPolling] Reconciliation error for ${connection.workspaceId}:`, (error instanceof Error ? error.message : String(error)));
         }
       }
@@ -203,7 +203,7 @@ class QuickBooksSyncPollingService {
         metadata: { action: 'quickbooks.full_reconciliation_complete', connectionsProcessed: connections.length },
       }).catch((err) => log.warn('[quickbooksSyncPollingService] Fire-and-forget failed:', err));
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[QuickBooksSyncPolling] Full reconciliation failed:', (error instanceof Error ? error.message : String(error)));
     }
 
@@ -280,7 +280,7 @@ class QuickBooksSyncPollingService {
         })
         .where(eq(partnerSyncLogs.id, syncLog.id));
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       result.errors.push((error instanceof Error ? error.message : String(error)));
       result.durationMs = Date.now() - startTime;
 
@@ -391,7 +391,7 @@ class QuickBooksSyncPollingService {
               }
               updated++;
             }
-          } catch (itemError: any) {
+          } catch (itemError : unknown) {
             failed++;
             log.error(`[QuickBooksSyncPolling] Error processing customer ${customer.Id}:`, (itemError instanceof Error ? itemError.message : String(itemError)));
           }
@@ -401,7 +401,7 @@ class QuickBooksSyncPollingService {
           quickbooksRateLimiter.completeRequest(realmId, environment, success);
         }
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[QuickBooksSyncPolling] Customer sync error for ${workspaceId}:`, (error instanceof Error ? error.message : String(error)));
     }
 
@@ -495,7 +495,7 @@ class QuickBooksSyncPollingService {
               }
               updated++;
             }
-          } catch (itemError: any) {
+          } catch (itemError : unknown) {
             failed++;
             log.error(`[QuickBooksSyncPolling] Error processing employee ${qbEmployee.Id}:`, (itemError instanceof Error ? itemError.message : String(itemError)));
           }
@@ -505,7 +505,7 @@ class QuickBooksSyncPollingService {
           quickbooksRateLimiter.completeRequest(realmId, environment, success);
         }
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[QuickBooksSyncPolling] Employee sync error for ${workspaceId}:`, (error instanceof Error ? error.message : String(error)));
     }
 

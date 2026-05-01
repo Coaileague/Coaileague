@@ -237,7 +237,7 @@ class PlatformAIBudgetService {
       });
 
       return summaries;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('Failed to get provider spend summary', { error: (error instanceof Error ? error.message : String(error)) });
       return [];
     }
@@ -273,7 +273,7 @@ class PlatformAIBudgetService {
 
       log.info(`[PlatformAIBudget] Top-off recorded for ${params.provider}: $${(params.amountCents / 100).toFixed(2)} by ${params.performedBy}`);
       return { success: true };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('Failed to record provider top-off', { error: (error instanceof Error ? error.message : String(error)) });
       return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
@@ -313,7 +313,7 @@ class PlatformAIBudgetService {
       );
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }

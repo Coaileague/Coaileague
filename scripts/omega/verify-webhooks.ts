@@ -76,7 +76,7 @@ async function verifyStripe(secretKey: string, label: string): Promise<void> {
       row('Stripe', `${label} webhook events (9)`, 'MISMATCH',
         `Missing: ${missingEvents.join(', ')}`);
     }
-  } catch (err: any) {
+  } catch (err : unknown) {
     row('Stripe', `${label} webhook URL`, 'MISSING', `API error: ${err.message}`);
     row('Stripe', `${label} webhook events (9)`, 'MISSING', `API error: ${err.message}`);
   }
@@ -115,7 +115,7 @@ async function verifyResend(): Promise<void> {
       outboundFound ? outboundUrl : `Not registered: ${outboundUrl}`);
     row('Resend', 'Inbound webhook', inboundFound ? 'VERIFIED' : 'MISSING',
       inboundFound ? inboundUrl : `Not registered: ${inboundUrl}`);
-  } catch (err: any) {
+  } catch (err : unknown) {
     row('Resend', 'Outbound webhook', 'MISSING', `Network error: ${err.message}`);
     row('Resend', 'Inbound webhook',  'MISSING', `Network error: ${err.message}`);
   }
@@ -163,7 +163,7 @@ async function verifyTwilio(): Promise<void> {
       row('Twilio', c.label, match ? 'VERIFIED' : 'MISMATCH',
         match ? actual : `Expected: ${expected_val} | Got: ${actual}`);
     }
-  } catch (err: any) {
+  } catch (err : unknown) {
     for (const c of checks) {
       row('Twilio', c.label, 'MISSING', `SDK error: ${err.message}`);
     }
@@ -192,7 +192,7 @@ async function verifyPlaid(): Promise<void> {
     });
     row('Plaid', 'API connectivity', resp.ok ? 'VERIFIED' : 'MISSING',
       resp.ok ? 'Plaid sandbox reachable — keys valid' : `HTTP ${resp.status}`);
-  } catch (err: any) {
+  } catch (err : unknown) {
     row('Plaid', 'API connectivity', 'MISSING', `Network error: ${err.message}`);
   }
 }

@@ -123,7 +123,7 @@ router.post('/', async (req, res) => {
           eq(plaidTransferAttempts.transferId, transfer_id),
           ne(plaidTransferAttempts.status, 'completed'),
         ));
-      } catch (attemptErr: any) {
+      } catch (attemptErr : unknown) {
         log.warn('[PlaidWebhook] plaid_transfer_attempts completion update failed (non-fatal):', attemptErr?.message);
       }
     }

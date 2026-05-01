@@ -145,7 +145,7 @@ class TrinityNotificationBridge {
         channels: payload.channels,
         deliveryTime: Date.now() - startTime,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       this.deliveryMetrics.totalFailed++;
       errors.push((error instanceof Error ? error.message : String(error)));
       log.error('[TrinityNotificationBridge] Delivery error:', error);
@@ -551,7 +551,7 @@ class TrinityNotificationBridge {
           b => b.status === 'pending' || (b.status !== 'delivered' && b.retryCount < 3)
         );
       }
-      } catch (error: any) {
+      } catch (error : unknown) {
         log.warn('[TrinityNotificationBridge] Batch processing failed (will retry):', error?.message || 'unknown');
       }
     }, 30 * 1000);
@@ -652,7 +652,7 @@ class TrinityNotificationBridge {
     this.watchdogInterval = setInterval(async () => {
       try {
         await this.runWatchdogCheck();
-      } catch (error: any) {
+      } catch (error : unknown) {
         log.warn('[TrinityNotificationWatchdog] Check failed (will retry):', error?.message || 'unknown');
       }
     }, 2 * 60 * 1000);
@@ -712,7 +712,7 @@ class TrinityNotificationBridge {
       if (!dbTest.success) {
         issues.push(`Database notification access issue: ${dbTest.error}`);
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       issues.push(`Database access error: ${(error instanceof Error ? error.message : String(error))}`);
     }
 
@@ -762,7 +762,7 @@ class TrinityNotificationBridge {
         .from(notifications)
         .limit(1);
       return { success: true };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }

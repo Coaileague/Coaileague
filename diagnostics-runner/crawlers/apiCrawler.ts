@@ -293,7 +293,7 @@ export class APICrawler {
           reproducible: true
         });
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       console.error('[APICrawler] Authentication error:', error.message);
       this.issues.push({
         id: generateId(),
@@ -363,7 +363,7 @@ export class APICrawler {
         timestamp: new Date().toISOString()
       };
       
-    } catch (error: any) {
+    } catch (error : unknown) {
       return {
         testCase,
         success: false,

@@ -15,6 +15,7 @@
  */
 
 import { Router } from 'express';
+import { AuthenticatedRequest } from '../rbac';
 import { requireAuth } from '../auth';
 import { pool } from '../db';
 import { z } from 'zod';
@@ -37,7 +38,7 @@ router.get('/events', requireAuth, (req, res) => {
 });
 
 // ─── GET /api/webhooks ────────────────────────────────────────────────────────
-router.get('/', requireAuth, async (req: any, res) => {
+router.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId } = req.user;
 
@@ -62,7 +63,7 @@ const createWebhookSchema = z.object({
   events: z.array(z.string()).min(1),
 });
 
-router.post('/', requireAuth, async (req: any, res) => {
+router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { role, workspaceId, id: userId } = req.user;
 
@@ -122,7 +123,7 @@ const updateWebhookSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-router.put('/:id', requireAuth, async (req: any, res) => {
+router.put('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { role, workspaceId } = req.user;
 
@@ -168,7 +169,7 @@ router.put('/:id', requireAuth, async (req: any, res) => {
 });
 
 // ─── DELETE /api/webhooks/:id ─────────────────────────────────────────────────
-router.delete('/:id', requireAuth, async (req: any, res) => {
+router.delete('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { role, workspaceId } = req.user;
 
@@ -190,7 +191,7 @@ router.delete('/:id', requireAuth, async (req: any, res) => {
 });
 
 // ─── POST /api/webhooks/:id/test ──────────────────────────────────────────────
-router.post('/:id/test', requireAuth, async (req: any, res) => {
+router.post('/:id/test', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId } = req.user;
     const result = await sendTestWebhook(req.params.id, workspaceId);
@@ -202,7 +203,7 @@ router.post('/:id/test', requireAuth, async (req: any, res) => {
 });
 
 // ─── GET /api/webhooks/:id/deliveries ─────────────────────────────────────────
-router.get('/:id/deliveries', requireAuth, async (req: any, res) => {
+router.get('/:id/deliveries', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId } = req.user;
 
@@ -230,7 +231,7 @@ router.get('/:id/deliveries', requireAuth, async (req: any, res) => {
 });
 
 // ─── POST /api/webhooks/:id/retry ─────────────────────────────────────────────
-router.post('/:id/retry', requireAuth, async (req: any, res) => {
+router.post('/:id/retry', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { role, workspaceId } = req.user;
 

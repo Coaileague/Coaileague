@@ -148,7 +148,7 @@ class ElevatedSessionGuardian {
         error: result.error,
         telemetry 
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       const anomalyCode = this.classifyError(error);
       
       const telemetry = await this.emitTelemetry({
@@ -189,7 +189,7 @@ class ElevatedSessionGuardian {
       }
 
       return { isElevated: result.isElevated, context: result, telemetry };
-    } catch (error: any) {
+    } catch (error : unknown) {
       const anomalyCode = this.classifyError(error);
       
       const telemetry = await this.emitTelemetry({
@@ -225,7 +225,7 @@ class ElevatedSessionGuardian {
       log.info(`[ElevatedSessionGuardian] Elevation ${elevationId} revoked by ${revokedBy}: ${reason}`);
       
       return { success: true, telemetry };
-    } catch (error: any) {
+    } catch (error : unknown) {
       const telemetry = await this.emitTelemetry({
         subagentId: this.SUBAGENT_ID,
         subagentName: this.SUBAGENT_NAME,
@@ -346,7 +346,7 @@ class ElevatedSessionGuardian {
 
       this.lastHealthCheck = new Date();
       return report;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[ElevatedSessionGuardian] Diagnostics failed:', error);
       return {
         executionId,

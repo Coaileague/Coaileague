@@ -6,6 +6,7 @@
  * Missing fields show [NOT ON FILE] — no synthetic PII is generated.
  */
 import { Router } from 'express';
+import { AuthenticatedRequest } from '../rbac';
 import { db } from '../db';
 import { employeeDocuments, employees, workspaces } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
@@ -707,7 +708,7 @@ const DOC_GENERATORS: Record<string, (emp: any, ws: any) => string> = {
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
-documentViewRouter.get('/view/:docId', async (req: any, res) => {
+documentViewRouter.get('/view/:docId', async (req: AuthenticatedRequest, res) => {
   try {
     const { docId } = req.params;
     const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
@@ -753,7 +754,7 @@ documentViewRouter.get('/view/:docId', async (req: any, res) => {
   }
 });
 
-documentViewRouter.get('/download/:docId', async (req: any, res) => {
+documentViewRouter.get('/download/:docId', async (req: AuthenticatedRequest, res) => {
   try {
     const { docId } = req.params;
     const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;

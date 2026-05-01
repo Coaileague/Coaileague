@@ -288,7 +288,7 @@ class UnifiedLifecycleManager {
     for (const hook of combinedHooks) {
       try {
         await hook.handler(event);
-      } catch (error: any) {
+      } catch (error : unknown) {
         log.error(`[UnifiedLifecycleManager] Hook '${hook.name}' failed:`, (error instanceof Error ? error.message : String(error)));
       }
     }
@@ -438,7 +438,7 @@ class UnifiedLifecycleManager {
       );
 
       log.info(`[UnifiedLifecycleManager] Memory context restored for user ${session.userId}`);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[UnifiedLifecycleManager] Failed to restore memory context:`, (error instanceof Error ? error.message : String(error)));
     }
   }
@@ -468,7 +468,7 @@ class UnifiedLifecycleManager {
 
       log.info(`[UnifiedLifecycleManager] Memory checkpoint ${checkpointId} saved`);
       return checkpointId;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[UnifiedLifecycleManager] Failed to save memory checkpoint:`, (error instanceof Error ? error.message : String(error)));
       throw error;
     }
@@ -668,7 +668,7 @@ class UnifiedLifecycleManager {
           confidence: event.context.confidenceScore,
           applicableScenarios: [event.context.domain || 'general'],
         });
-      } catch (error: any) {
+      } catch (error : unknown) {
         log.error(`[UnifiedLifecycleManager] Failed to share task insight:`, (error instanceof Error ? error.message : String(error)));
       }
     }

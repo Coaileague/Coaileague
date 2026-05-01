@@ -226,7 +226,7 @@ class MeteredGeminiClient {
         }
       };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[MeteredGemini] ERROR: ${(error instanceof Error ? error.message : String(error))}`);
       
       // Still record the attempt for audit

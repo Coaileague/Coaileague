@@ -194,7 +194,7 @@ export class IntelligentSchedulerSkill extends BaseSkill {
           quantity: 1,
         });
         logs.push(`[IntelligentScheduler] Billed 1 × ai_shift_matching credit`);
-      } catch (creditErr: any) {
+      } catch (creditErr : unknown) {
         logs.push(`[IntelligentScheduler] Credit billing failed (non-blocking): ${creditErr.message}`);
       }
 
@@ -217,7 +217,7 @@ export class IntelligentSchedulerSkill extends BaseSkill {
           processingTimeMs: Date.now() - startTime,
         },
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       logs.push(`[IntelligentScheduler] Error: ${(error instanceof Error ? error.message : String(error))}`);
       return {
         success: false,

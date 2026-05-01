@@ -125,14 +125,14 @@ class ExceptionQueueProcessor {
             case 'escalated': results.escalated++; break;
             case 'expired': results.expired++; break;
           }
-        } catch (error: any) {
+        } catch (error : unknown) {
           results.errors.push(`${exception.id}: ${(error instanceof Error ? error.message : String(error))}`);
         }
       }
 
       log.info('Processed exceptions', { processed: results.processed, autoResolved: results.autoResolved, escalated: results.escalated, expired: results.expired });
       return results;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('Processing failed', { error: (error instanceof Error ? error.message : String(error)) });
       results.errors.push((error instanceof Error ? error.message : String(error)));
       return results;
@@ -223,7 +223,7 @@ class ExceptionQueueProcessor {
         resolution: 'escalated',
         message: `Auto-resolution failed: ${message}`,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return {
         success: false,
         exceptionId: exception.id,
@@ -340,7 +340,7 @@ class ExceptionQueueProcessor {
         message: 'Exception resolved manually',
         resolvedBy: userId,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return {
         success: false,
         exceptionId,

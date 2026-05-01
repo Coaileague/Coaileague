@@ -291,7 +291,7 @@ class EnhancedLLMJudge {
 
       return result;
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[EnhancedLLMJudge] Risk evaluation failed:', error);
       
       return {

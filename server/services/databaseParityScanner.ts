@@ -345,7 +345,7 @@ export async function runParityScan(): Promise<ParityScanResult> {
 
     return result;
     
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error('[ParityScanner] Error during scan:', error);
     addStepResult(result.currentStep, 'failed', (error instanceof Error ? error.message : String(error)));
     result.allTablesHealthy = false;
@@ -373,7 +373,7 @@ export async function executeAutoFix(fixStatements: string[]): Promise<AutoFixRe
       await typedQuery(sql.raw(statement));
       result.statementsExecuted++;
       result.fixedIssues.push(statement);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[ParityScanner] Error executing statement: ${statement}`, error);
       result.errors.push(`${statement}: ${(error instanceof Error ? error.message : String(error))}`);
       result.success = false;

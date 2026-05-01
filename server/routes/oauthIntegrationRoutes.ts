@@ -48,7 +48,7 @@ const getQuickBooksApiBase = () => {
 function requireWorkspaceMembership(
   workspaceIdSource: 'body' | 'params' | 'query' = 'body'
 ): RequestHandler {
-  return async (req: any, res: Response, next) => {
+  return async (req: AuthenticatedRequest, res: Response, next) => {
     try {
       const userId = req.session?.userId;
       if (!userId) {

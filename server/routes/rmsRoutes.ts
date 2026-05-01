@@ -1,4 +1,5 @@
 import { sanitizeError } from '../middleware/errorHandler';
+import { AuthenticatedRequest } from '../rbac';
 import { Router } from "express";
 import { NotificationDeliveryService } from '../services/notificationDeliveryService';
 import { pool } from "../db";
@@ -27,7 +28,7 @@ function genNum(prefix: string) {
   return `${prefix}-${y}${m}${d}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 }
 
-function wid(req: any) {
+function wid(req: AuthenticatedRequest) {
   return req.workspaceId || req.session?.workspaceId;
 }
 
@@ -38,7 +39,7 @@ async function q(text: string, params: any[] = []) {
 
 // ─── INCIDENT REPORTS ────────────────────────────────────────────────────────
 
-rmsRouter.get("/incidents", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/incidents", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { status, category, siteId, limit = 50, offset = 0 } = req.query;
@@ -58,7 +59,7 @@ rmsRouter.get("/incidents", requireAuth as any, ensureWorkspaceAccess as any, as
 // In-memory idempotency cache for RMS submissions (5-minute TTL)
 const rmsIdempotencyCache = new Map<string, { result: any; expiresAt: number }>();
 
-rmsRouter.post("/incidents/:id/ai-narrative", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/incidents/:id/ai-narrative", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const rows = await q(`SELECT * FROM incident_reports WHERE id = $1 AND workspace_id = $2`, [req.params.id, workspaceId]);
@@ -77,7 +78,7 @@ rmsRouter.post("/incidents/:id/ai-narrative", requireAuth as any, ensureWorkspac
 
 // ─── DAILY ACTIVITY REPORTS ──────────────────────────────────────────────────
 
-rmsRouter.get("/dars", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/dars", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { employeeId, status, siteId, limit = 50, offset = 0 } = req.query;
@@ -93,7 +94,7 @@ rmsRouter.get("/dars", requireAuth as any, ensureWorkspaceAccess as any, async (
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-rmsRouter.post("/dars", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/dars", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const authUserId = req.user?.id;
@@ -113,7 +114,7 @@ rmsRouter.post("/dars", requireAuth as any, ensureWorkspaceAccess as any, async 
   } catch (e: unknown) { res.status(400).json({ error: sanitizeError(e) }); }
 });
 
-rmsRouter.post("/dars/:id/approve", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/dars/:id/approve", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { supervisorId } = req.body;
@@ -127,7 +128,7 @@ rmsRouter.post("/dars/:id/approve", requireAuth as any, ensureWorkspaceAccess as
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-rmsRouter.post("/dars/:id/verify", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/dars/:id/verify", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const authenticatedUserId = req.user?.id;
@@ -152,7 +153,7 @@ rmsRouter.post("/dars/:id/verify", requireAuth as any, ensureWorkspaceAccess as 
           );
           dar.pdf_url = pdfUrl;
         }
-      } catch (pdfErr: any) {
+      } catch (pdfErr : unknown) {
         log.error('[DAR] Auto PDF generation failed (non-blocking):', pdfErr?.message);
       }
     }
@@ -199,7 +200,7 @@ rmsRouter.post("/dars/:id/verify", requireAuth as any, ensureWorkspaceAccess as 
           },
         });
       }
-    } catch (autoSendErr: any) {
+    } catch (autoSendErr : unknown) {
       log.warn('[DAR] Auto-send check failed (non-fatal):', autoSendErr?.message);
     }
 
@@ -208,7 +209,7 @@ rmsRouter.post("/dars/:id/verify", requireAuth as any, ensureWorkspaceAccess as 
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-rmsRouter.post("/dars/:id/generate-pdf", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/dars/:id/generate-pdf", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { generateDarPdf } = await import("../services/darPdfService");
@@ -222,7 +223,7 @@ rmsRouter.post("/dars/:id/generate-pdf", requireAuth as any, ensureWorkspaceAcce
 
 // ── DAR Narrative: Download as formatted HTML document ─────────────────────
 // ── Incident Narrative: Download formatted document ─────────────────────────
-rmsRouter.post("/shift-reports/:id/generate-pdf", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/shift-reports/:id/generate-pdf", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { generateShiftTransparencyPdf } = await import("../services/darPdfService");
@@ -264,7 +265,7 @@ async function streamPdfFromStorage(pdfPath: string, filename: string, res: any)
   }
 }
 
-rmsRouter.get("/shift-reports", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/shift-reports", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { status, limit = 50, offset = 0 } = req.query;
@@ -280,7 +281,7 @@ rmsRouter.get("/shift-reports", requireAuth as any, ensureWorkspaceAccess as any
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-rmsRouter.post("/shift-reports/:id/submit", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/shift-reports/:id/submit", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     await q(`UPDATE dar_reports SET status='pending_review', updated_at=NOW() WHERE id=$1 AND workspace_id=$2`, [req.params.id, workspaceId]);
@@ -338,7 +339,7 @@ rmsRouter.post("/shift-reports/:id/submit", requireAuth as any, ensureWorkspaceA
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-rmsRouter.post("/shift-reports/:id/send-to-client", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/shift-reports/:id/send-to-client", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { recipientEmail } = req.body;
@@ -379,7 +380,7 @@ rmsRouter.post("/shift-reports/:id/send-to-client", requireAuth as any, ensureWo
 
 // ─── VISITOR LOGS ────────────────────────────────────────────────────────────
 
-rmsRouter.get("/visitors/stats", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/visitors/stats", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const [stats] = await q(`
@@ -410,7 +411,7 @@ rmsRouter.get("/visitors/stats", requireAuth as any, ensureWorkspaceAccess as an
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-rmsRouter.post("/visitors/pre-register", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/visitors/pre-register", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { 
@@ -453,7 +454,7 @@ rmsRouter.post("/visitors/pre-register", requireAuth as any, ensureWorkspaceAcce
   } catch (e: unknown) { res.status(400).json({ error: sanitizeError(e) }); }
 });
 
-rmsRouter.get("/visitors", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/visitors", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { status, siteId, search, limit = 50, offset = 0 } = req.query;
@@ -488,7 +489,7 @@ rmsRouter.get("/visitors", requireAuth as any, ensureWorkspaceAccess as any, asy
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-rmsRouter.put("/visitors/:id", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.put("/visitors/:id", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { notes, visitorBadgeNumber, hostName, purpose } = req.body;
@@ -507,7 +508,7 @@ rmsRouter.put("/visitors/:id", requireAuth as any, ensureWorkspaceAccess as any,
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-rmsRouter.post("/visitors", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/visitors", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { siteId, siteName, visitorName, visitorCompany, visitorIdType, visitorIdNumber, visitorBadgeNumber, hostName, hostEmployeeId, purpose, vehiclePlate, vehicleDescription, checkedInBy, notes, idPhotoUrl, vehicleFrontPhotoUrl, vehicleRearPhotoUrl, visitorPhotoUrl, expectedDeparture } = req.body;
@@ -542,7 +543,7 @@ rmsRouter.post("/visitors", requireAuth as any, ensureWorkspaceAccess as any, as
 
 // ─── KEY CONTROL ─────────────────────────────────────────────────────────────
 
-rmsRouter.get("/key-control", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/key-control", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { siteId, limit = 50, offset = 0 } = req.query;
@@ -554,7 +555,7 @@ rmsRouter.get("/key-control", requireAuth as any, ensureWorkspaceAccess as any, 
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-rmsRouter.post("/key-control", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/key-control", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { siteId, siteName, keyIdentifier, keyDescription, checkedOutByEmployeeId, checkedOutByName, expectedReturnAt, purpose, notes } = req.body;
@@ -569,7 +570,7 @@ rmsRouter.post("/key-control", requireAuth as any, ensureWorkspaceAccess as any,
 
 // ─── LOST & FOUND ────────────────────────────────────────────────────────────
 
-rmsRouter.get("/lost-found", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/lost-found", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { status, limit = 50, offset = 0 } = req.query;
@@ -581,7 +582,7 @@ rmsRouter.get("/lost-found", requireAuth as any, ensureWorkspaceAccess as any, a
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-rmsRouter.post("/lost-found", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/lost-found", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { siteId, siteName, description, category, foundLocation, foundByEmployeeId, foundByName, storageLocation, notes } = req.body;
@@ -597,7 +598,7 @@ rmsRouter.post("/lost-found", requireAuth as any, ensureWorkspaceAccess as any, 
 
 // ─── TRESPASS NOTICES ────────────────────────────────────────────────────────
 
-rmsRouter.get("/trespass", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/trespass", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { status, siteId, limit = 50, offset = 0 } = req.query;
@@ -611,7 +612,7 @@ rmsRouter.get("/trespass", requireAuth as any, ensureWorkspaceAccess as any, asy
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-rmsRouter.post("/trespass", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/trespass", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { siteId, siteName, subjectName, subjectDob, subjectDescription, reason, issuedByEmployeeId, issuedByName, validUntil, isPermanent = false, witnessName, policeNotified = false, policeReportNumber } = req.body;
@@ -627,7 +628,7 @@ rmsRouter.post("/trespass", requireAuth as any, ensureWorkspaceAccess as any, as
 
 // ─── RMS CASES ───────────────────────────────────────────────────────────────
 
-rmsRouter.get("/cases", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/cases", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { status, priority, limit = 50, offset = 0 } = req.query;
@@ -641,7 +642,7 @@ rmsRouter.get("/cases", requireAuth as any, ensureWorkspaceAccess as any, async 
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-rmsRouter.post("/cases", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/cases", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { title, category, priority = "medium", description, siteId, siteName, assignedToEmployeeId, assignedToName, incidentReportIds, policeCaseNumber } = req.body;
@@ -658,7 +659,7 @@ rmsRouter.post("/cases", requireAuth as any, ensureWorkspaceAccess as any, async
 
 // ─── BOLO ALERTS ─────────────────────────────────────────────────────────────
 
-rmsRouter.get("/bolo", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/bolo", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { active, limit = 50, offset = 0 } = req.query;
@@ -670,7 +671,7 @@ rmsRouter.get("/bolo", requireAuth as any, ensureWorkspaceAccess as any, async (
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-rmsRouter.post("/bolo", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/bolo", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { subjectName, subjectDob, subjectDescription, photoUrl, reason, expiresAt, createdByName } = req.body;
@@ -687,7 +688,7 @@ rmsRouter.post("/bolo", requireAuth as any, ensureWorkspaceAccess as any, async 
 
 // ─── EVIDENCE ────────────────────────────────────────────────────────────────
 
-rmsRouter.get("/evidence", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/evidence", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { caseId, status, limit = 50, offset = 0 } = req.query;
@@ -702,7 +703,7 @@ rmsRouter.get("/evidence", requireAuth as any, ensureWorkspaceAccess as any, asy
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-rmsRouter.post("/evidence", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/evidence", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { caseId, description, category, storageLocation, photoUrls, policeCaseNumber, currentCustodianName, createdByName } = req.body;
@@ -721,7 +722,7 @@ rmsRouter.post("/evidence", requireAuth as any, ensureWorkspaceAccess as any, as
   } catch (e: unknown) { res.status(400).json({ error: sanitizeError(e) }); }
 });
 
-rmsRouter.get("/evidence/:id/custody-log", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/evidence/:id/custody-log", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const log = await q(`SELECT * FROM evidence_custody_log WHERE evidence_id=$1 AND workspace_id=$2 ORDER BY transferred_at ASC`, [req.params.id, wid(req)]);
     res.json({ log });
@@ -730,7 +731,7 @@ rmsRouter.get("/evidence/:id/custody-log", requireAuth as any, ensureWorkspaceAc
 
 // ─── STATS ───────────────────────────────────────────────────────────────────
 
-rmsRouter.get("/stats", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/stats", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const [inc, dar, vis, keys, lf, tn, cases, bolos] = await Promise.all([
@@ -758,7 +759,7 @@ rmsRouter.get("/stats", requireAuth as any, ensureWorkspaceAccess as any, async 
 
 // ─── SITE LOOKUP FOR FORMS ────────────────────────────────────────────────────
 
-rmsRouter.get("/sites-lookup", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/sites-lookup", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const rows = await q(`
@@ -782,7 +783,7 @@ const RMS_ALLOWED_MIME_TYPES = new Set([
 ]);
 const RMS_ALLOWED_CATEGORIES = new Set(['photos', 'evidence', 'signatures', 'documents', 'dar-photos', 'scene']);
 
-rmsRouter.post("/upload", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/upload", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { base64Data, fileName, category } = req.body;
@@ -830,7 +831,7 @@ const reportAuditTrail: Map<string, Array<{
   metadata: any; createdAt: string;
 }>> = new Map();
 
-rmsRouter.get("/reports/:id/audit-trail", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/reports/:id/audit-trail", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const reportId = req.params.id;
@@ -859,7 +860,7 @@ rmsRouter.get("/reports/:id/audit-trail", requireAuth as any, ensureWorkspaceAcc
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-rmsRouter.get("/reports/audit-summary", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.get("/reports/audit-summary", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     let summaries: any[] = [];
@@ -914,7 +915,7 @@ rmsRouter.get("/reports/audit-summary", requireAuth as any, ensureWorkspaceAcces
   } catch (e: unknown) { res.status(500).json({ error: sanitizeError(e) }); }
 });
 
-rmsRouter.post("/upload-photo", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+rmsRouter.post("/upload-photo", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const { base64Data, fileName, category } = req.body;

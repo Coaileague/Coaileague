@@ -229,7 +229,7 @@ export function CalendarSyncDialog({ open, onOpenChange, employeeId }: CalendarS
         title: 'Export successful',
         description: 'Your schedule has been downloaded as an iCal file',
       });
-    } catch (error: any) {
+    } catch (error : unknown) {
       toast({
         title: 'Export failed',
         description: error.message,

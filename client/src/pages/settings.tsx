@@ -4405,7 +4405,7 @@ export default function Settings() {
                     const data = await res.json();
                     setMfaSetupData(data);
                     setMfaSetupOpen(true);
-                  } catch (error: any) {
+                  } catch (error : unknown) {
                     toast({ title: "Error", description: error.message || "Failed to start 2FA setup", variant: "destructive" });
                   }
                 }}
@@ -5488,7 +5488,7 @@ function CalendarIntegrationCard() {
         description: data.message || `Imported ${data.result?.eventsImported || 0} events`,
         variant: data.success ? "default" : "destructive",
       });
-    } catch (error: any) {
+    } catch (error : unknown) {
       toast({
         title: "Error",
         description: error.message || "Failed to import calendar",

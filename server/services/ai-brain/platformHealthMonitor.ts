@@ -78,7 +78,7 @@ async function checkDatabase(): Promise<HealthCheckResult> {
       message: latency > 1000 ? 'High latency detected' : 'Connected',
       lastChecked: new Date(),
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     return {
       service: 'database',
       status: 'unhealthy',
@@ -100,7 +100,7 @@ async function checkAIBrain(): Promise<HealthCheckResult> {
       message: geminiKey ? 'Gemini API configured' : 'Missing Gemini API key',
       lastChecked: new Date(),
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     return {
       service: 'ai_brain',
       status: 'unhealthy',
@@ -122,7 +122,7 @@ async function checkStripeIntegration(): Promise<HealthCheckResult> {
       message: stripeKey ? 'Stripe configured' : 'Missing Stripe API key',
       lastChecked: new Date(),
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     return {
       service: 'stripe',
       status: 'unknown',
@@ -144,7 +144,7 @@ async function checkEmailService(): Promise<HealthCheckResult> {
       message: resendKey ? 'Resend API configured' : 'Missing Resend API key',
       lastChecked: new Date(),
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     return {
       service: 'email',
       status: 'unknown',
@@ -185,7 +185,7 @@ async function checkNotificationSystem(): Promise<HealthCheckResult> {
         : 'Watchdog not running',
       lastChecked: new Date(),
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     return {
       service: 'notifications',
       status: 'unknown',

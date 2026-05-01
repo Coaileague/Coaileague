@@ -162,7 +162,7 @@ router.get("/policies/:id/acknowledgments", requireManager, async (req: Authenti
   }
 });
 
-router.get("/compliance-reports/labor-violations", requireAuth, async (req: any, res) => {
+router.get("/compliance-reports/labor-violations", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -189,7 +189,7 @@ router.get("/compliance-reports/labor-violations", requireAuth, async (req: any,
   }
 });
 
-router.get("/compliance-reports/tax-remittance", requireAuth, async (req: any, res) => {
+router.get("/compliance-reports/tax-remittance", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -216,7 +216,7 @@ router.get("/compliance-reports/tax-remittance", requireAuth, async (req: any, r
   }
 });
 
-router.get("/compliance-reports/audit-log", requireAuth, async (req: any, res) => {
+router.get("/compliance-reports/audit-log", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -244,7 +244,7 @@ router.get("/compliance-reports/audit-log", requireAuth, async (req: any, res) =
   }
 });
 
-router.get("/compliance/summary", requireAuth, async (req: any, res) => {
+router.get("/compliance/summary", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);

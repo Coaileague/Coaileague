@@ -175,7 +175,7 @@ export async function executeGeminiToolCall(
       conversationId: context.conversationId,
     };
 
-  } catch (error: any) {
+  } catch (error : unknown) {
     console.error(`[Tool Bridge] Execution error for ${actionId}:`, error);
     
     // Propagate detailed error information back to Gemini

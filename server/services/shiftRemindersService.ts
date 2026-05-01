@@ -183,7 +183,7 @@ export async function sendShiftReminder(
         workspaceId,
       );
       result.channels.email = { sent: true };
-    } catch (error: any) {
+    } catch (error : unknown) {
       result.channels.email = { sent: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
@@ -202,7 +202,7 @@ export async function sendShiftReminder(
         }
       });
       result.channels.sms = { sent: !smsResult.startsWith('skipped'), error: smsResult.startsWith('skipped') ? smsResult : undefined };
-    } catch (error: any) {
+    } catch (error : unknown) {
       result.channels.sms = { sent: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   } else if (channels.includes('sms') && employee.phone) {
@@ -219,7 +219,7 @@ export async function sendShiftReminder(
         }
       });
       result.channels.sms = { sent: !smsResult.startsWith('skipped'), error: smsResult.startsWith('skipped') ? smsResult : undefined };
-    } catch (error: any) {
+    } catch (error : unknown) {
       result.channels.sms = { sent: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
@@ -238,7 +238,7 @@ export async function sendShiftReminder(
         metadata: { shiftDate, shiftTime, location },
       });
       result.channels.push = { sent: true };
-    } catch (error: any) {
+    } catch (error : unknown) {
       result.channels.push = { sent: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }

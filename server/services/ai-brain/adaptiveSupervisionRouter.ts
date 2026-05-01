@@ -303,7 +303,7 @@ class AdaptiveSupervisionRouter {
         status: 'active',
         createdAt: new Date(),
       });
-    } catch (persistErr: any) {
+    } catch (persistErr : unknown) {
       log.warn('[Handoff] Persist start failed (non-fatal):', persistErr?.message);
     }
 
@@ -348,7 +348,7 @@ class AdaptiveSupervisionRouter {
 
       return result;
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       const result: HandoffResult = {
         handoffId,
         success: false,
@@ -368,7 +368,7 @@ class AdaptiveSupervisionRouter {
         await db.update(supervisorHandoffs)
           .set({ status: 'resolved', resolvedAt: new Date() })
           .where(eq(supervisorHandoffs.id, handoffId));
-      } catch (persistErr: any) {
+      } catch (persistErr : unknown) {
         log.warn('[Handoff] Persist resolve failed (non-fatal):', persistErr?.message);
       }
     }

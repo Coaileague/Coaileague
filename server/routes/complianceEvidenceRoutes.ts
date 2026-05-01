@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Router } from "express";
 import { pool } from "../db";
-import { requireAuth, requireManager } from "../rbac";
+import { requireAuth, requireManager, AuthenticatedRequest} from "../rbac";
 import { platformActionHub } from "../services/helpai/platformActionHub";
 import { platformEventBus } from "../services/platformEventBus";
 import { registerLegacyBootstrap } from "../services/legacyBootstrapRegistry";
@@ -98,7 +98,7 @@ platformActionHub.registerAction({
 // --- ROUTES ---
 
 // GET /api/compliance-evidence/pending (requireAuth, manager+)
-router.get("/pending", requireManager, async (req: any, res) => {
+router.get("/pending", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await pool.query(`
       SELECT ce.*, e.name as officer_name
@@ -114,7 +114,7 @@ router.get("/pending", requireManager, async (req: any, res) => {
 });
 
 // GET /api/compliance-evidence/expiring (requireAuth)
-router.get("/expiring", requireAuth, async (req: any, res) => {
+router.get("/expiring", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await pool.query(`
       SELECT ce.*, e.name as officer_name
@@ -133,7 +133,7 @@ router.get("/expiring", requireAuth, async (req: any, res) => {
 });
 
 // GET /api/compliance-evidence/:officerId (requireAuth)
-router.get("/:officerId", requireAuth, async (req: any, res) => {
+router.get("/:officerId", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { officerId } = req.params;
     const result = await pool.query(`
@@ -157,7 +157,7 @@ const SubmitEvidenceSchema = z.object({
 });
 
 // POST /api/compliance-evidence (requireAuth)
-router.post("/", requireAuth, async (req: any, res) => {
+router.post("/", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { officerId, evidenceType, documentUrl, expiryDate } = req.body;
 
@@ -226,7 +226,7 @@ router.post("/", requireAuth, async (req: any, res) => {
 });
 
 // POST /api/compliance-evidence/:id/verify (requireAuth, manager+)
-router.post("/:id/verify", requireManager, async (req: any, res) => {
+router.post("/:id/verify", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const client = await pool.connect();
@@ -266,7 +266,7 @@ router.post("/:id/verify", requireManager, async (req: any, res) => {
 });
 
 // POST /api/compliance-evidence/:id/reject (requireAuth, manager+)
-router.post("/:id/reject", requireManager, async (req: any, res) => {
+router.post("/:id/reject", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const { rejectionReason } = req.body;

@@ -83,7 +83,7 @@ async function main() {
         blocker: false,
       });
     }
-  } catch (err: any) {
+  } catch (err : unknown) {
     results.push({
       name: 'Health endpoint reachable',
       pass: false,
@@ -158,7 +158,7 @@ async function main() {
           blocker: true,
         });
       }
-    } catch (err: any) {
+    } catch (err : unknown) {
       results.push({
         name: 'Statewide DB check',
         pass: false,

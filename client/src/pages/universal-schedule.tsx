@@ -1341,7 +1341,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       });
       toast({ title: 'Published', description: `${draftShiftIds.length} shifts published` });
       queryClient.invalidateQueries({ queryKey: ['/api/shifts', workspaceId] });
-    } catch (error: any) {
+    } catch (error : unknown) {
       toast({ variant: 'destructive', title: 'Publish Failed', description: error.message });
     }
   }, [shifts, selectedDay, toast]);

@@ -514,7 +514,7 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
             canAskTrinity: false,
           });
         }
-      } catch (licenseErr: any) {
+      } catch (licenseErr : unknown) {
         log.warn('[ClockIn] License check error (non-blocking):', licenseErr.message);
       }
     }
@@ -829,7 +829,7 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
         latitude: newEntry.clockInLatitude,
         longitude: newEntry.clockInLongitude
       });
-    } catch (webhookErr: any) {
+    } catch (webhookErr : unknown) {
       log.warn('[TimeEntry] Failed to log webhook error to audit log', { error: webhookErr.message });
     }
 
@@ -1151,7 +1151,7 @@ timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Aut
         latitude: latitude || null,
         longitude: longitude || null
       });
-    } catch (webhookErr: any) {
+    } catch (webhookErr : unknown) {
       log.warn('[TimeEntry] Failed to log webhook error to audit log', { error: webhookErr.message });
     }
 
@@ -1265,7 +1265,7 @@ timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Aut
               endTime: new Date(incomingShift.endTime),
             }
           );
-        } catch (handoffErr: any) {
+        } catch (handoffErr : unknown) {
           log.warn('[TimeEntry] Shift handoff initiation failed (non-blocking):', handoffErr?.message || String(handoffErr));
         }
       });

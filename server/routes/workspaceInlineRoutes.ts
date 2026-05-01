@@ -913,7 +913,7 @@ async function applyAutomationUpdate(params: {
     }
   });
 
-  router.post('/upgrade', requireAuth, async (req: any, res) => {
+  router.post('/upgrade', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
@@ -1916,7 +1916,7 @@ router.post('/branding/logo', requireAuth, logoUpload.single('logo'), async (req
 // STORAGE USAGE — Option B category breakdown for the settings dashboard
 // GET /api/workspace/storage-usage
 // ============================================================================
-router.get('/storage-usage', requireAuth, async (req: any, res) => {
+router.get('/storage-usage', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId: string | undefined =
       req.workspaceId || req.user?.workspaceId || req.session?.currentWorkspaceId;

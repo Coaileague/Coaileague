@@ -29,7 +29,7 @@ async function run() {
   try {
     const dbModule = await import('../../server/db');
     db = dbModule.db;
-  } catch (err: any) {
+  } catch (err : unknown) {
     console.error('Cannot connect to DB:', err.message);
     process.exit(1);
   }
@@ -84,7 +84,7 @@ async function run() {
         sql.raw(`DELETE FROM ${table} WHERE workspace_id = '${ACME_ID}'`)
       );
       console.log(`✅ Cleared ${table}: ${result.rowCount ?? 'ok'} rows`);
-    } catch (err: any) {
+    } catch (err : unknown) {
       console.warn(`⚠ Could not clear ${table}: ${err.message}`);
     }
   }

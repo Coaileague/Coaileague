@@ -140,7 +140,7 @@ class TrinityReflectionEngineService {
       }
       
       return { clean: errors.length === 0, errors };
-    } catch (error: any) {
+    } catch (error : unknown) {
       // tsc returns non-zero exit code on errors
       const output = (error.stdout || '') + (error.stderr || '');
       const errorLines = output.split('\n').filter((line: string) => 
@@ -222,7 +222,7 @@ class TrinityReflectionEngineService {
       }
 
       return this.parseReflectionResponse(result.text, context);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[TrinityReflection] Error during reflection:', (error instanceof Error ? error.message : String(error)));
       return {
         shouldRetry: context.attemptNumber < context.maxAttempts,

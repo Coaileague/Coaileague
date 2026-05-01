@@ -106,7 +106,7 @@ export default function ResetPassword() {
         title: "Password Reset Successful",
         description: "You can now log in with your new password.",
       });
-    } catch (error: any) {
+    } catch (error : unknown) {
       toast({
         title: "Error",
         description: error.message || "Something went wrong. Please try again.",

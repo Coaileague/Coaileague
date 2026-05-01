@@ -105,7 +105,7 @@ export async function registerPushSubscription(
 
     log.info(`[PushNotification] Created subscription ${inserted.id} for user ${userId}`);
     return { success: true, subscriptionId: inserted.id };
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error('[PushNotification] Registration error:', error);
     return { success: false, error: (error instanceof Error ? error.message : String(error)) };
   }
@@ -133,7 +133,7 @@ export async function unregisterPushSubscription(
 
     log.info(`[PushNotification] Unsubscribed ${unsubscribed} subscription(s) for user ${userId}`);
     return { success: true, unsubscribed };
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error('[PushNotification] Unsubscribe error:', error);
     return { success: false, unsubscribed: 0 };
   }
@@ -198,7 +198,7 @@ export async function sendPushToUser(
         attemptCount: 1,
         sentAt: new Date(),
       }).onConflictDoNothing().catch((err) => log.warn('[pushNotificationService] Fire-and-forget failed:', err));
-    } catch (error: any) {
+    } catch (error : unknown) {
       results.failed++;
       results.errors.push((error instanceof Error ? error.message : String(error)));
 

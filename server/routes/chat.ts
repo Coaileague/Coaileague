@@ -74,7 +74,7 @@ const router = Router();
   });
 
   // Create new conversation
-  router.post('/api/chat/conversations', requireAuth, async (req: any, res) => {
+  router.post('/api/chat/conversations', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const workspace = await storage.getWorkspaceByOwnerId(userId) || 
@@ -200,7 +200,7 @@ const router = Router();
   });
 
   // Update conversation (assign agent, change status, etc.)
-  router.patch('/api/chat/conversations/:id', requireAuth, async (req: any, res) => {
+  router.patch('/api/chat/conversations/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;
       const userId = req.user?.id || req.user?.claims?.sub;
@@ -236,7 +236,7 @@ const router = Router();
   });
 
   // Close conversation
-  router.post('/api/chat/conversations/:id/close', requireAuth, async (req: any, res) => {
+  router.post('/api/chat/conversations/:id/close', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;
       const userId = req.user?.id || req.user?.claims?.sub;
@@ -416,7 +416,7 @@ const router = Router();
   });
 
   // Grant voice to user (remove silence) - Managers and Owners only
-  router.post('/api/chat/conversations/:id/grant-voice', requireManager, async (req: any, res) => {
+  router.post('/api/chat/conversations/:id/grant-voice', requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;
       const userId = req.user?.id;
@@ -467,7 +467,7 @@ const router = Router();
   });
 
   // Help bot: Send AI response
-  router.post('/api/chat/help-bot/respond', requireAuth, async (req: any, res) => {
+  router.post('/api/chat/help-bot/respond', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { conversationId, userMessage, previousMessages } = req.body;
       const userId = req.user?.id || req.user?.claims?.sub;

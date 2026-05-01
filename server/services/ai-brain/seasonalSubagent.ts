@@ -232,7 +232,7 @@ export class SeasonalSubagent {
     this.checkInterval = setInterval(async () => {
       try {
         await this.checkAndApplySeasonalTheme();
-      } catch (error: any) {
+      } catch (error : unknown) {
         log.warn('[SeasonalSubagent] Theme check failed (will retry):', error?.message || 'unknown');
       }
     }, this.CHECK_INTERVAL_MS);

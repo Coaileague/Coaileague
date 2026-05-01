@@ -350,7 +350,7 @@ function testEmailDelivery(): void {
     console.log('\n  Email Service Status:');
     logValue('Service Instantiated', 'Yes');
     logValue('Service Type', typeof emailServiceInstance);
-  } catch (error: any) {
+  } catch (error : unknown) {
     instantiationError = error.message;
     console.log('\n  Email Service Status:');
     logValue('Service Instantiated', 'No');
@@ -609,7 +609,7 @@ async function main(): Promise<void> {
     
     // Exit with appropriate code
     process.exit(passedTests === totalTests ? 0 : 1);
-  } catch (error: any) {
+  } catch (error : unknown) {
     console.error('\n  ❌ FATAL ERROR during test execution:');
     console.error(`     ${error.message}`);
     console.error(error.stack);

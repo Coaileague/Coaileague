@@ -268,17 +268,17 @@ function isMfaMandatory(role: string): boolean {
 }
 
 async function generateAndSendSupportOtp(userId: string): Promise<{success: boolean; message?: string}> {
-  // TODO: Full OTP implementation via Resend/SMS
+  // PLANNED: OTP via Resend (email) + Twilio (SMS) — see server/services/notifications/otpService.ts
   return { success: false, message: 'OTP service not yet configured. Contact support.' };
 }
 
 async function adminResetUserMfa(targetUserId: string, adminId: string): Promise<void> {
-  // TODO: Reset MFA for user — update users table
+  // PLANNED: MFA reset — update users.mfaEnabled=false, users.mfaSecret=null, log to audit_log
   await pool.query('UPDATE users SET mfa_enabled = false, mfa_secret = null WHERE id = $1', [targetUserId])
     .catch(() => {});
 }
 
-async function getActiveSessions(req: any): Promise<any[]> {
+async function getActiveSessions(req: AuthenticatedRequest): Promise<any[]> {
   // Return active sessions for user from express-session store
   return [];
 }
@@ -289,17 +289,17 @@ async function removeSession(sessionId: string): Promise<void> {
 }
 
 async function isDeviceTrusted(userId: string, deviceToken: string): Promise<boolean> {
-  // TODO: Implement device trust via JWT or DB record
+  // PLANNED: Device trust — store deviceId in device_trust_tokens table, TTL 30d
   return false;
 }
 
 async function verifySupportOtp(userId: string, otp: string): Promise<boolean> {
-  // TODO: Verify OTP from support flow
+  // PLANNED: Verify OTP — check otp_tokens table where token=input AND expires_at>NOW()
   return false;
 }
 
 async function trustDevice(userId: string, ipAddress: string, userAgent: string, res: any): Promise<void> {
-  // TODO: Issue device trust cookie (Phase 53 - MFA trusted devices)
+  // PLANNED: Device trust cookie — JWT signed with deviceId, 30d TTL, stored in device_trust_tokens
   // Generates a signed JWT stored in dt_token cookie
   try {
     const crypto = await import('crypto');
@@ -948,7 +948,7 @@ router.post("/api/auth/mfa/verify", async (req, res) => {
 // PHASE 53 — Active Sessions Management
 // ============================================================================
 
-router.get("/api/auth/sessions", requireAuth, async (req: any, res) => {
+router.get("/api/auth/sessions", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const sessions = await getActiveSessions(req.user.id);
     return res.json({
@@ -966,7 +966,7 @@ router.get("/api/auth/sessions", requireAuth, async (req: any, res) => {
   }
 });
 
-router.delete("/api/auth/sessions/:id", requireAuth, async (req: any, res) => {
+router.delete("/api/auth/sessions/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT session_id FROM user_sessions WHERE id = $1 AND user_id = $2`,
@@ -985,7 +985,7 @@ router.delete("/api/auth/sessions/:id", requireAuth, async (req: any, res) => {
 // PHASE 53 — Admin MFA Reset (org_owner / platform_staff only)
 // ============================================================================
 
-router.post("/api/mfa/admin-reset", requireAuth, async (req: any, res) => {
+router.post("/api/mfa/admin-reset", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { targetUserId } = req.body;
     if (!targetUserId) return res.status(400).json({ error: 'targetUserId required' });
@@ -1041,7 +1041,7 @@ const DEV_ACCOUNTS = {
   },
 } as const;
 
-async function devLoginById(userId: string, targetWorkspaceId: string, label: string, req: any, res: any) {
+async function devLoginById(userId: string, targetWorkspaceId: string, label: string, req: AuthenticatedRequest, res: any) {
   if (isProduction()) {
     return res.status(404).json({ message: "Not found" });
   }

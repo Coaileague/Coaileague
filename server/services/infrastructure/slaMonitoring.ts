@@ -675,7 +675,7 @@ class SLAMonitoringService {
     this.reportInterval = setInterval(async () => {
       try {
         await this.generateReport();
-      } catch (error: any) {
+      } catch (error : unknown) {
         log.warn('[SLAMonitoring] Report generation failed (will retry):', error?.message || 'unknown');
       }
     }, 60 * 60 * 1000);

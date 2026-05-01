@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { AuthenticatedRequest } from '../rbac';
 import { pool, db } from "../db";
 import { sql } from "drizzle-orm";
 import { requireAuth } from "../auth";
@@ -13,11 +14,11 @@ const log = createLogger('IncidentPipelineRoutes');
 
 export const incidentPipelineRouter = Router();
 
-function wid(req: any): string {
+function wid(req: AuthenticatedRequest): string {
   return req.workspaceId || req.session?.workspaceId;
 }
 
-function uid(req: any): string {
+function uid(req: AuthenticatedRequest): string {
   return req.user?.id || req.session?.userId;
 }
 
@@ -69,7 +70,7 @@ const createSchema = z.object({
   occurredAt: z.string().optional().nullable(),
 });
 
-incidentPipelineRouter.post("/", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+incidentPipelineRouter.post("/", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const userId = uid(req);
@@ -184,7 +185,7 @@ incidentPipelineRouter.post("/", requireAuth as any, ensureWorkspaceAccess as an
           );
           log.info(`[IncidentPipeline] PDF vaulted for incident ${incident.incident_number} — vault id ${vaultResult.vault.id}`);
         }
-      } catch (pdfErr: any) {
+      } catch (pdfErr : unknown) {
         log.warn(`[IncidentPipeline] PDF vault failed for ${id} (non-fatal):`, pdfErr?.message);
       }
     });
@@ -196,7 +197,7 @@ incidentPipelineRouter.post("/", requireAuth as any, ensureWorkspaceAccess as an
   }
 });
 
-incidentPipelineRouter.get("/", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+incidentPipelineRouter.get("/", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
@@ -226,7 +227,7 @@ incidentPipelineRouter.get("/", requireAuth as any, ensureWorkspaceAccess as any
   }
 });
 
-incidentPipelineRouter.get("/:id", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+incidentPipelineRouter.get("/:id", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     const workspaceId = wid(req);
     const rows = await q(
@@ -264,14 +265,14 @@ const statusUpdateSchema = z.object({
 
 const MANAGER_ROLES = ["org_owner", "co_owner", "manager", "org_manager", "department_manager", "supervisor"];
 
-function hasManagerRole(req: any): boolean {
+function hasManagerRole(req: AuthenticatedRequest): boolean {
   const role = req.workspaceRole || req.session?.workspaceRole || req.user?.platformRole;
   if (MANAGER_ROLES.includes(role)) return true;
   if (process.env.NODE_ENV !== 'production' && req.user?.id?.startsWith("dev-owner")) return true;
   return false;
 }
 
-incidentPipelineRouter.post("/:id/trinity-polish", requireAuth as any, ensureWorkspaceAccess as any, async (req: any, res: any) => {
+incidentPipelineRouter.post("/:id/trinity-polish", requireAuth as any, ensureWorkspaceAccess as any, async (req: AuthenticatedRequest, res: any) => {
   try {
     if (!hasManagerRole(req)) {
       return res.status(403).json({ error: "Insufficient permissions. Manager or above role required to use Trinity polish." });

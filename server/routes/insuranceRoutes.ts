@@ -1,4 +1,5 @@
 import express from 'express';
+import { AuthenticatedRequest } from '../rbac';
 import { pool } from '../db';
 import { platformActionHub } from '../services/helpai/platformActionHub';
 import { registerLegacyBootstrap } from '../services/legacyBootstrapRegistry';
@@ -68,7 +69,7 @@ platformActionHub.registerAction({
 });
 
 // Routes
-router.get('/policies', async (req: any, res) => {
+router.get('/policies', async (req: AuthenticatedRequest, res) => {
   try {
     const result = await pool.query(
       `SELECT *,
@@ -89,7 +90,7 @@ router.get('/policies', async (req: any, res) => {
   }
 });
 
-router.post('/policies', async (req: any, res) => {
+router.post('/policies', async (req: AuthenticatedRequest, res) => {
   const { policyType, carrierName, policyNumber, coverageAmount, effectiveDate, expirationDate, premiumAmount, certificateUrl, namedInsured } = req.body;
   try {
     const result = await pool.query(
@@ -105,7 +106,7 @@ router.post('/policies', async (req: any, res) => {
   }
 });
 
-router.patch('/policies/:id', async (req: any, res) => {
+router.patch('/policies/:id', async (req: AuthenticatedRequest, res) => {
   const { id } = req.params;
   const updates = req.body;
   const keys = Object.keys(updates);
@@ -126,7 +127,7 @@ router.patch('/policies/:id', async (req: any, res) => {
   }
 });
 
-router.delete('/policies/:id', async (req: any, res) => {
+router.delete('/policies/:id', async (req: AuthenticatedRequest, res) => {
   try {
     const result = await pool.query(
       `UPDATE insurance_policies SET is_active = false WHERE id = $1 AND workspace_id = $2`,
@@ -139,7 +140,7 @@ router.delete('/policies/:id', async (req: any, res) => {
   }
 });
 
-router.get('/compliance', async (req: any, res) => {
+router.get('/compliance', async (req: AuthenticatedRequest, res) => {
   try {
     const requiredTypes = ['general_liability', 'workers_compensation', 'professional_liability'];
     const result = await pool.query(
@@ -166,7 +167,7 @@ router.get('/compliance', async (req: any, res) => {
   }
 });
 
-router.post('/certificates/generate', async (req: any, res) => {
+router.post('/certificates/generate', async (req: AuthenticatedRequest, res) => {
   try {
     const wsResult = await pool.query('SELECT name FROM workspaces WHERE id = $1', [req.workspaceId]);
     const workspaceName = wsResult.rows[0]?.name || 'Our Workspace';

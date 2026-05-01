@@ -71,7 +71,7 @@ export default function ForgotPassword() {
         title: "Reset Email Sent",
         description: "Check your inbox for password reset instructions.",
       });
-    } catch (error: any) {
+    } catch (error : unknown) {
       toast({
         title: "Error",
         description: error.message || "Something went wrong. Please try again.",

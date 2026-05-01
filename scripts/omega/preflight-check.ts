@@ -70,7 +70,7 @@ async function run() {
     const result = await db.execute(sql`SELECT current_database(), version()`);
     const row = (result.rows || result)[0] as any;
     check('DB:connect', true, `Connected to: ${row?.current_database ?? 'ok'}`);
-  } catch (err: any) {
+  } catch (err : unknown) {
     check('DB:connect', false, `FAILED: ${err.message}`);
   }
 

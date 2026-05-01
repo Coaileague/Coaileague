@@ -101,7 +101,7 @@ export function registerTrinityDocumentActions(orchestrator: any): void {
           },
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -186,7 +186,7 @@ export function registerTrinityDocumentActions(orchestrator: any): void {
           data: { documentId, signingRequests: results },
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -284,7 +284,7 @@ export function registerTrinityDocumentActions(orchestrator: any): void {
           },
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -373,7 +373,7 @@ export function registerTrinityDocumentActions(orchestrator: any): void {
           },
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -463,7 +463,7 @@ export function registerTrinityDocumentActions(orchestrator: any): void {
           },
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -570,7 +570,7 @@ export function registerTrinityDocumentActions(orchestrator: any): void {
           },
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -621,7 +621,7 @@ export function registerTrinityDocumentActions(orchestrator: any): void {
           },
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,

@@ -71,7 +71,7 @@ const router = Router();
     }
   });
 
-  router.get('/', requireAuth, async (req: any, res) => {
+  router.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const workspace = req.workspaceId ? { id: req.workspaceId } : (await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId));
@@ -105,7 +105,7 @@ const router = Router();
     }
   });
 
-  router.post('/', requireAuth, async (req: any, res) => {
+  router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const workspace = req.workspaceId ? { id: req.workspaceId } : (await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId));
@@ -552,7 +552,7 @@ const router = Router();
     }
   });
 
-  router.get('/post-order-quiz/:shiftId', requireAuth, async (req: any, res) => {
+  router.get('/post-order-quiz/:shiftId', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const workspace = req.workspaceId ? { id: req.workspaceId } : (await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId));
@@ -573,7 +573,7 @@ const router = Router();
     }
   });
 
-  router.post('/post-order-quiz/:shiftId/submit', requireAuth, async (req: any, res) => {
+  router.post('/post-order-quiz/:shiftId/submit', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const workspace = req.workspaceId ? { id: req.workspaceId } : (await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId));
@@ -594,7 +594,7 @@ const router = Router();
     }
   });
 
-  router.post('/gps-ping', requireAuth, async (req: any, res) => {
+  router.post('/gps-ping', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const workspace = req.workspaceId ? { id: req.workspaceId } : (await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId));
@@ -665,7 +665,7 @@ const router = Router();
     }
   });
 
-  router.post('/manual-override', requireAuth, async (req: any, res) => {
+  router.post('/manual-override', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const workspace = req.workspaceId ? { id: req.workspaceId } : (await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId));
@@ -713,7 +713,7 @@ const router = Router();
     }
   });
 
-  router.patch('/:id/clock-out', requireAuth, async (req: any, res) => {
+  router.patch('/:id/clock-out', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const workspace = req.workspaceId ? { id: req.workspaceId } : (await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId));
@@ -814,7 +814,7 @@ const router = Router();
     }
   });
 
-  router.post('/:id/start-break', requireAuth, async (req: any, res) => {
+  router.post('/:id/start-break', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const workspace = req.workspaceId ? { id: req.workspaceId } : (await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId));
@@ -853,7 +853,7 @@ const router = Router();
     }
   });
 
-  router.post('/:id/end-break', requireAuth, async (req: any, res) => {
+  router.post('/:id/end-break', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const workspace = req.workspaceId ? { id: req.workspaceId } : (await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId));
@@ -886,7 +886,7 @@ const router = Router();
     }
   });
 
-  router.get('/unbilled/:clientId', requireAuth, async (req: any, res) => {
+  router.get('/unbilled/:clientId', requireAuth, async (req: AuthenticatedRequest, res) => {
 
 
     try {

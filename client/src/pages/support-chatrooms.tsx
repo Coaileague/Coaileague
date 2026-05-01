@@ -113,7 +113,7 @@ export default function SupportChatrooms() {
         description: `You are now a participant in ${roomName}. The organization has been notified.`,
       });
       setLocation(`/org-chat/${roomId}`);
-    } catch (error: any) {
+    } catch (error : unknown) {
       toast({
         title: 'Failed to Join',
         description: error.message || 'Could not join chatroom. Please try again.',

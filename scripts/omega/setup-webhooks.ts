@@ -87,7 +87,7 @@ async function setupStripeWebhook(secretKey: string, label: string): Promise<voi
         `→ Add to env: ${envVarName}`,
       );
     }
-  } catch (err: any) {
+  } catch (err : unknown) {
     check(`STRIPE:${label}`, false, `Stripe API error: ${err.message}`, 'Fix and re-run');
   }
 }
@@ -148,7 +148,7 @@ async function setupResendWebhooks(): Promise<void> {
       check('RESEND:outbound', ok,
         ok ? `REGISTERED: ${outboundUrl}` : `Failed: HTTP ${resp.status}`,
         ok ? '' : 'Check RESEND_API_KEY and re-run');
-    } catch (err: any) {
+    } catch (err : unknown) {
       check('RESEND:outbound', false, `Network error: ${err.message}`, 'Fix and re-run');
     }
   }
@@ -174,7 +174,7 @@ async function setupResendWebhooks(): Promise<void> {
       check('RESEND:inbound', ok,
         ok ? `REGISTERED: ${inboundUrl}` : `Failed: HTTP ${resp.status}`,
         ok ? '' : 'Check RESEND_API_KEY and re-run');
-    } catch (err: any) {
+    } catch (err : unknown) {
       check('RESEND:inbound', false, `Network error: ${err.message}`, 'Fix and re-run');
     }
   }
@@ -270,7 +270,7 @@ async function setupTwilioWebhooks(): Promise<void> {
       check('TWILIO:configure', false, 'One or more URL mismatches detected — see above', 'Re-run after checking SID');
       process.exitCode = 1;
     }
-  } catch (err: any) {
+  } catch (err : unknown) {
     check('TWILIO:configure', false, `Twilio SDK error: ${err.message}`, 'Verify SID and auth token');
   }
 }
@@ -333,7 +333,7 @@ async function checkPlaid(): Promise<void> {
       const body = await resp.json().catch(() => ({})) as any;
       check('PLAID:sandbox', false, `Plaid returned HTTP ${resp.status}: ${body?.error_message || 'unknown'}`, 'Verify Plaid keys');
     }
-  } catch (err: any) {
+  } catch (err : unknown) {
     check('PLAID:sandbox', false, `Network error: ${err.message}`, 'Check connectivity');
   }
 }

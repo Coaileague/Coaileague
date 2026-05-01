@@ -69,7 +69,7 @@ export class KnowledgeGraphRepository {
       }).returning();
       log.info(`[KnowledgeGraphRepo] Entity persisted: ${entity.name}`);
       return result;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[KnowledgeGraphRepo] Failed to persist entity:`, (error instanceof Error ? error.message : String(error)));
       return null;
     }
@@ -84,7 +84,7 @@ export class KnowledgeGraphRepository {
           .where(eq(knowledgeEntities.id, id));
       }
       return entity || null;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[KnowledgeGraphRepo] Failed to get entity:`, (error instanceof Error ? error.message : String(error)));
       return null;
     }
@@ -96,7 +96,7 @@ export class KnowledgeGraphRepository {
         .where(eq(knowledgeEntities.domain, domain as any))
         .orderBy(desc(knowledgeEntities.usageCount))
         .limit(limit);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[KnowledgeGraphRepo] Failed to get entities by domain:`, (error instanceof Error ? error.message : String(error)));
       return [];
     }
@@ -110,7 +110,7 @@ export class KnowledgeGraphRepository {
         .where(and(...conditions))
         .orderBy(desc(knowledgeEntities.createdAt))
         .limit(limit);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[KnowledgeGraphRepo] Failed to get entities by type:`, (error instanceof Error ? error.message : String(error)));
       return [];
     }
@@ -121,7 +121,7 @@ export class KnowledgeGraphRepository {
       return await db.select().from(knowledgeEntities)
         .orderBy(desc(knowledgeEntities.createdAt))
         .limit(limit);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[KnowledgeGraphRepo] Failed to get all entities:`, (error instanceof Error ? error.message : String(error)));
       return [];
     }
@@ -150,7 +150,7 @@ export class KnowledgeGraphRepository {
       }).returning();
       log.info(`[KnowledgeGraphRepo] Relationship persisted: ${rel.sourceId} -> ${rel.targetId}`);
       return result;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[KnowledgeGraphRepo] Failed to persist relationship:`, (error instanceof Error ? error.message : String(error)));
       return null;
     }
@@ -160,7 +160,7 @@ export class KnowledgeGraphRepository {
     try {
       return await db.select().from(knowledgeRelationships)
         .where(eq(knowledgeRelationships.sourceId, entityId));
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[KnowledgeGraphRepo] Failed to get relationships:`, (error instanceof Error ? error.message : String(error)));
       return [];
     }
@@ -171,7 +171,7 @@ export class KnowledgeGraphRepository {
       return await db.select().from(knowledgeRelationships)
         .orderBy(desc(knowledgeRelationships.createdAt))
         .limit(limit);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[KnowledgeGraphRepo] Failed to get all relationships:`, (error instanceof Error ? error.message : String(error)));
       return [];
     }
@@ -196,7 +196,7 @@ export class KnowledgeGraphRepository {
         relationshipCount: Number(relationships[0]?.count || 0),
         domainBreakdown,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[KnowledgeGraphRepo] Failed to get stats:`, (error instanceof Error ? error.message : String(error)));
       return { entityCount: 0, relationshipCount: 0, domainBreakdown: {} };
     }
@@ -250,7 +250,7 @@ export class A2AProtocolRepository {
       }).onConflictDoNothing({ target: a2aAgents.id }).returning();
       log.info(`[A2ARepo] Agent persisted: ${agent.name}`);
       return result;
-    } catch (error: any) {
+    } catch (error : unknown) {
       if (error.code === '23505') {
         return this.updateAgent(agent.id, agent);
       }
@@ -263,7 +263,7 @@ export class A2AProtocolRepository {
     try {
       const [agent] = await db.select().from(a2aAgents).where(eq(a2aAgents.id, id));
       return agent || null;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[A2ARepo] Failed to get agent:`, (error instanceof Error ? error.message : String(error)));
       return null;
     }
@@ -286,7 +286,7 @@ export class A2AProtocolRepository {
 
       const [result] = await db.update(a2aAgents).set(updateData).where(eq(a2aAgents.id, id)).returning();
       return result;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[A2ARepo] Failed to update agent:`, (error instanceof Error ? error.message : String(error)));
       return null;
     }
@@ -295,7 +295,7 @@ export class A2AProtocolRepository {
   async getAllAgents(): Promise<any[]> {
     try {
       return await db.select().from(a2aAgents).orderBy(desc(a2aAgents.createdAt));
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[A2ARepo] Failed to get all agents:`, (error instanceof Error ? error.message : String(error)));
       return [];
     }
@@ -333,7 +333,7 @@ export class A2AProtocolRepository {
         expiresAt,
       }).returning();
       return result;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[A2ARepo] Failed to persist message:`, (error instanceof Error ? error.message : String(error)));
       return null;
     }
@@ -344,7 +344,7 @@ export class A2AProtocolRepository {
       const updateData: any = { status };
       if (acknowledgedAt) updateData.processedAt = acknowledgedAt;
       await db.update(a2aMessages).set(updateData).where(eq(a2aMessages.id, id));
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[A2ARepo] Failed to update message status:`, (error instanceof Error ? error.message : String(error)));
     }
   }
@@ -355,7 +355,7 @@ export class A2AProtocolRepository {
         .where(eq(a2aMessages.toAgent, agentId))
         .orderBy(desc(a2aMessages.createdAt))
         .limit(limit);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[A2ARepo] Failed to get messages:`, (error instanceof Error ? error.message : String(error)));
       return [];
     }
@@ -383,7 +383,7 @@ export class A2AProtocolRepository {
       }).returning();
       log.info(`[A2ARepo] Team persisted: ${team.name}`);
       return result;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[A2ARepo] Failed to persist team:`, (error instanceof Error ? error.message : String(error)));
       return null;
     }
@@ -410,7 +410,7 @@ export class A2AProtocolRepository {
         trustLevel: rule.trustLevel !== undefined ? (rule.trustLevel > 0.8 ? 'full' : rule.trustLevel > 0.5 ? 'verified' : 'conditional') : 'conditional',
       }).returning();
       return result;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[A2ARepo] Failed to persist trust rule:`, (error instanceof Error ? error.message : String(error)));
       return null;
     }
@@ -419,7 +419,7 @@ export class A2AProtocolRepository {
   async getTrustRulesForAgent(agentId: string): Promise<any[]> {
     try {
       return await db.select().from(a2aTrustRules).where(eq(a2aTrustRules.sourceAgent, agentId));
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[A2ARepo] Failed to get trust rules:`, (error instanceof Error ? error.message : String(error)));
       return [];
     }
@@ -488,7 +488,7 @@ export class RLLoopRepository {
       }).onConflictDoNothing({ target: aiLearningEvents.id }).returning({ id: aiLearningEvents.id });
       log.verbose(`[RLRepo] Experience persisted: ${exp.agentId}/${exp.actionType} -> ${exp.outcome}`);
       return result?.[0] ?? null;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[RLRepo] Failed to persist experience:`, (error instanceof Error ? error.message : String(error)));
       return null;
     }
@@ -500,7 +500,7 @@ export class RLLoopRepository {
         .where(and(eq(aiLearningEvents.eventType, 'experience'), eq(aiLearningEvents.agentId, agentId)))
         .orderBy(desc(aiLearningEvents.createdAt))
         .limit(limit);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[RLRepo] Failed to get experiences:`, (error instanceof Error ? error.message : String(error)));
       return [];
     }
@@ -516,7 +516,7 @@ export class RLLoopRepository {
         ))
         .orderBy(desc(aiLearningEvents.createdAt))
         .limit(limit);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[RLRepo] Failed to get experiences by action:`, (error instanceof Error ? error.message : String(error)));
       return [];
     }
@@ -528,7 +528,7 @@ export class RLLoopRepository {
         .where(eq(aiLearningEvents.eventType, 'experience'))
         .orderBy(desc(aiLearningEvents.createdAt))
         .limit(limit);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[RLRepo] Failed to get all experiences:`, (error instanceof Error ? error.message : String(error)));
       return [];
     }
@@ -582,7 +582,7 @@ export class RLLoopRepository {
       `);
       log.verbose(`[RLRepo] Confidence model upserted: ${model.agentId}/${model.actionType}`);
       return (result as unknown as any[])[0] ?? null;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[RLRepo] Failed to upsert confidence model:`, (error instanceof Error ? error.message : String(error)));
       return null;
     }
@@ -597,7 +597,7 @@ export class RLLoopRepository {
           eq(aiLearningEvents.action, actionType)
         ));
       return model || null;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[RLRepo] Failed to get confidence model:`, (error instanceof Error ? error.message : String(error)));
       return null;
     }
@@ -608,7 +608,7 @@ export class RLLoopRepository {
       return await db.select().from(aiLearningEvents)
         .where(eq(aiLearningEvents.eventType, 'confidence_update'))
         .orderBy(desc(aiLearningEvents.updatedAt));
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[RLRepo] Failed to get all confidence models:`, (error instanceof Error ? error.message : String(error)));
       return [];
     }
@@ -651,7 +651,7 @@ export class RLLoopRepository {
       }).returning();
       log.info(`[RLRepo] Strategy adaptation persisted: ${adaptation.agentId}/${adaptation.actionType}`);
       return result;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[RLRepo] Failed to persist strategy adaptation:`, (error instanceof Error ? error.message : String(error)));
       return null;
     }
@@ -663,7 +663,7 @@ export class RLLoopRepository {
         .where(and(eq(aiLearningEvents.eventType, 'strategy_adaptation'), eq(aiLearningEvents.agentId, agentId)))
         .orderBy(desc(aiLearningEvents.createdAt))
         .limit(limit);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[RLRepo] Failed to get adaptations:`, (error instanceof Error ? error.message : String(error)));
       return [];
     }
@@ -698,7 +698,7 @@ export class RLLoopRepository {
         modelCount: Number(modelCount[0]?.count || 0),
         adaptationCount: Number(adaptCount[0]?.count || 0),
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[RLRepo] Failed to get metrics:`, (error instanceof Error ? error.message : String(error)));
       return { totalExperiences: 0, successRate: 0, avgReward: 0, modelCount: 0, adaptationCount: 0 };
     }
@@ -744,7 +744,7 @@ export class RLLoopRepository {
       }).returning();
       log.info(`[RLRepo] Correction recorded: ${correction.agentId}/${correction.actionType} by ${correction.correctedBy}`);
       return result;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[RLRepo] Failed to record correction:`, (error instanceof Error ? error.message : String(error)));
       return null;
     }
@@ -768,7 +768,7 @@ export class RLLoopRepository {
         .where(and(...conditions))
         .orderBy(desc(aiLearningEvents.createdAt))
         .limit(limit);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[RLRepo] Failed to lookup corrections:`, (error instanceof Error ? error.message : String(error)));
       return [];
     }
@@ -810,7 +810,7 @@ export class RLLoopRepository {
       }
 
       return { totalDecisions, totalCorrections, accuracyRate, correctionsByAction: byAction };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[RLRepo] Failed to get accuracy metrics:`, (error instanceof Error ? error.message : String(error)));
       return { totalDecisions: 0, totalCorrections: 0, accuracyRate: 0, correctionsByAction: {} };
     }

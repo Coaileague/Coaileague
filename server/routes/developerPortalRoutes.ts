@@ -2,7 +2,7 @@ import { Router } from "express";
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { pool } from "../db";
-import { requireAuth } from "../rbac";
+import { requireAuth, AuthenticatedRequest} from "../rbac";
 import { platformActionHub } from '../services/helpai/platformActionHub';
 import { registerLegacyBootstrap } from '../services/legacyBootstrapRegistry';
 import { createLogger } from '../lib/logger';
@@ -77,7 +77,7 @@ platformActionHub.registerAction({
 // === Routes ===
 
 // GET /api/developers/keys
-router.get('/keys', requireAuth, async (req: any, res) => {
+router.get('/keys', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await pool.query(`
       SELECT id, name, key_prefix, scopes, last_used_at, expires_at, is_active, created_at 
@@ -92,7 +92,7 @@ router.get('/keys', requireAuth, async (req: any, res) => {
 });
 
 // POST /api/developers/keys
-router.post('/keys', requireAuth, async (req: any, res) => {
+router.post('/keys', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { name, scopes, expiresAt } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required' });
@@ -117,7 +117,7 @@ router.post('/keys', requireAuth, async (req: any, res) => {
 });
 
 // DELETE /api/developers/keys/:id
-router.delete('/keys/:id', requireAuth, async (req: any, res) => {
+router.delete('/keys/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await pool.query(`
       UPDATE developer_api_keys 
@@ -134,7 +134,7 @@ router.delete('/keys/:id', requireAuth, async (req: any, res) => {
 });
 
 // GET /api/developers/keys/:id/usage
-router.get('/keys/:id/usage', requireAuth, async (req: any, res) => {
+router.get('/keys/:id/usage', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await pool.query(`
       SELECT endpoint, method, response_status, COUNT(*) as count 
@@ -151,7 +151,7 @@ router.get('/keys/:id/usage', requireAuth, async (req: any, res) => {
 });
 
 // GET /api/developers/status
-router.get('/status', requireAuth, async (req: any, res) => {
+router.get('/status', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await pool.query(`
       SELECT COUNT(*) as count 

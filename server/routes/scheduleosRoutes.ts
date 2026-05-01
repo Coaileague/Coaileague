@@ -87,7 +87,7 @@ router.post('/ai/toggle', requireManager, async (req: AuthenticatedRequest, res)
     }
   });
 
-router.get('/ai/status', requireAuth, async (req: any, res) => {
+router.get('/ai/status', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { workspaceId } = req.query;
       if (!workspaceId) return res.status(400).json({ message: "workspaceId query parameter is required" });
@@ -109,7 +109,7 @@ router.get('/ai/status', requireAuth, async (req: any, res) => {
     }
   });
   
-  router.post('/smart-generate', requireManager, requireStarter, async (req: any, res) => {
+  router.post('/smart-generate', requireManager, requireStarter, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
@@ -236,7 +236,7 @@ router.get('/ai/status', requireAuth, async (req: any, res) => {
     }
   });
   
-  router.get('/proposals', requireManager, async (req: any, res) => {
+  router.get('/proposals', requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
@@ -291,7 +291,7 @@ router.get('/ai/status', requireAuth, async (req: any, res) => {
     }
   });
   
-  router.get('/proposals/:id', requireAuth, async (req: any, res) => {
+  router.get('/proposals/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;
       const userId = req.user?.id || req.user?.claims?.sub;
@@ -316,7 +316,7 @@ router.get('/ai/status', requireAuth, async (req: any, res) => {
     }
   });
   
-  router.patch('/proposals/:id/approve', requireManager, async (req: any, res) => {
+  router.patch('/proposals/:id/approve', requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;
       const { disclaimerAcknowledged } = req.body;
@@ -379,7 +379,7 @@ router.get('/ai/status', requireAuth, async (req: any, res) => {
     }
   });
   
-  router.patch('/proposals/:id/reject', requireManager, async (req: any, res) => {
+  router.patch('/proposals/:id/reject', requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;
       const { reason } = req.body;
@@ -419,7 +419,7 @@ router.get('/ai/status', requireAuth, async (req: any, res) => {
     }
   });
   
-router.post('/import-migrated-shifts', requireManager, async (req: any, res) => {
+router.post('/import-migrated-shifts', requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const { extractedShifts, sourceApp } = req.body;
 
@@ -501,7 +501,7 @@ router.post('/import-migrated-shifts', requireManager, async (req: any, res) => 
     }
   });
   
-router.post('/start-trial', requireAuth, async (req: any, res) => {
+router.post('/start-trial', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
@@ -542,7 +542,7 @@ router.post('/start-trial', requireAuth, async (req: any, res) => {
     }
   });
 
-router.post('/activate', requireManager, async (req: any, res) => {
+router.post('/activate', requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       
@@ -708,7 +708,7 @@ router.post('/activate', requireManager, async (req: any, res) => {
     }
   });
 
-router.get('/status', async (req: any, res) => {
+router.get('/status', async (req: AuthenticatedRequest, res) => {
     try {
       let userId: string;
       let user: any;
@@ -789,7 +789,7 @@ router.get('/status', async (req: any, res) => {
     }
   });
 
-router.post('/acknowledge/:shiftId', requireAuth, async (req: any, res) => {
+router.post('/acknowledge/:shiftId', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const { shiftId } = req.params;

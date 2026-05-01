@@ -3,7 +3,7 @@ import { db } from "../db";
 import { kpiAlerts } from "../../shared/schema";
 import { alertHistory } from "../../shared/schema/domains/audit";
 import { eq, and, desc, sql } from "drizzle-orm";
-import { hasManagerAccess } from "../rbac";
+import { hasManagerAccess, AuthenticatedRequest} from "../rbac";
 import { createLogger } from '../lib/logger';
 import { z } from 'zod';
 const log = createLogger('AlertConfigRoutes');
@@ -11,7 +11,7 @@ const log = createLogger('AlertConfigRoutes');
 
 const router = Router();
 
-router.get('/config', async (req: any, res) => {
+router.get('/config', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(403).json({ message: "No workspace" });
@@ -29,7 +29,7 @@ router.get('/config', async (req: any, res) => {
   }
 });
 
-router.patch('/config/:type/toggle', async (req: any, res) => {
+router.patch('/config/:type/toggle', async (req: AuthenticatedRequest, res) => {
   try {
     if (!hasManagerAccess(req.workspaceRole || '')) {
       return res.status(403).json({ message: "Manager access required to toggle alert config" });
@@ -56,7 +56,7 @@ router.patch('/config/:type/toggle', async (req: any, res) => {
   }
 });
 
-router.put('/config/:type', async (req: any, res) => {
+router.put('/config/:type', async (req: AuthenticatedRequest, res) => {
   try {
     if (!hasManagerAccess(req.workspaceRole || '')) {
       return res.status(403).json({ message: "Manager access required to update alert config" });
@@ -102,7 +102,7 @@ router.put('/config/:type', async (req: any, res) => {
   }
 });
 
-router.get('/history', async (req: any, res) => {
+router.get('/history', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(403).json({ message: "No workspace" });
@@ -133,7 +133,7 @@ router.get('/history', async (req: any, res) => {
   }
 });
 
-router.get('/unacknowledged-count', async (req: any, res) => {
+router.get('/unacknowledged-count', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(403).json({ message: "No workspace" });
@@ -150,7 +150,7 @@ router.get('/unacknowledged-count', async (req: any, res) => {
   }
 });
 
-router.post('/test', async (req: any, res) => {
+router.post('/test', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(403).json({ message: "No workspace" });
@@ -176,7 +176,7 @@ router.post('/test', async (req: any, res) => {
   }
 });
 
-router.post('/:id/acknowledge', async (req: any, res) => {
+router.post('/:id/acknowledge', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(403).json({ message: "No workspace" });

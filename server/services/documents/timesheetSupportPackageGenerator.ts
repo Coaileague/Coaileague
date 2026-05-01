@@ -261,7 +261,7 @@ export async function generateTimesheetSupportPackage(
       entryCount: rows.length,
       totalHours: Number(totalHours.toFixed(2)),
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error('[TimesheetSupportPackage] Generation failed:', error?.message);
     return { success: false, error: error?.message || 'Failed to generate timesheet support package' };
   }

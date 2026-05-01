@@ -439,7 +439,7 @@ class InvoiceSubagentService {
 
       return result;
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       this.logAudit(traceId, 'invoice.generate', 'failed', { error: (error instanceof Error ? error.message : String(error)) });
 
       return {
@@ -488,7 +488,7 @@ class InvoiceSubagentService {
         description: `Invoice batch ${traceId.substring(0, 16)} — processing fee (line item calculation, gap analysis, formatting)`,
       });
       log.info(`[InvoiceSubagent] Session fee charged: ${sessionFee} credits for workspace ${workspaceId}`);
-    } catch (feeErr: any) {
+    } catch (feeErr : unknown) {
       log.error(`[InvoiceSubagent] Session fee deduction failed for workspace ${workspaceId}:`, feeErr.message);
       this.logAudit(traceId, 'invoice.batch_generate', 'billing_failed', { error: feeErr.message });
       return {
@@ -544,13 +544,13 @@ class InvoiceSubagentService {
               quantity: 1,
             });
             log.info(`[InvoiceSubagent] Per-invoice fee charged: ${perInvoiceFee}cr for invoice ${result.invoiceId}`);
-          } catch (invoiceErr: any) {
+          } catch (invoiceErr : unknown) {
             log.warn(`[InvoiceSubagent] Per-invoice billing error (non-blocking):`, invoiceErr.message);
           }
         } else {
           failedClients.push(clientId);
         }
-      } catch (error: any) {
+      } catch (error : unknown) {
         log.error(`[InvoiceSubagent] Failed to generate invoice for client ${clientId}:`, (error instanceof Error ? error.message : String(error)));
         failedClients.push(clientId);
       }

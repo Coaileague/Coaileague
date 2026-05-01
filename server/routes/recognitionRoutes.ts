@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { pool } from "../db";
-import { requireAuth } from "../rbac";
+import { requireAuth, AuthenticatedRequest} from "../rbac";
 import { platformActionHub } from "../services/helpai/platformActionHub";
 import { registerLegacyBootstrap } from "../services/legacyBootstrapRegistry";
 import { createLogger } from "../lib/logger";
@@ -63,7 +63,7 @@ platformActionHub.registerAction({
 });
 
 // GET /api/recognition/awards — list awards
-router.get("/awards", requireAuth, async (req: any, res) => {
+router.get("/awards", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT
@@ -89,7 +89,7 @@ router.get("/awards", requireAuth, async (req: any, res) => {
 });
 
 // POST /api/recognition/nominations — create nomination
-router.post("/nominations", requireAuth, async (req: any, res) => {
+router.post("/nominations", requireAuth, async (req: AuthenticatedRequest, res) => {
   const { nomineeId, awardType, reason } = req.body;
   try {
     const { rows } = await pool.query(`
@@ -104,7 +104,7 @@ router.post("/nominations", requireAuth, async (req: any, res) => {
 });
 
 // PATCH /api/recognition/nominations/:id/approve
-router.patch("/nominations/:id/approve", requireAuth, async (req: any, res) => {
+router.patch("/nominations/:id/approve", requireAuth, async (req: AuthenticatedRequest, res) => {
   const { id } = req.params;
   try {
     await pool.query('BEGIN');
@@ -136,7 +136,7 @@ router.patch("/nominations/:id/approve", requireAuth, async (req: any, res) => {
 });
 
 // PATCH /api/recognition/nominations/:id/reject
-router.patch("/nominations/:id/reject", requireAuth, async (req: any, res) => {
+router.patch("/nominations/:id/reject", requireAuth, async (req: AuthenticatedRequest, res) => {
   const { id } = req.params;
   const { reason } = req.body;
   try {
@@ -157,7 +157,7 @@ router.patch("/nominations/:id/reject", requireAuth, async (req: any, res) => {
 });
 
 // GET /api/recognition/wall — all public awards
-router.get("/wall", requireAuth, async (req: any, res) => {
+router.get("/wall", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT
@@ -184,7 +184,7 @@ router.get("/wall", requireAuth, async (req: any, res) => {
 });
 
 // GET /api/recognition/officer/:officerId — all awards for officer
-router.get("/officer/:officerId", requireAuth, async (req: any, res) => {
+router.get("/officer/:officerId", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT
@@ -210,7 +210,7 @@ router.get("/officer/:officerId", requireAuth, async (req: any, res) => {
 });
 
 // GET /api/recognition/pending — nominations
-router.get("/pending", requireAuth, async (req: any, res) => {
+router.get("/pending", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT
@@ -239,7 +239,7 @@ router.get("/pending", requireAuth, async (req: any, res) => {
 });
 
 // GET /api/recognition/milestones — upcoming anniversaries
-router.get("/milestones", requireAuth, async (req: any, res) => {
+router.get("/milestones", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT

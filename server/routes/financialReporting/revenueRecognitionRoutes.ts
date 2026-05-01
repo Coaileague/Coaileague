@@ -151,7 +151,7 @@ async function resolveWorkspace(req: AuthenticatedRequest): Promise<{ ok: boolea
 // ============================================================================
 // GET /api/finance/recognition/summary
 // ============================================================================
-router.get('/recognition/summary', async (req: any, res: any) => {
+router.get('/recognition/summary', async (req: AuthenticatedRequest, res: any) => {
   try {
     const ctx = await resolveWorkspace(req);
     if (!ctx.ok) return res.status(ctx.status!).json({ error: ctx.error });
@@ -168,7 +168,7 @@ router.get('/recognition/summary', async (req: any, res: any) => {
 // ============================================================================
 // GET /api/finance/recognition/schedules
 // ============================================================================
-router.get('/recognition/schedules', async (req: any, res: any) => {
+router.get('/recognition/schedules', async (req: AuthenticatedRequest, res: any) => {
   try {
     const ctx = await resolveWorkspace(req);
     if (!ctx.ok) return res.status(ctx.status!).json({ error: ctx.error });
@@ -206,7 +206,7 @@ const createScheduleBodySchema = z.object({
   startDate: z.string().optional(),
 });
 
-router.post('/recognition/schedules', async (req: any, res: any) => {
+router.post('/recognition/schedules', async (req: AuthenticatedRequest, res: any) => {
   try {
     const ctx = await resolveWorkspace(req);
     if (!ctx.ok) return res.status(ctx.status!).json({ error: ctx.error });
@@ -255,7 +255,7 @@ router.post('/recognition/schedules', async (req: any, res: any) => {
 // ============================================================================
 // POST /api/finance/recognition/run — Manually trigger monthly recognition job
 // ============================================================================
-router.post('/recognition/run', async (req: any, res: any) => {
+router.post('/recognition/run', async (req: AuthenticatedRequest, res: any) => {
   try {
     const ctx = await resolveWorkspace(req);
     if (!ctx.ok) return res.status(ctx.status!).json({ error: ctx.error });
@@ -301,7 +301,7 @@ router.post('/recognition/run', async (req: any, res: any) => {
 // ============================================================================
 // GET /api/finance/asc-606/report
 // ============================================================================
-router.get('/asc-606/report', async (req: any, res: any) => {
+router.get('/asc-606/report', async (req: AuthenticatedRequest, res: any) => {
   try {
     const ctx = await resolveWorkspace(req);
     if (!ctx.ok) return res.status(ctx.status!).json({ error: ctx.error });
@@ -318,7 +318,7 @@ router.get('/asc-606/report', async (req: any, res: any) => {
 // ============================================================================
 // GET /api/finance/forecast
 // ============================================================================
-router.get('/forecast', async (req: any, res: any) => {
+router.get('/forecast', async (req: AuthenticatedRequest, res: any) => {
   try {
     const ctx = await resolveWorkspace(req);
     if (!ctx.ok) return res.status(ctx.status!).json({ error: ctx.error });
@@ -336,7 +336,7 @@ router.get('/forecast', async (req: any, res: any) => {
 // ============================================================================
 // GET /api/finance/pl/detail — Line-by-line P&L breakdown
 // ============================================================================
-router.get('/pl/detail', async (req: any, res: any) => {
+router.get('/pl/detail', async (req: AuthenticatedRequest, res: any) => {
   try {
     const ctx = await resolveWorkspace(req);
     if (!ctx.ok) return res.status(ctx.status!).json({ error: ctx.error });
@@ -471,7 +471,7 @@ router.get('/pl/detail', async (req: any, res: any) => {
 // ============================================================================
 // GET /api/finance/pl/history — 12-month P&L history
 // ============================================================================
-router.get('/pl/history', async (req: any, res: any) => {
+router.get('/pl/history', async (req: AuthenticatedRequest, res: any) => {
   try {
     const ctx = await resolveWorkspace(req);
     if (!ctx.ok) return res.status(ctx.status!).json({ error: ctx.error });
@@ -560,7 +560,7 @@ router.get('/pl/history', async (req: any, res: any) => {
 // ============================================================================
 // POST /api/finance/contracts/:contractId/map-revenue
 // ============================================================================
-router.post('/contracts/:contractId/map-revenue', async (req: any, res: any) => {
+router.post('/contracts/:contractId/map-revenue', async (req: AuthenticatedRequest, res: any) => {
   try {
     const ctx = await resolveWorkspace(req);
     if (!ctx.ok) return res.status(ctx.status!).json({ error: ctx.error });

@@ -81,7 +81,7 @@ export default function CustomRegister() {
         // Default: redirect to org creation
         setLocation("/create-org");
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       toast({
         title: "Registration failed",
         description: error.message || "Please try again",

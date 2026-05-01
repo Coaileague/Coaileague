@@ -347,7 +347,7 @@ export class ExecutionPipeline {
       
       try {
         processResult = await handlers.process(ctx, fetchedData);
-      } catch (processError: any) {
+      } catch (processError : unknown) {
         if (!escalation?.enabled) {
           throw processError;
         }
@@ -366,7 +366,7 @@ export class ExecutionPipeline {
             if (escalation.humanReviewHandler) {
               try {
                 ticketId = await escalation.humanReviewHandler(ctx, lastError, ctx.escalationHistory || []);
-              } catch (hrError: any) {
+              } catch (hrError : unknown) {
                 log.error('[ExecutionPipeline] Human review handler failed:', hrError.message);
               }
             }
@@ -410,7 +410,7 @@ export class ExecutionPipeline {
             resolved = true;
             log.info(`[ExecutionPipeline] ${options.operationName} resolved at escalation tier: ${tier}`);
             break;
-          } catch (retryError: any) {
+          } catch (retryError : unknown) {
             lastError = retryError;
             ctx.escalationHistory?.push({
               tier,

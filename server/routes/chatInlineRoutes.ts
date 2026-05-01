@@ -57,7 +57,7 @@ router.get('/conversations', async (req: AuthenticatedRequest, res) => {
   }
 });
 
-router.post('/conversations', async (req: any, res) => {
+router.post('/conversations', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
@@ -206,7 +206,7 @@ router.get('/conversations/:id/messages', async (req: AuthenticatedRequest, res)
   }
 });
 
-router.patch('/conversations/:id', async (req: any, res) => {
+router.patch('/conversations/:id', async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id || req.user?.claims?.sub;
@@ -239,7 +239,7 @@ router.patch('/conversations/:id', async (req: any, res) => {
   }
 });
 
-router.post('/conversations/:id/close', async (req: any, res) => {
+router.post('/conversations/:id/close', async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id || req.user?.claims?.sub;
@@ -416,7 +416,7 @@ router.post('/main-room/messages', async (req: AuthenticatedRequest, res) => {
   }
 });
 
-router.post('/conversations/:id/grant-voice', async (req: any, res) => {
+router.post('/conversations/:id/grant-voice', async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
@@ -461,7 +461,7 @@ router.post('/conversations/:id/grant-voice', async (req: any, res) => {
   }
 });
 
-router.post('/help-bot/respond', async (req: any, res) => {
+router.post('/help-bot/respond', async (req: AuthenticatedRequest, res) => {
   try {
     const { conversationId, userMessage, previousMessages } = req.body;
     const userId = req.user?.id || req.user?.claims?.sub;

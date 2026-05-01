@@ -21,7 +21,7 @@ const log = createLogger('DisputeRoutes');
 
 const router = Router();
 
-router.post('/', async (req: any, res) => {
+router.post('/', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -204,7 +204,7 @@ router.post('/', async (req: any, res) => {
   }
 });
 
-router.get('/', async (req: any, res) => {
+router.get('/', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -231,7 +231,7 @@ router.get('/', async (req: any, res) => {
   }
 });
 
-router.get('/my-disputes', async (req: any, res) => {
+router.get('/my-disputes', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -248,7 +248,7 @@ router.get('/my-disputes', async (req: any, res) => {
   }
 });
 
-router.get('/target/:targetType/:targetId', async (req: any, res) => {
+router.get('/target/:targetType/:targetId', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -266,7 +266,7 @@ router.get('/target/:targetType/:targetId', async (req: any, res) => {
   }
 });
 
-router.get('/pending-review', async (req: any, res) => {
+router.get('/pending-review', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -322,7 +322,7 @@ router.get('/pending-review', async (req: any, res) => {
   }
 });
 
-router.get('/disputeable-items', async (req: any, res) => {
+router.get('/disputeable-items', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -364,7 +364,7 @@ router.get('/disputeable-items', async (req: any, res) => {
   }
 });
 
-router.get('/:id', async (req: any, res) => {
+router.get('/:id', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -394,7 +394,7 @@ router.get('/:id', async (req: any, res) => {
   }
 });
 
-router.patch('/:id/assign', async (req: any, res) => {
+router.patch('/:id/assign', async (req: AuthenticatedRequest, res) => {
   try {
     if (!hasManagerAccess(req.workspaceRole || '')) {
       return res.status(403).json({ message: "Manager access required to assign disputes" });
@@ -429,7 +429,7 @@ router.patch('/:id/assign', async (req: any, res) => {
   }
 });
 
-router.patch('/:id', async (req: any, res) => {
+router.patch('/:id', async (req: AuthenticatedRequest, res) => {
   try {
     if (!hasManagerAccess(req.workspaceRole || '')) {
       return res.status(403).json({ message: "Manager access required to update disputes" });
@@ -457,7 +457,7 @@ router.patch('/:id', async (req: any, res) => {
   }
 });
 
-router.post('/:id/resolve', async (req: any, res) => {
+router.post('/:id/resolve', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -492,7 +492,7 @@ router.post('/:id/resolve', async (req: any, res) => {
   }
 });
 
-router.post('/:id/apply-changes', async (req: any, res) => {
+router.post('/:id/apply-changes', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -535,7 +535,7 @@ router.post('/:id/apply-changes', async (req: any, res) => {
   }
 });
 
-router.post('/:id/review', async (req: any, res) => {
+router.post('/:id/review', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -583,7 +583,7 @@ router.post('/:id/review', async (req: any, res) => {
   }
 });
 
-router.get('/:id/investigation-context', async (req: any, res) => {
+router.get('/:id/investigation-context', async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const userWorkspaceId = req.workspaceId || req.user?.currentWorkspaceId;
@@ -702,7 +702,7 @@ router.get('/:id/investigation-context', async (req: any, res) => {
   }
 });
 
-router.post('/:id/ai-analysis', async (req: any, res) => {
+router.post('/:id/ai-analysis', async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     

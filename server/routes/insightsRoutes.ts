@@ -269,7 +269,7 @@ router.get("/metrics", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/api/predict/turnover", requireManager, async (req: any, res) => {
+router.post("/api/predict/turnover", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
     const { employeeId } = req.body;
@@ -303,7 +303,7 @@ router.post("/api/predict/turnover", requireManager, async (req: any, res) => {
   }
 });
 
-router.get("/api/predict/turnover/workspace", requireManager, async (req: any, res) => {
+router.get("/api/predict/turnover/workspace", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
     const { turnoverRiskScores } = await import("@shared/schema");
@@ -329,7 +329,7 @@ router.get("/api/predict/turnover/workspace", requireManager, async (req: any, r
   }
 });
 
-router.post("/api/predict/cost-overrun", requireManager, async (req: any, res) => {
+router.post("/api/predict/cost-overrun", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
     const { scheduleDate, proposedShifts } = req.body;
@@ -352,7 +352,7 @@ router.post("/api/predict/cost-overrun", requireManager, async (req: any, res) =
   }
 });
 
-router.get("/api/patterns/employee/:employeeId", requireAuth, async (req: any, res) => {
+router.get("/api/patterns/employee/:employeeId", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
     const { employeeId } = req.params;
@@ -370,7 +370,7 @@ router.get("/api/patterns/employee/:employeeId", requireAuth, async (req: any, r
   }
 });
 
-router.get("/api/patterns/workspace", requireManager, async (req: any, res) => {
+router.get("/api/patterns/workspace", requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
     const { employeePatternService } = await import("../services/employeePatternService");
@@ -388,7 +388,7 @@ router.get("/api/patterns/workspace", requireManager, async (req: any, res) => {
   }
 });
 
-router.get("/api/patterns/similar/:employeeId", requireAuth, async (req: any, res) => {
+router.get("/api/patterns/similar/:employeeId", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
     const { employeeId } = req.params;

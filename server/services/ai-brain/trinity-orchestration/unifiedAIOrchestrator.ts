@@ -130,7 +130,7 @@ class UnifiedAIOrchestrator {
       });
 
       return result;
-    } catch (error: any) {
+    } catch (error : unknown) {
       await aiActionLogger.log({
         actionType: 'orchestrator_request_failed',
         context,
@@ -397,7 +397,7 @@ class UnifiedAIOrchestrator {
         default:
           return { type: dataType, status: 'no_data_available', message: `No handler for data type: ${dataType}` };
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[UnifiedAIOrchestrator] Error fetching ${dataType} for workspace ${workspaceId}:`, (error instanceof Error ? error.message : String(error)));
       return { type: dataType, status: 'query_error', error: (error instanceof Error ? error.message : String(error)) };
     }
@@ -804,7 +804,7 @@ Please provide a clear, authoritative response. If Trinity's attempt was partial
           break;
         }
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[UnifiedAIOrchestrator] Executive enrichment failed for ${taskType}, falling back to standard:`, (error instanceof Error ? error.message : String(error)));
     }
 

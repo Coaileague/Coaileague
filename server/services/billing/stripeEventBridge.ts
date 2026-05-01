@@ -122,7 +122,7 @@ class StripeEventBridge {
         default:
           return { success: true, eventType: event.type, action: 'ignored', message: 'Event type not handled' };
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('Error processing event', { eventType: event.type, error: (error instanceof Error ? error.message : String(error)) });
       return {
         success: false,

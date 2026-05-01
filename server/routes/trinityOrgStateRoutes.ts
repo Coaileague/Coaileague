@@ -12,7 +12,7 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { requireAuth } from '../auth';
-import { requirePlatformRole , requirePlatformStaff } from '../rbac';
+import { requirePlatformRole , requirePlatformStaff, AuthenticatedRequest} from '../rbac';
 import { trinityPrefrontalCortex } from '../services/ai-brain/trinityPrefrontalCortex';
 import { createLogger } from '../lib/logger';
 
@@ -39,7 +39,7 @@ router.get('/org-state/:workspaceId', requirePlatformStaff, async (req: Request,
 
 // ─── Quick vitals (org owners can see their own workspace) ───────────────
 
-router.get('/org-vitals/:workspaceId', requireAuth, async (req: any, res: Response) => {
+router.get('/org-vitals/:workspaceId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const { workspaceId } = req.params;
   const requestingUser = req.userId || req.user?.id;
 

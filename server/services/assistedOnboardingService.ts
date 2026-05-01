@@ -186,7 +186,7 @@ class AssistedOnboardingService {
         success: true,
         workspaceId: workspace.id,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[AssistedOnboarding] Failed to create workspace:', error);
       return {
         success: false,
@@ -236,7 +236,7 @@ class AssistedOnboardingService {
         success: true,
         status: 'processing',
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return {
         success: false,
         status: 'failed',
@@ -280,7 +280,7 @@ class AssistedOnboardingService {
         status: 'complete',
         extractedData: mergedData,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       await db.update(workspaces)
         .set({ assistedExtractionStatus: 'failed' })
         .where(eq(workspaces.id, workspaceId));
@@ -353,7 +353,7 @@ class AssistedOnboardingService {
           handoffToken: token,
           expiresAt,
         });
-      } catch (emailError: any) {
+      } catch (emailError : unknown) {
         log.error('[AssistedOnboarding] Failed to send handoff email:', emailError);
         // Rollback status if email fails
         await db.update(workspaces)
@@ -378,7 +378,7 @@ class AssistedOnboardingService {
         token,
         expiresAt,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[AssistedOnboarding] Failed to initiate handoff:', error);
       return {
         success: false,
@@ -515,7 +515,7 @@ class AssistedOnboardingService {
         workspaceId: workspace.id,
         workspaceName: workspace.name,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[AssistedOnboarding] Failed to complete handoff:', error);
       return {
         success: false,
@@ -570,7 +570,7 @@ class AssistedOnboardingService {
           expired,
         },
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return { valid: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }

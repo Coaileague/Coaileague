@@ -353,7 +353,7 @@ export async function sendDailyDigest(employeeId: string): Promise<{ success: bo
 
     log.info(`[DailyDigest] Sent digest to ${digestData.employee.email}`);
     return { success: true };
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error(`[DailyDigest] ❌ Error sending digest:`, error);
     return { success: false, error: (error instanceof Error ? error.message : String(error)) };
   }

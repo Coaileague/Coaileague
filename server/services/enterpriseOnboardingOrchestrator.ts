@@ -634,7 +634,7 @@ export class EnterpriseOnboardingOrchestrator {
                 // 24h Stripe idempotency window also prevents accidental double-purchase within the same session.
                 }, { idempotencyKey: `pi-credit-${workspaceId}-${paymentData.creditPackage}` });
               }
-            } catch (stripeError: any) {
+            } catch (stripeError : unknown) {
               log.error('[EnterpriseOnboarding] Stripe error:', stripeError.message);
               throw new Error(`Payment processing failed: ${stripeError.message}`);
             }

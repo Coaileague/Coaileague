@@ -65,7 +65,7 @@ export async function triggerAIScheduleGeneration(
       message: 'AI schedule generation triggered successfully',
       processingTimeMs,
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     const processingTimeMs = Date.now() - startTime;
 
     return {

@@ -278,7 +278,7 @@ export class SubscriptionManager {
         subscriptionId: subscription.id,
         clientSecret,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('Subscription creation error', { error: (error instanceof Error ? error.message : String(error)) });
       return {
         success: false,
@@ -405,7 +405,7 @@ export class SubscriptionManager {
       }).catch((err) => log.warn('[subscriptionManager] Fire-and-forget failed:', err));
 
       return { success: true, subscriptionId: workspace.stripeSubscriptionId };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('Subscription change error', { error: (error instanceof Error ? error.message : String(error)) });
       return {
         success: false,
@@ -565,7 +565,7 @@ export class SubscriptionManager {
       }
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('Subscription cancellation error', { error: (error instanceof Error ? error.message : String(error)) });
       return {
         success: false,
@@ -671,7 +671,7 @@ export class SubscriptionManager {
             subscriptionId: stripeSubId,
           };
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('Subscription resume error', { error: (error instanceof Error ? error.message : String(error)) });
       return {
         success: false,
@@ -1003,7 +1003,7 @@ export class SubscriptionManager {
             .set({ ...updates, updatedAt: new Date() })
             .where(eq(workspaces.id, workspaceId));
         }
-      } catch (error: any) {
+      } catch (error : unknown) {
         if (error.code === 'resource_missing') {
           // Subscription was deleted in Stripe but we still have record
           await db.update(workspaces)

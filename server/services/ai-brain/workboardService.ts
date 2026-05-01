@@ -480,7 +480,7 @@ class WorkboardService {
 
       log.info('[WorkboardService] Task completed:', taskId, result.success ? 'SUCCESS' : 'FAILED');
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[WorkboardService] Error processing task:', taskId, error);
       
       await db.update(aiWorkboardTasks)
@@ -582,7 +582,7 @@ class WorkboardService {
         summary: `Task processed by ${routing.assignedAgent} with ${Math.round(routing.confidence * 100)}% confidence.`
       };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[WorkboardService] AI execution error:', error);
       
       // Fallback to basic response on error
@@ -966,7 +966,7 @@ class WorkboardService {
         error: result.success ? undefined : result.error
       };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[WorkboardService] Trinity voice command error:', error);
       
       // Update task to failed if it was created

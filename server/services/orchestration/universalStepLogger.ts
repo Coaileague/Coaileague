@@ -640,7 +640,7 @@ class UniversalStepLogger {
       }
       
       return result;
-    } catch (error: any) {
+    } catch (error : unknown) {
       stepEntry.completedAt = new Date();
       stepEntry.durationMs = stepEntry.completedAt.getTime() - stepEntry.startedAt.getTime();
       stepEntry.status = 'failed';
@@ -1235,7 +1235,7 @@ export async function executeFullOrchestration<T>(
       orchestrationId: context.orchestrationId, 
       result: confirmResult.data as T 
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     await universalStepLogger.failOrchestration(context.orchestrationId, (error instanceof Error ? error.message : String(error)), 'UNHANDLED_EXCEPTION');
     return { success: false, orchestrationId: context.orchestrationId, error: (error instanceof Error ? error.message : String(error)) };
   }

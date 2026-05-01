@@ -88,7 +88,7 @@ async function main() {
       if (result.summary) {
         console.log(`[Trinity:FillShifts]   AI Summary: ${result.summary.substring(0, 120)}`);
       }
-    } catch (err: any) {
+    } catch (err : unknown) {
       console.log(`ERROR — ${err.message}`);
       unresolved.push(...batchShifts.map((s: any) => s.id));
     }
@@ -124,7 +124,7 @@ async function main() {
       } else {
         dbSkipped++;
       }
-    } catch (err: any) {
+    } catch (err : unknown) {
       dbErrors++;
       console.error(`[Trinity:FillShifts] DB error for shift ${assignment.shiftId}: ${err.message}`);
     }

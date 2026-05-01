@@ -273,7 +273,7 @@ export const trinityRuntimeFlagsService = {
       log.info(`[TrinityRuntimeFlags] ${actor.type} updated '${key}': ${previousValue} → ${newValueJson}`);
       
       return { success: true, flag: updated };
-    } catch (error: any) {
+    } catch (error : unknown) {
       // Log failed attempt
       await db.insert(trinityRuntimeFlagChanges).values({
         flagId: flag.id,

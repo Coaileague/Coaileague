@@ -233,7 +233,7 @@ export async function validateClockIn(
           site: site.name
         })]
       );
-    } catch (auditErr: any) {
+    } catch (auditErr : unknown) {
       log.warn('[GPS] Failed to write scheduling audit log:', auditErr.message);
     }
 

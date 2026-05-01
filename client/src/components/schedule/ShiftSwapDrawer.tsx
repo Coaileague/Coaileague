@@ -482,10 +482,10 @@ function SwapRequestCard({
         </div>
       </div>
 
-      // @ts-ignore — TS migration: fix in refactoring sprint
+      // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
       {(request as any).notes && (
         <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-          // @ts-ignore — TS migration: fix in refactoring sprint
+          // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
           "{(request as any).notes}"
         </p>
       )}

@@ -91,7 +91,7 @@ router.get('/dashboard', ensureWorkspaceAccess, async (req: Request, res: Respon
         return (tierOrder[a.alertTier] ?? 9) - (tierOrder[b.alertTier] ?? 9);
       }),
     });
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error('[LicenseDashboard] Dashboard error:', error);
     return res.status(500).json({ error: 'Failed to load license dashboard' });
   }
@@ -161,7 +161,7 @@ router.get('/export/dps-csv', ensureWorkspaceAccess, async (req: Request, res: R
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('X-Record-Count', String(certs.length));
     return res.send(csv);
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error('[LicenseDashboard] CSV export error:', error);
     return res.status(500).json({ error: 'Failed to generate DPS CSV export' });
   }
@@ -287,7 +287,7 @@ router.post('/:certId/revoke', ensureWorkspaceAccess, async (req: Request, res: 
       supervisorsNotified: shiftsNotified > 0,
       message: `License revoked. ${affectedShifts.length} upcoming shift(s) flagged for reassignment.`,
     });
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error('[LicenseDashboard] Revoke error:', error);
     return res.status(500).json({ error: 'Failed to revoke license' });
   }
@@ -383,7 +383,7 @@ router.get('/export/:stateCode/csv', ensureWorkspaceAccess, async (req: Request,
     res.setHeader('X-State-Code', normalizedState);
     res.setHeader('X-Regulatory-Body', regulatoryBody);
     return res.send(csv);
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error('[LicenseDashboard] State CSV export error:', error);
     return res.status(500).json({ error: 'Failed to generate state license CSV export' });
   }

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AuthenticatedRequest } from '../rbac';
 /**
  * UNIVERSAL ACCESS CONTROL PANEL (UACP) API ROUTES
  * =================================================
@@ -32,7 +33,7 @@ const log = createLogger('UacpRoutes');
 const router = Router();
 
 // Middleware to check admin access
-const requireAdminAccess = (req: any, res: any, next: any) => {
+const requireAdminAccess = (req: AuthenticatedRequest, res: any, next: any) => {
   const user = req.user;
   const allowedRoles = ['org_owner', 'co_owner', 'org_admin', 'root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
   

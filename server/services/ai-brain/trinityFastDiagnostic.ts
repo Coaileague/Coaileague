@@ -95,7 +95,7 @@ async function collectDatabaseMetrics(): Promise<Record<string, any>> {
       pendingAITasks: taskResult,
       databaseStatus: 'connected'
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     return {
       databaseStatus: 'error',
       error: (error instanceof Error ? error.message : String(error))
@@ -113,7 +113,7 @@ async function collectSubagentMetrics(): Promise<Record<string, any>> {
       activeSubagents: activeCount,
       inactiveSubagents: allSubagents.length - activeCount,
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     return {
       subagentStatus: 'error',
       error: (error instanceof Error ? error.message : String(error))
@@ -131,7 +131,7 @@ async function collectToolMetrics(): Promise<Record<string, any>> {
       degradedTools: 0,
       status: 'operational'
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     return {
       toolStatus: 'error',
       error: (error instanceof Error ? error.message : String(error))
@@ -151,7 +151,7 @@ async function collectNotificationMetrics(): Promise<Record<string, any>> {
       unreadNotifications: result,
       notificationSystem: 'operational'
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     return {
       notificationSystem: 'error',
       error: (error instanceof Error ? error.message : String(error))
@@ -252,7 +252,7 @@ Be concise but thorough. Focus on actionable insights. Format your response with
     }
 
     return { analysis, findings, recommendations };
-  } catch (error: any) {
+  } catch (error : unknown) {
     const executionTime = Date.now() - startTime;
     recordModelResult(tier, false, executionTime, (error instanceof Error ? error.message : String(error)));
     
@@ -297,7 +297,7 @@ async function applySelfHealing(findings: DiagnosticFinding[]): Promise<string[]
           break;
       }
       finding.fixApplied = true;
-    } catch (error: any) {
+    } catch (error : unknown) {
       actions.push(`Failed to fix ${finding.title}: ${(error instanceof Error ? error.message : String(error))}`);
     }
   }
@@ -354,7 +354,7 @@ async function sendDiagnosticReport(report: DiagnosticReport): Promise<void> {
     }
 
     log.info(`[TrinityDiagnostic] Report sent to notification system: ${report.id}`);
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error('[TrinityDiagnostic] Failed to send report:', (error instanceof Error ? error.message : String(error)));
   }
 }

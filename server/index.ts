@@ -11,9 +11,9 @@ if (process.env.GCS_KEY_JSON && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
   try {
     _fs.writeFileSync(_keyPath, process.env.GCS_KEY_JSON, { mode: 0o600 });
     process.env.GOOGLE_APPLICATION_CREDENTIALS = _keyPath;
-    console.log('[GCS] Credentials written from GCS_KEY_JSON env var');
+    log.info('[GCS] Credentials written from GCS_KEY_JSON env var');
   } catch (e) {
-    console.error('[GCS] Failed to write credentials:', e);
+    log.error('[GCS] Failed to write credentials:', e);
   }
 }
 
@@ -2297,8 +2297,8 @@ self.addEventListener('activate', async () => {
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
     const errStack = error instanceof Error ? error.stack : '';
-    console.error('[FATAL] CRITICAL: Failed to register routes —', errMsg);
-    if (errStack) console.error(errStack);
+    log.error('[FATAL] CRITICAL: Failed to register routes —', errMsg);
+    if (errStack) log.error(errStack);
     log.error(`CRITICAL: Failed to register routes — ${errMsg}`, { stack: typeof errStack === 'string' ? errStack.slice(0, 500) : '' });
     process.exit(1);
   }

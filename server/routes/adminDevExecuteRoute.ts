@@ -19,6 +19,7 @@
  */
 
 import { Router } from 'express';
+import { AuthenticatedRequest } from '../rbac';
 import { timingSafeEqual } from 'crypto';
 import { createLogger } from '../lib/logger';
 import { sanitizeError } from '../middleware/errorHandler';
@@ -29,7 +30,7 @@ const router = Router();
 
 // ─── Token middleware ─────────────────────────────────────────────────────────
 
-function requireAdminScriptToken(req: any, res: any, next: any): void {
+function requireAdminScriptToken(req: AuthenticatedRequest, res: any, next: any): void {
   const expectedToken = process.env.ADMIN_SCRIPT_TOKEN;
 
   if (!expectedToken) {
@@ -89,7 +90,7 @@ const ALLOWED_COMMANDS: Record<string, () => Promise<string>> = {
 
 // ─── Route ───────────────────────────────────────────────────────────────────
 
-router.post('/dev-execute', requireAdminScriptToken, async (req: any, res: any) => {
+router.post('/dev-execute', requireAdminScriptToken, async (req: AuthenticatedRequest, res: any) => {
   // Extra safety: dev-execute should never run in production
   if (process.env.NODE_ENV === 'production') {
     log.error('[DevExecute] Attempted dev-execute in production — blocked');

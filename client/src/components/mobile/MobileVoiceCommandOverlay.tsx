@@ -209,7 +209,7 @@ export function MobileVoiceCommandOverlay({
 
       queryClient.invalidateQueries({ queryKey: ['/api/workboard'] });
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       console.error('[VoiceOverlay] Submit error:', error);
       setSubmissionState('error');
       onModeChange?.('ERROR');

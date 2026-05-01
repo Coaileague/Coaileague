@@ -205,7 +205,7 @@ export async function syncInvoiceToQuickBooks(invoiceId: string): Promise<SyncRe
 
     return { success: true, qbInvoiceId };
 
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error(`[QBSync] Failed to sync invoice ${invoiceId}:`, (error instanceof Error ? error.message : String(error)));
 
     await db.update(invoices)
@@ -359,7 +359,7 @@ export async function syncPayrollToQuickBooks(payrollRunId: string): Promise<Syn
       await qbRequest(qbClient, 'POST', '/timeactivity', { TimeActivity: timeActivity });
 
       syncedCount++;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[QBPayrollSync] Failed to sync entry for employee ${entry.employeeId}:`, (error instanceof Error ? error.message : String(error)));
       errors.push(`Entry ${entry.id}: ${(error instanceof Error ? error.message : String(error))}`);
       failedCount++;

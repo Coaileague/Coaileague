@@ -16,7 +16,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { pool } from '../db';
 import { requireAuth } from '../auth';
-import { requireWorkspaceRole } from '../rbac';
+import { requireWorkspaceRole, AuthenticatedRequest} from '../rbac';
 import { createLogger } from '../lib/logger';
 import { verifyClockInPin } from '../services/trinityVoice/clockInPinService';
 import { pinVerifyLimiter } from '../middleware/rateLimiter';
@@ -50,7 +50,7 @@ clockinPinRouter.post(
   '/:employeeId/pin/set',
   requireAuth,
   requireWorkspaceRole(['manager', 'owner', 'root_admin']),
-  async (req: any, res) => {
+  async (req: AuthenticatedRequest, res) => {
     try {
       const { employeeId } = req.params;
       const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
@@ -85,7 +85,7 @@ clockinPinRouter.post(
   '/:employeeId/pin/verify',
   requireAuth,
   pinVerifyLimiter,
-  async (req: any, res) => {
+  async (req: AuthenticatedRequest, res) => {
     try {
       const { employeeId } = req.params;
       const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
@@ -128,7 +128,7 @@ clockinPinRouter.post(
   '/pin/verify-by-number',
   requireAuth,
   pinVerifyLimiter,
-  async (req: any, res) => {
+  async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
       const { employeeNumber, pin } = req.body;
@@ -170,7 +170,7 @@ clockinPinRouter.delete(
   '/:employeeId/pin',
   requireAuth,
   requireWorkspaceRole(['manager', 'owner', 'root_admin']),
-  async (req: any, res) => {
+  async (req: AuthenticatedRequest, res) => {
     try {
       const { employeeId } = req.params;
       const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
@@ -192,7 +192,7 @@ clockinPinRouter.get(
   '/:employeeId/pin/status',
   requireAuth,
   requireWorkspaceRole(['manager', 'owner', 'root_admin']),
-  async (req: any, res) => {
+  async (req: AuthenticatedRequest, res) => {
     try {
       const { employeeId } = req.params;
       const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
@@ -216,7 +216,7 @@ clockinPinRouter.get(
 clockinPinRouter.post(
   '/me/pin/set',
   requireAuth,
-  async (req: any, res) => {
+  async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.session?.userId;
       const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
@@ -256,7 +256,7 @@ clockinPinRouter.post(
 clockinPinRouter.delete(
   '/me/pin',
   requireAuth,
-  async (req: any, res) => {
+  async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.session?.userId;
       const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
@@ -279,7 +279,7 @@ clockinPinRouter.delete(
 clockinPinRouter.get(
   '/me/pin/status',
   requireAuth,
-  async (req: any, res) => {
+  async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.session?.userId;
       const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;

@@ -208,7 +208,7 @@ class TrinityAgentParityLayer {
       
       return result;
       
-    } catch (error: any) {
+    } catch (error : unknown) {
       this.log.error(`Execution failed:`, error);
       return {
         executionId,
@@ -483,7 +483,7 @@ class TrinityAgentParityLayer {
         verified: false,
       };
       
-    } catch (error: any) {
+    } catch (error : unknown) {
       return {
         stepId: step.stepId,
         action: step.action,
@@ -540,7 +540,7 @@ class TrinityAgentParityLayer {
         summary: result.stdout.substring(0, 500),
         exitCode: 0,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       // Test command failed - this indicates actual test failures
       return {
         success: false,

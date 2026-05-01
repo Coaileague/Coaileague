@@ -57,7 +57,7 @@ async function syncSchema() {
       for (const idx of table.indexes) {
         await db.execute(sql.raw(idx));
       }
-    } catch (err: any) {
+    } catch (err : unknown) {
       if (err.message?.includes("already exists")) {
         console.log(`  [OK] ${table.name} — already exists`);
       } else {

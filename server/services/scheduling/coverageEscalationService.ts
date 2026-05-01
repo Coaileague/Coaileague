@@ -116,7 +116,7 @@ class CoverageEscalationService {
             } else {
               siteName = shiftRow?.title ?? null;
             }
-          } catch (siteErr: any) {
+          } catch (siteErr : unknown) {
             log.warn(`[CoverageEscalation] Site lookup failed for coverage ${row.id}: ${siteErr?.message}`);
           }
 
@@ -147,7 +147,7 @@ class CoverageEscalationService {
           });
 
           escalated++;
-        } catch (rowErr: any) {
+        } catch (rowErr : unknown) {
           log.error(`[CoverageEscalation] Failed to escalate coverage ${row.id}:`, rowErr?.message);
         }
       }

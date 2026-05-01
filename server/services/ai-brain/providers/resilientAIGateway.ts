@@ -265,7 +265,7 @@ class ResilientAIGateway {
           fallbackUsed,
           originalProvider,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         lastError = error;
         log.error(`❌ ${provider} failed:`, (error instanceof Error ? error.message : String(error)));
         this.openCircuit(provider, (error instanceof Error ? error.message : String(error)));
@@ -593,7 +593,7 @@ class ResilientAIGateway {
     this.healthCheckInterval = setInterval(async () => {
       try {
         await this.performHealthCheck();
-      } catch (error: any) {
+      } catch (error : unknown) {
         log.warn('[Trinity:gateway] Health check failed (will retry):', error?.message || 'unknown');
       }
     }, HEALTH_CHECK_INTERVAL_MS);
@@ -624,7 +624,7 @@ class ResilientAIGateway {
         health.lastCheck = new Date();
         
         log.info(`✅ ${provider} healthy (${latencyMs}ms)`);
-      } catch (error: any) {
+      } catch (error : unknown) {
         health.isHealthy = false;
         health.lastError = (error instanceof Error ? error.message : String(error));
         health.lastCheck = new Date();

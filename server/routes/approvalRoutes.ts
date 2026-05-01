@@ -3,7 +3,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { approvalRequestService } from "../services/ai-brain/approvalRequestService";
 import { requireAuth } from '../auth';
-import { getUserPlatformRole } from '../rbac';
+import { getUserPlatformRole, AuthenticatedRequest} from '../rbac';
 import { db } from "../db";
 import { sql, eq, and } from "drizzle-orm";
 import { shifts, expenses } from "@shared/schema";
@@ -292,7 +292,7 @@ router.post("/:id/cancel", async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // Timesheet Edit Requests — manager review of officer-submitted edit requests
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/pending', requireAuth, async (req: any, res) => {  // mounted at /api/timesheet-edit-requests/pending
+router.get('/pending', requireAuth, async (req: AuthenticatedRequest, res) => {  // mounted at /api/timesheet-edit-requests/pending
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(401).json({ error: 'Workspace required' });
@@ -306,7 +306,7 @@ router.get('/pending', requireAuth, async (req: any, res) => {  // mounted at /a
   }
 });
 
-router.put('/:id/review', requireAuth, async (req: any, res) => {  // mounted at /api/timesheet-edit-requests/:id/review
+router.put('/:id/review', requireAuth, async (req: AuthenticatedRequest, res) => {  // mounted at /api/timesheet-edit-requests/:id/review
   try {
     const { id } = req.params;
     const { approved, reviewNotes } = req.body;

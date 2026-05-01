@@ -1091,7 +1091,7 @@ router.get('/platform-patterns', async (req: Request, res: Response) => {
  * GET /api/trinity/ai-usage/summary
  * Returns AI usage summary for the authenticated workspace (owner/manager only).
  */
-router.get('/ai-usage/summary', async (req: any, res: Response) => {
+router.get('/ai-usage/summary', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const user = await getAuthenticatedUser(req);
     if (!user) return res.status(401).json({ error: 'Unauthorized' });

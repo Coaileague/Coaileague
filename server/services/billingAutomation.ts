@@ -182,7 +182,7 @@ export async function generateUsageBasedInvoices(workspaceId: string, generateDa
         });
       }
       log.info(`[Billing Platform] Recorded processing fees for ${generatedInvoices.length} invoices`);
-    } catch (feeErr: any) {
+    } catch (feeErr : unknown) {
       log.warn(`[Billing Platform] Processing fee recording for invoice gen failed (non-blocking):`, feeErr.message);
     }
   }
@@ -301,7 +301,7 @@ export async function generateInvoiceForClient(
           referenceId: inv.invoiceNumber || inv.id,
         });
       }
-    } catch (feeErr: any) {
+    } catch (feeErr : unknown) {
       log.warn(`[Billing] Processing fee recording for per-client invoice failed (non-blocking):`, feeErr.message);
     }
   }
@@ -1012,7 +1012,7 @@ export async function sendInvoiceViaStripe(invoiceId: string): Promise<{ success
 
     return { success: true, stripeInvoiceId: stripeInvoice.id };
 
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error('[Billing Platform] Failed to send invoice via Stripe:', error);
     return { success: false, error: (error instanceof Error ? error.message : String(error)) };
   }
@@ -1182,7 +1182,7 @@ export async function generateWeeklyInvoices(
             .where(eq(invoices.id, invoice.id));
           invoice.status = 'sent';
           log.info(`[Billing Platform] Auto-sent invoice ${invoice.invoiceNumber} for ${clientSummary.clientName}`);
-        } catch (sendErr: any) {
+        } catch (sendErr : unknown) {
           log.warn(`[Billing Platform] Auto-send failed for ${invoice.invoiceNumber}:`, sendErr.message);
         }
       }
@@ -1195,7 +1195,7 @@ export async function generateWeeklyInvoices(
         entriesCovered: allTimeEntryIds.length,
         billingCycle: cycle,
       });
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[Billing Platform] Invoice failed for ${clientSummary.clientName}:`, error);
       failedClients.push({
         clientName: clientSummary.clientName,

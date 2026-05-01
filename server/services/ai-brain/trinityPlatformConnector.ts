@@ -140,7 +140,7 @@ class TrinityPlatformConnector {
       // Update connection stats
       this.updateConnectionStats(domain);
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[TrinityPlatformConnector] Failed to emit event for ${domain}:`, (error instanceof Error ? error.message : String(error)));
     }
   }
@@ -240,7 +240,7 @@ class TrinityPlatformConnector {
         this.connectionStats.set(domain, stats);
       }
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[TrinityPlatformConnector] Failed to share insight for ${domain}:`, (error instanceof Error ? error.message : String(error)));
     }
   }

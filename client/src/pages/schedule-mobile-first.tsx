@@ -469,7 +469,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
       queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
       setDetailSheetOpen(false);
       toast({ title: "Shift claimed", description: "This shift is now yours." });
-    } catch (error: any) {
+    } catch (error : unknown) {
       toast({ title: "Failed to claim shift", description: error?.message || "Please try again", variant: "destructive" });
     } finally {
       setClaimingShiftId(null);
@@ -488,7 +488,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
       queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
       const msg = isMyShift ? 'You are confirmed for this shift.' : 'Shift claimed successfully.';
       toast({ title: 'Shift accepted', description: msg });
-    } catch (error: any) {
+    } catch (error : unknown) {
       toast({
         title: 'Failed to accept shift',
         description: error?.message || 'Please try again',
@@ -504,7 +504,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
       queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
       queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
       toast({ title: 'Shift declined', description: 'Your supervisor has been notified.' });
-    } catch (error: any) {
+    } catch (error : unknown) {
       toast({
         title: 'Failed to decline shift',
         description: error?.message || 'Please try again',

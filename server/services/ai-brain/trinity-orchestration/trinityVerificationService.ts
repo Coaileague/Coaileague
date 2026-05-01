@@ -145,7 +145,7 @@ class ClaudeVerificationService {
         ...verification,
         creditsUsed,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[ClaudeVerificationService] Verification failed:', error);
 
       return {

@@ -884,7 +884,7 @@ class SupportActionsService {
           targetUser.currentWorkspaceId || undefined
         );
         emailSent = true;
-      } catch (emailErr: any) {
+      } catch (emailErr : unknown) {
         emailError = emailErr?.message || 'Unknown email error';
         log.error('[SupportActions] Password reset email failed:', emailErr);
       }

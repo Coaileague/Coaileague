@@ -189,7 +189,7 @@ export class UICrawler {
       } else {
         console.log('[UICrawler] Could not find login form inputs');
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       console.log(`[UICrawler] Login failed: ${error.message}`);
     } finally {
       await page.close();
@@ -310,7 +310,7 @@ export class UICrawler {
       this.pageResults.push(result);
       this.convertToTriadIssues(result);
       
-    } catch (error: any) {
+    } catch (error : unknown) {
       console.error(`[UICrawler] Error auditing ${url}:`, error.message);
       this.issues.push({
         id: generateId(),

@@ -63,7 +63,7 @@ class CommitmentManagerService {
         await this.cleanupExpiredLocks();
         consecutiveFailures = 0;
         backoffUntil = 0;
-      } catch (error: any) {
+      } catch (error : unknown) {
         consecutiveFailures++;
         const backoffMs = Math.min(60000 * Math.pow(2, consecutiveFailures - 1), 300000);
         backoffUntil = Date.now() + backoffMs;

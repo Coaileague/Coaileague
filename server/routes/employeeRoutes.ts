@@ -798,7 +798,7 @@ router.delete('/:id', async (req: AuthenticatedRequest, res) => {
   }
 });
 
-router.get('/me', async (req: any, res) => {
+router.get('/me', async (req: AuthenticatedRequest, res) => {
   try {
     let userId: string | undefined;
     

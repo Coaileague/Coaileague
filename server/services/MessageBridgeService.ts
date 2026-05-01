@@ -93,7 +93,7 @@ class MessageBridgeService {
             externalMessageId: result.id || `email-${Date.now()}`,
             providerResponse: result,
           };
-        } catch (error: any) {
+        } catch (error : unknown) {
           log.error('Email send failed', { error: (error instanceof Error ? error.message : String(error)) });
           return {
             externalMessageId: `email-failed-${Date.now()}`,
@@ -136,7 +136,7 @@ class MessageBridgeService {
             externalMessageId: data.sid || `sms-${Date.now()}`,
             providerResponse: data,
           };
-        } catch (error: any) {
+        } catch (error : unknown) {
           log.error('SMS send failed', { error: (error instanceof Error ? error.message : String(error)) });
           return {
             externalMessageId: `sms-failed-${Date.now()}`,
@@ -177,7 +177,7 @@ class MessageBridgeService {
             externalMessageId: data.sid || `wa-${Date.now()}`,
             providerResponse: data,
           };
-        } catch (error: any) {
+        } catch (error : unknown) {
           log.error('WhatsApp send failed', { error: (error instanceof Error ? error.message : String(error)) });
           return {
             externalMessageId: `wa-failed-${Date.now()}`,
@@ -490,7 +490,7 @@ class MessageBridgeService {
         externalMessageId = result.externalMessageId;
         providerResponse = result.providerResponse;
         deliveryStatus = providerResponse?.status === 'failed' ? 'failed' : 'sent';
-      } catch (sendError: any) {
+      } catch (sendError : unknown) {
         log.error('Outbound send failed', { channelType, error: sendError.message });
         deliveryStatus = 'failed';
         providerResponse = { error: sendError.message };

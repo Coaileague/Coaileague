@@ -123,7 +123,7 @@ export function HelpCommandPanel({
     <UniversalModal open={open} onOpenChange={onClose}>
       <UniversalModalContent size="full" hideBuiltInClose className="max-h-[80dvh] sm:max-h-[90vh] p-0 flex flex-col bg-gradient-to-br from-slate-900 to-slate-800 border border-blue-500/30 overflow-y-auto">
         {/* Header with Logo and Close */}
-        {/* @ts-ignore */}
+        {/* @ts-expect-error — TS migration */}
         <DialogStyledHeader variant="info" showClose={true} className="p-5 sm:p-6 border-b-2 border-blue-400/50">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center">
@@ -141,7 +141,7 @@ export function HelpCommandPanel({
               </p>
             </div>
           </div>
-        {/* @ts-ignore */}
+        {/* @ts-expect-error — TS migration */}
         </DialogStyledHeader>
 
         {/* Command Grid */}

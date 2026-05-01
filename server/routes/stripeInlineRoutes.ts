@@ -1,4 +1,5 @@
 import { sanitizeError } from '../middleware/errorHandler';
+import { AuthenticatedRequest } from '../rbac';
 import { Router, RequestHandler } from "express";
 import crypto from 'crypto';
 import Stripe from 'stripe';
@@ -45,11 +46,11 @@ if (!isStripeConfigured()) {
   log.warn('STRIPE_SECRET_KEY not found. Payment processing disabled. Add keys to activate.');
 }
 
-function resolveUserId(req: any): string | undefined {
+function resolveUserId(req: AuthenticatedRequest): string | undefined {
   return req.user?.id || req.user?.claims?.sub || req.session?.userId;
 }
 
-async function resolveWorkspace(req: any) {
+async function resolveWorkspace(req: AuthenticatedRequest) {
   const wsId = req.user?.currentWorkspaceId || req.session?.currentWorkspaceId || req.workspaceId;
   if (wsId) {
     const ws = await storage.getWorkspace(wsId);
@@ -62,7 +63,7 @@ async function resolveWorkspace(req: any) {
   return undefined;
 }
 
-const flexAuth: RequestHandler = async (req: any, res, next) => {
+const flexAuth: RequestHandler = async (req: AuthenticatedRequest, res, next) => {
   if (req.session?.userId) {
     if (!req.user) {
       const user = await storage.getUser(req.session.userId);
@@ -87,7 +88,7 @@ router.get('/config', async (req, res) => {
   });
 });
 
-router.post('/connect-account', flexAuth, async (req: any, res) => {
+router.post('/connect-account', flexAuth, async (req: AuthenticatedRequest, res) => {
   try {
     if (!isStripeConfigured()) {
       return res.status(503).json({ 
@@ -135,7 +136,7 @@ router.post('/connect-account', flexAuth, async (req: any, res) => {
   }
 });
 
-router.post('/onboarding-link', flexAuth, async (req: any, res) => {
+router.post('/onboarding-link', flexAuth, async (req: AuthenticatedRequest, res) => {
   try {
     if (!isStripeConfigured()) {
       return res.status(503).json({ message: "Stripe keys required" });
@@ -161,7 +162,7 @@ router.post('/onboarding-link', flexAuth, async (req: any, res) => {
   }
 });
 
-router.post('/pay-invoice', requireAuth, async (req: any, res) => {
+router.post('/pay-invoice', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     if (!isStripeConfigured()) {
       return res.status(503).json({ message: "Stripe keys required" });
@@ -327,7 +328,7 @@ router.post('/pay-invoice', requireAuth, async (req: any, res) => {
   }
 });
 
-router.post('/create-subscription', requireAuth, async (req: any, res) => {
+router.post('/create-subscription', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     if (!isStripeConfigured()) {
       return res.status(503).json({ message: "Stripe keys required" });
@@ -477,7 +478,7 @@ router.post('/create-subscription', requireAuth, async (req: any, res) => {
   }
 });
 
-router.post('/webhook', async (req: any, res) => {
+router.post('/webhook', async (req: AuthenticatedRequest, res) => {
   try {
     if (!isStripeConfigured()) {
       return res.status(503).send('Stripe not configured');
@@ -581,7 +582,7 @@ router.post('/webhook', async (req: any, res) => {
  * POST /api/stripe/billing-portal
  * Create a Stripe Customer Portal session so the org owner can manage billing
  */
-router.post('/billing-portal', requireAuth, async (req: any, res) => {
+router.post('/billing-portal', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     if (!isStripeConfigured()) return res.status(503).json({ message: 'Payment processing not configured' });
 
@@ -622,7 +623,7 @@ router.post('/billing-portal', requireAuth, async (req: any, res) => {
  * POST /api/stripe/create-subscription-checkout
  * Create a Stripe Checkout session for subscription renewal or upgrade
  */
-router.post('/create-subscription-checkout', requireAuth, async (req: any, res) => {
+router.post('/create-subscription-checkout', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     if (!isStripeConfigured()) return res.status(503).json({ message: 'Payment processing not configured' });
 
@@ -701,7 +702,7 @@ router.post('/create-subscription-checkout', requireAuth, async (req: any, res) 
 });
 
 
-router.get('/connect-status', flexAuth, async (req: any, res) => {
+router.get('/connect-status', flexAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const workspace = await resolveWorkspace(req);
     if (!workspace) {
@@ -755,7 +756,7 @@ router.get('/connect-status', flexAuth, async (req: any, res) => {
   }
 });
 
-router.get('/fee-schedule', flexAuth, async (req: any, res) => {
+router.get('/fee-schedule', flexAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const workspace = await resolveWorkspace(req);
     if (!workspace) {
@@ -816,7 +817,7 @@ router.get('/fee-schedule', flexAuth, async (req: any, res) => {
   }
 });
 
-router.post('/connect-dashboard', flexAuth, async (req: any, res) => {
+router.post('/connect-dashboard', flexAuth, async (req: AuthenticatedRequest, res) => {
   try {
     if (!isStripeConfigured()) {
       return res.status(503).json({ message: "Stripe keys required" });

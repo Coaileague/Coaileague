@@ -18,7 +18,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { requirePlatformRole } from '../rbac';
+import { requirePlatformRole, AuthenticatedRequest} from '../rbac';
 import { assistedOnboardingService } from '../services/assistedOnboardingService';
 import { db } from '../db';
 import { workspaces } from '@shared/schema';
@@ -58,7 +58,7 @@ const storeExtractedSchema = z.object({
 assistedOnboardingRouter.post(
   '/create',
   requirePlatformRole([...SUPPORT_ROLES]),
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const parsed = createWorkspaceSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -92,7 +92,7 @@ assistedOnboardingRouter.post(
 assistedOnboardingRouter.get(
   '/list',
   requirePlatformRole([...SUPPORT_ROLES]),
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const workspaceList = await assistedOnboardingService.getAssistedWorkspaces(req.user?.id);
       
@@ -111,7 +111,7 @@ assistedOnboardingRouter.get(
 assistedOnboardingRouter.get(
   '/:id',
   requirePlatformRole([...SUPPORT_ROLES]),
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { id } = req.params;
       
@@ -155,7 +155,7 @@ assistedOnboardingRouter.get(
 assistedOnboardingRouter.post(
   '/:id/upload-documents',
   requirePlatformRole([...SUPPORT_ROLES]),
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { id } = req.params;
       const parsed = documentUploadSchema.safeParse(req.body);
@@ -183,7 +183,7 @@ assistedOnboardingRouter.post(
 assistedOnboardingRouter.post(
   '/:id/extract',
   requirePlatformRole([...SUPPORT_ROLES]),
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { id } = req.params;
       
@@ -208,7 +208,7 @@ assistedOnboardingRouter.post(
 assistedOnboardingRouter.post(
   '/:id/store-extracted',
   requirePlatformRole([...SUPPORT_ROLES]),
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { id } = req.params;
       const parsed = storeExtractedSchema.safeParse(req.body);
@@ -244,7 +244,7 @@ assistedOnboardingRouter.post(
 assistedOnboardingRouter.post(
   '/:id/ready',
   requirePlatformRole([...SUPPORT_ROLES]),
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { id } = req.params;
       
@@ -268,7 +268,7 @@ assistedOnboardingRouter.post(
 assistedOnboardingRouter.post(
   '/:id/handoff',
   requirePlatformRole([...SUPPORT_ROLES]),
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { id } = req.params;
       
@@ -294,7 +294,7 @@ export const acceptHandoffRouter = Router();
 
 acceptHandoffRouter.get(
   '/:token',
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { token } = req.params;
       
@@ -320,7 +320,7 @@ acceptHandoffRouter.get(
 
 acceptHandoffRouter.post(
   '/:token/complete',
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { token } = req.params;
       

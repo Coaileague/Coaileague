@@ -1,4 +1,5 @@
 import { sanitizeError } from '../../middleware/errorHandler';
+import { AuthenticatedRequest } from '../../rbac';
 import { Router } from 'express';
 import { db } from '../../db';
 import { complianceEnrollments } from '../../../shared/schema/domains/workforce/index';
@@ -22,7 +23,7 @@ function computeDeadline(workspaceCreatedAt: Date): Date {
 
 // ─── GET /api/compliance/enrollment/status ─────────────────────────────────
 // Current user's enrollment record + deadline info
-router.get('/status', requireAuth, async (req: any, res) => {
+router.get('/status', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
     const userId = req.user?.id;
@@ -94,7 +95,7 @@ router.get('/status', requireAuth, async (req: any, res) => {
 
 // ─── GET /api/compliance/enrollment/workspace ─────────────────────────────
 // All users' enrollment status — for owners/managers
-router.get('/workspace', requireAuth, async (req: any, res) => {
+router.get('/workspace', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'No workspace context' });
@@ -163,7 +164,7 @@ router.get('/workspace', requireAuth, async (req: any, res) => {
 
 // ─── POST /api/compliance/enrollment/submit ───────────────────────────────
 // Submit or update current user's enrollment
-router.post('/submit', requireAuth, async (req: any, res) => {
+router.post('/submit', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
     const userId = req.user?.id;
@@ -240,7 +241,7 @@ router.post('/submit', requireAuth, async (req: any, res) => {
 
 // ─── PATCH /api/compliance/enrollment/:employeeId/review ─────────────────
 // Owner/manager reviews and approves/rejects a submission
-router.patch('/:employeeId/review', requireAuth, async (req: any, res) => {
+router.patch('/:employeeId/review', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.user?.workspaceId || req.user?.currentWorkspaceId;
     const userId = req.user?.id;

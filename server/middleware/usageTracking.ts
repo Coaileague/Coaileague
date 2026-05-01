@@ -65,7 +65,7 @@ export function withUsageTracking<T>(
       
       responseStatusCode = 200;
       return result;
-    } catch (error: any) {
+    } catch (error : unknown) {
       success = false;
       errorMessage = error.message || String(error);
       errorCode = error.code || error.statusCode?.toString();
@@ -162,7 +162,7 @@ export async function withBatchUsageTracking<T>(
     const result = await fn();
     responseStatusCode = 200;
     return result;
-  } catch (error: any) {
+  } catch (error : unknown) {
     success = false;
     errorMessage = error.message || String(error);
     errorCode = error.code || error.statusCode?.toString();

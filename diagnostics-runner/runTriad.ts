@@ -92,7 +92,7 @@ async function main() {
     
     process.exit(report.summary.criticalCount > 0 ? 1 : 0);
     
-  } catch (error: any) {
+  } catch (error : unknown) {
     console.error('');
     console.error('❌ TRINITY TRIAD FAILED');
     console.error('=======================');

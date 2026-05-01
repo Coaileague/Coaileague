@@ -111,7 +111,7 @@ async function handleTrainingSchedule(req: ActionRequest): Promise<ActionResult>
       suggestions,
       availableSessions: upcomingSessions.length
     }, start);
-  } catch (error: any) {
+  } catch (error : unknown) {
     return createResult('training.schedule', false, `Training schedule action failed: ${error.message}`, null, start);
   }
 }
@@ -168,7 +168,7 @@ async function handleTrainingCompliance(req: ActionRequest): Promise<ActionResul
         status: Number(o.hours) >= 40 ? 'compliant' : 'at_risk'
       }))
     }, start);
-  } catch (error: any) {
+  } catch (error : unknown) {
     return createResult('training.compliance', false, `Training compliance summary failed: ${error.message}`, null, start);
   }
 }
@@ -235,7 +235,7 @@ async function handleTrainingHours(req: ActionRequest): Promise<ActionResult> {
       projectionStatus: yearEndProjection >= 40 ? 'on_track' : 'behind_schedule',
       recentSessions: attendance.slice(0, 5)
     }, start);
-  } catch (error: any) {
+  } catch (error : unknown) {
     return createResult('training.hours', false, `Training hours report failed: ${error.message}`, null, start);
   }
 }

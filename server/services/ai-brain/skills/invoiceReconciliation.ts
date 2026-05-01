@@ -194,7 +194,7 @@ export class InvoiceReconciliationSkill extends BaseSkill {
         executionTimeMs: Date.now() - (context as any).startTime,
       };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       logs.push(`[InvoiceReconciliation] Error: ${(error instanceof Error ? error.message : String(error))}`);
       return {
         success: false,

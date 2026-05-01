@@ -189,7 +189,7 @@ async function runStripeTests(): Promise<void> {
       const pass = r.status === 200;
       result(`STRIPE:${tc.name}`, pass, `HTTP ${r.status}${pass ? '' : ` — ${r.body.slice(0, 100)}`}`);
       if (pass) stripeEventsPassed++;
-    } catch (err: any) {
+    } catch (err : unknown) {
       result(`STRIPE:${tc.name}`, false, `Network error: ${err.message}`);
     }
   }
@@ -203,7 +203,7 @@ async function runStripeTests(): Promise<void> {
       stripeIdempotent = pass ? 'PASS' : 'FAIL';
       result('STRIPE:idempotency', pass,
         pass ? 'Replay returned 200 — idempotent' : `HTTP ${r.status} — may have re-processed`);
-    } catch (err: any) {
+    } catch (err : unknown) {
       stripeIdempotent = 'FAIL';
       result('STRIPE:idempotency', false, `Network error: ${err.message}`);
     }
@@ -252,7 +252,7 @@ async function runResendTests(): Promise<void> {
       result(`RESEND:${tc.name}`, pass,
         `HTTP ${r.status} — ${pass ? tc.expect : r.body.slice(0, 100)}`);
       if (pass) resendEventsPassed++;
-    } catch (err: any) {
+    } catch (err : unknown) {
       result(`RESEND:${tc.name}`, false, `Network error: ${err.message}`);
     }
   }
@@ -305,7 +305,7 @@ async function runTwilioTests(): Promise<void> {
     const pass = r.status === 200;
     twilioVoice = pass ? 'PASS' : 'FAIL';
     result('TWILIO:voice-inbound', pass, `HTTP ${r.status}${pass ? ' — TwiML response returned' : ` — ${r.body.slice(0, 100)}`}`);
-  } catch (err: any) {
+  } catch (err : unknown) {
     twilioVoice = 'FAIL';
     result('TWILIO:voice-inbound', false, `Network error: ${err.message}`);
   }
@@ -317,7 +317,7 @@ async function runTwilioTests(): Promise<void> {
     const pass = r.status === 200;
     twilioSms = pass ? 'PASS' : 'FAIL';
     result('TWILIO:sms-inbound', pass, `HTTP ${r.status}`);
-  } catch (err: any) {
+  } catch (err : unknown) {
     twilioSms = 'FAIL';
     result('TWILIO:sms-inbound', false, `Network error: ${err.message}`);
   }
@@ -339,7 +339,7 @@ async function runTwilioTests(): Promise<void> {
       twilioSigEnforced = 'PASS';
       result('TWILIO:sig-enforced', true, 'SIGNATURE_ENFORCED — invalid sig correctly rejected with 403');
     }
-  } catch (err: any) {
+  } catch (err : unknown) {
     twilioSigEnforced = 'FAIL';
     result('TWILIO:sig-enforced', false, `Network error: ${err.message}`);
   }
@@ -395,7 +395,7 @@ async function runEmailRoutingTests(): Promise<void> {
       result(`EMAIL:route-${tc.alias}`, true,
         `HTTP 200 — routed to ${tc.address} → expected ${tc.folder} folder`);
       emailRoutingPassed++;
-    } catch (err: any) {
+    } catch (err : unknown) {
       result(`EMAIL:route-${tc.alias}`, false, `Network error: ${err.message}`);
     }
   }

@@ -2,6 +2,7 @@
 // Canonical prefix: /api/tos
 // Public routes (no auth required — signed before account exists)
 import { sanitizeError } from '../middleware/errorHandler';
+import { AuthenticatedRequest } from '../rbac';
 import { Router } from "express";
 import { pool, db } from "../db";
 import { tosAgreements } from '@shared/schema';
@@ -17,7 +18,7 @@ tosRouter.get("/text", (_req, res) => {
   res.json({ version: "2026-03-01", lastUpdated: "March 1, 2026" });
 });
 
-tosRouter.post("/sign", async (req: any, res) => {
+tosRouter.post("/sign", async (req: AuthenticatedRequest, res) => {
   try {
     const { email, fullName, initials, agreementType, orgName, inviteToken } = req.body;
     if (!email || !fullName || !initials || !agreementType) {
@@ -56,7 +57,7 @@ tosRouter.post("/sign", async (req: any, res) => {
   }
 });
 
-tosRouter.get("/status", async (req: any, res) => {
+tosRouter.get("/status", async (req: AuthenticatedRequest, res) => {
   try {
     if (!req.session?.userId) return res.json({ hasSigned: false, agreements: [] });
     const userId      = req.session.userId;
@@ -78,7 +79,7 @@ tosRouter.get("/status", async (req: any, res) => {
   }
 });
 
-tosRouter.patch("/link-workspace", async (req: any, res) => {
+tosRouter.patch("/link-workspace", async (req: AuthenticatedRequest, res) => {
   try {
     const { agreementId, workspaceId } = req.body;
     if (!agreementId || !workspaceId) return res.status(400).json({ error: "agreementId and workspaceId required" });

@@ -247,7 +247,7 @@ class HealthCheckAggregationService {
       }
 
       service.metadata = result.metadata;
-    } catch (error: any) {
+    } catch (error : unknown) {
       service.consecutiveFailures++;
       service.lastCheck = Date.now();
       service.uptime = service.uptime * 0.99 + 0 * 0.01;
@@ -386,7 +386,7 @@ class HealthCheckAggregationService {
         },
         createdAt: new Date()
       });
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.warn('[HealthCheck] Failed to log unhealthy service (will retry):', error?.message || 'unknown');
     }
   }

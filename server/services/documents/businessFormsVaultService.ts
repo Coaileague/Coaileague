@@ -204,7 +204,7 @@ async function stampBrandedFrame(opts: StampOptions, docNumber: string): Promise
 
     const pdfBytes = await stampPdf.save();
     return Buffer.from(pdfBytes);
-  } catch (stampErr: any) {
+  } catch (stampErr : unknown) {
     log.error('[VaultService] PDF stamp failed, returning original:', stampErr?.message);
     // Return original rather than branded-but-empty shell
     return opts.rawBuffer;
@@ -290,7 +290,7 @@ export async function saveToVault(opts: StampOptions): Promise<SaveToVaultResult
       const contentPages = await mergedDoc.copyPages(contentDoc, contentDoc.getPageIndices());
       contentPages.forEach(p => mergedDoc.addPage(p));
       stampedBuffer = Buffer.from(await mergedDoc.save());
-    } catch (mergeErr: any) {
+    } catch (mergeErr : unknown) {
       // Fallback: if rawBuffer isn't a valid PDF (e.g. PDFKit stream mid-render),
       // use the frame buffer alone and log a warning
       log.warn('[BusinessForms] PDF merge failed, using frame-only fallback:', mergeErr?.message);
@@ -305,7 +305,7 @@ export async function saveToVault(opts: StampOptions): Promise<SaveToVaultResult
     );
 
     return { success: true, vault, stampedBuffer };
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error('[BusinessForms] Failed to save document to vault:', error?.message);
     return { success: false, error: error?.message || 'Failed to generate branded document' };
   }

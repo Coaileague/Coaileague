@@ -43,7 +43,7 @@ if (!DB_URL) {
     try {
       await client.query(sql);
       console.log(`✓ ${file}`);
-    } catch (e: any) {
+    } catch (e : unknown) {
       if (e.code === '42P07' || e.code === '42710') {
         console.log(`⚠ ${file} - already exists, skipping`);
       } else {

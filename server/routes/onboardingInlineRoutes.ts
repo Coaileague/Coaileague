@@ -275,7 +275,7 @@ router.get('/status', async (req, res) => {
   }
 })
 
-router.get('/progress', async (req: any, res) => {
+router.get('/progress', async (req: AuthenticatedRequest, res) => {
   try {
     let userId: string;
 
@@ -306,7 +306,7 @@ router.get('/progress', async (req: any, res) => {
   }
 })
 
-router.post('/skip', async (req: any, res) => {
+router.post('/skip', async (req: AuthenticatedRequest, res) => {
   try {
     let userId: string;
 
@@ -346,7 +346,7 @@ router.post('/skip', async (req: any, res) => {
   }
 })
 
-router.post('/complete', async (req: any, res) => {
+router.post('/complete', async (req: AuthenticatedRequest, res) => {
   try {
     let userId: string;
 

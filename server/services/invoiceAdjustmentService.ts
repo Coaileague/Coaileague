@@ -138,7 +138,7 @@ export async function creditInvoice(
       description: `Credit applied to ${invoice.invoiceNumber || invoiceId}: ${description} — -$${amount.toFixed(2)}`,
       metadata: { adjustmentType: 'credit', adjustedBy, source: 'invoiceAdjustmentService' },
     });
-  } catch (ledgerErr: any) {
+  } catch (ledgerErr : unknown) {
     log.error(`[INVOICE ADJUSTMENT] Ledger write failed for credit on ${invoiceId}:`, ledgerErr.message);
   }
 
@@ -153,7 +153,7 @@ export async function creditInvoice(
       payload: { invoiceId, adjustmentType: 'credit', amount, adjustedBy },
       metadata: { source: 'invoiceAdjustmentService' },
     });
-  } catch (eventErr: any) {
+  } catch (eventErr : unknown) {
     log.warn(`[INVOICE ADJUSTMENT] Platform event failed for credit on ${invoiceId}:`, eventErr.message);
   }
 
@@ -247,7 +247,7 @@ export async function discountInvoice(
       description: `Discount of ${discountPercent}% applied to ${invoice.invoiceNumber || invoiceId}: ${reason} — -$${discountAmount.toFixed(2)}`,
       metadata: { adjustmentType: 'discount', discountPercent, approvedBy, source: 'invoiceAdjustmentService' },
     });
-  } catch (ledgerErr: any) {
+  } catch (ledgerErr : unknown) {
     log.error(`[INVOICE ADJUSTMENT] Ledger write failed for discount on ${invoiceId}:`, ledgerErr.message);
   }
 
@@ -262,7 +262,7 @@ export async function discountInvoice(
       payload: { invoiceId, adjustmentType: 'discount', discountPercent, discountAmount, approvedBy },
       metadata: { source: 'invoiceAdjustmentService' },
     });
-  } catch (eventErr: any) {
+  } catch (eventErr : unknown) {
     log.warn(`[INVOICE ADJUSTMENT] Platform event failed for discount on ${invoiceId}:`, eventErr.message);
   }
 
@@ -337,7 +337,7 @@ export async function refundInvoice(
         stripeRefundId = stripeRefund.id;
         log.info(`[INVOICE ADJUSTMENT] Stripe refund issued: ${stripeRefund.id} — $${refundAmount.toFixed(2)} for invoice ${invoiceId}`);
       }
-    } catch (stripeErr: any) {
+    } catch (stripeErr : unknown) {
       // Stripe refund failure is critical — block the operation so the DB isn't updated
       // while the money isn't actually returned. Operator must resolve in Stripe dashboard.
       throw new Error(`Stripe refund failed for invoice ${invoiceId}: ${stripeErr.message}. DB not modified — no money was returned yet.`);
@@ -397,7 +397,7 @@ export async function refundInvoice(
         description: `Refund of $${refundAmount.toFixed(2)} for ${invoice.invoiceNumber || invoiceId}: ${reason} (offline/manual — no Stripe PI)`,
         metadata: { adjustmentType: 'refund', processedBy, stripeRefundId, stripePaymentIntentId, source: 'invoiceAdjustmentService_offline' },
       });
-    } catch (ledgerErr: any) {
+    } catch (ledgerErr : unknown) {
       log.error(`[INVOICE ADJUSTMENT] Ledger write failed for offline refund on ${invoiceId}:`, ledgerErr.message);
     }
   }
@@ -415,7 +415,7 @@ export async function refundInvoice(
       payload: { invoiceId, adjustmentType: 'refund', refundAmount, newStatus, stripeRefundId, processedBy },
       metadata: { source: 'invoiceAdjustmentService' },
     });
-  } catch (eventErr: any) {
+  } catch (eventErr : unknown) {
     log.warn(`[INVOICE ADJUSTMENT] Platform event failed for refund on ${invoiceId}:`, eventErr.message);
   }
 

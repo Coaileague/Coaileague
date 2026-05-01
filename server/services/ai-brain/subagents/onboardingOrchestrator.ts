@@ -282,7 +282,7 @@ class OnboardingOrchestrator {
 
       result.success = result.errors.length === 0;
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       this.log.error('Onboarding failed:', error);
       result.success = false;
       result.errors.push((error instanceof Error ? error.message : String(error)));
@@ -403,7 +403,7 @@ class OnboardingOrchestrator {
         combinedData.errors.push(...extracted.errors);
         combinedData.confidence = Math.max(combinedData.confidence, extracted.confidence);
 
-      } catch (error: any) {
+      } catch (error : unknown) {
         errors.push(`Source extraction failed: ${(error instanceof Error ? error.message : String(error))}`);
       }
     }
@@ -556,7 +556,7 @@ class OnboardingOrchestrator {
       
       this.log.info(`Cleared ${viewRecords.length} platform updates for new user ${userId}`);
       return viewRecords.length;
-    } catch (error: any) {
+    } catch (error : unknown) {
       this.log.error('Failed to clear platform updates:', (error instanceof Error ? error.message : String(error)));
       return 0;
     }
@@ -670,7 +670,7 @@ class OnboardingOrchestrator {
         } else {
           this.log.warn(`[OnboardingOrchestrator] Trial start warning: ${trialResult.error}`);
         }
-      } catch (trialError: any) {
+      } catch (trialError : unknown) {
         this.log.warn('[OnboardingOrchestrator] Trial start failed (may already exist):', trialError.message);
       }
 
@@ -684,7 +684,7 @@ class OnboardingOrchestrator {
           completionPercent: pipelineProgress.completionPercent,
         };
         this.log.info(`[OnboardingOrchestrator] Billing pipeline initialized: ${pipelineProgress.totalTasks} tasks`);
-      } catch (pipelineError: any) {
+      } catch (pipelineError : unknown) {
         this.log.warn('[OnboardingOrchestrator] Pipeline init warning:', pipelineError.message);
       }
 
@@ -805,7 +805,7 @@ class OnboardingOrchestrator {
         errors,
       };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       this.log.error('[OnboardingOrchestrator] Invitation acceptance failed:', error);
       errors.push((error instanceof Error ? error.message : String(error)));
       return {
@@ -915,7 +915,7 @@ class OnboardingOrchestrator {
         errors,
       };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       this.log.error('[OnboardingOrchestrator] Trinity initialization failed:', error);
       errors.push((error instanceof Error ? error.message : String(error)));
       return {
@@ -1082,7 +1082,7 @@ class OnboardingOrchestrator {
         status: 'passed',
         duration: Date.now() - step1Start,
       });
-    } catch (error: any) {
+    } catch (error : unknown) {
       steps.push({
         name: 'Validate Workspace',
         status: dryRun ? 'passed' : 'failed',
@@ -1110,7 +1110,7 @@ class OnboardingOrchestrator {
         status: 'passed',
         duration: Date.now() - step2Start,
       });
-    } catch (error: any) {
+    } catch (error : unknown) {
       steps.push({
         name: 'Generate Trinity Welcome',
         status: 'failed',
@@ -1136,7 +1136,7 @@ class OnboardingOrchestrator {
           duration: Date.now() - step3Start,
           error: trinityInit.errors[0],
         });
-      } catch (error: any) {
+      } catch (error : unknown) {
         steps.push({
           name: 'Initialize Workspace Trinity',
           status: 'failed',
@@ -1172,7 +1172,7 @@ class OnboardingOrchestrator {
           duration: Date.now() - step4Start,
           error: gamificationResult.errors[0],
         });
-      } catch (error: any) {
+      } catch (error : unknown) {
         steps.push({
           name: 'Activate Gamification',
           status: 'failed',
@@ -1197,7 +1197,7 @@ class OnboardingOrchestrator {
         status: 'passed',
         duration: Date.now() - step5Start,
       });
-    } catch (error: any) {
+    } catch (error : unknown) {
       steps.push({
         name: 'Verify Onboarding Status',
         status: dryRun ? 'passed' : 'failed',
@@ -1302,7 +1302,7 @@ class OnboardingOrchestrator {
         recommendations,
       };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       errors.push((error instanceof Error ? error.message : String(error)));
       return {
         workspaceId,
@@ -1390,7 +1390,7 @@ class OnboardingOrchestrator {
         errors,
       };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       this.log.error('[OnboardingOrchestrator] Industry compliance deployment failed:', error);
       errors.push((error instanceof Error ? error.message : String(error)));
       return {
@@ -1491,7 +1491,7 @@ class OnboardingOrchestrator {
         errors,
       };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       this.log.error('[OnboardingOrchestrator] Custom industry compliance deployment failed:', error);
       errors.push((error instanceof Error ? error.message : String(error)));
       return {
@@ -1591,7 +1591,7 @@ class OnboardingOrchestrator {
         requiredCertifications,
       };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       this.log.error('[OnboardingOrchestrator] Failed to get industry compliance status:', error);
       return {
         industryConfigured: false,

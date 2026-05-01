@@ -282,7 +282,7 @@ export async function generateProposalPdf(proposalId: string, workspaceId: strin
       ],
     );
     log.info(`[proposalPdf] Stored to GCS: ${gcsPath} (${pdfBuffer.length} bytes)`);
-  } catch (storeErr: any) {
+  } catch (storeErr : unknown) {
     log.warn(`[proposalPdf] GCS store failed for ${proposalId} (non-fatal): ${storeErr.message}`);
   }
 

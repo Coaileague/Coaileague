@@ -226,7 +226,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
     }
   });
 
-  router.get('/today', requireAuth, async (req: any, res) => {
+  router.get('/today', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const workspaceId = req.workspaceId;
@@ -2711,7 +2711,7 @@ router.post('/:id/mark-calloff', requireEmployee, async (req: AuthenticatedReque
     }
   });
 
-  router.post('/:shiftId/start', requireAuth, async (req: any, res) => {
+  router.post('/:shiftId/start', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       
@@ -2857,7 +2857,7 @@ router.post('/:id/mark-calloff', requireEmployee, async (req: AuthenticatedReque
     }
   });
 
-  router.post('/:shiftId/end', requireAuth, async (req: any, res) => {
+  router.post('/:shiftId/end', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       
@@ -2901,7 +2901,7 @@ router.post('/:id/mark-calloff', requireEmployee, async (req: AuthenticatedReque
     }
   });
 
-  router.get('/:shiftId/site-info', requireAuth, async (req: any, res) => {
+  router.get('/:shiftId/site-info', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const siteInfo = await shiftChatroomWorkflowService.getSiteInfo(req.params.shiftId);
       res.json(siteInfo);

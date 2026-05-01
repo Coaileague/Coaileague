@@ -111,7 +111,7 @@ class AIBrainTestRunner {
             message: response.ok ? 'API is healthy' : 'API returned error',
             details: { statusCode: response.status, data },
           };
-        } catch (error: any) {
+        } catch (error : unknown) {
           return {
             testId: 'api-health',
             testName: 'API Health Check',
@@ -149,7 +149,7 @@ class AIBrainTestRunner {
             message: 'Database connection successful',
             details: { rows: (result as any).length || 0 },
           };
-        } catch (error: any) {
+        } catch (error : unknown) {
           return {
             testId: 'db-connectivity',
             testName: 'Database Connectivity',
@@ -185,7 +185,7 @@ class AIBrainTestRunner {
             message: result.success ? 'File read successful' : result.error,
             details: { fileSize: result.metadata?.size },
           };
-        } catch (error: any) {
+        } catch (error : unknown) {
           return {
             testId: 'fs-read-access',
             testName: 'File System Read Access',
@@ -221,7 +221,7 @@ class AIBrainTestRunner {
             message: result.success ? `Found ${result.data?.length} entries` : result.error,
             details: { entryCount: result.data?.length },
           };
-        } catch (error: any) {
+        } catch (error : unknown) {
           return {
             testId: 'fs-list-access',
             testName: 'File System List Access',
@@ -260,7 +260,7 @@ class AIBrainTestRunner {
             message: `Broadcast sent to ${count} clients`,
             details: { clientCount: count },
           };
-        } catch (error: any) {
+        } catch (error : unknown) {
           return {
             testId: 'websocket-broadcast',
             testName: 'WebSocket Broadcast',
@@ -344,7 +344,7 @@ class AIBrainTestRunner {
               lineCount: result.metadata?.lineCount,
             },
           };
-        } catch (error: any) {
+        } catch (error : unknown) {
           return {
             testId: 'schema-validation',
             testName: 'Schema File Validation',
@@ -386,7 +386,7 @@ class AIBrainTestRunner {
             message: `Response time: ${responseTime}ms (threshold: ${threshold}ms)`,
             details: { responseTime, threshold },
           };
-        } catch (error: any) {
+        } catch (error : unknown) {
           return {
             testId: 'api-response-time',
             testName: 'API Response Time',
@@ -458,7 +458,7 @@ class AIBrainTestRunner {
       await this.logTestResult(result, triggeredBy);
       
       return result;
-    } catch (error: any) {
+    } catch (error : unknown) {
       const result: TestResult = {
         testId: test.id,
         testName: test.name,
@@ -527,7 +527,7 @@ class AIBrainTestRunner {
             duration: result.duration,
           },
         });
-      } catch (error: any) {
+      } catch (error : unknown) {
         results.push({
           testId,
           testName: this.tests.get(testId)?.name || testId,

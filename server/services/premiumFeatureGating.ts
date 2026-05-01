@@ -312,7 +312,7 @@ class PremiumFeatureGatingService {
       
       return result;
       
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[PremiumGating] Error checking access:', error);
       // Complete all 7 steps with failure state for audit compliance
       await this.logStep(orchContext, 'PROCESS', 'failed', {}, {}, (error instanceof Error ? error.message : String(error)));
@@ -492,7 +492,7 @@ class PremiumFeatureGatingService {
 
       return result;
       
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[PremiumGating] Error deducting credits:', error);
       // Complete all 7 steps with failure state for audit compliance
       await this.logStep(orchContext, 'MUTATE', 'failed', {}, {}, (error instanceof Error ? error.message : String(error)));

@@ -990,7 +990,7 @@ class ToolCapabilityRegistry {
 
       log.info(`[ToolRegistry] Health check ${toolId}: ${health.status}`);
       return health;
-    } catch (error: any) {
+    } catch (error : unknown) {
       health.lastCheck = new Date();
       health.consecutiveFailures++;
       health.lastError = { message: (error instanceof Error ? error.message : String(error)), timestamp: new Date() };

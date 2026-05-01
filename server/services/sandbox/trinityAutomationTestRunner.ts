@@ -119,7 +119,7 @@ export class TrinityAutomationTestRunner {
         durationMs: Date.now() - start,
         details: status.stats,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return {
         testName,
         passed: false,
@@ -169,7 +169,7 @@ export class TrinityAutomationTestRunner {
           assignmentRate: `${assignmentRate}%`,
         },
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return {
         testName,
         passed: false,
@@ -221,7 +221,7 @@ export class TrinityAutomationTestRunner {
           validationRate: `${validationRate}%`,
         },
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return {
         testName,
         passed: false,
@@ -266,7 +266,7 @@ export class TrinityAutomationTestRunner {
           totalPaid: `$${totalPaid.toFixed(2)}`,
         },
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return {
         testName,
         passed: false,
@@ -311,7 +311,7 @@ export class TrinityAutomationTestRunner {
           employeesProcessed: totalEmployees,
         },
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return {
         testName,
         passed: false,
@@ -364,7 +364,7 @@ export class TrinityAutomationTestRunner {
           tokenValid: isTokenValid,
         },
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return {
         testName,
         passed: false,
@@ -423,7 +423,7 @@ export class TrinityAutomationTestRunner {
           readyForSync: true,
         },
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return {
         test: {
           testName,

@@ -132,7 +132,7 @@ class FinancialMathVerifierSkill extends BaseSkill {
           hasWarnings: result.warnings.length > 0,
         },
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       logs.push(`Verification failed: ${(error instanceof Error ? error.message : String(error))}`);
       return { success: false, error: (error instanceof Error ? error.message : String(error)), logs };
     }

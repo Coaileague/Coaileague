@@ -227,7 +227,7 @@ ESCALATE = Too risky for AI, flag for human review`;
         suggestedAlternative: suggestedAlt,
         originalScore: params.originalConfidence,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[TriadJustice] Review failed (non-blocking):', (error instanceof Error ? error.message : String(error)));
 
       try {
@@ -240,7 +240,7 @@ ESCALATE = Too risky for AI, flag for human review`;
             updatedAt: new Date(),
           })
           .where(eq(trinityDecisionLog.id, params.decisionLogId));
-      } catch (updateErr: any) {
+      } catch (updateErr : unknown) {
         log.warn(`[TrinityDecisionLogger] Failed to update decision log ${params.decisionLogId} after triad review failure: ${updateErr?.message}`);
       }
 

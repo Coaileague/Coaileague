@@ -220,7 +220,7 @@ router.get("/compliance-grid", requireAuth, async (req: AuthenticatedRequest, re
 
     const grid = officers.map((officer: any) => ({
       officer,
-      certifications: requirements.map((req: any) => {
+      certifications: requirements.map((req: AuthenticatedRequest) => {
         const rec = recordMap[officer.id]?.[req.id];
         if (!rec) return { requirementId: req.id, status: 'not_on_file', days_left: null };
         const days = rec.days_left;

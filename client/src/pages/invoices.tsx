@@ -800,7 +800,7 @@ export default function Invoices() {
       const url = window.URL.createObjectURL(blob);
       setPdfPreviewUrl(url);
       setIsPdfPreviewOpen(true);
-    } catch (error: any) {
+    } catch (error : unknown) {
       toast({
         title: "Preview Failed",
         description: error.message,
@@ -931,7 +931,7 @@ export default function Invoices() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-    } catch (error: any) {
+    } catch (error : unknown) {
       toast({
         title: "Download Failed",
         description: error.message,

@@ -71,7 +71,7 @@ export async function runNotificationDeduplicationTests(): Promise<{
     });
     
     if (testPassed) passed++; else failed++;
-  } catch (error: any) {
+  } catch (error : unknown) {
     results.push({
       name: 'pushWhatsNew creates exactly one entry',
       passed: false,
@@ -106,7 +106,7 @@ export async function runNotificationDeduplicationTests(): Promise<{
         description: 'Second submission - should be blocked',
         category: 'announcement',
       });
-    } catch (dupError: any) {
+    } catch (dupError : unknown) {
       // Constraint error is expected - this is correct behavior
     }
     
@@ -127,7 +127,7 @@ export async function runNotificationDeduplicationTests(): Promise<{
     });
     
     if (testPassed) passed++; else failed++;
-  } catch (error: any) {
+  } catch (error : unknown) {
     results.push({
       name: 'Duplicate detection blocks repeated submissions',
       passed: false,
@@ -181,7 +181,7 @@ export async function runNotificationDeduplicationTests(): Promise<{
     });
     
     if (testPassed) passed++; else failed++;
-  } catch (error: any) {
+  } catch (error : unknown) {
     results.push({
       name: 'deliverLivePatch creates one update and bumps sync',
       passed: false,
@@ -209,7 +209,7 @@ export async function runNotificationDeduplicationTests(): Promise<{
     });
     
     if (testPassed) passed++; else failed++;
-  } catch (error: any) {
+  } catch (error : unknown) {
     results.push({
       name: 'Feature registry sync version increments',
       passed: false,

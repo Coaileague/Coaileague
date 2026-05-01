@@ -17,6 +17,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { AuthenticatedRequest } from '../rbac';
 import { pool } from '../db';
 import { db } from '../db';
 import { universalAudit } from '../services/universalAuditService';
@@ -53,7 +54,7 @@ const WORKFORCE_ROLES = ['org_owner', 'co_owner', 'org_admin', 'org_manager'];
 const CLIENT_ROLES = ['org_owner', 'co_owner', 'org_admin', 'account_manager'];
 const OPS_ROLES = ['org_owner', 'co_owner', 'org_admin', 'org_manager', 'supervisor'];
 
-function hasRole(req: any, allowedRoles: string[]): boolean {
+function hasRole(req: AuthenticatedRequest, allowedRoles: string[]): boolean {
   const role = req.user?.role || req.user?.workspaceRole;
   if (!role) return false;
   if (req.user?.platformRole === 'admin' || req.user?.platformRole === 'support') return true;
@@ -63,7 +64,7 @@ function hasRole(req: any, allowedRoles: string[]): boolean {
 // ── GET /api/analytics/bi/calloff-rates ──────────────────────────────────────
 // Check 4: Calloff analytics by officer + pattern by day of week
 
-router.get('/calloff-rates', async (req: any, res: Response) => {
+router.get('/calloff-rates', async (req: AuthenticatedRequest, res: Response) => {
   const workspaceId = req.workspaceId;
   if (!workspaceId) return res.status(403).json({ error: 'Workspace context required.' });
   if (!hasRole(req, WORKFORCE_ROLES)) return res.status(403).json({ error: 'Insufficient role.' });
@@ -125,7 +126,7 @@ router.get('/calloff-rates', async (req: any, res: Response) => {
 // ── GET /api/analytics/bi/license-expiry ─────────────────────────────────────
 // Check 6: License expiry pipeline — 30/60/90 days
 
-router.get('/license-expiry', async (req: any, res: Response) => {
+router.get('/license-expiry', async (req: AuthenticatedRequest, res: Response) => {
   const workspaceId = req.workspaceId;
   if (!workspaceId) return res.status(403).json({ error: 'Workspace context required.' });
   if (!hasRole(req, WORKFORCE_ROLES)) return res.status(403).json({ error: 'Insufficient role.' });
@@ -190,7 +191,7 @@ router.get('/license-expiry', async (req: any, res: Response) => {
 // ── GET /api/analytics/bi/client-health ──────────────────────────────────────
 // Check 7: Client health scores from precomputed aggregate table (Check 19)
 
-router.get('/client-health', async (req: any, res: Response) => {
+router.get('/client-health', async (req: AuthenticatedRequest, res: Response) => {
   const workspaceId = req.workspaceId;
   if (!workspaceId) return res.status(403).json({ error: 'Workspace context required.' });
   if (!hasRole(req, CLIENT_ROLES)) return res.status(403).json({ error: 'Insufficient role.' });
@@ -238,7 +239,7 @@ router.get('/client-health', async (req: any, res: Response) => {
 // ── GET /api/analytics/bi/retention ──────────────────────────────────────────
 // Check 5: Turnover, tenure, rehire rate
 
-router.get('/retention', async (req: any, res: Response) => {
+router.get('/retention', async (req: AuthenticatedRequest, res: Response) => {
   const workspaceId = req.workspaceId;
   if (!workspaceId) return res.status(403).json({ error: 'Workspace context required.' });
   if (!hasRole(req, WORKFORCE_ROLES)) return res.status(403).json({ error: 'Insufficient role.' });
@@ -308,7 +309,7 @@ router.get('/retention', async (req: any, res: Response) => {
 // ── GET /api/analytics/bi/realtime ───────────────────────────────────────────
 // Check 8: Real-time operations view
 
-router.get('/realtime', async (req: any, res: Response) => {
+router.get('/realtime', async (req: AuthenticatedRequest, res: Response) => {
   const workspaceId = req.workspaceId;
   if (!workspaceId) return res.status(403).json({ error: 'Workspace context required.' });
   if (!hasRole(req, OPS_ROLES)) return res.status(403).json({ error: 'Insufficient role.' });
@@ -338,7 +339,7 @@ router.get('/realtime', async (req: any, res: Response) => {
 // ── GET /api/analytics/bi/snapshots ──────────────────────────────────────────
 // Check 12/13/19: Return precomputed aggregate data for trend charts
 
-router.get('/snapshots', async (req: any, res: Response) => {
+router.get('/snapshots', async (req: AuthenticatedRequest, res: Response) => {
   const workspaceId = req.workspaceId;
   if (!workspaceId) return res.status(403).json({ error: 'Workspace context required.' });
 
@@ -370,7 +371,7 @@ router.get('/snapshots', async (req: any, res: Response) => {
 // ── GET /api/analytics/bi/financial-summary ──────────────────────────────────
 // Check 2/3: Financial summary from precomputed aggregates (Check 19)
 
-router.get('/financial-summary', async (req: any, res: Response) => {
+router.get('/financial-summary', async (req: AuthenticatedRequest, res: Response) => {
   const workspaceId = req.workspaceId;
   if (!workspaceId) return res.status(403).json({ error: 'Workspace context required.' });
   if (!hasRole(req, FINANCIAL_ROLES)) return res.status(403).json({ error: 'Insufficient role.' });
@@ -438,7 +439,7 @@ router.get('/financial-summary', async (req: any, res: Response) => {
 // ── GET /api/analytics/bi/export ─────────────────────────────────────────────
 // Check 21/22/23: CSV export with audit record
 
-router.get('/export', async (req: any, res: Response) => {
+router.get('/export', async (req: AuthenticatedRequest, res: Response) => {
   const workspaceId = req.workspaceId;
   const userId = req.user?.id;
   if (!workspaceId) return res.status(403).json({ error: 'Workspace context required.' });
@@ -487,7 +488,7 @@ router.get('/export', async (req: any, res: Response) => {
 // ── GET /api/analytics/bi/scheduled-report ───────────────────────────────────
 // Check 24: Get scheduled report configuration
 
-router.get('/scheduled-report', async (req: any, res: Response) => {
+router.get('/scheduled-report', async (req: AuthenticatedRequest, res: Response) => {
   const workspaceId = req.workspaceId;
   if (!workspaceId) return res.status(403).json({ error: 'Workspace context required.' });
   if (!hasRole(req, FINANCIAL_ROLES)) return res.status(403).json({ error: 'Insufficient role.' });
@@ -509,7 +510,7 @@ router.get('/scheduled-report', async (req: any, res: Response) => {
 // ── POST /api/analytics/bi/scheduled-report ──────────────────────────────────
 // Check 24: Save/update scheduled report configuration
 
-router.post('/scheduled-report', async (req: any, res: Response) => {
+router.post('/scheduled-report', async (req: AuthenticatedRequest, res: Response) => {
   const workspaceId = req.workspaceId;
   if (!workspaceId) return res.status(403).json({ error: 'Workspace context required.' });
   if (!hasRole(req, FINANCIAL_ROLES)) return res.status(403).json({ error: 'Insufficient role.' });

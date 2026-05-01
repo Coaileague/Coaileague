@@ -53,7 +53,7 @@ export function registerCognitiveBrainActions(): void {
           message: `${providers.length} third-party integrations available for automatic data extraction`,
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -97,7 +97,7 @@ export function registerCognitiveBrainActions(): void {
           message: `Authorization URL generated for ${provider}. User should be redirected to complete OAuth flow.`,
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -144,7 +144,7 @@ export function registerCognitiveBrainActions(): void {
             : `Extraction failed: ${result.errors.join(', ')}`,
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -191,7 +191,7 @@ export function registerCognitiveBrainActions(): void {
             : `Onboarding had errors: ${result.errors.join(', ')}`,
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -228,7 +228,7 @@ export function registerCognitiveBrainActions(): void {
           message: `${stats.agentCount} agents registered (${stats.activeAgents} active), ${stats.totalMessages} total messages, ${stats.activeTeams} active teams`,
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -274,7 +274,7 @@ export function registerCognitiveBrainActions(): void {
           message: `Message ${message.id} sent from ${from} to ${to} (status: ${message.status})`,
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -320,7 +320,7 @@ export function registerCognitiveBrainActions(): void {
           message: `Team "${name}" formed with ${team.members.length} members, coordinated by ${coordinator}`,
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -367,7 +367,7 @@ export function registerCognitiveBrainActions(): void {
             : `Trust not established: ${evaluation.reason}`,
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,

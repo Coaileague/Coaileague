@@ -214,7 +214,7 @@ export default function ClientSignup() {
             <CheckCircle className="h-4 w-4" />
             <AlertDescription>
               This access code has already been used to create an account.{' '}
-              {/* @ts-ignore */}
+              {/* @ts-expect-error — TS migration */}
               <Button variant="link" className="p-0 h-auto" onClick={() => setLocation('/login')}>
                 Log in instead
               </Button>

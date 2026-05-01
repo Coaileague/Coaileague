@@ -170,7 +170,7 @@ export function PricingROICalculator() {
             </div>
             {overageEmployees > 0 && (
               <div className="text-[10px] sm:text-sm text-muted-foreground">
-                // @ts-ignore — TS migration: fix in refactoring sprint
+                // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
                 + {overageEmployees} employees x ${(tierConfig as any).overagePrice} = {formatCurrency(overageCharge)}/mo
               </div>
             )}

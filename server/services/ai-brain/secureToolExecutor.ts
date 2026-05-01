@@ -421,7 +421,7 @@ class SecureToolExecutor {
         durationMs: Date.now() - startTime,
         toolCall,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       toolCall.error = (error instanceof Error ? error.message : String(error));
       toolCall.durationMs = Date.now() - startTime;
 
@@ -459,7 +459,7 @@ class SecureToolExecutor {
 
       log.warn(`[SecureToolExecutor] BYPASS: Tool ${toolId} not found in registry. Elevated role ${callerContext.platformRole} attempted execution.`);
       throw new Error(`Tool '${toolId}' is not registered. Cannot execute unregistered tools even with elevated privileges.`);
-    } catch (error: any) {
+    } catch (error : unknown) {
       // If registry lookup fails, re-throw
       throw new Error(`Tool execution failed: ${(error instanceof Error ? error.message : String(error))}`);
     }

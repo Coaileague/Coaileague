@@ -73,7 +73,7 @@ router.post("/feedback", async (req, res) => {
 });
 
 // ── PUBLIC: FAQ entries — no auth required ────────────────────────────────
-router.get("/faq/entries", async (req: any, res) => {
+router.get("/faq/entries", async (req: AuthenticatedRequest, res) => {
   try {
     const { category, language } = req.query as Record<string, string>;
     let query = `SELECT * FROM faq_entries WHERE is_active = true`;
@@ -709,7 +709,7 @@ router.post('/verify-ticket', async (req: AuthenticatedRequest, res) => {
   }
 });
 
-router.post('/terms/accept', async (req: any, res) => {
+router.post('/terms/accept', async (req: AuthenticatedRequest, res) => {
   try {
     const { initialsProvided, userName, userEmail, workspaceId, ticketNumber } = req.body;
 
@@ -1029,7 +1029,7 @@ router.post('/motd/acknowledge', async (req: AuthenticatedRequest, res) => {
   }
 });
 
-router.post('/agreement/accept', async (req: any, res) => {
+router.post('/agreement/accept', async (req: AuthenticatedRequest, res) => {
   try {
     const schema = z.object({
       fullName: z.string().optional(),
@@ -1083,7 +1083,7 @@ router.post('/agreement/accept', async (req: any, res) => {
   }
 });
 
-router.get('/agreement/check/:roomSlug', async (req: any, res) => {
+router.get('/agreement/check/:roomSlug', async (req: AuthenticatedRequest, res) => {
   try {
     const { roomSlug } = req.params;
     const userId = req.user?.id || req.user?.claims?.sub;
@@ -1122,7 +1122,7 @@ router.get('/agreement/check/:roomSlug', async (req: any, res) => {
   }
 });
 
-router.get('/user-context/:userId', async (req: any, res) => {
+router.get('/user-context/:userId', async (req: AuthenticatedRequest, res) => {
   try {
     const { userId } = req.params;
 

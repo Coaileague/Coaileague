@@ -169,7 +169,7 @@ export class IntegrationCrawler {
           }
         }
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       console.log(`[IntegrationCrawler] Login failed: ${error.message}`);
     } finally {
       await page.close();
@@ -778,7 +778,7 @@ export class IntegrationCrawler {
         try {
           await this.executeStep(page, step);
           stepsCompleted++;
-        } catch (stepError: any) {
+        } catch (stepError : unknown) {
           failedStep = step.description;
           error = stepError.message;
           break;
@@ -896,7 +896,7 @@ export class IntegrationCrawler {
         }
         
         this.websocketConnectionsTested++;
-      } catch (error: any) {
+      } catch (error : unknown) {
         console.warn(`[IntegrationCrawler] WebSocket test error for ${endpoint.name}:`, error.message);
       }
     }

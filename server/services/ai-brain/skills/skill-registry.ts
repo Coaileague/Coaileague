@@ -206,7 +206,7 @@ export class SkillRegistry {
       }
 
       return result;
-    } catch (error: any) {
+    } catch (error : unknown) {
       const durationMs = Date.now() - startTime;
       log.error(`[SkillRegistry] Error executing ${skillId}:`, error);
 

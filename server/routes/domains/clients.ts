@@ -5,6 +5,7 @@
 //   /api/contract-documents, /api/custom-rules, /api/signatures,
 //   /api/contract-renewals, /api/client-satisfaction
 import type { Express } from "express";
+import { AuthenticatedRequest } from '../../rbac';
 import { requireAuth } from "../../auth";
 import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
 import clientRouter from "../clientRoutes";
@@ -42,7 +43,7 @@ export function mountClientRoutes(app: Express): void {
 
   // ── Spec §4: /{org_code}/login — Unified Login Entry Point ──────────────────
   // Redirects org-scoped login URL to the main login with org pre-filled
-  app.get("/:orgCode/login", (req: any, res: any) => {
+  app.get("/:orgCode/login", (req: AuthenticatedRequest, res: any) => {
     const { orgCode } = req.params;
     if (!orgCode || orgCode.length < 2 || orgCode.length > 20) {
       return res.redirect('/login');
@@ -54,7 +55,7 @@ export function mountClientRoutes(app: Express): void {
   // ── Spec §4: Handshake Confirmation — flips INVITED → ACTIVE ────────────────
   // Called when client clicks Confirm on the verification screen.
   // Requires all: POC Email, Address, Bill Rate, Service Hours.
-  app.post("/api/clients/portal/handshake/confirm", requireAuth, async (req: any, res: any) => {
+  app.post("/api/clients/portal/handshake/confirm", requireAuth, async (req: AuthenticatedRequest, res: any) => {
     try {
       const { flipInvitedToActive, validateHandshakePayload } = await import("../services/onboarding/onboardingHandshakeService");
       const payload = { ...req.body, userId: req.session?.userId || req.user?.id };
@@ -97,7 +98,7 @@ export function mountClientRoutes(app: Express): void {
   });
 
   // Client portal dashboard — quick summary for portal users
-  app.get("/api/client-portal/dashboard", requireAuth, ensureWorkspaceAccess, async (req: any, res: any) => {
+  app.get("/api/client-portal/dashboard", requireAuth, ensureWorkspaceAccess, async (req: AuthenticatedRequest, res: any) => {
     try {
       const workspaceId = req.workspaceId;
       const { pool } = await import("../../db");
@@ -136,7 +137,7 @@ export function mountClientRoutes(app: Express): void {
   });
 
   // Client portal — active officer status (read-only view for clients)
-  app.get("/api/client-portal/officers/status", requireAuth, async (req: any, res: any) => {
+  app.get("/api/client-portal/officers/status", requireAuth, async (req: AuthenticatedRequest, res: any) => {
     try {
       const workspaceId = req.workspaceId;
       const { pool } = await import("../../db");

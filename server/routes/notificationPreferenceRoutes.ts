@@ -13,6 +13,7 @@
  */
 
 import { Router } from 'express';
+import { AuthenticatedRequest } from '../rbac';
 import { requireAuth } from '../auth';
 import { pool } from '../db';
 import { z } from 'zod';
@@ -30,7 +31,7 @@ import {
 const router = Router();
 
 // ─── GET /api/notification-preferences ────────────────────────────────────────
-router.get('/', requireAuth, async (req: any, res) => {
+router.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { id: userId, workspaceId } = req.user;
 
@@ -77,7 +78,7 @@ const updatePrefsSchema = z.object({
   digestFrequency: z.enum(['realtime', 'hourly', 'daily', 'weekly']).optional(),
 });
 
-router.put('/', requireAuth, async (req: any, res) => {
+router.put('/', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { id: userId, workspaceId } = req.user;
 
@@ -124,7 +125,7 @@ router.put('/', requireAuth, async (req: any, res) => {
 });
 
 // ─── GET /api/notification-templates ──────────────────────────────────────────
-router.get('/templates', requireAuth, async (req: any, res) => {
+router.get('/templates', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId } = req.user;
     const templates = await listTemplates(workspaceId);
@@ -136,7 +137,7 @@ router.get('/templates', requireAuth, async (req: any, res) => {
 });
 
 // ─── POST /api/notification-templates/preview ──────────────────────────────────
-router.post('/templates/preview', requireAuth, async (req: any, res) => {
+router.post('/templates/preview', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { bodyTemplate, sampleData } = req.body;
     if (!bodyTemplate) return res.status(400).json({ error: 'bodyTemplate is required' });
@@ -161,7 +162,7 @@ const createTemplateSchema = z.object({
   isGlobal: z.boolean().optional().default(false),
 });
 
-router.post('/templates', requireAuth, async (req: any, res) => {
+router.post('/templates', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { role, workspaceId, id: userId } = req.user;
 
@@ -196,7 +197,7 @@ router.post('/templates', requireAuth, async (req: any, res) => {
 });
 
 // ─── GET /api/notification-templates/:id/versions ─────────────────────────────
-router.get('/templates/:notifType/versions', requireAuth, async (req: any, res) => {
+router.get('/templates/:notifType/versions', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId } = req.user;
     const { notifType } = req.params;

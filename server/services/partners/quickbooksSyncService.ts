@@ -411,7 +411,7 @@ export class QuickBooksSyncService {
         errors,
         durationMs: Date.now() - startTime,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       // Use intelligent error analysis to determine next action
       const errorAnalysis = await this.analyzeAndHandleSyncError(
         workspaceId,
@@ -474,7 +474,7 @@ export class QuickBooksSyncService {
               idempotencyKey: `system-${Date.now()}-`
             }).catch(() => null)
           ));
-        } catch (notifyErr: any) {
+        } catch (notifyErr : unknown) {
           log.error('[QuickBooksSyncService] Failed to notify org owner on ABORT/ESCALATE:', notifyErr.message);
         }
       }
@@ -560,7 +560,7 @@ export class QuickBooksSyncService {
           );
           reviewRequired++;
         }
-      } catch (error: any) {
+      } catch (error : unknown) {
         errors.push(`Customer ${qboCustomer.DisplayName}: ${(error instanceof Error ? error.message : String(error))}`);
       }
     }
@@ -732,7 +732,7 @@ export class QuickBooksSyncService {
           
           created++;
         }
-      } catch (error: any) {
+      } catch (error : unknown) {
         errors.push(`Employee ${qboEmployee.DisplayName}: ${(error instanceof Error ? error.message : String(error))}`);
       }
     }
@@ -802,13 +802,13 @@ export class QuickBooksSyncService {
           );
           
           log.info(`[QuickBooksSyncService] Sent invite to ${emp.email} for employee ${emp.employeeId}`);
-        } catch (inviteError: any) {
+        } catch (inviteError : unknown) {
           log.error(`[QuickBooksSyncService] Failed to invite ${emp.email}: ${inviteError.message}`);
         }
       }
       
       log.info(`[QuickBooksSyncService] Sent ${employeesToInvite.length} employee invitations`);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[QuickBooksSyncService] Error sending employee invitations:', (error instanceof Error ? error.message : String(error)));
     }
   }
@@ -915,7 +915,7 @@ export class QuickBooksSyncService {
 
             created++;
           }
-        } catch (itemError: any) {
+        } catch (itemError : unknown) {
           errors.push(`Item ${qboItem.Name}: ${itemError.message}`);
         }
       }
@@ -923,7 +923,7 @@ export class QuickBooksSyncService {
       log.info(`[QuickBooksSyncService] Items sync: ${qboItems.length} processed, ${matched} matched, ${created} created`);
       
       return { processed: qboItems.length, matched, created, reviewRequired, errors };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[QuickBooksSyncService] Items sync failed:', (error instanceof Error ? error.message : String(error)));
       return { processed: 0, matched: 0, created: 0, reviewRequired: 0, errors: [(error instanceof Error ? error.message : String(error))] };
     }
@@ -1039,7 +1039,7 @@ export class QuickBooksSyncService {
           });
           created++;
         }
-      } catch (error: any) {
+      } catch (error : unknown) {
         errors.push(`Vendor/Contractor ${qboVendor.DisplayName}: ${(error instanceof Error ? error.message : String(error))}`);
       }
     }
@@ -1868,7 +1868,7 @@ export class QuickBooksSyncService {
 
       return { invoiceId: response.Invoice.Id, wasCreated: true };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       await db.update(partnerInvoiceIdempotency)
         .set({
           status: 'failed',
@@ -2100,7 +2100,7 @@ export class QuickBooksSyncService {
         durationMs: Date.now() - startTime,
       };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       await this.updateSyncLog(jobId, {
         status: 'failed',
         errorDetails: { message: (error instanceof Error ? error.message : String(error)) },
@@ -2487,7 +2487,7 @@ Respond in JSON format:
           retryDelayMs: parsed.retryDelayMs || 2000,
         };
       }
-    } catch (aiError: any) {
+    } catch (aiError : unknown) {
       log.error('[QuickBooksSyncService] Gemini analysis failed:', aiError.message);
     }
 

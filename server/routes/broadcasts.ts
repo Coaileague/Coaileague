@@ -219,7 +219,7 @@ router.post('/', requireAuth, requireRole(['org_owner', 'co_owner', 'manager', '
             log.info(`[Broadcast] Queued ${result.queued} SMS messages via outbox`);
           }
         }
-      } catch (smsErr: any) {
+      } catch (smsErr : unknown) {
         log.warn('[BroadcastRoutes] SMS dispatch failed (non-fatal):', smsErr?.message);
       }
     }
@@ -374,7 +374,7 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
  * GET /api/broadcasts/:id/stats
  */
 // @ts-expect-error — TS migration: fix in refactoring sprint
-router.get('/:id/stats', requireAuth, requireRole(['org_owner', 'co_owner', 'manager']), async (req: any, res) => {
+router.get('/:id/stats', requireAuth, requireRole(['org_owner', 'co_owner', 'manager']), async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId } = await getUserInfo(req);
     const broadcast = await broadcastService.getBroadcastById(req.params.id);
@@ -394,7 +394,7 @@ router.get('/:id/stats', requireAuth, requireRole(['org_owner', 'co_owner', 'man
  * PATCH /api/broadcasts/:id
  */
 // @ts-expect-error — TS migration: fix in refactoring sprint
-router.patch('/:id', requireAuth, requireRole(['org_owner', 'co_owner', 'manager']), async (req: any, res) => {
+router.patch('/:id', requireAuth, requireRole(['org_owner', 'co_owner', 'manager']), async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId } = await getUserInfo(req);
     const existing = await broadcastService.getBroadcastById(req.params.id);
@@ -420,7 +420,7 @@ router.patch('/:id', requireAuth, requireRole(['org_owner', 'co_owner', 'manager
  * DELETE /api/broadcasts/:id
  */
 // @ts-expect-error — TS migration: fix in refactoring sprint
-router.delete('/:id', requireAuth, requireRole(['org_owner', 'co_owner', 'manager']), async (req: any, res) => {
+router.delete('/:id', requireAuth, requireRole(['org_owner', 'co_owner', 'manager']), async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId } = await getUserInfo(req);
     const existing = await broadcastService.getBroadcastById(req.params.id);

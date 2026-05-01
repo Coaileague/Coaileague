@@ -37,6 +37,7 @@
  */
 
 import { Router } from 'express';
+import { AuthenticatedRequest } from '../../rbac';
 import { pool } from '../../db';
 import { requireAuth, getUserPlatformRole } from '../../rbac';
 import { getUncachableResendClient } from '../../services/emailCore';
@@ -54,7 +55,7 @@ emailRouter.use(requireAuth);
 // Tenants (non platform_staff) cannot create, activate, or send from
 // addresses on the coaileague.com root domain (e.g. trinity@, support@, info@).
 // All tenant addresses must be on {slug}.coaileague.com subdomains.
-emailRouter.use((req: any, res, next) => {
+emailRouter.use((req: AuthenticatedRequest, res, next) => {
   const isWrite = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
   if (!isWrite) return next();
 
@@ -81,7 +82,7 @@ emailRouter.use((req: any, res, next) => {
 type AuthReq = Express.Request & { user: { id: string; workspaceId: string; role: string } };
 
 // ─── GET /api/email/inbox ─────────────────────────────────────────────────────
-emailRouter.get('/inbox', async (req: any, res) => {
+emailRouter.get('/inbox', async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId, id: userId } = req.user;
     const folder = (req.query.folder as string) || 'inbox';
@@ -124,7 +125,7 @@ emailRouter.get('/inbox', async (req: any, res) => {
 });
 
 // ─── GET /api/email/:emailId ──────────────────────────────────────────────────
-emailRouter.get('/:emailId', async (req: any, res) => {
+emailRouter.get('/:emailId', async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId, id: userId } = req.user;
     const { emailId } = req.params;
@@ -154,7 +155,7 @@ emailRouter.get('/:emailId', async (req: any, res) => {
 });
 
 // ─── GET /api/email/thread/:messageId ────────────────────────────────────────
-emailRouter.get('/thread/:messageId', async (req: any, res) => {
+emailRouter.get('/thread/:messageId', async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId } = req.user;
     const { messageId } = req.params;
@@ -175,7 +176,7 @@ emailRouter.get('/thread/:messageId', async (req: any, res) => {
 });
 
 // ─── POST /api/email/send ─────────────────────────────────────────────────────
-emailRouter.post('/send', async (req: any, res) => {
+emailRouter.post('/send', async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId, id: userId } = req.user;
     const { from, to, cc, subject, bodyHtml, bodyText, replyToEmailId } = req.body;
@@ -291,7 +292,7 @@ emailRouter.post('/send', async (req: any, res) => {
 });
 
 // ─── POST /api/email/:emailId/reply ──────────────────────────────────────────
-emailRouter.post('/:emailId/reply', async (req: any, res) => {
+emailRouter.post('/:emailId/reply', async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId, id: userId } = req.user;
     const { emailId } = req.params;
@@ -316,7 +317,7 @@ emailRouter.post('/:emailId/reply', async (req: any, res) => {
 });
 
 // ─── PATCH /api/email/:emailId ────────────────────────────────────────────────
-emailRouter.patch('/:emailId', async (req: any, res) => {
+emailRouter.patch('/:emailId', async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId } = req.user;
     const { emailId } = req.params;
@@ -346,7 +347,7 @@ emailRouter.patch('/:emailId', async (req: any, res) => {
 });
 
 // ─── DELETE /api/email/:emailId (soft delete) ─────────────────────────────────
-emailRouter.delete('/:emailId', async (req: any, res) => {
+emailRouter.delete('/:emailId', async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId } = req.user;
     const { emailId } = req.params;
@@ -367,7 +368,7 @@ emailRouter.delete('/:emailId', async (req: any, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ─── GET /api/email/management ────────────────────────────────────────────────
-emailRouter.get('/management', async (req: any, res) => {
+emailRouter.get('/management', async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId } = req.user;
 
@@ -403,7 +404,7 @@ emailRouter.get('/management', async (req: any, res) => {
 });
 
 // ─── GET /api/email/management/stats ─────────────────────────────────────────
-emailRouter.get('/management/stats', async (req: any, res) => {
+emailRouter.get('/management/stats', async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId } = req.user;
 
@@ -439,7 +440,7 @@ emailRouter.get('/management/stats', async (req: any, res) => {
 });
 
 // ─── POST /api/email/addresses/:id/activate ───────────────────────────────────
-emailRouter.post('/addresses/:id/activate', async (req: any, res) => {
+emailRouter.post('/addresses/:id/activate', async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId, id: userId } = req.user;
     const { id: emailAddressId } = req.params;
@@ -465,7 +466,7 @@ emailRouter.post('/addresses/:id/activate', async (req: any, res) => {
 });
 
 // ─── POST /api/email/addresses/:id/deactivate ─────────────────────────────────
-emailRouter.post('/addresses/:id/deactivate', async (req: any, res) => {
+emailRouter.post('/addresses/:id/deactivate', async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId, id: userId } = req.user;
     const { id: emailAddressId } = req.params;
@@ -488,7 +489,7 @@ emailRouter.post('/addresses/:id/deactivate', async (req: any, res) => {
 });
 
 // ─── POST /api/email/activate-all ────────────────────────────────────────────
-emailRouter.post('/activate-all', async (req: any, res) => {
+emailRouter.post('/activate-all', async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId, id: userId } = req.user;
 
@@ -520,7 +521,7 @@ emailRouter.post('/activate-all', async (req: any, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ─── GET /api/email/addresses/:id/settings ────────────────────────────────────
-emailRouter.get('/addresses/:id/settings', async (req: any, res) => {
+emailRouter.get('/addresses/:id/settings', async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId } = req.user;
     const { id } = req.params;
@@ -544,7 +545,7 @@ emailRouter.get('/addresses/:id/settings', async (req: any, res) => {
 });
 
 // ─── PUT /api/email/addresses/:id/settings ────────────────────────────────────
-emailRouter.put('/addresses/:id/settings', async (req: any, res) => {
+emailRouter.put('/addresses/:id/settings', async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId, id: userId } = req.user;
     const { id } = req.params;
@@ -599,7 +600,7 @@ emailRouter.put('/addresses/:id/settings', async (req: any, res) => {
 // Returns the platform_email_addresses rows assigned to the calling user within
 // their current workspace.  Used to populate the "From:" dropdown in compose.
 // Never returns the user's login email (users.email) — that is never a sender.
-emailRouter.get('/addresses/mine', async (req: any, res) => {
+emailRouter.get('/addresses/mine', async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId, id: userId } = req.user;
     const result = await pool.query(`
@@ -636,7 +637,7 @@ const SUPPORT_INBOX_ROLES = new Set([
 const SUPPORT_EMAIL_ADDRESS = 'support@coaileague.com';
 
 // GET /api/email/support-inbox
-emailRouter.get('/support-inbox', async (req: any, res) => {
+emailRouter.get('/support-inbox', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id ?? '';
     const platformRole = await getUserPlatformRole(userId);
@@ -688,7 +689,7 @@ emailRouter.get('/support-inbox', async (req: any, res) => {
 // Sends a reply FROM support@coaileague.com.
 // The individual agent's personal signature is appended so replies are
 // attributable even though the From: address is shared.
-emailRouter.post('/support-inbox/:emailId/reply', async (req: any, res) => {
+emailRouter.post('/support-inbox/:emailId/reply', async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id ?? '';
     const platformRole = await getUserPlatformRole(userId);

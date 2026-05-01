@@ -345,7 +345,7 @@ class FeatureGateService {
           // NOTE: We do NOT return allowed: false here. Overages are billed as line-items.
           // The platform flags the workspace for billing review but does not block requests.
         }
-      } catch (usageErr: any) {
+      } catch (usageErr : unknown) {
         // Usage check failure is non-fatal — allow the request, log the error
         log.warn('[FeatureGate] Usage check failed (non-fatal):', usageErr?.message);
       }
@@ -406,7 +406,7 @@ class FeatureGateService {
           lastUpdated: sql`now()`
         }
       });
-    } catch (trackErr: any) {
+    } catch (trackErr : unknown) {
       // Non-fatal — usage tracking failure must never deny service
       log.warn('[FeatureGate] Usage recording failed (non-fatal):', trackErr?.message);
     }

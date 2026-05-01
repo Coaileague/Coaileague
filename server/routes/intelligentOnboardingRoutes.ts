@@ -22,6 +22,7 @@
  */
 
 import { sanitizeError } from '../middleware/errorHandler';
+import { AuthenticatedRequest } from '../rbac';
 import { Router } from 'express';
 import { db } from '../db';
 import { complianceAlerts, employees, workspaces } from '@shared/schema';
@@ -38,7 +39,7 @@ const log = createLogger('IntelligentOnboardingRoutes');
 export const intelligentOnboardingRouter = Router();
 intelligentOnboardingRouter.use(requireAuth);
 
-function getWorkspaceId(req: any): string | null {
+function getWorkspaceId(req: AuthenticatedRequest): string | null {
   return req.session?.workspaceId || null;
 }
 
@@ -121,7 +122,7 @@ async function recalcEmployeeProgress(workspaceId: string, employeeId: string) {
 // TENANT ROUTES
 // ─────────────────────────────────────────────────────────────────────────────
 
-intelligentOnboardingRouter.get('/tenant', async (req: any, res) => {
+intelligentOnboardingRouter.get('/tenant', async (req: AuthenticatedRequest, res) => {
   const workspaceId = getWorkspaceId(req);
   if (!workspaceId) return res.status(403).json({ error: 'No workspace' });
   try {
@@ -154,7 +155,7 @@ intelligentOnboardingRouter.get('/tenant', async (req: any, res) => {
   }
 });
 
-intelligentOnboardingRouter.get('/tenant/steps', async (req: any, res) => {
+intelligentOnboardingRouter.get('/tenant/steps', async (req: AuthenticatedRequest, res) => {
   try {
     const steps = await query(`SELECT * FROM tenant_onboarding_steps ORDER BY step_number`);
     res.json({ success: true, steps });
@@ -163,7 +164,7 @@ intelligentOnboardingRouter.get('/tenant/steps', async (req: any, res) => {
   }
 });
 
-intelligentOnboardingRouter.post('/tenant/steps/:stepKey/complete', async (req: any, res) => {
+intelligentOnboardingRouter.post('/tenant/steps/:stepKey/complete', async (req: AuthenticatedRequest, res) => {
   const workspaceId = getWorkspaceId(req);
   if (!workspaceId) return res.status(403).json({ error: 'No workspace' });
   const userId = req.user?.id;
@@ -233,7 +234,7 @@ intelligentOnboardingRouter.post('/tenant/steps/:stepKey/complete', async (req: 
 // EMPLOYEE STEP DEFINITIONS
 // ─────────────────────────────────────────────────────────────────────────────
 
-intelligentOnboardingRouter.get('/steps/employee', async (req: any, res) => {
+intelligentOnboardingRouter.get('/steps/employee', async (req: AuthenticatedRequest, res) => {
   try {
     const steps = await query(`SELECT * FROM employee_onboarding_steps ORDER BY step_number`);
     res.json({ success: true, steps });
@@ -242,7 +243,7 @@ intelligentOnboardingRouter.get('/steps/employee', async (req: any, res) => {
   }
 });
 
-intelligentOnboardingRouter.get('/required-documents', async (req: any, res) => {
+intelligentOnboardingRouter.get('/required-documents', async (req: AuthenticatedRequest, res) => {
   const workspaceId = getWorkspaceId(req);
   if (!workspaceId) return res.status(403).json({ error: 'No workspace' });
 
@@ -283,7 +284,7 @@ intelligentOnboardingRouter.get('/required-documents', async (req: any, res) => 
 // EMPLOYEE MANAGER VIEW
 // ─────────────────────────────────────────────────────────────────────────────
 
-intelligentOnboardingRouter.get('/employees', async (req: any, res) => {
+intelligentOnboardingRouter.get('/employees', async (req: AuthenticatedRequest, res) => {
   const workspaceId = getWorkspaceId(req);
   if (!workspaceId) return res.status(403).json({ error: 'No workspace' });
   try {
@@ -315,7 +316,7 @@ intelligentOnboardingRouter.get('/employees', async (req: any, res) => {
 // SINGLE EMPLOYEE PROGRESS
 // ─────────────────────────────────────────────────────────────────────────────
 
-intelligentOnboardingRouter.get('/employee/:employeeId', async (req: any, res) => {
+intelligentOnboardingRouter.get('/employee/:employeeId', async (req: AuthenticatedRequest, res) => {
   const workspaceId = getWorkspaceId(req);
   if (!workspaceId) return res.status(403).json({ error: 'No workspace' });
   const { employeeId } = req.params;
@@ -368,7 +369,7 @@ intelligentOnboardingRouter.get('/employee/:employeeId', async (req: any, res) =
 // MARK EMPLOYEE STEP COMPLETE
 // ─────────────────────────────────────────────────────────────────────────────
 
-intelligentOnboardingRouter.post('/employee/:employeeId/steps/:stepKey/complete', async (req: any, res) => {
+intelligentOnboardingRouter.post('/employee/:employeeId/steps/:stepKey/complete', async (req: AuthenticatedRequest, res) => {
   const workspaceId = getWorkspaceId(req);
   if (!workspaceId) return res.status(403).json({ error: 'No workspace' });
   const { employeeId, stepKey } = req.params;
@@ -425,7 +426,7 @@ intelligentOnboardingRouter.post('/employee/:employeeId/steps/:stepKey/complete'
 // SUBMIT STEP (creates document + marks complete)
 // ─────────────────────────────────────────────────────────────────────────────
 
-intelligentOnboardingRouter.post('/employee/:employeeId/steps/:stepKey/submit', async (req: any, res) => {
+intelligentOnboardingRouter.post('/employee/:employeeId/steps/:stepKey/submit', async (req: AuthenticatedRequest, res) => {
   const workspaceId = getWorkspaceId(req);
   if (!workspaceId) return res.status(403).json({ error: 'No workspace' });
   const { employeeId, stepKey } = req.params;
@@ -509,7 +510,7 @@ intelligentOnboardingRouter.post('/employee/:employeeId/steps/:stepKey/submit', 
 // DOCUMENT ROUTES
 // ─────────────────────────────────────────────────────────────────────────────
 
-intelligentOnboardingRouter.get('/documents/:entityId', async (req: any, res) => {
+intelligentOnboardingRouter.get('/documents/:entityId', async (req: AuthenticatedRequest, res) => {
   const workspaceId = getWorkspaceId(req);
   if (!workspaceId) return res.status(403).json({ error: 'No workspace' });
   const { entityId } = req.params;
@@ -530,7 +531,7 @@ intelligentOnboardingRouter.get('/documents/:entityId', async (req: any, res) =>
   }
 });
 
-intelligentOnboardingRouter.get('/document/:docId', async (req: any, res) => {
+intelligentOnboardingRouter.get('/document/:docId', async (req: AuthenticatedRequest, res) => {
   const workspaceId = getWorkspaceId(req);
   if (!workspaceId) return res.status(403).json({ error: 'No workspace' });
   const { docId } = req.params;
@@ -548,7 +549,7 @@ intelligentOnboardingRouter.get('/document/:docId', async (req: any, res) => {
 });
 
 // Render document HTML for browser preview
-intelligentOnboardingRouter.get('/document/:docId/view', async (req: any, res) => {
+intelligentOnboardingRouter.get('/document/:docId/view', async (req: AuthenticatedRequest, res) => {
   const workspaceId = getWorkspaceId(req);
   if (!workspaceId) return res.status(403).json({ error: 'No workspace' });
   const { docId } = req.params;
@@ -572,7 +573,7 @@ intelligentOnboardingRouter.get('/document/:docId/view', async (req: any, res) =
   }
 });
 
-intelligentOnboardingRouter.post('/documents', async (req: any, res) => {
+intelligentOnboardingRouter.post('/documents', async (req: AuthenticatedRequest, res) => {
   const workspaceId = getWorkspaceId(req);
   if (!workspaceId) return res.status(403).json({ error: 'No workspace' });
   const {
@@ -661,7 +662,7 @@ export function validateTxGuardCardNumber(cardNumber: string): {
 // (canonical URL: GET /api/employee-onboarding/required-documents in employeeOnboardingRoutes.ts)
 // ─────────────────────────────────────────────────────────────────────────────
 
-intelligentOnboardingRouter.get('/required-documents', async (req: any, res) => {
+intelligentOnboardingRouter.get('/required-documents', async (req: AuthenticatedRequest, res) => {
   const workspaceId = getWorkspaceId(req);
   if (!workspaceId) return res.status(403).json({ error: 'No workspace' });
   const userId = req.user?.id;

@@ -198,7 +198,7 @@ class ErrorTrackingService {
     this.checkInterval = setInterval(async () => {
       try {
         await this.checkAlertRules();
-      } catch (error: any) {
+      } catch (error : unknown) {
         log.warn('[ErrorTracking] Alert check cycle failed (will retry next interval):', error?.message || error);
       }
     }, 60000);

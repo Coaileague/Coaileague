@@ -54,7 +54,7 @@ router.get("/customer-reports/:token", async (req, res) => {
   }
 });
 
-router.get("/client-reports", requireAuth, async (req: any, res) => {
+router.get("/client-reports", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -209,7 +209,7 @@ router.get("/client-reports", requireAuth, async (req: any, res) => {
   }
 });
 
-router.get("/locked-reports", requireAuth, async (req: any, res) => {
+router.get("/locked-reports", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);
@@ -234,7 +234,7 @@ router.get("/locked-reports", requireAuth, async (req: any, res) => {
   }
 });
 
-router.get("/locked-reports/:id", requireAuth, async (req: any, res) => {
+router.get("/locked-reports/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     
@@ -250,7 +250,7 @@ router.get("/locked-reports/:id", requireAuth, async (req: any, res) => {
   }
 });
 
-router.get("/report-analytics", requireAuth, async (req: any, res) => {
+router.get("/report-analytics", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const user = await storage.getUser(userId);

@@ -229,7 +229,7 @@ class WeeklyPlatformAuditService {
         const placeholderFindings = this.checkForPlaceholderData(pageContent, page);
         findings.push(...placeholderFindings);
 
-      } catch (error: any) {
+      } catch (error : unknown) {
         findings.push({
           id: `vqa_error_${Date.now()}`,
           category: 'ui',
@@ -294,7 +294,7 @@ class WeeklyPlatformAuditService {
           }
         }
 
-      } catch (error: any) {
+      } catch (error : unknown) {
         findings.push({
           id: `api_error_${Date.now()}`,
           category: 'api',
@@ -351,7 +351,7 @@ class WeeklyPlatformAuditService {
           });
         }
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[WeeklyAudit] Data quality check error:', (error instanceof Error ? error.message : String(error)));
     }
 

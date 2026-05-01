@@ -278,7 +278,7 @@ export class AIBrainService {
     try {
       const result = await this.executeJob(job);
       return result;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`❌ [AI Brain] Job ${job.id} failed:`, error);
       
       const errorMessage = (error instanceof Error ? error.message : String(error)) || 'Unknown error occurred';
@@ -451,7 +451,7 @@ export class AIBrainService {
 
       // Race between execution and timeout
       await Promise.race([executionPromise, timeoutPromise]);
-    } catch (error: any) {
+    } catch (error : unknown) {
       // Check if this is a timeout error
       if (error.code === 'ETIMEDOUT' || error.isTimeout) {
         const executionTime = Date.now() - startTime;
@@ -655,7 +655,7 @@ export class AIBrainService {
         finalResponse = aiResponse.content;
         totalTokens = finalResponse.length / 4;
         log.info(`✅ [Chain-of-Command] ${aiResponse.provider} responded (${finalResponse.length} chars, fallback: ${aiResponse.fallbackUsed})`);
-      } catch (routingError: any) {
+      } catch (routingError : unknown) {
         log.warn(`⚠️ [Chain-of-Command] ${selectedProvider} routing failed, falling back to Gemini: ${routingError.message}`);
         const response = await geminiClient.generate({
           workspaceId,
@@ -1531,7 +1531,7 @@ Constraints: ${JSON.stringify(enrichedInput.constraints, null, 2)}`;
         
         log.info(`✅ [AI Brain] Auto-approved ${createdShifts.length} shift(s) (confidence: ${(confidence * 100).toFixed(1)}%)`);
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[AI Brain] Failed to persist schedule:', error);
     }
   }
@@ -1803,7 +1803,7 @@ ${JSON.stringify(contextData, null, 2)}`;
         },
         tokensUsed: 0
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return {
         output: {
           success: false,

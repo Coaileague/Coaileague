@@ -12,7 +12,7 @@ async function main() {
     const result = await manualTriggers.invoicing();
     console.log('\n✅ Invoice generation completed!');
     console.log('Result:', JSON.stringify(result, null, 2));
-  } catch (error: any) {
+  } catch (error : unknown) {
     console.error('\n❌ Invoice generation failed:', error.message);
     console.error(error.stack);
   }

@@ -67,7 +67,7 @@ function randFloat(min: number, max: number) { return +(Math.random() * (max - m
 async function q(sql: string, params: any[] = []) {
   try {
     return await pool.query(sql, params);
-  } catch (e: any) {
+  } catch (e : unknown) {
     if (!e.message?.includes('duplicate key') && !e.message?.includes('already exists')) {
       console.warn(`  ⚠️  ${e.message?.slice(0, 100)}`);
     }
@@ -612,7 +612,7 @@ async function main() {
     console.log('');
     console.log('   ⚠️  Token expires: revoke GitHub PAT after session');
 
-  } catch (err: any) {
+  } catch (err : unknown) {
     console.error('\n❌ Seed failed:', err?.message || err);
     process.exit(1);
   } finally {

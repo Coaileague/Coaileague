@@ -113,7 +113,7 @@ export class ChatParityService {
         .where(eq(chatMessages.id, messageId));
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[ChatParity] deleteMessageForUser failed: ${(error instanceof Error ? error.message : String(error))}`);
       return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
@@ -155,7 +155,7 @@ export class ChatParityService {
         .where(eq(chatMessages.id, messageId));
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[ChatParity] deleteMessageForEveryone failed: ${(error instanceof Error ? error.message : String(error))}`);
       return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
@@ -197,7 +197,7 @@ export class ChatParityService {
       }
 
       return { hasTicket: false };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[ChatParity] verifyTicketForSupportEntry failed: ${(error instanceof Error ? error.message : String(error))}`);
       return { hasTicket: false };
     }
@@ -233,7 +233,7 @@ export class ChatParityService {
         return { ticketNumber: ticket.ticketNumber, ticketId: ticket.id };
       }
       return null;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[ChatParity] autoCreateTicketForSupportEntry failed: ${(error instanceof Error ? error.message : String(error))}`);
       return null;
     }
@@ -298,7 +298,7 @@ export class ChatParityService {
 
       log.info(`[ChatParity] HelpAI moderator bot ${botId} completed ${params.action} and left room`);
       return { success: true, systemMessage };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[ChatParity] Moderator action failed: ${(error instanceof Error ? error.message : String(error))}`);
       return { success: false };
     }
@@ -540,7 +540,7 @@ export class ChatParityService {
 
       log.info(`[ChatParity] Room ${roomId} nuked: ${archivedCount} messages archived, participants cleared, room reset to active`);
       return { success: true, archivedMessageCount: archivedCount };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[ChatParity] nukeRoom failed: ${(error instanceof Error ? error.message : String(error))}`);
       return { success: false, archivedMessageCount: 0 };
     }
@@ -590,7 +590,7 @@ export class ChatParityService {
       }
 
       return null;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[ChatParity] escalateSystemBug failed: ${(error instanceof Error ? error.message : String(error))}`);
       return null;
     }
@@ -720,7 +720,7 @@ export class ChatParityService {
 
       log.info(`[ChatParity] Group DM created: ${conversation.id} with ${allParticipants.length} participants`);
       return conversation;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[ChatParity] createGroupDM failed: ${(error instanceof Error ? error.message : String(error))}`);
       return null;
     }
@@ -858,7 +858,7 @@ export class ChatParityService {
 
       log.info(`[ChatParity] Conversation ${conversationId} reopened by ${actorName}`);
       return { success: true };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[ChatParity] reopenConversation failed: ${(error instanceof Error ? error.message : String(error))}`);
       return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
@@ -913,7 +913,7 @@ export class ChatParityService {
       );
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[ChatParity] closeConversationWithMute failed: ${(error instanceof Error ? error.message : String(error))}`);
       return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }

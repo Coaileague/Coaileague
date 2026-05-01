@@ -196,7 +196,7 @@ class AgentToAgentProtocol {
 
       this.dbInitialized = true;
       log.info(`[A2A Protocol] Loaded ${dbAgents.length} agents from database`);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[A2A Protocol] Database load error:', (error instanceof Error ? error.message : String(error)));
     }
   }
@@ -304,7 +304,7 @@ class AgentToAgentProtocol {
         status: 'pending',
         expiresAt: message.expiresAt,
       });
-    } catch (persistErr: any) {
+    } catch (persistErr : unknown) {
       log.warn('[A2A] Persist message failed (non-fatal):', persistErr?.message);
     }
 
@@ -335,7 +335,7 @@ class AgentToAgentProtocol {
             replyTo: message.id,
           });
         }
-      } catch (error: any) {
+      } catch (error : unknown) {
         message.status = 'failed';
         message.metadata = { error: (error instanceof Error ? error.message : String(error)) };
         await this.markMessagePersisted(message.id, 'failed');
@@ -359,7 +359,7 @@ class AgentToAgentProtocol {
       await db.update(a2aMessages)
         .set({ status: status as any, processedAt: new Date() })
         .where(eq(a2aMessages.id, messageId));
-    } catch (persistErr: any) {
+    } catch (persistErr : unknown) {
       log.warn('[A2A] Mark message persisted failed (non-fatal):', persistErr?.message);
     }
   }

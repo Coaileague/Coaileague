@@ -128,7 +128,7 @@ class DataResearchSkill extends BaseSkill {
           findingsCount: findings.length,
         },
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       logs.push(`Research failed: ${(error instanceof Error ? error.message : String(error))}`);
       return { success: false, error: (error instanceof Error ? error.message : String(error)), logs };
     }
@@ -200,7 +200,7 @@ class DataResearchSkill extends BaseSkill {
         default:
           return { data: [], summary: {}, dataPoints: 0 };
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       logs.push(`Failed to query ${source}: ${(error instanceof Error ? error.message : String(error))}`);
       return { data: [], summary: { error: (error instanceof Error ? error.message : String(error)) }, dataPoints: 0 };
     }

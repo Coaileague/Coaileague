@@ -156,7 +156,7 @@ Respond ONLY with valid JSON, no other text.`;
 
     return disputeResult;
 
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error('Error analyzing dispute with AI:', error);
     
     // Return fallback analysis

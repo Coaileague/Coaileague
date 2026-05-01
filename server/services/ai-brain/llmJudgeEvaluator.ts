@@ -278,7 +278,7 @@ class LLMJudgeEvaluator {
 
       return result;
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[LLMJudgeEvaluator] Evaluation failed:', error);
       
       // Return failed evaluation

@@ -161,7 +161,7 @@ export function usePushNotifications(options: PushNotificationOptions = {}) {
       });
 
       subscribeMutation.mutate(subscription.toJSON());
-    } catch (error: any) {
+    } catch (error : unknown) {
       console.error("Push subscription error:", error);
       toast({
         title: "Subscription Failed",
@@ -182,7 +182,7 @@ export function usePushNotifications(options: PushNotificationOptions = {}) {
       } else {
         unsubscribeMutation.mutate();
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       console.error("Unsubscribe error:", error);
       unsubscribeMutation.mutate();
     }

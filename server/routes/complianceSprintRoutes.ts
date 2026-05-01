@@ -8,6 +8,7 @@
  */
 
 import { sanitizeError } from '../middleware/errorHandler';
+import { AuthenticatedRequest } from '../rbac';
 import { Router } from "express";
 import { requireAuth } from "../auth";
 import { ensureWorkspaceAccess } from "../middleware/workspaceScope";
@@ -17,7 +18,7 @@ import { translateText, translateIncidentReport, getUIString, UI_STRINGS } from 
 
 export const complianceSprintRouter = Router();
 
-function wid(req: any): string {
+function wid(req: AuthenticatedRequest): string {
   return req.workspaceId || req.user?.workspaceId || req.session?.workspaceId || "";
 }
 
@@ -28,7 +29,7 @@ complianceSprintRouter.post(
   "/handbook/audit",
   requireAuth as any,
   ensureWorkspaceAccess as any,
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { documentText, documentTitle, documentId } = req.body;
       if (!documentText || typeof documentText !== "string") {
@@ -55,7 +56,7 @@ complianceSprintRouter.get(
   "/handbook/audit/workspace",
   requireAuth as any,
   ensureWorkspaceAccess as any,
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const audits = await auditWorkspaceHandbooks(wid(req));
       res.json({ audits, count: audits.length, auditedAt: new Date().toISOString() });
@@ -72,7 +73,7 @@ complianceSprintRouter.get(
   "/contracts/integrity/report",
   requireAuth as any,
   ensureWorkspaceAccess as any,
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const report = await generateContractIntegrityReport(wid(req));
       res.json(report);
@@ -87,7 +88,7 @@ complianceSprintRouter.get(
   "/contracts/:id/integrity",
   requireAuth as any,
   ensureWorkspaceAccess as any,
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const result = await verifyContractIntegrity(req.params.id, wid(req));
       res.json(result);
@@ -102,7 +103,7 @@ complianceSprintRouter.post(
   "/contracts/:id/snapshot",
   requireAuth as any,
   ensureWorkspaceAccess as any,
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { changeType = "amended", changeSummary = "Manual snapshot" } = req.body;
       const snapshot = await snapshotContract({
@@ -125,7 +126,7 @@ complianceSprintRouter.get(
   "/contracts/expirations",
   requireAuth as any,
   ensureWorkspaceAccess as any,
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const alerts = await scanContractExpirations(wid(req));
       res.json({ alerts, count: alerts.length, scannedAt: new Date().toISOString() });
@@ -142,7 +143,7 @@ complianceSprintRouter.post(
   "/translate/text",
   requireAuth as any,
   ensureWorkspaceAccess as any,
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { text, sourceLanguage = "en", targetLanguage, context } = req.body;
       if (!text || !targetLanguage) {
@@ -171,7 +172,7 @@ complianceSprintRouter.post(
   "/translate/incident/:id",
   requireAuth as any,
   ensureWorkspaceAccess as any,
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { targetLanguage = "es" } = req.body;
       if (!["en", "es"].includes(targetLanguage)) {
@@ -195,7 +196,7 @@ complianceSprintRouter.post(
 complianceSprintRouter.get(
   "/translate/ui-strings/:language",
   requireAuth as any,
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { language } = req.params;
       if (!["en", "es"].includes(language)) {
@@ -217,7 +218,7 @@ complianceSprintRouter.get(
 complianceSprintRouter.get(
   "/verification/sprint-status",
   requireAuth as any,
-  async (req: any, res: any) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       res.json({
         reportedAt: new Date().toISOString(),

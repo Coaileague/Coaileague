@@ -61,7 +61,7 @@ async function testCorrectSchemaInsert(): Promise<AuditSchemaTestResult> {
       passed: true,
       insertedId: testId
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     return {
       testName: 'testCorrectSchemaInsert',
       passed: false,
@@ -94,7 +94,7 @@ async function testRequiredFieldValidation(): Promise<AuditSchemaTestResult> {
       passed: false,
       error: 'NOT NULL constraint was not enforced for action field'
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     // Expected to fail with NOT NULL violation
     if (error.code === '23502' || error.message?.includes('not-null')) {
       return {
@@ -172,7 +172,7 @@ async function testHealthCheckAuditSchema(): Promise<AuditSchemaTestResult> {
       passed: true,
       insertedId: testId
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     return {
       testName: 'testHealthCheckAuditSchema',
       passed: false,
@@ -245,7 +245,7 @@ async function testMetricsDashboardAuditSchema(): Promise<AuditSchemaTestResult>
       passed: true,
       insertedId: testId
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     return {
       testName: 'testMetricsDashboardAuditSchema',
       passed: false,

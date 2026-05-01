@@ -94,7 +94,7 @@ async function collectNotificationMetrics(): Promise<Record<string, any>> {
       recent24h: recentResult || [],
       status: 'collected'
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     return { status: 'error', error: (error instanceof Error ? error.message : String(error)) };
   }
 }
@@ -121,7 +121,7 @@ async function collectMaintenanceAlertMetrics(): Promise<Record<string, any>> {
       acknowledgedUsers: parseInt((ackResult as any[])[0]?.acknowledged_users || '0'),
       status: 'collected'
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     return { status: 'error', error: (error instanceof Error ? error.message : String(error)) };
   }
 }
@@ -146,7 +146,7 @@ async function collectWhatsNewMetrics(): Promise<Record<string, any>> {
       recentViewers: Number(viewsResult?.uniqueViewers || 0),
       status: 'collected'
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     return { status: 'error', error: (error instanceof Error ? error.message : String(error)) };
   }
 }
@@ -173,7 +173,7 @@ async function collectClearOperationMetrics(): Promise<Record<string, any>> {
       clearOperationsWorking: true,
       status: 'collected'
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     return { status: 'error', error: (error instanceof Error ? error.message : String(error)) };
   }
 }
@@ -297,7 +297,7 @@ Format as a clear diagnostic report.`;
         'Confirm backend acknowledgment logic returns updated isAcknowledged field'
       ]
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     return {
       analysis: `Gemini analysis unavailable: ${(error instanceof Error ? error.message : String(error))}`,
       recommendations: ['Run manual verification of notification endpoints']

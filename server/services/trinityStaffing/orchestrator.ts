@@ -315,7 +315,7 @@ class TrinityStaffingOrchestrator {
 
       this.updateWorkflow(workflow);
       return workflow;
-    } catch (error: any) {
+    } catch (error : unknown) {
       workflow.status = 'failed';
       workflow.error = (error instanceof Error ? error.message : String(error));
       this.updateWorkflow(workflow);
@@ -448,7 +448,7 @@ class TrinityStaffingOrchestrator {
               officerPayRate: emp.hourlyRate ? parseFloat(emp.hourlyRate) : undefined,
               replyEmail: ctx?.senderEmail || `staffing@coaileague.com`,
             });
-          } catch (offerErr: any) {
+          } catch (offerErr : unknown) {
             log.error(`[TrinityStaffing] Failed to send offer email to ${emp.email}:`, offerErr.message);
           }
         }
@@ -468,7 +468,7 @@ class TrinityStaffingOrchestrator {
               officerPayRate: emp.hourlyRate ? parseFloat(emp.hourlyRate) : undefined,
               offerId,
             });
-          } catch (smsErr: any) {
+          } catch (smsErr : unknown) {
             log.warn(`[TrinityStaffing] SMS offer skipped for ${emp.id}:`, smsErr.message);
           }
         }
@@ -498,7 +498,7 @@ class TrinityStaffingOrchestrator {
               officerPayRate: (emp as any).defaultHourlyRate,
             },
           });
-        } catch (notifErr: any) {
+        } catch (notifErr : unknown) {
           log.error(`[TrinityStaffing] Failed to insert UNS offer notification for ${emp.id}:`, notifErr.message);
         }
       }
@@ -725,7 +725,7 @@ class TrinityStaffingOrchestrator {
           shiftsFilled: workflow.assignedEmployees.length,
         });
         log.info(`[TrinityStaffing] Client portal invitation sent to ${ctx.senderEmail} (prospect: ${prospect.id}, code: ${tempCode})`);
-      } catch (portalErr: any) {
+      } catch (portalErr : unknown) {
         log.error('[TrinityStaffing] Failed to send client portal invitation:', portalErr.message);
       }
     }
@@ -793,7 +793,7 @@ class TrinityStaffingOrchestrator {
         });
         log.info(`[TrinityStaffing] Org summary sent to ${managerEmails.length} manager(s)`);
       }
-    } catch (orgSummaryErr: any) {
+    } catch (orgSummaryErr : unknown) {
       log.error('[TrinityStaffing] Failed to send org summary:', orgSummaryErr.message);
     }
   }

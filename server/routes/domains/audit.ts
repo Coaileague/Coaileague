@@ -6,6 +6,7 @@
 //   /api/admin, /api/platform, /api/sandbox, /api/deletion-protection
 // NOTE: /api/alerts/* is owned by the COMMS domain (commInlineRoutes.ts)
 import { sanitizeError } from '../../middleware/errorHandler';
+import { AuthenticatedRequest } from '../../rbac';
 import type { Express } from "express";
 import { requireAuth } from "../../auth";
 import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
@@ -53,7 +54,7 @@ export function mountAuditRoutes(app: Express): void {
   app.use("/api-docs", apiDocsRouter);
 
   // Inline audit trail handlers (universalAudit service)
-  app.get("/api/audit/trail", requireAuth, ensureWorkspaceAccess, requireManager, async (req: any, res: any) => {
+  app.get("/api/audit/trail", requireAuth, ensureWorkspaceAccess, requireManager, async (req: AuthenticatedRequest, res: any) => {
     try {
       const workspaceId = req.workspaceId;
       if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
@@ -72,7 +73,7 @@ export function mountAuditRoutes(app: Express): void {
     } catch (error: unknown) { res.status(500).json({ error: sanitizeError(error) }); }
   });
 
-  app.get("/api/audit/entity/:type/:id", requireAuth, ensureWorkspaceAccess, requireManager, async (req: any, res: any) => {
+  app.get("/api/audit/entity/:type/:id", requireAuth, ensureWorkspaceAccess, requireManager, async (req: AuthenticatedRequest, res: any) => {
     try {
       const workspaceId = req.workspaceId;
       const { type, id } = req.params;
@@ -82,7 +83,7 @@ export function mountAuditRoutes(app: Express): void {
     } catch (error: unknown) { res.status(500).json({ error: sanitizeError(error) }); }
   });
 
-  app.get("/api/audit/user/:userId", requireAuth, ensureWorkspaceAccess, requireManager, async (req: any, res: any) => {
+  app.get("/api/audit/user/:userId", requireAuth, ensureWorkspaceAccess, requireManager, async (req: AuthenticatedRequest, res: any) => {
     try {
       const workspaceId = req.workspaceId;
       const { userId } = req.params;
@@ -92,7 +93,7 @@ export function mountAuditRoutes(app: Express): void {
     } catch (error: unknown) { res.status(500).json({ error: sanitizeError(error) }); }
   });
 
-  app.get("/api/audit/bot/:botName", requireAuth, ensureWorkspaceAccess, requireManager, async (req: any, res: any) => {
+  app.get("/api/audit/bot/:botName", requireAuth, ensureWorkspaceAccess, requireManager, async (req: AuthenticatedRequest, res: any) => {
     try {
       const workspaceId = req.workspaceId;
       if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
@@ -103,7 +104,7 @@ export function mountAuditRoutes(app: Express): void {
     } catch (error: unknown) { res.status(500).json({ error: sanitizeError(error) }); }
   });
 
-  app.get("/api/audit/workspace/summary", requireAuth, ensureWorkspaceAccess, requireManager, async (req: any, res: any) => {
+  app.get("/api/audit/workspace/summary", requireAuth, ensureWorkspaceAccess, requireManager, async (req: AuthenticatedRequest, res: any) => {
     try {
       const workspaceId = req.workspaceId;
       if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
@@ -114,7 +115,7 @@ export function mountAuditRoutes(app: Express): void {
 
   // Compliance export for workspace audit history.
   // GET /api/audit/export?start=&end=&format=csv|json
-  app.get("/api/audit/export", requireAuth, ensureWorkspaceAccess, requireManager, async (req: any, res: any) => {
+  app.get("/api/audit/export", requireAuth, ensureWorkspaceAccess, requireManager, async (req: AuthenticatedRequest, res: any) => {
     try {
       const workspaceId = req.workspaceId;
       if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
@@ -208,7 +209,7 @@ export function mountAuditRoutes(app: Express): void {
   app.use("/api/kpi-alerts", kpiAlertRouter);
   app.use("/api/insights", requireAuth, ensureWorkspaceAccess, insightsRouter);
   // Predict & patterns routes have full /api/predict/*, /api/patterns/* paths inside insightsRouter
-  app.use((req: any, res: any, next: any) => {
+  app.use((req: AuthenticatedRequest, res: any, next: any) => {
     if (req.path.startsWith("/api/predict") || req.path.startsWith("/api/patterns")) {
       return insightsRouter(req, res, next);
     }

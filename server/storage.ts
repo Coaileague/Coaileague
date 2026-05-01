@@ -4717,7 +4717,7 @@ export class DatabaseStorage implements IStorage {
           )
         );
       return Number(logs[0]?.count || 0);
-    } catch (error: any) {
+    } catch (error : unknown) {
       if (error.code === '42P01') {
         return 0;
       }

@@ -185,7 +185,7 @@ class ChatServerHealthManager {
     this.diagnosticInterval = setInterval(async () => {
       try {
         await this.runDiagnostics();
-      } catch (error: any) {
+      } catch (error : unknown) {
         log.warn('[ChatServerSubagent] Diagnostics failed (will retry):', error?.message || 'unknown');
       }
     }, 60000);
@@ -400,7 +400,7 @@ class ChatServerHealthManager {
       this.selfAwareness.currentState = 'idle';
       return true;
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       action.status = 'failed';
       action.completedAt = new Date();
       action.result = `Self-healing failed: ${(error instanceof Error ? error.message : String(error))}`;

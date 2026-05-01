@@ -714,7 +714,7 @@ class BehavioralMonitoringService {
           const [subagentId, modelTier] = key.split('-');
           await this.updateProfile(subagentId, modelTier);
         }
-      } catch (error: any) {
+      } catch (error : unknown) {
         log.warn('[BehavioralMonitoring] Analysis failed (will retry):', error?.message || 'unknown');
       }
     }, 5 * 60 * 1000).unref();

@@ -227,7 +227,7 @@ class QuickBooksOrchestrationService {
           if (connection.accessTokenExpiresAt && new Date() > (connection as any).accessTokenExpiresAt) {
             try {
               await quickbooksOAuthService.refreshAccessToken(connection.id);
-            } catch (refreshError: any) {
+            } catch (refreshError : unknown) {
               return {
                 success: false,
                 error: `Token refresh failed: ${refreshError.message}`,
@@ -262,7 +262,7 @@ class QuickBooksOrchestrationService {
             
             const result = await executor(refreshedCtx, orchestrationCtx!);
             return { success: true, data: result };
-          } catch (error: any) {
+          } catch (error : unknown) {
             const errorCode = this.categorizeError(error);
             return {
               success: false,
@@ -340,7 +340,7 @@ class QuickBooksOrchestrationService {
         durationMs: Date.now() - startTime,
       };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       const errorCode = this.categorizeError(error);
       const errorInfo = QB_ERROR_CODES[errorCode] || QB_ERROR_CODES['UNKNOWN'];
 

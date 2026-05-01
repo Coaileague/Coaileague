@@ -241,7 +241,7 @@ class AIBrainFileSystemTools {
           lineCount,
         },
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       if (error.code === 'ENOENT') {
         return { success: false, error: 'File not found', path: filePath };
       }
@@ -307,7 +307,7 @@ class AIBrainFileSystemTools {
           lineCount: content.split('\n').length,
         },
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return { success: false, error: (error instanceof Error ? error.message : String(error)), path: filePath };
     }
   }
@@ -394,7 +394,7 @@ class AIBrainFileSystemTools {
         path: filePath,
         metadata: writeResult.metadata,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return { success: false, error: (error instanceof Error ? error.message : String(error)), path: filePath };
     }
   }
@@ -445,7 +445,7 @@ class AIBrainFileSystemTools {
           size: stats.size,
         },
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       if (error.code === 'ENOENT') {
         return { success: false, error: 'File not found', path: filePath };
       }
@@ -534,7 +534,7 @@ class AIBrainFileSystemTools {
           isDirectory: true,
         },
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       if (error.code === 'ENOENT') {
         return { success: false, error: 'Directory not found', path: dirPath };
       }
@@ -624,7 +624,7 @@ class AIBrainFileSystemTools {
         data: matches,
         path: searchPath,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return { success: false, error: (error instanceof Error ? error.message : String(error)), path: searchPath };
     }
   }
@@ -662,7 +662,7 @@ class AIBrainFileSystemTools {
           lineCount,
         },
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       if (error.code === 'ENOENT') {
         return { success: false, error: 'Path not found', path: filePath };
       }
@@ -735,7 +735,7 @@ class AIBrainFileSystemTools {
         data: diff,
         path: file1,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
@@ -793,7 +793,7 @@ class AIBrainFileSystemTools {
           modified: stats.mtime,
         },
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
@@ -841,7 +841,7 @@ class AIBrainFileSystemTools {
           modified: stats.mtime,
         },
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }

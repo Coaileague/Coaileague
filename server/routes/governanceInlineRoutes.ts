@@ -198,7 +198,7 @@ router.get("/safety-checks/recent", requireAuth, async (req: AuthenticatedReques
   }
 });
 
-router.post("/dar/:darId/verify", requireAuth, async (req: any, res) => {
+router.post("/dar/:darId/verify", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const { notes } = req.body;
@@ -220,7 +220,7 @@ router.post("/dar/:darId/verify", requireAuth, async (req: any, res) => {
   }
 });
 
-router.post("/dar/:darId/send", requireAuth, async (req: any, res) => {
+router.post("/dar/:darId/send", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await shiftChatroomWorkflowService.sendDARToClient(req.params.darId);
 

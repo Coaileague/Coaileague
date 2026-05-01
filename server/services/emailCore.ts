@@ -77,7 +77,7 @@ async function getOrCreateUnsubscribeToken(email: string, workspaceId?: string):
     });
 
     return token;
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.warn('[Email] Failed to get/create unsubscribe token:', (error instanceof Error ? error.message : String(error)));
     // Return a fallback token if DB fails - still allows email to be sent
     return generateUnsubscribeToken();
@@ -122,7 +122,7 @@ export async function isEmailUnsubscribed(
       case 'digests': return unsub.unsubscribeDigests || false;
       default: return false;
     }
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.warn('[Email] Failed to check unsubscribe status:', (error instanceof Error ? error.message : String(error)));
     return false; // Default to allowing email on error
   }
@@ -408,7 +408,7 @@ export async function sendCanSpamCompliantEmail(
 
     log.info(`[Email] Sent CAN-SPAM compliant ${emailType} email to ${to}`);
     return { success: true, data: result };
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error(`[Email] Error sending ${emailType} email to ${to}:`, (error instanceof Error ? error.message : String(error)));
     return { success: false, error };
   }
@@ -441,7 +441,7 @@ async function sendMeteredEmail(
     }
     
     return { success: true, data: result };
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error(`[Email] Error sending ${emailCategory} email:`, (error instanceof Error ? error.message : String(error)));
     return { success: false, error };
   }

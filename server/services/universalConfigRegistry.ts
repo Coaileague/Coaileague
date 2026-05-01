@@ -606,7 +606,7 @@ export class UniversalConfigRegistry {
         default:
           return { success: false, message: `Unknown action: ${action}. Available: get_config, set_config, toggle_feature, set_seasonal_theme, disable_seasonal, create_snapshot, restore_snapshot, list_domain, get_all, set_maintenance_mode` };
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[ConfigRegistry] Trinity execute error (${action}):`, error);
       return { success: false, message: `Error: ${(error instanceof Error ? error.message : String(error))}` };
     }

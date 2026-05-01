@@ -762,7 +762,7 @@ export async function sendInvoiceWithEmail(input: SendInvoiceEmailInput): Promis
       emailId: emailResult.data?.id,
       emailEventId: emailEvent.id,
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     // Log failed email attempt
     await db.insert(emailEvents).values({
       workspaceId,

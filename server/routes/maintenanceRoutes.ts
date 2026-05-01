@@ -15,7 +15,7 @@ import { z } from 'zod';
 import { maintenanceModeService } from '../services/maintenanceModeService';
 import { trinityMaintenanceOrchestrator, DiagnosticsReport } from '../services/trinityMaintenanceOrchestrator';
 import { requireAuth } from '../auth';
-import { requirePlatformAdmin, requirePlatformStaff } from '../rbac';
+import { requirePlatformAdmin, requirePlatformStaff, AuthenticatedRequest} from '../rbac';
 import { createLogger } from '../lib/logger';
 import { db } from '../db';
 import { cronRunLog } from '@shared/schema';
@@ -53,7 +53,7 @@ const diagnosticsReportSchema = z.object({
  * Middleware: accept either a valid DIAG_BYPASS_SECRET header (Trinity internal calls)
  * or a fully authenticated platform admin user. Rejects if neither condition is met.
  */
-function requireTrinityOrAdmin(req: any, res: any, next: any) {
+function requireTrinityOrAdmin(req: AuthenticatedRequest, res: any, next: any) {
   const diagSecret = process.env.DIAG_BYPASS_SECRET;
   const suppliedSecret = req.headers['x-diagnostics-runner'];
   const trinityActor = req.headers['x-trinity-actor'];

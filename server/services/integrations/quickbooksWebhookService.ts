@@ -246,7 +246,7 @@ class QuickBooksWebhookService {
         try {
           await this.processEntityChange(connection, entity);
           processed++;
-        } catch (error: any) {
+        } catch (error : unknown) {
           errors.push(`${entity.name} ${entity.id}: ${(error instanceof Error ? error.message : String(error))}`);
         }
       }
@@ -366,7 +366,7 @@ class QuickBooksWebhookService {
         .where(eq(clients.id, existingClient.id));
 
       log.info(`[QuickBooksWebhooks] Updated client ${existingClient.id} from QB customer ${qboCustomerId}`);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[QuickBooksWebhooks] Failed to sync customer ${qboCustomerId}:`, (error instanceof Error ? error.message : String(error)));
       throw error;
     }
@@ -433,7 +433,7 @@ class QuickBooksWebhookService {
         .where(eq(employees.id, existingEmployee.id));
 
       log.info(`[QuickBooksWebhooks] Updated employee ${existingEmployee.id} from QB employee ${qboEmployeeId}`);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[QuickBooksWebhooks] Failed to sync employee ${qboEmployeeId}:`, (error instanceof Error ? error.message : String(error)));
       throw error;
     }

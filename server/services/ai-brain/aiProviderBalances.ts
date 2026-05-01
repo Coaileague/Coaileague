@@ -113,7 +113,7 @@ class AIProviderBalanceService {
         dashboardUrl: 'https://platform.openai.com/usage',
         warningThreshold: 10, // $10 warning threshold
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return {
         provider: 'openai',
         displayName: 'OpenAI (GPT)',
@@ -171,7 +171,7 @@ class AIProviderBalanceService {
         dashboardUrl: 'https://console.cloud.google.com/billing',
         warningThreshold: 50, // $50 warning threshold
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return {
         provider: 'gemini',
         displayName: 'Google Gemini',
@@ -243,7 +243,7 @@ class AIProviderBalanceService {
       }
       
       throw new Error(`API returned ${response.status}`);
-    } catch (error: any) {
+    } catch (error : unknown) {
       return {
         provider: 'claude',
         displayName: 'Anthropic Claude 4.5',

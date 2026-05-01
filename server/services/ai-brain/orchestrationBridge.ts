@@ -325,7 +325,7 @@ function setupWebSocketBridge() {
         executionTimeMs: result.executionTimeMs,
         timestamp: new Date().toISOString(),
       }, data.workspaceId);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[OrchestrationBridge] Action ${data.actionId} execution error:`, (error instanceof Error ? error.message : String(error)));
       broadcastOrchestrationEvent('action_result', {
         actionId: data.actionId,

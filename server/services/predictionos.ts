@@ -218,7 +218,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
         recommendations: aiResponse.recommendations || "No recommendations available",
         confidenceScore: aiResponse.confidenceScore || 0,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       // Handle specific OpenAI errors
       if (error.code === 'insufficient_quota') {
         log.error("PredictionOS™: OpenAI quota exceeded. Using fallback analysis.");

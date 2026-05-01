@@ -104,7 +104,7 @@ async function safeExec(label: string, text: string, params?: unknown[]): Promis
     const deleted = result.rowCount ?? 0;
     if (deleted > 0) console.log(`  ${label}: ${deleted} rows deleted`);
     return deleted;
-  } catch (err: any) {
+  } catch (err : unknown) {
     await client.query('ROLLBACK TO SAVEPOINT cleanup_sp').catch(() => {});
     if (err?.code !== '42P01') { // 42P01 = table does not exist — expected
       console.log(`  ${label}: FAILED (non-fatal) — ${err?.message}`);

@@ -242,7 +242,7 @@ class TrinitySchedulingOrchestratorService {
       log.info(`[TrinitySchedulingOrchestrator] Session ${sessionId} complete (DRY RUN): ${mutations.length} proposed mutations awaiting verification`);
       return result;
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[TrinitySchedulingOrchestrator] Session ${sessionId} failed:`, error);
 
       await automationExecutionTracker.failExecution(executionId, {

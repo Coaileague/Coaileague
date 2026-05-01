@@ -185,7 +185,7 @@ export class UsageTracker {
       log.info(`[UsageTracker] Created overage invoice item for ${workspaceId}: $${usage.overageCost / 100}`);
 
       return { success: true, amount: usage.overageCost };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[UsageTracker] Failed to bill overages for ${workspaceId}:`, error);
       return { success: false, amount: 0, error: (error instanceof Error ? error.message : String(error)) };
     }

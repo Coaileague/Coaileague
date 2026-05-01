@@ -608,7 +608,7 @@ class IndustryComplianceTemplatesService {
         errors,
       };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[IndustryComplianceTemplates] Deployment failed:', error);
       errors.push((error instanceof Error ? error.message : String(error)));
       return {

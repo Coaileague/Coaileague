@@ -127,7 +127,7 @@ class DataMigrationAgent {
       });
 
       return this.parseExtractionResponse(response.text, extractionType);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[DataMigrationAgent] PDF extraction failed:', error);
       return {
         confidence: 0,
@@ -216,7 +216,7 @@ Respond with JSON only:
         warnings: mapping.warnings || [],
         errors: [],
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[DataMigrationAgent] Spreadsheet extraction failed:', error);
       return {
         confidence: 0,
@@ -283,7 +283,7 @@ Respond with JSON:
           warnings: parsed.warnings || [],
           errors: [],
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           confidence: 0,
           warnings: [],
@@ -445,7 +445,7 @@ Respond with JSON:
             isActive: true,
           });
           result.importedCounts.employees++;
-        } catch (error: any) {
+        } catch (error : unknown) {
           result.errors.push(`Failed to import employee "${emp.firstName} ${emp.lastName}": ${(error instanceof Error ? error.message : String(error))}`);
         }
       }
@@ -512,7 +512,7 @@ Only include arrays that have data. If no data found for a category, omit that a
         warnings: parsed.warnings || [],
         errors: [],
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return { confidence: 0, warnings: [], errors: [`Parse error: ${(error instanceof Error ? error.message : String(error))}`] };
     }
   }
@@ -665,7 +665,7 @@ Only include arrays that have data. If no data found for a category, omit that a
           estimatedCredits,
         };
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[DataMigrationAgent] TAS check failed:', error);
       checks.push({
         name: 'tas_verification',
@@ -817,7 +817,7 @@ Only include arrays that have data. If no data found for a category, omit that a
         detectedType,
         preview,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[DataMigrationAgent] Ingestion failed:', error);
       return {
         success: false,
@@ -1004,7 +1004,7 @@ Respond with JSON only:
         }
         
         log.info(`[DataMigrationAgent] Compliance check: ${complianceStatus} (${complianceNotes.length} issues)`);
-      } catch (error: any) {
+      } catch (error : unknown) {
         log.warn('[DataMigrationAgent] Compliance check failed, continuing with basic validation:', (error instanceof Error ? error.message : String(error)));
         complianceNotes.push('AI compliance check unavailable - using basic validation only');
       }
@@ -1233,7 +1233,7 @@ Respond with JSON only:
         steps,
         finalResult,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[DataMigrationAgent] Workflow ${workflowId} failed:`, error);
       return {
         success: false,

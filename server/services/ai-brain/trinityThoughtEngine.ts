@@ -195,7 +195,7 @@ class TrinityThoughtEngine {
         confidence,
         wasConfused,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       // Extract the meaningful error message — PostgreSQL errors bury the cause in .message or .detail
       const errMsg = error?.message || error?.detail || String(error);
       const errCode = error?.code || 'unknown';

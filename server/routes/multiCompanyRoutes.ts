@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { pool } from "../db";
 import { registerLegacyBootstrap } from "../services/legacyBootstrapRegistry";
-import { requireAuth } from "../rbac";
+import { requireAuth, AuthenticatedRequest} from "../rbac";
 import { requirePlan } from '../tierGuards';
 import { z } from 'zod';
 import { platformActionHub } from "../services/helpai/platformActionHub";
@@ -65,7 +65,7 @@ platformActionHub.registerAction({
 });
 
 // Routes
-router.get('/subsidiaries', requireAuth, async (req: any, res) => {
+router.get('/subsidiaries', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT wr.id as relationship_id, wr.relationship_type, wr.created_at, w.id as workspace_id, w.name, w.config
@@ -81,7 +81,7 @@ router.get('/subsidiaries', requireAuth, async (req: any, res) => {
   }
 });
 
-router.post('/relationships', requireAuth, async (req: any, res) => {
+router.post('/relationships', requireAuth, async (req: AuthenticatedRequest, res) => {
   const { childWorkspaceId, relationshipType } = req.body;
   if (!childWorkspaceId || !relationshipType) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -102,7 +102,7 @@ router.post('/relationships', requireAuth, async (req: any, res) => {
   }
 });
 
-router.delete('/relationships/:id', requireAuth, async (req: any, res) => {
+router.delete('/relationships/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     await pool.query(
       `UPDATE workspace_relationships SET is_active = false 
@@ -116,7 +116,7 @@ router.delete('/relationships/:id', requireAuth, async (req: any, res) => {
   }
 });
 
-router.get('/consolidated/dashboard', requireAuth, async (req: any, res) => {
+router.get('/consolidated/dashboard', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows: subsidiaries } = await pool.query(
       `SELECT child_workspace_id FROM workspace_relationships 
@@ -150,7 +150,7 @@ router.get('/consolidated/dashboard', requireAuth, async (req: any, res) => {
   }
 });
 
-router.get('/consolidated/reports', requireAuth, async (req: any, res) => {
+router.get('/consolidated/reports', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT * FROM consolidated_reports WHERE parent_workspace_id = $1 ORDER BY generated_at DESC`,
@@ -163,7 +163,7 @@ router.get('/consolidated/reports', requireAuth, async (req: any, res) => {
   }
 });
 
-router.post('/policy/broadcast', requireAuth, async (req: any, res) => {
+router.post('/policy/broadcast', requireAuth, async (req: AuthenticatedRequest, res) => {
   const { policyType, description, subsidiaries } = req.body;
   try {
     // In a real app, this would iterate through subsidiaries and apply logic
@@ -179,7 +179,7 @@ router.post('/policy/broadcast', requireAuth, async (req: any, res) => {
   }
 });
 
-router.get('/officer-pool', requireAuth, async (req: any, res) => {
+router.get('/officer-pool', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT e.id, e.name, e.email, e.phone, w.name as workspace_name

@@ -68,7 +68,7 @@ export function registerIntegrationBrainActions(): void {
           message: `Found ${integrations.length} available integrations`,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -111,7 +111,7 @@ export function registerIntegrationBrainActions(): void {
           message: `Found ${connections.length} active connections`,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -170,7 +170,7 @@ export function registerIntegrationBrainActions(): void {
           message: result.success ? 'Integration connected successfully' : result.error,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -222,7 +222,7 @@ export function registerIntegrationBrainActions(): void {
           message: result.success ? 'Integration disconnected successfully' : result.error,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -274,7 +274,7 @@ export function registerIntegrationBrainActions(): void {
           message: result.success ? 'Credentials updated successfully' : result.error,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -332,7 +332,7 @@ export function registerIntegrationBrainActions(): void {
           message: result.success ? 'API key created successfully. Save this key securely - it will only be shown once.' : result.error,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -378,7 +378,7 @@ export function registerIntegrationBrainActions(): void {
           message: `Found ${keys.length} API keys`,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -430,7 +430,7 @@ export function registerIntegrationBrainActions(): void {
           message: result.success ? 'API key revoked successfully' : result.error,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -476,7 +476,7 @@ export function registerIntegrationBrainActions(): void {
           message: `${health.length - unhealthyCount}/${health.length} services healthy`,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -529,7 +529,7 @@ export function registerIntegrationBrainActions(): void {
           message: analysis.diagnosis,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -576,7 +576,7 @@ export function registerIntegrationBrainActions(): void {
           message: `Found ${result.total} integration partners`,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -624,7 +624,7 @@ export function registerIntegrationBrainActions(): void {
           message: details ? `Partner: ${details.name}` : 'Partner not found',
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -672,7 +672,7 @@ export function registerIntegrationBrainActions(): void {
           message: result.success ? `Partner "${partner.name}" created successfully` : result.error,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -719,7 +719,7 @@ export function registerIntegrationBrainActions(): void {
           message: result.success ? 'Partner updated successfully' : result.error,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -769,7 +769,7 @@ export function registerIntegrationBrainActions(): void {
             : result.error,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -816,7 +816,7 @@ export function registerIntegrationBrainActions(): void {
           message: result.success ? 'Partner reactivated successfully' : result.error,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -863,7 +863,7 @@ export function registerIntegrationBrainActions(): void {
           message: result.success ? 'Partner deleted permanently' : result.error,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -902,7 +902,7 @@ export function registerIntegrationBrainActions(): void {
           message: `${stats.totalPartners} partners, ${stats.totalConnections} connections`,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,

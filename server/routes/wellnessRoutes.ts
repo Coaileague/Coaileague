@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth } from "../rbac";
+import { requireAuth, AuthenticatedRequest} from "../rbac";
 import { pool } from "../db";
 import { platformEventBus } from "../services/platformEventBus";
 import { platformActionHub } from "../services/helpai/platformActionHub";
@@ -102,7 +102,7 @@ platformActionHub.registerAction({
 });
 
 // Routes
-router.get("/overdue", requireAuth, async (req: any, res) => {
+router.get("/overdue", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT s.*, e.name as employee_name 
@@ -117,7 +117,7 @@ router.get("/overdue", requireAuth, async (req: any, res) => {
   }
 });
 
-router.get("/config", requireAuth, async (req: any, res) => {
+router.get("/config", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(
       "SELECT * FROM wellness_check_configs WHERE workspace_id = $1",
@@ -137,7 +137,7 @@ router.get("/config", requireAuth, async (req: any, res) => {
   }
 });
 
-router.patch("/config", requireAuth, async (req: any, res) => {
+router.patch("/config", requireAuth, async (req: AuthenticatedRequest, res) => {
   const { defaultIntervalMinutes, escalationThresholdMinutes, supervisorNotificationEnabled } = req.body;
   try {
     const { rows } = await pool.query(
@@ -157,7 +157,7 @@ router.patch("/config", requireAuth, async (req: any, res) => {
   }
 });
 
-router.get("/sessions", requireAuth, async (req: any, res) => {
+router.get("/sessions", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT s.*, e.name as employee_name 
@@ -172,7 +172,7 @@ router.get("/sessions", requireAuth, async (req: any, res) => {
   }
 });
 
-router.post("/sessions", requireAuth, async (req: any, res) => {
+router.post("/sessions", requireAuth, async (req: AuthenticatedRequest, res) => {
   const { employeeId, shiftId, checkInIntervalMinutes } = req.body;
   const interval = checkInIntervalMinutes || 30;
   try {
@@ -196,7 +196,7 @@ router.post("/sessions", requireAuth, async (req: any, res) => {
   }
 });
 
-router.post("/sessions/:id/checkin", requireAuth, async (req: any, res) => {
+router.post("/sessions/:id/checkin", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(
       `UPDATE lone_worker_sessions 
@@ -223,7 +223,7 @@ router.post("/sessions/:id/checkin", requireAuth, async (req: any, res) => {
   }
 });
 
-router.post("/sessions/:id/sos", requireAuth, async (req: any, res) => {
+router.post("/sessions/:id/sos", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(
       "SELECT * FROM lone_worker_sessions WHERE id = $1 AND workspace_id = $2",
@@ -255,7 +255,7 @@ router.post("/sessions/:id/sos", requireAuth, async (req: any, res) => {
   }
 });
 
-router.post("/sessions/:id/end", requireAuth, async (req: any, res) => {
+router.post("/sessions/:id/end", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(
       "UPDATE lone_worker_sessions SET status = 'ended', ended_at = NOW() WHERE id = $1 AND workspace_id = $2 RETURNING *",
@@ -278,7 +278,7 @@ router.post("/sessions/:id/end", requireAuth, async (req: any, res) => {
   }
 });
 
-router.get("/sessions/:id/events", requireAuth, async (req: any, res) => {
+router.get("/sessions/:id/events", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(
       "SELECT * FROM wellness_check_events WHERE session_id = $1 AND workspace_id = $2 ORDER BY created_at DESC",

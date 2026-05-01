@@ -210,7 +210,7 @@ class MeteredGptClient {
         latencyMs,
         creditsCharged: GPT_CREDIT_COSTS[tier],
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[MeteredGptClient] Error:`, (error instanceof Error ? error.message : String(error)));
       throw error;
     }

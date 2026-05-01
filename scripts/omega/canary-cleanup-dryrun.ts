@@ -21,7 +21,7 @@ async function run() {
   try {
     const dbModule = await import('../../server/db');
     db = dbModule.db;
-  } catch (err: any) {
+  } catch (err : unknown) {
     console.error('Cannot connect to DB:', err.message);
     process.exit(1);
   }

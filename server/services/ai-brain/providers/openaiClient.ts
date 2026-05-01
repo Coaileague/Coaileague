@@ -206,7 +206,7 @@ class OpenAIClient {
         latencyMs,
         finishReason: choice?.finish_reason || 'unknown',
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       const latencyMs = Date.now() - startTime;
       this.recordError(modelId, (error instanceof Error ? error.message : String(error)), latencyMs);
       throw error;
@@ -220,7 +220,7 @@ class OpenAIClient {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         return await this.generate(request);
-      } catch (error: any) {
+      } catch (error : unknown) {
         lastError = error;
         log.warn(`[Trinity:support-backend] Attempt ${attempt}/${retries} failed:`, (error instanceof Error ? error.message : String(error)));
         
@@ -293,7 +293,7 @@ class OpenAIClient {
         maxTokens: 5,
       });
       return { healthy: true, latencyMs: Date.now() - startTime };
-    } catch (error: any) {
+    } catch (error : unknown) {
       return { healthy: false, latencyMs: Date.now() - startTime, error: (error instanceof Error ? error.message : String(error)) };
     }
   }

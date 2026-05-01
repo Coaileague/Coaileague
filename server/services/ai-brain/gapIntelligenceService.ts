@@ -117,7 +117,7 @@ class GapIntelligenceService {
           maxBuffer: 10 * 1024 * 1024,
         });
         output = result.stdout + result.stderr;
-      } catch (execError: any) {
+      } catch (execError : unknown) {
         output = (execError.stdout || '') + (execError.stderr || '');
         if (!output && execError.message) {
           log.info('[GapIntelligence] tsc execution failed:', execError.message);

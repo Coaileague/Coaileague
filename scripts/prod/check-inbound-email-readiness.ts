@@ -63,7 +63,7 @@ async function main() {
         : `MX = ${mxRecords.map(r => r.exchange).join(', ')} — must be changed to ${EXPECTED_MX}`,
       blocker: true,
     });
-  } catch (err: any) {
+  } catch (err : unknown) {
     results.push({
       name: `Wildcard MX lookup`,
       pass: false,
@@ -147,7 +147,7 @@ async function main() {
         detail: 'No email folders found in internal_email_folders — new workspace creation will provision them',
       });
     }
-  } catch (err: any) {
+  } catch (err : unknown) {
     results.push({
       name: 'DB: internal_email_folders table accessible',
       pass: false,

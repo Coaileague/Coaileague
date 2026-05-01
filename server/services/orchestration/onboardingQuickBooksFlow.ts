@@ -356,7 +356,7 @@ class OnboardingQuickBooksFlow {
         flow.stage = 'flow_failed';
         await this.persistFlow(flow);
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[OnboardingQuickBooksFlow] Initial sync failed:`, error);
       flow.errors.push(`Initial sync failed: ${(error instanceof Error ? error.message : String(error))}`);
       flow.stage = 'flow_failed';
@@ -402,7 +402,7 @@ class OnboardingQuickBooksFlow {
       await this.persistFlow(flow);
 
       await this.importEmployees(flowId);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[OnboardingQuickBooksFlow] Data mapping failed:`, error);
       flow.warnings.push(`Data mapping partially failed: ${(error instanceof Error ? error.message : String(error))}`);
       await this.importEmployees(flowId);
@@ -441,7 +441,7 @@ class OnboardingQuickBooksFlow {
       } else {
         await this.configureAutomation(flowId);
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[OnboardingQuickBooksFlow] Employee import failed:`, error);
       flow.errors.push(`Employee import failed: ${(error instanceof Error ? error.message : String(error))}`);
       flow.stage = 'flow_failed';
@@ -476,7 +476,7 @@ class OnboardingQuickBooksFlow {
       });
 
       await this.configureAutomation(flowId);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[OnboardingQuickBooksFlow] Schedule generation failed:`, error);
       flow.warnings.push(`Schedule generation skipped: ${(error instanceof Error ? error.message : String(error))}`);
       await this.configureAutomation(flowId);
@@ -499,7 +499,7 @@ class OnboardingQuickBooksFlow {
       await this.persistFlow(flow);
 
       await this.completeFlow(flowId);
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[OnboardingQuickBooksFlow] Automation configuration failed:`, error);
       flow.warnings.push(`Automation partially configured: ${(error instanceof Error ? error.message : String(error))}`);
       await this.completeFlow(flowId);
@@ -645,7 +645,7 @@ class OnboardingQuickBooksFlow {
         message: 'QuickBooks onboarding flow reset. You can now start a fresh migration.',
         clearedFlows: Math.max(clearedCount, dbDeletedCount),
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[OnboardingQuickBooksFlow] Reset failed:', error);
       return {
         success: false,
@@ -938,7 +938,7 @@ class OnboardingQuickBooksFlow {
 
           results.imported++;
           log.info(`[QB Import] Imported employee: ${emp.firstName} ${emp.lastName}`);
-        } catch (error: any) {
+        } catch (error : unknown) {
           results.errors.push(`${emp.displayName}: ${(error instanceof Error ? error.message : String(error))}`);
           results.failed++;
         }

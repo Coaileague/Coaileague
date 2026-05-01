@@ -189,7 +189,7 @@ export async function fetchWithOfflineFallback(
       body: body ? JSON.stringify(body) : undefined,
     });
     return { queued: false, response };
-  } catch (error: any) {
+  } catch (error : unknown) {
     if (!navigator.onLine || error?.message?.includes('Failed to fetch') || error?.message?.includes('NetworkError') || error?.name === 'TypeError') {
       await queueRequest(url, method, body, type);
       return { queued: true };

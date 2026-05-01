@@ -103,7 +103,7 @@ export async function runShiftCompletionBridge(): Promise<ShiftBridgeResult> {
         for (const workspace of activeWorkspaces) {
           try {
             await processWorkspace(workspace, cutoff, result);
-          } catch (wsErr: any) {
+          } catch (wsErr : unknown) {
             const msg = `[ShiftBridge] Workspace ${workspace.id} error: ${wsErr.message}`;
             log.error(msg);
             result.errors.push(msg);
@@ -263,7 +263,7 @@ async function processWorkspace(
         result.autoApproved++;
         approvedEntryIds.push(inserted.id);
       }
-    } catch (shiftErr: any) {
+    } catch (shiftErr : unknown) {
       const msg = `[ShiftBridge] Failed to create entry for shift ${shift.id}: ${shiftErr.message}`;
       log.error(msg);
       result.errors.push(msg);
@@ -285,7 +285,7 @@ async function processWorkspace(
         payload: { count: missing.length, source: 'shift_completion_bridge' },
         metadata: { source: 'ShiftCompletionBridge', actionUrl: '/time-tracking' },
       });
-    } catch (notifyErr: any) {
+    } catch (notifyErr : unknown) {
       log.warn(`[ShiftBridge] Notification event failed for workspace ${workspace.id}:`, notifyErr.message);
     }
   }
@@ -307,7 +307,7 @@ async function processWorkspace(
         },
         metadata: { source: 'ShiftCompletionBridge' },
       });
-    } catch (eventErr: any) {
+    } catch (eventErr : unknown) {
       log.warn(`[ShiftBridge] Event publish failed for workspace ${workspace.id}:`, eventErr.message);
     }
   }

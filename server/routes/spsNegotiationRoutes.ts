@@ -4,6 +4,7 @@
  * terms extraction, and agreement detection.
  */
 import { Router } from 'express';
+import { AuthenticatedRequest } from '../rbac';
 import { db } from '../db';
 import {
   spsNegotiationThreads, spsNegotiationMessages, spsDocuments, workspaces,
@@ -71,7 +72,7 @@ Client message: "${message.replace(/"/g, "'")}"`;
 }
 
 // POST /api/sps/negotiations — Create negotiation thread (from proposal)
-spsNegotiationRouter.post('/', async (req: any, res) => {
+spsNegotiationRouter.post('/', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'No workspace context' });
@@ -116,7 +117,7 @@ spsNegotiationRouter.post('/', async (req: any, res) => {
 });
 
 // GET /api/sps/negotiations — List threads for workspace
-spsNegotiationRouter.get('/', async (req: any, res) => {
+spsNegotiationRouter.get('/', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     if (!workspaceId) return res.status(400).json({ error: 'No workspace context' });
@@ -132,7 +133,7 @@ spsNegotiationRouter.get('/', async (req: any, res) => {
 });
 
 // GET /api/sps/negotiations/:id — Thread + messages
-spsNegotiationRouter.get('/:id', async (req: any, res) => {
+spsNegotiationRouter.get('/:id', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
@@ -151,7 +152,7 @@ spsNegotiationRouter.get('/:id', async (req: any, res) => {
 });
 
 // POST /api/sps/negotiations/:id/messages — Send org message (with Trinity option)
-spsNegotiationRouter.post('/:id/messages', async (req: any, res) => {
+spsNegotiationRouter.post('/:id/messages', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });
@@ -244,7 +245,7 @@ Original message: "${input.messageRaw.replace(/"/g, "'")}"`;
 });
 
 // POST /api/sps/negotiations/:id/polish — Get Trinity polish suggestion (without sending)
-spsNegotiationRouter.post('/:id/polish', async (req: any, res) => {
+spsNegotiationRouter.post('/:id/polish', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
     const [thread] = await db.select().from(spsNegotiationThreads)
@@ -277,7 +278,7 @@ Original: "${messageRaw.replace(/"/g, "'")}"`,
 });
 
 // POST /api/sps/negotiations/:id/convert-to-contract — Generate contract from agreed terms
-spsNegotiationRouter.post('/:id/convert-to-contract', async (req: any, res) => {
+spsNegotiationRouter.post('/:id/convert-to-contract', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
         if (!workspaceId) return res.status(403).json({ error: 'Workspace context required' });

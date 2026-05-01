@@ -49,7 +49,7 @@ export function registerUIShellBrainActions(): void {
           message: `Found ${rules.length} UI shell validation rules`,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -94,7 +94,7 @@ export function registerUIShellBrainActions(): void {
           message: `Found ${rules.length} rules for type: ${type}`,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -124,7 +124,7 @@ export function registerUIShellBrainActions(): void {
           message: `Audit complete - Score: ${report.overallScore}% (${report.passed}/${report.totalChecks} passed)`,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,
@@ -175,7 +175,7 @@ export function registerUIShellBrainActions(): void {
           message: `Validation complete: ${passed}/${results.length} rules passed`,
           executionTimeMs: Date.now() - startTime
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: request.actionId,

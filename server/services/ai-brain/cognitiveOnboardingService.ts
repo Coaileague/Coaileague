@@ -476,7 +476,7 @@ class CognitiveOnboardingService {
 
       return { success: true, connection };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[CognitiveOnboarding] OAuth callback failed:`, error);
       return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
@@ -561,7 +561,7 @@ class CognitiveOnboardingService {
 
       result.success = true;
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[CognitiveOnboarding] Data extraction failed:`, error);
       result.errors.push((error instanceof Error ? error.message : String(error)));
     }
@@ -720,7 +720,7 @@ Return JSON with:
         data: mappedData,
         confidence: mapping.confidence || 0.8,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.warn('[CognitiveOnboarding] AI mapping failed, using default mapping:', (error instanceof Error ? error.message : String(error)));
       return {
         data: rawData.map(r => this.defaultMapping(r, dataType)),

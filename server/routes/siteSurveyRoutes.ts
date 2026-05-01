@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { AuthenticatedRequest } from '../rbac';
 import { pool } from '../db';
 import { platformActionHub } from '../services/helpai/platformActionHub';
 import { registerLegacyBootstrap } from '../services/legacyBootstrapRegistry';
@@ -118,7 +119,7 @@ platformActionHub.registerAction({
 });
 
 // API Routes
-router.get('/', requireAuth, async (req: any, res) => {
+router.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(
       'SELECT * FROM site_surveys WHERE workspace_id = $1 ORDER BY created_at DESC',
@@ -130,7 +131,7 @@ router.get('/', requireAuth, async (req: any, res) => {
   }
 });
 
-router.post('/', requireAuth, async (req: any, res) => {
+router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
   const { siteName, clientId, address, conductedBy } = req.body;
   try {
     const { rows } = await pool.query(
@@ -143,7 +144,7 @@ router.post('/', requireAuth, async (req: any, res) => {
   }
 });
 
-router.get('/stats', requireAuth, async (req: any, res) => {
+router.get('/stats', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT 
@@ -160,7 +161,7 @@ router.get('/stats', requireAuth, async (req: any, res) => {
   }
 });
 
-router.get('/:id', requireAuth, async (req: any, res) => {
+router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const surveyRes = await pool.query(
       'SELECT * FROM site_surveys WHERE id = $1 AND workspace_id = $2',
@@ -188,7 +189,7 @@ router.get('/:id', requireAuth, async (req: any, res) => {
   }
 });
 
-router.patch('/:id', requireAuth, async (req: any, res) => {
+router.patch('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
   const { status, overall_risk_level, summary, recommendations } = req.body;
   try {
     const { rows } = await pool.query(
@@ -207,7 +208,7 @@ router.patch('/:id', requireAuth, async (req: any, res) => {
   }
 });
 
-router.post('/:id/zones', requireAuth, async (req: any, res) => {
+router.post('/:id/zones', requireAuth, async (req: AuthenticatedRequest, res) => {
   const { zoneName, zoneType, riskLevel, notes } = req.body;
   try {
     const { rows } = await pool.query(
@@ -220,7 +221,7 @@ router.post('/:id/zones', requireAuth, async (req: any, res) => {
   }
 });
 
-router.post('/:id/requirements', requireAuth, async (req: any, res) => {
+router.post('/:id/requirements', requireAuth, async (req: AuthenticatedRequest, res) => {
   const { requirementType, description, priority, isMet } = req.body;
   try {
     const { rows } = await pool.query(
@@ -233,7 +234,7 @@ router.post('/:id/requirements', requireAuth, async (req: any, res) => {
   }
 });
 
-router.patch('/requirements/:reqId', requireAuth, async (req: any, res) => {
+router.patch('/requirements/:reqId', requireAuth, async (req: AuthenticatedRequest, res) => {
   const { isMet, description, priority } = req.body;
   try {
     const { rows } = await pool.query(

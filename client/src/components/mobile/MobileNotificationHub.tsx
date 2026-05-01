@@ -396,7 +396,7 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
           // Single retry per item
           try {
             return await apiRequest('DELETE', `/api/notifications/${id}`);
-          } catch (error: any) {
+          } catch (error : unknown) {
             if (error?.status === 404) return; // Already deleted
             // One retry after 100ms
             await new Promise(resolve => setTimeout(resolve, 100));
@@ -530,7 +530,7 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
         try {
           const result = await apiRequest('DELETE', `/api/notifications/${id}`);
           return result;
-        } catch (error: any) {
+        } catch (error : unknown) {
           lastError = error;
           // Don't retry on 404 (already deleted) or 403 (unauthorized)
           if (error?.status === 404 || error?.status === 403) {

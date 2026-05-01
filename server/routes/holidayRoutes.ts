@@ -11,6 +11,7 @@
  */
 
 import { Router } from 'express';
+import { AuthenticatedRequest } from '../rbac';
 import { requireAuth } from '../auth';
 import {
   isValidIANATimezone,
@@ -28,7 +29,7 @@ const log = createLogger('HolidayRoutes');
 const router = Router();
 
 // ─── GET /api/holidays ────────────────────────────────────────────────────────
-router.get('/', requireAuth, async (req: any, res) => {
+router.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId } = req.user;
     const year = req.query.year ? parseInt(req.query.year as string) : undefined;
@@ -42,7 +43,7 @@ router.get('/', requireAuth, async (req: any, res) => {
 });
 
 // ─── POST /api/holidays/validate-timezone ─────────────────────────────────────
-router.post('/validate-timezone', requireAuth, (req: any, res) => {
+router.post('/validate-timezone', requireAuth, (req: AuthenticatedRequest, res) => {
   const { timezone } = req.body;
   if (!timezone) return res.status(400).json({ error: 'timezone is required' });
   
@@ -51,7 +52,7 @@ router.post('/validate-timezone', requireAuth, (req: any, res) => {
 });
 
 // ─── GET /api/holidays/check-date ────────────────────────────────────────────
-router.get('/check-date', requireAuth, async (req: any, res) => {
+router.get('/check-date', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { workspaceId } = req.user;
     const { date, state_code } = req.query;
@@ -80,7 +81,7 @@ const createSchema = z.object({
   appliesToDifferential: z.boolean().default(true),
 });
 
-router.post('/', requireAuth, async (req: any, res) => {
+router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { role, workspaceId, id: userId } = req.user;
     
@@ -118,7 +119,7 @@ const updateSchema = z.object({
   appliesToDifferential: z.boolean().optional(),
 });
 
-router.put('/:id', requireAuth, async (req: any, res) => {
+router.put('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { role, workspaceId } = req.user;
     
@@ -144,7 +145,7 @@ router.put('/:id', requireAuth, async (req: any, res) => {
 });
 
 // ─── DELETE /api/holidays/:id ─────────────────────────────────────────────────
-router.delete('/:id', requireAuth, async (req: any, res) => {
+router.delete('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { role, workspaceId } = req.user;
     

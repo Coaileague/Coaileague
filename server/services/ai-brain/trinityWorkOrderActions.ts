@@ -56,7 +56,7 @@ export function registerTrinityWorkOrderActions(): void {
           },
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: 'workorder.process',
@@ -107,7 +107,7 @@ export function registerTrinityWorkOrderActions(): void {
           },
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: 'workorder.parse',
@@ -160,7 +160,7 @@ export function registerTrinityWorkOrderActions(): void {
           },
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: 'workorder.decompose',
@@ -201,7 +201,7 @@ export function registerTrinityWorkOrderActions(): void {
           },
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: 'workorder.clarify',
@@ -259,7 +259,7 @@ export function registerTrinityWorkOrderActions(): void {
           },
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: 'workorder.status',
@@ -306,7 +306,7 @@ export function registerTrinityWorkOrderActions(): void {
           },
           executionTimeMs: Date.now() - startTime,
         };
-      } catch (error: any) {
+      } catch (error : unknown) {
         return {
           success: false,
           actionId: 'workorder.get_summary',

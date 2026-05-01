@@ -195,7 +195,7 @@ class DisasterRecoveryService {
         newState: config.currentState,
         duration,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[DisasterRecovery] Failover failed for ${service}:`, error);
       throw error;
     }
@@ -235,7 +235,7 @@ class DisasterRecoveryService {
       
       test.status = 'passed';
       test.details.push('Test completed successfully');
-    } catch (error: any) {
+    } catch (error : unknown) {
       test.status = 'failed';
       test.details.push(`Test failed: ${(error instanceof Error ? error.message : String(error))}`);
     }

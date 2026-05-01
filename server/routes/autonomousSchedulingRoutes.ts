@@ -17,7 +17,7 @@ import { historicalScheduleImporter } from '../services/scheduling/historicalSch
 import { recurringScheduleTemplates } from '../services/scheduling/recurringScheduleTemplates';
 import { autonomousSchedulingDaemon } from '../services/scheduling/autonomousSchedulingDaemon';
 import { requireAuth } from '../auth';
-import { requireManager } from '../rbac';
+import { requireManager, AuthenticatedRequest} from '../rbac';
 import { storage } from '../storage';
 import { platformEventBus } from '../services/platformEventBus';
 import multer from 'multer';
@@ -49,7 +49,7 @@ export function registerAutonomousSchedulingRoutes(app: Express) {
    * Execute autonomous scheduling for current workspace
    * POST /api/trinity/autonomous-schedule
    */
-  app.post('/api/trinity/autonomous-schedule', requireAuth, async (req: any, res: Response) => {
+  app.post('/api/trinity/autonomous-schedule', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
@@ -96,7 +96,7 @@ export function registerAutonomousSchedulingRoutes(app: Express) {
    * Get scheduling session status
    * GET /api/trinity/autonomous-schedule/status/:sessionId
    */
-  app.get('/api/trinity/autonomous-schedule/status/:sessionId', requireAuth, async (req: any, res: Response) => {
+  app.get('/api/trinity/autonomous-schedule/status/:sessionId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { sessionId } = req.params;
       const session = trinityAutonomousScheduler.getActiveSession(sessionId);
@@ -125,7 +125,7 @@ export function registerAutonomousSchedulingRoutes(app: Express) {
    * Import historical schedule from CSV
    * POST /api/trinity/import-schedule
    */
-  app.post('/api/trinity/import-schedule', requireAuth, upload.single('file'), localVirusScan, async (req: any, res: Response) => {
+  app.post('/api/trinity/import-schedule', requireAuth, upload.single('file'), localVirusScan, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
@@ -206,7 +206,7 @@ export function registerAutonomousSchedulingRoutes(app: Express) {
    * Get all templates for workspace
    * GET /api/trinity/templates
    */
-  app.get('/api/trinity/templates', requireAuth, async (req: any, res: Response) => {
+  app.get('/api/trinity/templates', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
@@ -231,7 +231,7 @@ export function registerAutonomousSchedulingRoutes(app: Express) {
    * Create template from current week
    * POST /api/trinity/templates/from-week
    */
-  app.post('/api/trinity/templates/from-week', requireAuth, async (req: any, res: Response) => {
+  app.post('/api/trinity/templates/from-week', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
@@ -268,7 +268,7 @@ export function registerAutonomousSchedulingRoutes(app: Express) {
    * Apply template to a week
    * POST /api/trinity/templates/:templateId/apply
    */
-  app.post('/api/trinity/templates/:templateId/apply', requireAuth, async (req: any, res: Response) => {
+  app.post('/api/trinity/templates/:templateId/apply', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
@@ -312,7 +312,7 @@ export function registerAutonomousSchedulingRoutes(app: Express) {
    * Delete template
    * DELETE /api/trinity/templates/:templateId
    */
-  app.delete('/api/trinity/templates/:templateId', requireAuth, async (req: any, res: Response) => {
+  app.delete('/api/trinity/templates/:templateId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
@@ -342,7 +342,7 @@ export function registerAutonomousSchedulingRoutes(app: Express) {
    * Get daemon status
    * GET /api/trinity/daemon/status
    */
-  app.get('/api/trinity/daemon/status', requireManager, async (req: any, res: Response) => {
+  app.get('/api/trinity/daemon/status', requireManager, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const status = autonomousSchedulingDaemon.getStatus();
       res.json({
@@ -358,7 +358,7 @@ export function registerAutonomousSchedulingRoutes(app: Express) {
    * Start the daemon
    * POST /api/trinity/daemon/start
    */
-  app.post('/api/trinity/daemon/start', requireManager, async (req: any, res: Response) => {
+  app.post('/api/trinity/daemon/start', requireManager, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const config = req.body || {};
       autonomousSchedulingDaemon.start(config);
@@ -376,7 +376,7 @@ export function registerAutonomousSchedulingRoutes(app: Express) {
    * Stop the daemon
    * POST /api/trinity/daemon/stop
    */
-  app.post('/api/trinity/daemon/stop', requireManager, async (req: any, res: Response) => {
+  app.post('/api/trinity/daemon/stop', requireManager, async (req: AuthenticatedRequest, res: Response) => {
     try {
       autonomousSchedulingDaemon.stop();
       
@@ -393,7 +393,7 @@ export function registerAutonomousSchedulingRoutes(app: Express) {
    * Trigger manual scheduling run
    * POST /api/trinity/daemon/trigger
    */
-  app.post('/api/trinity/daemon/trigger', requireManager, async (req: any, res: Response) => {
+  app.post('/api/trinity/daemon/trigger', requireManager, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);

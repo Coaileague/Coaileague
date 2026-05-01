@@ -313,7 +313,7 @@ export async function processEmailReply(
         // Auto-send Round 2, using the just-completed session as round1SessionId
         await sendEmailRound2(cand, session.workspaceId, sessionId);
       }
-    } catch (r2Err: any) {
+    } catch (r2Err : unknown) {
       log.warn('[EmailInterview] Auto Round 2 send failed:', r2Err.message);
     }
   } else if (advanceToChat) {
@@ -332,7 +332,7 @@ export async function processEmailReply(
         const chatRoomUrl = `${baseUrl}/recruitment/candidates/${candidate.id}`;
         await sendChatInvitation(candidate, session.workspaceId, chatRoomId, chatRoomUrl);
       }
-    } catch (chatErr: any) {
+    } catch (chatErr : unknown) {
       log.warn('[EmailInterview] Auto chat invite failed:', chatErr.message);
     }
   }

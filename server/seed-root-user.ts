@@ -147,7 +147,7 @@ export async function seedRootUser() {
 
   console.log('\n🎉 Root user setup complete!');
   console.log('Login URL: /api/root-login');
-  } catch (extIdErr: any) {
+  } catch (extIdErr : unknown) {
     // Non-fatal: external identifier creation failed, core user/workspace/role are already set
     console.warn('[seedRootUser] External identifier setup skipped (non-fatal):', extIdErr?.message);
   }

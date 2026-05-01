@@ -475,7 +475,7 @@ export default function TimeTracking() {
         videoRef.current.onloadedmetadata = () => setIsCameraLoading(false);
         setIsCameraActive(true);
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       setIsCameraLoading(false);
 
       if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
@@ -493,7 +493,7 @@ export default function TimeTracking() {
             videoRef.current.onloadedmetadata = () => setIsCameraLoading(false);
             setIsCameraActive(true);
           }
-        } catch (fallbackErr: any) {
+        } catch (fallbackErr : unknown) {
           if (fallbackErr.name === "NotAllowedError" || fallbackErr.name === "PermissionDeniedError") {
             setCameraPermissionDenied(true);
           } else {

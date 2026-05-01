@@ -316,7 +316,7 @@ export class ConsoleCommandExecutor {
 
     try {
       result = await this.runCommand(command);
-    } catch (error: any) {
+    } catch (error : unknown) {
       result = {
         success: false,
         output: `Error executing command: ${(error instanceof Error ? error.message : String(error))}`,
@@ -638,7 +638,7 @@ Provide actionable guidance and suggest next steps when appropriate.`;
         suggestedActions: this.extractSuggestedActions(aiResponse.text, request.context?.currentPage),
         relatedFaqs: relatedFaqs.length > 0 ? relatedFaqs : undefined,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[EndUserBotSupport] AI generation failed:', error);
       return {
         response: "I'm here to help! Could you tell me more about what you're trying to do?",

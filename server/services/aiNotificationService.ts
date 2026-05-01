@@ -1032,7 +1032,7 @@ JSON:`;
       } else if (result.error) {
         log.info('[AINotification] Metered billing failed, using direct Gemini fallback:', result.error);
       }
-    } catch (meteredError: any) {
+    } catch (meteredError : unknown) {
       log.info('[AINotification] Metered billing exception, using direct Gemini fallback:', meteredError.message || meteredError);
     }
     

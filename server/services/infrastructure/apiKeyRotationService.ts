@@ -261,7 +261,7 @@ class ApiKeyRotationService {
       log.info(`[ApiKeyRotation] Generated new ${params.keyType}: ${params.name}`);
       return { keyId, keyValue };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[ApiKeyRotation] Failed to generate key:', error);
       throw error;
     }
@@ -382,7 +382,7 @@ class ApiKeyRotationService {
         newKeyValue,
       };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[ApiKeyRotation] Rotation failed:', error);
       return { success: false, oldKeyId: keyId, error: (error instanceof Error ? error.message : String(error)) };
     }

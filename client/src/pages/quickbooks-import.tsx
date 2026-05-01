@@ -298,7 +298,7 @@ export default function QuickBooksImportPage() {
         title: 'Migration Reset Complete',
         description: 'All previous migration data has been cleared. You can now start fresh.',
       });
-    } catch (error: any) {
+    } catch (error : unknown) {
       console.error('Failed to reset migration:', error);
       toast({
         title: 'Reset Failed',
@@ -593,7 +593,7 @@ export default function QuickBooksImportPage() {
             ? 'QuickBooks is connected, but no active customers or employees were returned for discovery.'
             : 'Sandbox is connected, but no records were returned yet. Try pushing sandbox data first.',
       });
-    } catch (error: any) {
+    } catch (error : unknown) {
       toast({
         title: 'Discovery Failed',
         description: error.message || 'Failed to fetch QuickBooks data',
@@ -699,7 +699,7 @@ export default function QuickBooksImportPage() {
         await new Promise(resolve => setTimeout(resolve, 1500));
         
         return data;
-      } catch (error: any) {
+      } catch (error : unknown) {
         if (syncProgressTimer) {
           clearInterval(syncProgressTimer);
         }
@@ -850,7 +850,7 @@ export default function QuickBooksImportPage() {
         setPreflightTests(initialTests.map(t => ({ ...t, status: 'passed' as const })));
         setAllTestsPassed(true);
       }
-    } catch (error: any) {
+    } catch (error : unknown) {
       toast({
         title: 'Pre-flight Test Failed',
         description: error.message || 'Failed to run pre-flight tests',

@@ -137,7 +137,7 @@ async function runTests() {
     console.log('✅ All tests completed successfully!');
     console.log('═'.repeat(50));
 
-  } catch (error: any) {
+  } catch (error : unknown) {
     console.error('\n❌ Test failed with error:');
     console.error(error.message);
     console.error('\nStack trace:');

@@ -18,7 +18,7 @@ const router = Router();
 
 router.use(requireAuth);
 
-router.get('/status', async (req: any, res) => {
+router.get('/status', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId || req.workspaceId;
     const { pool } = await import('../db');
@@ -313,7 +313,7 @@ router.get('/executions', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/executions/:executionId', async (req: any, res: Response) => {
+router.get('/executions/:executionId', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { executionId } = req.params;
     const workspaceId = req.user?.currentWorkspaceId || req.workspaceId;
@@ -339,7 +339,7 @@ router.get('/executions/:executionId', async (req: any, res: Response) => {
   }
 });
 
-router.get('/orchestration/:orchestrationId/steps', async (req: any, res: Response) => {
+router.get('/orchestration/:orchestrationId/steps', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { orchestrationId } = req.params;
     const workspaceId = req.user?.currentWorkspaceId || req.workspaceId;

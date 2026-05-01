@@ -127,7 +127,7 @@ async function ensureOrgIdentifiersInTx(
            ON CONFLICT DO NOTHING`,
           ['org', orgId, externalId]
         );
-      } catch (_poolErr: any) {
+      } catch (_poolErr : unknown) {
         // Pool import failed — fall back to Drizzle (may abort tx on conflict)
         await tx.insert(externalIdentifiers).values({
           entityType: 'org',
@@ -141,7 +141,7 @@ async function ensureOrgIdentifiersInTx(
 
       // Success!
       success = true;
-    } catch (error: any) {
+    } catch (error : unknown) {
       // Concurrent insert race — re-check if this org now has an external ID.
       if (error.code === '23505') {
         const recheck = await tx
@@ -186,7 +186,7 @@ async function ensureOrgIdentifiersInTx(
       nextVal: 1,
     });
     log.info(`[Identity] Employee sequence initialized successfully`);
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.info(`[Identity] Employee sequence init caught error: ${error.code}`);
     // Ignore unique constraint violation - another transaction created it
     if (error.code !== '23505') {
@@ -205,7 +205,7 @@ async function ensureOrgIdentifiersInTx(
       nextVal: 1,
     });
     log.info(`[Identity] Client sequence initialized successfully`);
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.info(`[Identity] Client sequence init caught error: ${error.code}`);
     // Ignore unique constraint violation - another transaction created it
     if (error.code !== '23505') {
@@ -340,7 +340,7 @@ async function attachEmployeeExternalIdInTx(
 
         log.info(`[Identity] Created employee external ID: ${externalId} for employee ${employeeId}`);
         return { externalId, localNumber: nextVal };
-      } catch (error: any) {
+      } catch (error : unknown) {
         log.error('[Identity] Error in attachEmployeeExternalIdInTx:', (error instanceof Error ? error.message : String(error)), error.code);
         throw error;
       }
@@ -365,7 +365,7 @@ export async function attachEmployeeExternalId(
     return await db.transaction(async (tx: any) => {
       return attachEmployeeExternalIdInTx(tx, employeeId, orgId);
     });
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error('[Identity] Failed to attach employee external ID:', (error instanceof Error ? error.message : String(error)), error.code);
     throw error;
   }
@@ -459,7 +459,7 @@ async function attachClientExternalIdInTx(
 
     log.info(`[Identity] Created client external ID: ${externalId} for client ${clientId}`);
     return { externalId, localNumber: nextVal };
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error('[Identity] Error in attachClientExternalIdInTx:', (error instanceof Error ? error.message : String(error)), error.code);
     throw error;
   }
@@ -484,7 +484,7 @@ export async function attachClientExternalId(
     return await db.transaction(async (tx: any) => {
       return attachClientExternalIdInTx(tx, clientId, orgId);
     });
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error('[Identity] Failed to attach client external ID:', (error instanceof Error ? error.message : String(error)), error.code);
     throw error;
   }
@@ -518,7 +518,7 @@ export async function ensureSupportCode(userId: string): Promise<{ supportCode: 
       });
       
       return { supportCode: code };
-    } catch (error: any) {
+    } catch (error : unknown) {
       // If unique constraint violation, retry
       if (error.code === '23505') {
         attempts++;
@@ -728,7 +728,7 @@ export async function migrateEmployeeIdsToNewOrgCode(
             migratedCount++;
             migratedEmployeeIds.push(emp.employeeId);
           }
-        } catch (empError: any) {
+        } catch (empError : unknown) {
           // Handle unique constraint violations gracefully
           if (empError.code === '23505') {
             errors.push(`Employee ${emp.employeeId}: ID conflict - skipped`);
@@ -774,14 +774,14 @@ export async function migrateEmployeeIdsToNewOrgCode(
           });
         }
         log.info(`[Identity] Emitted ${migratedEmployeeIds.length} cross-device sync events`);
-      } catch (syncError: any) {
+      } catch (syncError : unknown) {
         log.warn(`[Identity] Cross-device sync warning: ${syncError.message}`);
       }
     }
     
     log.info(`[Identity] Migration complete: ${migratedCount} employees migrated to ${normalizedCode}`);
     return { success: true, migratedCount, errors };
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error('[Identity] Migration failed:', (error instanceof Error ? error.message : String(error)));
     return { success: false, migratedCount, errors: [(error instanceof Error ? error.message : String(error))] };
   }
@@ -996,7 +996,7 @@ export async function supportLookupFull(query: string): Promise<FullIdentityReco
           .where(eq(supportRegistry.userId, user.id))
           .limit(1);
         if (sr) record.supportCode = sr.supportCode || undefined;
-      } catch (srErr: any) { log.warn('[Identity] Support registry lookup failed:', srErr.message); }
+      } catch (srErr : unknown) { log.warn('[Identity] Support registry lookup failed:', srErr.message); }
 
       // Recent HelpAI sessions (last 5)
       const sessions = await db.select({

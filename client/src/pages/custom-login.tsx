@@ -222,7 +222,7 @@ export default function CustomLogin() {
       sessionStorage.removeItem('coaileague_post_login_redirect');
       setLocation(redirectTo);
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       transitionLoader.cancel();
       toast({
         title: "Login failed",

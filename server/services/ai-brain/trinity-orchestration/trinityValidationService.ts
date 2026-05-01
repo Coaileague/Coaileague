@@ -170,7 +170,7 @@ class ClaudeService {
           ? { primary: 'claude', support: 'trinity', collaborationType: 'data_enrichment' }
           : { primary: 'claude' },
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       await aiActionLogger.logClaudeAction({
         actionType: 'claude_request_failed',
         context: params.context,

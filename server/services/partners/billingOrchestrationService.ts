@@ -882,7 +882,7 @@ class WeeklyInvoiceOrchestrator {
 
           invoicesCreated++;
 
-        } catch (error: any) {
+        } catch (error : unknown) {
           await this.exceptionTriage.triage(
             workspaceId,
             realmId,
@@ -914,7 +914,7 @@ class WeeklyInvoiceOrchestrator {
         errors,
       };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       return {
         success: false,
         invoicesCreated,

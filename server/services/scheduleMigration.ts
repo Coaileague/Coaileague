@@ -218,7 +218,7 @@ export async function extractScheduleFromFile(
     }
 
     return validatedResponse;
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error("Schedule migration error:", error);
     throw new Error(`Failed to extract schedule: ${(error instanceof Error ? error.message : String(error))}`);
   }

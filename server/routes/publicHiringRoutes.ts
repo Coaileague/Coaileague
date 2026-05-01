@@ -192,7 +192,7 @@ router.post('/:workspaceId/apply', async (req, res) => {
             relatedEntityId: id,
             spawnedBy: 'public_apply_auto_score',
           });
-        } catch (spawnErr: any) {
+        } catch (spawnErr : unknown) {
           log.warn('[AutoScore] legal_agent spawn failed:', spawnErr?.message);
         }
       }

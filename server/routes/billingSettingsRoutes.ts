@@ -530,7 +530,7 @@ router.delete("/payment-methods/:paymentMethodId", requireOwner, async (req: Aut
 });
 
 // ─── GET /api/billing-settings/seat-hard-cap — get current hard cap setting ──
-router.get('/seat-hard-cap', async (req: any, res) => {
+router.get('/seat-hard-cap', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     if (!workspaceId) return res.status(400).json({ message: 'Workspace ID required' });
@@ -553,7 +553,7 @@ router.get('/seat-hard-cap', async (req: any, res) => {
 });
 
 // ─── PATCH /api/billing-settings/seat-hard-cap — toggle hard cap ─────────────
-router.patch('/seat-hard-cap', async (req: any, res) => {
+router.patch('/seat-hard-cap', async (req: AuthenticatedRequest, res) => {
   try {
     const workspaceId = req.workspaceId;
     const userId = req.user?.id;

@@ -16,6 +16,7 @@
  */
 
 import { Router } from 'express';
+import { AuthenticatedRequest } from '../rbac';
 import { requireAuth } from '../auth';
 import { pool } from '../db';
 import { universalAudit } from '../services/universalAuditService';
@@ -246,7 +247,7 @@ statusRouter.get('/unsubscribe/:token', async (req, res) => {
 });
 
 // ─── GET /admin/platform-status (internal, platform_staff only) ───────────────
-statusRouter.get('/admin', requireAuth, async (req: any, res) => {
+statusRouter.get('/admin', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     if (req.user?.role !== 'platform_staff') {
       return res.status(403).json({ error: 'Platform staff only' });
@@ -289,7 +290,7 @@ statusRouter.get('/admin', requireAuth, async (req: any, res) => {
 // ─── Platform Feature Flag Management ─────────────────────────────────────────
 
 // GET /api/platform-flags
-platformFlagRouter.get('/', requireAuth, async (req: any, res) => {
+platformFlagRouter.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     if (req.user?.role !== 'platform_staff') {
       return res.status(403).json({ error: 'Platform staff only' });
@@ -311,7 +312,7 @@ const upsertFlagSchema = z.object({
   minimumTier: z.enum(['basic', 'professional', 'business', 'premium', 'enterprise']).optional(),
 });
 
-platformFlagRouter.post('/', requireAuth, async (req: any, res) => {
+platformFlagRouter.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     if (req.user?.role !== 'platform_staff') {
       return res.status(403).json({ error: 'Platform staff only' });
@@ -334,7 +335,7 @@ platformFlagRouter.post('/', requireAuth, async (req: any, res) => {
 });
 
 // DELETE /api/platform-flags/:key
-platformFlagRouter.delete('/:key', requireAuth, async (req: any, res) => {
+platformFlagRouter.delete('/:key', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     if (req.user?.role !== 'platform_staff') {
       return res.status(403).json({ error: 'Platform staff only' });

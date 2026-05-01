@@ -159,7 +159,7 @@ export async function getMeteredOpenAICompletion(
       creditsCharged: authResult.classification.tokenCost,
       model,
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error(`[BillingGate] OpenAI ${featureKey} FAILED: ${(error instanceof Error ? error.message : String(error))}`);
 
     return {

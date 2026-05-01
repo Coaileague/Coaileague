@@ -578,7 +578,7 @@ export default function ContractSigningPortal({ token }: { token: string }) {
               <p className="text-sm text-muted-foreground">
                 You have requested changes to this document. The sender will review and update it.
               </p>
-              // @ts-ignore — TS migration: fix in refactoring sprint
+              // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
               {(contract as any).changesRequested && (
                 <p className="text-sm bg-muted p-3 rounded-md text-left mt-2">{contract.changesRequested}</p>
               )}

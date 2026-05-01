@@ -93,7 +93,7 @@ router.get('/week/stats', requireAuth, async (req: AuthenticatedRequest, res) =>
   }
 });
 
-router.post('/publish', requireManager, async (req: any, res) => {
+router.post('/publish', requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);
@@ -292,7 +292,7 @@ router.post('/publish', requireManager, async (req: any, res) => {
   }
 });
 
-router.post('/unpublish', requireManager, async (req: any, res) => {
+router.post('/unpublish', requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id || req.user?.claims?.sub;
     const userWorkspace = await storage.getWorkspaceMemberByUserId(userId);

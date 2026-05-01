@@ -94,7 +94,7 @@ export async function extractDocumentData(
       status: "success",
       extractedAt: new Date(),
     };
-  } catch (error: any) {
+  } catch (error : unknown) {
     log.error("Document extraction error:", error);
     return {
       documentId: `doc_${Date.now()}`,

@@ -15,7 +15,7 @@
 
 import { Router } from 'express';
 import { requireAuth } from '../auth';
-import { requireOwner, requireManager, requirePlatformAdmin } from '../rbac';
+import { requireOwner, requireManager, requirePlatformAdmin, AuthenticatedRequest} from '../rbac';
 import { createLogger } from '../lib/logger';
 const log = createLogger('DeletionProtectionRoutes');
 
@@ -30,7 +30,7 @@ const router = Router();
  * Check if an entity can be safely deleted
  * Requires MANAGER role - read-only check operation
  */
-router.post('/check', requireManager, async (req: any, res) => {
+router.post('/check', requireManager, async (req: AuthenticatedRequest, res) => {
   try {
     const { entityType, entityId, reason } = req.body;
     const userId = req.user?.id;
@@ -61,7 +61,7 @@ router.post('/check', requireManager, async (req: any, res) => {
  * Safely delete an entity with all protection checks
  * Requires OWNER role - destructive operation
  */
-router.post('/delete', requireOwner, async (req: any, res) => {
+router.post('/delete', requireOwner, async (req: AuthenticatedRequest, res) => {
   try {
     const { entityType, entityId, reason, confirmationCode, mode } = req.body;
     const userId = req.user?.id;
@@ -118,7 +118,7 @@ router.post('/delete', requireOwner, async (req: any, res) => {
  * Recover a soft-deleted entity
  * Requires OWNER role - critical recovery operation
  */
-router.post('/recover', requireOwner, async (req: any, res) => {
+router.post('/recover', requireOwner, async (req: AuthenticatedRequest, res) => {
   try {
     const { entityType, entityId } = req.body;
     const userId = req.user?.id;
@@ -152,7 +152,7 @@ router.post('/recover', requireOwner, async (req: any, res) => {
  * Get deletion audit log
  * Requires PLATFORM ADMIN - sensitive audit data
  */
-router.get('/audit-log', requireAuth, requirePlatformAdmin, async (req: any, res) => {
+router.get('/audit-log', requireAuth, requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
   try {
     const limit = Math.min(Math.max(1, parseInt(req.query.limit as string) || 100), 1000);
     const auditLog = deletionProtection.getAuditLog(limit);
@@ -173,7 +173,7 @@ router.get('/audit-log', requireAuth, requirePlatformAdmin, async (req: any, res
  * Check migration safety for batch operations
  * Requires PLATFORM ADMIN - used by QuickBooks sync, HRIS sync, and data migration
  */
-router.post('/migration-safety', requireAuth, requirePlatformAdmin, async (req: any, res) => {
+router.post('/migration-safety', requireAuth, requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
   try {
     const { entityType, entityIds } = req.body;
 

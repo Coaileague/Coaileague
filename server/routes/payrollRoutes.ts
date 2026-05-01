@@ -80,12 +80,12 @@ const router = Router();
 // Apply rate limiting to all payroll routes
 // Payroll operations are sensitive and can be expensive (tax calculations, exports)
 router.use(rateLimitMiddleware(
-  (req: any) => {
+  (req: AuthenticatedRequest) => {
     const workspaceId = req.workspaceId || req.user?.workspaceId || req.session?.currentWorkspaceId;
     if (workspaceId) return `payroll-${workspaceId}`;
     return `payroll-ip-${req.ip}`;
   },
-  (req: any) => (req.session?.plan || 'free') as any
+  (req: AuthenticatedRequest) => (req.session?.plan || 'free') as any
 ));
 
 function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?: string; status?: number } {

@@ -187,7 +187,7 @@ export async function checkIdempotency(params: IdempotencyParams): Promise<Idemp
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await executeIdempotencyCheck(params);
-    } catch (error: any) {
+    } catch (error : unknown) {
       const isRetryable = 
         error.code === '40001' || // serialization_failure
         error.code === '40P01' || // deadlock_detected

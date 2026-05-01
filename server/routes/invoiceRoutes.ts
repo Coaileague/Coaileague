@@ -126,12 +126,12 @@ const DEFAULT_ROUND_HOURS_INCREMENT = '0.25';
 // Apply rate limiting to all invoice routes
 // Billing operations are sensitive and involve PDF generation/Stripe calls
 router.use(rateLimitMiddleware(
-  (req: any) => {
+  (req: AuthenticatedRequest) => {
     const workspaceId = req.workspaceId || req.session?.currentWorkspaceId;
     if (workspaceId) return `invoices-${workspaceId}`;
     return `invoices-ip-${req.ip}`;
   },
-  (req: any) => (req.session?.plan || 'free') as any
+  (req: AuthenticatedRequest) => (req.session?.plan || 'free') as any
 ));
 
 router.use((req, res, next) => {
@@ -550,7 +550,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
     }
   });
 
-  router.post('/:id/send-email', async (req: any, res) => {
+  router.post('/:id/send-email', async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;
       if (!isValidId(id)) return res.status(400).json({ message: "Invalid invoice ID format" });
@@ -743,7 +743,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
     }
   });
 
-  router.post('/:id/send', mutationLimiter, async (req: any, res: any) => {
+  router.post('/:id/send', mutationLimiter, async (req: AuthenticatedRequest, res: any) => {
     try {
       const roleCheck = await requireManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
@@ -860,7 +860,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
     }
   });
 
-  router.post('/', idempotencyMiddleware, async (req: any, res) => {
+  router.post('/', idempotencyMiddleware, async (req: AuthenticatedRequest, res) => {
     try {
       const roleCheck = await requireManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
@@ -1047,7 +1047,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
     }
   });
 
-  router.patch('/:id', mutationLimiter, async (req: any, res) => {
+  router.patch('/:id', mutationLimiter, async (req: AuthenticatedRequest, res) => {
     try {
       const roleCheck = await requireManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
@@ -1265,7 +1265,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
     }
   });
 
-  router.delete('/:id', async (req: any, res) => {
+  router.delete('/:id', async (req: AuthenticatedRequest, res) => {
     try {
       const roleCheck = await requireManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });
@@ -1375,7 +1375,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
     }
   });
 
-  router.post('/:id/mark-paid', idempotencyMiddleware, async (req: any, res) => {
+  router.post('/:id/mark-paid', idempotencyMiddleware, async (req: AuthenticatedRequest, res) => {
     try {
       // F2 FIX: Reject malformed IDs before hitting the DB (Drizzle is safe from injection,
       // but this gives a clean 400 instead of an empty-result 404 for garbage input).
@@ -1738,7 +1738,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
     }
   });
 
-  router.post('/generate-from-time', async (req: any, res) => {
+  router.post('/generate-from-time', async (req: AuthenticatedRequest, res) => {
     try {
       const roleCheck = await requireManagerRole(req);
       if (!roleCheck.allowed) return res.status(roleCheck.status || 403).json({ message: roleCheck.error });

@@ -64,7 +64,7 @@ export async function softDelete(params: SoftDeleteParams): Promise<void> {
       },
       createdAt: new Date(),
     } as any);
-  } catch (auditErr: any) {
+  } catch (auditErr : unknown) {
     log.warn('[softDelete] Audit log write failed (non-fatal):', auditErr?.message);
   }
 }

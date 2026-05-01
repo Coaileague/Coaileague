@@ -681,7 +681,7 @@ export class UniversalNotificationEngine {
         channels: deliveredChannels,
         notificationIds,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error("[UniversalNotificationEngine] Error:", error);
       return { success: false, recipientCount: 0, channels: [], notificationIds: [] };
     }
@@ -783,7 +783,7 @@ export class UniversalNotificationEngine {
         success: true,
         recipientCount,
       };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error("[UniversalNotificationEngine] Platform notification error:", error);
       return { success: false, recipientCount: 0 };
     }
@@ -813,7 +813,7 @@ export class UniversalNotificationEngine {
       });
 
       return results;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error("[UniversalNotificationEngine] Error fetching notifications:", error);
       return [];
     }
@@ -848,7 +848,7 @@ export class UniversalNotificationEngine {
       });
 
       return results;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error("[UniversalNotificationEngine] Error fetching user notifications:", error);
       return [];
     }
@@ -864,7 +864,7 @@ export class UniversalNotificationEngine {
         .set({ isRead: true, readAt: new Date() })
         .where(eq(notifications.id, notificationId));
       return true;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error("[UniversalNotificationEngine] Error marking as read:", error);
       return false;
     }
@@ -886,7 +886,7 @@ export class UniversalNotificationEngine {
           )
         );
       return 1; // Return count affected
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error("[UniversalNotificationEngine] Error marking all as read:", error);
       return 0;
     }
@@ -906,7 +906,7 @@ export class UniversalNotificationEngine {
         columns: { id: true },
       });
       return unread.length;
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error("[UniversalNotificationEngine] Error getting unread count:", error);
       return 0;
     }
@@ -1128,7 +1128,7 @@ export class UniversalNotificationEngine {
       });
 
       return { success: true, id: update.id };
-    } catch (error: any) {
+    } catch (error : unknown) {
       // Detailed Postgres error logging — expose code/detail/column/
       // constraint so we can diagnose ON CONFLICT failures, NOT NULL
       // violations, FK constraint failures, etc. The previous one-liner
@@ -1268,7 +1268,7 @@ export class UniversalNotificationEngine {
 
       log.info(`[UniversalNotificationEngine] Internal email notification sent to ${payload.recipientUserId} via ${channels.join(', ')}`);
       return { success: true, channels };
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error('[UniversalNotificationEngine] Error sending internal email notification:', error);
       return { success: false, channels: [] };
     }

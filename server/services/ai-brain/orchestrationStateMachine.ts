@@ -468,7 +468,7 @@ class OrchestrationStateMachine {
         bypassed: false,
       };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[OrchestrationStateMachine] Permission check failed:`, (error instanceof Error ? error.message : String(error)));
       
       // Log failure to audit trail for state consistency
@@ -683,7 +683,7 @@ class OrchestrationStateMachine {
         reason: `Escalation: ${reason}`,
         triggeredBy: 'orchestrator',
       });
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[OrchestrationStateMachine] Escalation failed:`, (error instanceof Error ? error.message : String(error)));
       
       // Log escalation failure
@@ -726,7 +726,7 @@ class OrchestrationStateMachine {
         reason: `Rollback: ${reason}`,
         triggeredBy: 'orchestrator',
       });
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[OrchestrationStateMachine] Rollback failed:`, (error instanceof Error ? error.message : String(error)));
       
       // Log rollback failure
@@ -997,7 +997,7 @@ class OrchestrationStateMachine {
         phase: 'completed',
       };
       
-    } catch (error: any) {
+    } catch (error : unknown) {
       log.error(`[OrchestrationStateMachine] Orchestration failed:`, (error instanceof Error ? error.message : String(error)));
       
       if (overlayId) {

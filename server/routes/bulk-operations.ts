@@ -108,7 +108,7 @@ bulkOperationsRouter.post('/import/employees', requireAuth, requireManager, uplo
           status: 'active',
         }).returning();
         imported.push(emp);
-      } catch (error: any) {
+      } catch (error : unknown) {
         errors.push({ row: i + 1, error: error.message });
       }
     }
@@ -119,7 +119,7 @@ bulkOperationsRouter.post('/import/employees', requireAuth, requireManager, uplo
       errors: errors.length,
       errorDetails: errors,
     });
-  } catch (error: any) {
+  } catch (error : unknown) {
     res.status(500).json({ error: 'Failed to import employees', message: error.message });
   }
 });
@@ -169,7 +169,7 @@ bulkOperationsRouter.post('/import/clients', requireAuth, requireManager, upload
           isActive: true,
         }).returning();
         imported.push(client);
-      } catch (error: any) {
+      } catch (error : unknown) {
         errors.push({ row: i + 1, error: error.message });
       }
     }
@@ -180,7 +180,7 @@ bulkOperationsRouter.post('/import/clients', requireAuth, requireManager, upload
       errors: errors.length,
       errorDetails: errors,
     });
-  } catch (error: any) {
+  } catch (error : unknown) {
     res.status(500).json({ error: 'Failed to import clients', message: error.message });
   }
 });
@@ -229,7 +229,7 @@ bulkOperationsRouter.post('/import/shifts', requireAuth, requireManager, upload.
           status: 'scheduled',
         }).returning();
         imported.push(shift);
-      } catch (error: any) {
+      } catch (error : unknown) {
         errors.push({ row: i + 1, error: error.message });
       }
     }
@@ -240,7 +240,7 @@ bulkOperationsRouter.post('/import/shifts', requireAuth, requireManager, upload.
       errors: errors.length,
       errorDetails: errors,
     });
-  } catch (error: any) {
+  } catch (error : unknown) {
     res.status(500).json({ error: 'Failed to import shifts', message: error.message });
   }
 });
@@ -268,7 +268,7 @@ bulkOperationsRouter.get('/export/employees', requireAuth, async (req: Request, 
     res.setHeader('Content-Type', format === 'csv' ? 'text/csv' : 'application/json');
     res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
     res.send(result.data);
-  } catch (error: any) {
+  } catch (error : unknown) {
     res.status(500).json({ error: 'Failed to export employees', message: error.message });
   }
 });
@@ -319,7 +319,7 @@ bulkOperationsRouter.get('/export/clients', requireAuth, async (req: Request, re
     res.setHeader('Content-Type', format === 'csv' ? 'text/csv' : 'application/json');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(data);
-  } catch (error: any) {
+  } catch (error : unknown) {
     res.status(500).json({ error: 'Failed to export clients', message: error.message });
   }
 });
@@ -369,7 +369,7 @@ bulkOperationsRouter.get('/export/shifts', requireAuth, async (req: Request, res
     res.setHeader('Content-Type', format === 'csv' ? 'text/csv' : 'application/json');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(data);
-  } catch (error: any) {
+  } catch (error : unknown) {
     res.status(500).json({ error: 'Failed to export shifts', message: error.message });
   }
 });
@@ -393,7 +393,7 @@ bulkOperationsRouter.get('/export/time-entries', requireAuth, async (req: Reques
     res.setHeader('Content-Type', format === 'csv' ? 'text/csv' : 'application/json');
     res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
     res.send(result.data);
-  } catch (error: any) {
+  } catch (error : unknown) {
     res.status(500).json({ error: 'Failed to export time entries', message: error.message });
   }
 });

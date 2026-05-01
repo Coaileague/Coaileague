@@ -403,7 +403,7 @@ class PayrollSubagentService {
         description: `Payroll session ${trace.traceId.substring(0, 16)} — processing fee (calculation, validation, compliance checks)`,
       });
       log.info(`[PayrollSubagent] Session fee charged: ${sessionFee} credits for workspace ${workspaceId}`);
-    } catch (feeErr: any) {
+    } catch (feeErr : unknown) {
       log.error(`[PayrollSubagent] Session fee deduction failed for workspace ${workspaceId}:`, feeErr.message);
       this.tracer.endTrace(trace, 'failed', { error: 'billing_failed', message: feeErr.message });
       return {
@@ -492,7 +492,7 @@ class PayrollSubagentService {
               quantity: result.employeeCount,
             });
             log.info(`[PayrollSubagent] Per-employee fee charged: ${totalPerEmp}cr (${result.employeeCount} × ${perEmpRate}cr) for workspace ${workspaceId}`);
-          } catch (empErr: any) {
+          } catch (empErr : unknown) {
             log.warn(`[PayrollSubagent] Per-employee billing error (non-blocking):`, empErr.message);
           }
         }
@@ -506,7 +506,7 @@ class PayrollSubagentService {
           auditLog: this.tracer.getAuditLog(trace.traceId),
         };
 
-      } catch (error: any) {
+      } catch (error : unknown) {
         lastError = error;
         retryCount++;
         
@@ -635,7 +635,7 @@ class PayrollSubagentService {
           medicare = taxes.medicare;
           stateWithholding = taxes.stateWithholding;
           totalEmployeeTax = taxes.totalDeductions;
-        } catch (taxErr: any) {
+        } catch (taxErr : unknown) {
           log.warn(`[PayrollSubagent] Tax calc error for employee ${emp.id}, using 22% estimate: ${taxErr.message}`);
           totalEmployeeTax = Number(multiplyFinancialValues(toFinancialString(gross), toFinancialString(0.22)));
         }
@@ -791,7 +791,7 @@ class PayrollSubagentService {
           resolution: 'Proceeding with caution - admin review recommended',
         });
       }
-    } catch (riskError: any) {
+    } catch (riskError : unknown) {
       log.error('[PayrollSubagent] LLM Judge evaluation failed, proceeding with caution:', riskError.message);
       this.tracer.endSpan(riskSpan, 'failed', { error: riskError.message });
     }
@@ -852,7 +852,7 @@ class PayrollSubagentService {
           metadata: { payrollRunId: payrollRun.id, totalGross, totalNet, totalDeductions, status: 'pending', source: 'payroll_subagent' },
           visibility: 'manager',
         }).catch((err) => log.warn('[payrollSubagent] Fire-and-forget failed:', err));
-      } catch (error: any) {
+      } catch (error : unknown) {
         this.tracer.endSpan(createSpan, 'failed', { error: (error instanceof Error ? error.message : String(error)) });
         throw error;
       }
@@ -961,7 +961,7 @@ class PayrollSubagentService {
 
       return { anomalies, aiInsights };
 
-    } catch (error: any) {
+    } catch (error : unknown) {
       this.tracer.endTrace(trace, 'failed', { error: (error instanceof Error ? error.message : String(error)) });
       throw error;
     }

@@ -4,7 +4,7 @@ import { requireAuth } from "../auth";
 import { storage } from "../storage";
 import { db, pool } from "../db";
 import { sql } from "drizzle-orm";
-import { hasManagerAccess, resolveWorkspaceForUser, getUserPlatformRole, hasPlatformWideAccess } from "../rbac";
+import { hasManagerAccess, resolveWorkspaceForUser, getUserPlatformRole, hasPlatformWideAccess, AuthenticatedRequest} from "../rbac";
 import { platformEventBus } from "../services/platformEventBus";
 import { scheduleNonBlocking } from '../lib/scheduleNonBlocking';
 import { createLogger } from '../lib/logger';
@@ -13,7 +13,7 @@ const log = createLogger('TerminationRoutes');
 
 const router = Router();
 
-async function requireManagerForTermination(req: any, res: any): Promise<{ workspace: any } | null> {
+async function requireManagerForTermination(req: AuthenticatedRequest, res: any): Promise<{ workspace: any } | null> {
   const userId = req.user?.id || req.user?.claims?.sub;
   if (!userId) { res.status(401).json({ message: "Unauthorized" }); return null; }
   const platformRole = await getUserPlatformRole(userId);
@@ -30,7 +30,7 @@ async function requireManagerForTermination(req: any, res: any): Promise<{ works
   return { workspace };
 }
 
-router.get("/terminations", requireAuth, async (req: any, res) => {
+router.get("/terminations", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await requireManagerForTermination(req, res);
     if (!result) return;
@@ -44,7 +44,7 @@ router.get("/terminations", requireAuth, async (req: any, res) => {
   }
 });
 
-router.post("/terminations", requireAuth, async (req: any, res) => {
+router.post("/terminations", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await requireManagerForTermination(req, res);
     if (!result) return;
