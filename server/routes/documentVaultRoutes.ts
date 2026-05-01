@@ -9,6 +9,7 @@ import type { AuthenticatedRequest } from "../rbac";
 import { requirePlan } from '../tierGuards';
 import { universalAudit } from "../services/universalAuditService";
 import { downloadFileFromObjectStorage } from "../objectStorage";
+import { writeHardenedPdfHeaders } from "../lib/pdfResponseHeaders";
 import { createLogger } from '../lib/logger';
 const log = createLogger('DocumentVaultRoutes');
 
@@ -28,6 +29,97 @@ const router = Router();
 // Document vault is a Professional+ feature (document_vault, document_signing)
 router.use(requireAuth);
 router.use(requirePlan('professional'));
+
+// ─── Recycle bin — soft-deleted docs, restorable by managers ──────────────────
+// Soft-deleted vault rows still exist (for audit) but are filtered out of the
+// normal list view. The recycle-bin endpoints surface them so a manager can
+// review what was removed and restore by mistake.
+
+router.get("/recycle-bin", async (req: AuthenticatedRequest, res) => {
+  try {
+    if (!hasManagerRole(req)) return res.status(403).json({ error: "Manager role required" });
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
+
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 200);
+    const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+
+    const [{ total } = { total: 0 }] = await db
+      .select({ total: count() })
+      .from(documentVault)
+      .where(and(
+        eq(documentVault.workspaceId, workspaceId),
+        sql`${documentVault.deletedAt} IS NOT NULL`,
+      ));
+
+    const items = await db
+      .select()
+      .from(documentVault)
+      .where(and(
+        eq(documentVault.workspaceId, workspaceId),
+        sql`${documentVault.deletedAt} IS NOT NULL`,
+      ))
+      .orderBy(desc(documentVault.deletedAt))
+      .limit(limit)
+      .offset(offset);
+
+    res.json({ items, total: Number(total || 0), limit, offset });
+  } catch (error: unknown) {
+    log.error("[Document Vault] Recycle-bin list error:", error);
+    res.status(500).json({ error: "Failed to list recycle bin" });
+  }
+});
+
+router.post("/:id/restore", async (req: AuthenticatedRequest, res) => {
+  try {
+    if (!hasManagerRole(req)) return res.status(403).json({ error: "Manager role required" });
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
+
+    const [existing] = await db
+      .select()
+      .from(documentVault)
+      .where(and(
+        eq(documentVault.id, req.params.id),
+        eq(documentVault.workspaceId, workspaceId),
+        sql`${documentVault.deletedAt} IS NOT NULL`,
+      ));
+
+    if (!existing) return res.status(404).json({ error: "Deleted document not found" });
+
+    const [restored] = await db
+      .update(documentVault)
+      .set({
+        deletedAt: null,
+        deletedBy: null,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(documentVault.id, req.params.id), eq(documentVault.workspaceId, workspaceId)))
+      .returning();
+
+    await universalAudit.log({
+      workspaceId,
+      actorId: req.user?.id || 'unknown',
+      actorType: 'user',
+      changeType: 'update',
+      action: 'DOCUMENT_VAULT:RESTORED',
+      entityType: 'document_vault',
+      entityId: req.params.id,
+      entityName: existing.title,
+      metadata: {
+        category: existing.category,
+        wasSigned: existing.isSigned,
+        previouslyDeletedAt: existing.deletedAt,
+        previouslyDeletedBy: existing.deletedBy,
+      },
+    });
+
+    res.json({ success: true, document: restored });
+  } catch (error: unknown) {
+    log.error("[Document Vault] Restore error:", error);
+    res.status(500).json({ error: "Failed to restore document" });
+  }
+});
 
 router.get("/stats", async (req: AuthenticatedRequest, res) => {
   try {
@@ -374,28 +466,12 @@ async function streamVaultPdf(req: AuthenticatedRequest, res: any, mode: 'attach
       return res.status(409).json({ error: "Document integrity check failed" });
     }
 
-    const filename = `${doc.documentNumber || doc.id}.pdf`;
-    res.setHeader('Content-Type', doc.mimeType || 'application/pdf');
-    res.setHeader('Content-Length', String(buffer.length));
-    res.setHeader(
-      'Content-Disposition',
-      `${mode}; filename="${filename.replace(/[^A-Za-z0-9._-]/g, '_')}"`
-    );
-    // Hard-lock the response so the PDF can't be embedded by other origins,
-    // can't execute scripts (PDFs may contain JS — disable via CSP), can't
-    // leak the URL via Referer to outbound links, and can't be cached on
-    // shared proxies. The `inline` mode allows same-origin iframe embeds
-    // for the in-app viewer; `attachment` disallows all framing.
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Referrer-Policy', 'no-referrer');
-    res.setHeader('X-Frame-Options', mode === 'inline' ? 'SAMEORIGIN' : 'DENY');
-    res.setHeader(
-      'Content-Security-Policy',
-      "default-src 'none'; script-src 'none'; object-src 'none'; frame-ancestors 'self'",
-    );
-    res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+    writeHardenedPdfHeaders(res, {
+      filename: `${doc.documentNumber || doc.id}.pdf`,
+      size: buffer.length,
+      mode,
+      contentType: doc.mimeType || 'application/pdf',
+    });
     return res.send(buffer);
   } catch (error: unknown) {
     log.error("[Document Vault] Stream error:", error);

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { PLATFORM } from '../config/platformConfig';
+import { writeHardenedPdfHeaders } from '../lib/pdfResponseHeaders';
 import { randomBytes } from 'crypto';
 import { pool } from '../db';
 import { requireAuth } from '../auth';
@@ -1099,9 +1100,7 @@ router.get('/submissions/:id/pdf', requireAuth, async (req: Request, res: Respon
 
     const safeFormId = req.params.id.replace(/[\r\n]/g, '');
     const fileName = `form-submission-${safeFormId}.pdf`;
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.setHeader('Content-Length', pdfBuf.length);
+    writeHardenedPdfHeaders(res, { filename: fileName, size: pdfBuf.length });
     res.send(pdfBuf);
   } catch (err: any) {
     log.error('Failed to serve submission PDF:', err?.message);

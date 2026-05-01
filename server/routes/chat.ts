@@ -1,6 +1,7 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import crypto from 'crypto';
 import { Router, type Request, type Response } from "express";
+import { writeHardenedPdfHeaders } from '../lib/pdfResponseHeaders';
 import { db, pool } from "../db";
 import { storage } from "../storage";
 import { requireAuth, requireAnyAuth } from "../auth";
@@ -1073,8 +1074,10 @@ const router = Router();
       if (format === 'pdf') {
         // @ts-expect-error — TS migration: fix in refactoring sprint
         const pdfBuffer = await generateChatPDF(exportData);
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="conversation-${conversationId}.pdf"`);
+        writeHardenedPdfHeaders(res, {
+          filename: `conversation-${conversationId}.pdf`,
+          size: pdfBuffer.length,
+        });
         res.send(pdfBuffer);
       } else {
         // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -1161,8 +1164,10 @@ const router = Router();
       if (format === 'pdf') {
         // @ts-expect-error — TS migration: fix in refactoring sprint
         const pdfBuffer = await generateChatPDF(exportData);
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="chatroom-${roomId}.pdf"`);
+        writeHardenedPdfHeaders(res, {
+          filename: `chatroom-${roomId}.pdf`,
+          size: pdfBuffer.length,
+        });
         res.send(pdfBuffer);
       } else {
         // @ts-expect-error — TS migration: fix in refactoring sprint
@@ -1260,8 +1265,10 @@ const router = Router();
       if (format === 'pdf') {
         // @ts-expect-error — TS migration: fix in refactoring sprint
         const pdfBuffer = await generateChatPDF(exportData);
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="private-dm-${conversationId}.pdf"`);
+        writeHardenedPdfHeaders(res, {
+          filename: `private-dm-${conversationId}.pdf`,
+          size: pdfBuffer.length,
+        });
         res.send(pdfBuffer);
       } else {
         // @ts-expect-error — TS migration: fix in refactoring sprint

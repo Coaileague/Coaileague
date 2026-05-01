@@ -7,6 +7,7 @@ import { validatePayrollPeriod, validateDeductionAmount, validateNonNegativeAmou
 import { Router } from "express";
 import type { AuthenticatedRequest } from "../rbac";
 import { sumFinancialValues, formatCurrency } from '../services/financialCalculator';
+import { writeHardenedPdfHeaders } from '../lib/pdfResponseHeaders';
 import { platformEventBus } from '../services/platformEventBus';
 import { hasManagerAccess, hasPlatformWideAccess, requireManager } from "../rbac";
 import { requireAuth } from "../auth";
@@ -1470,8 +1471,10 @@ router.get('/my-tax-forms/:formId/download', async (req: AuthenticatedRequest, r
       return res.status(500).json({ message: result.error || 'Failed to generate PDF' });
     }
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${form.formType}-${form.taxYear}.pdf"`);
+    writeHardenedPdfHeaders(res, {
+      filename: `${form.formType}-${form.taxYear}.pdf`,
+      size: result.pdfBuffer.length,
+    });
     return res.send(result.pdfBuffer);
   } catch (error: unknown) {
     log.error('Error downloading tax form:', error);
@@ -1916,8 +1919,10 @@ router.post('/tax-forms/941', async (req: AuthenticatedRequest, res) => {
     }).catch(err => log.error('[FinancialAudit] CRITICAL: SOC2 audit log write failed for 941 generation', { error: err?.message }));
 
     if (result.pdfBuffer) {
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="form-941-Q${quarterNum}-${yearNum}.pdf"`);
+      writeHardenedPdfHeaders(res, {
+        filename: `form-941-Q${quarterNum}-${yearNum}.pdf`,
+        size: result.pdfBuffer.length,
+      });
       return res.send(result.pdfBuffer);
     }
 
@@ -1952,8 +1957,10 @@ router.get('/tax-forms/941/:year/:quarter', async (req: AuthenticatedRequest, re
     }
 
     if (result.pdfBuffer) {
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="form-941-Q${quarterNum}-${yearNum}.pdf"`);
+      writeHardenedPdfHeaders(res, {
+        filename: `form-941-Q${quarterNum}-${yearNum}.pdf`,
+        size: result.pdfBuffer.length,
+      });
       return res.send(result.pdfBuffer);
     }
 
@@ -2041,8 +2048,10 @@ router.post('/tax-forms/generate', async (req: AuthenticatedRequest, res) => {
         `${PLATFORM.name} is not an IRS-registered filing agent.`;
 
     if (result.pdfBuffer) {
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${formType}-${taxYear}-${employeeId}.pdf"`);
+      writeHardenedPdfHeaders(res, {
+        filename: `${formType}-${taxYear}-${employeeId}.pdf`,
+        size: result.pdfBuffer.length,
+      });
       res.setHeader('X-Tax-Form-Limitation', formType === 'w2' ? 'estimate-only-file-via-ssa-bso' : 'estimate-only-file-via-irs-fire');
       return res.send(result.pdfBuffer);
     }
@@ -2107,8 +2116,10 @@ router.post('/tax-forms/940', async (req: AuthenticatedRequest, res) => {
     }).catch(err => log.error('[FinancialAudit] CRITICAL: SOC2 audit log write failed for 940 generation', { error: err?.message }));
 
     if (result.pdfBuffer) {
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="form-940-${year}.pdf"`);
+      writeHardenedPdfHeaders(res, {
+        filename: `form-940-${year}.pdf`,
+        size: result.pdfBuffer.length,
+      });
       return res.send(result.pdfBuffer);
     }
 
@@ -2140,8 +2151,10 @@ router.get('/tax-forms/940/:year', async (req: AuthenticatedRequest, res) => {
 
     const format = req.query.format as string;
     if (format === 'pdf' && result.pdfBuffer) {
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="form-940-${year}.pdf"`);
+      writeHardenedPdfHeaders(res, {
+        filename: `form-940-${year}.pdf`,
+        size: result.pdfBuffer.length,
+      });
       return res.send(result.pdfBuffer);
     }
 
@@ -2748,8 +2761,13 @@ router.get('/export/pdf/:runId', async (req: AuthenticatedRequest, res) => {
 
     const doc = new PDFDocument({ size: 'LETTER', margins: { top: 50, bottom: 50, left: 50, right: 50 } });
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="payroll-run-${format(run.periodStart || new Date(), 'yyyy-MM-dd')}.pdf"`);
+    // Streaming PDF — same hardened headers as the buffered endpoints, with
+    // size:0 so we don't set a misleading Content-Length on a chunked stream.
+    writeHardenedPdfHeaders(res, {
+      filename: `payroll-run-${format(run.periodStart || new Date(), 'yyyy-MM-dd')}.pdf`,
+      size: 0,
+    });
+    res.removeHeader('Content-Length');
     doc.pipe(res);
 
     doc.fontSize(20).text(workspace?.companyName || 'Company', { align: 'center' });

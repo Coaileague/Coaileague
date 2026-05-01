@@ -1,6 +1,7 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { validateInvoiceAmount, validateBillingRate, validatePartialPaymentAmount, validateNonNegativeAmount, businessRuleResponse } from '../lib/businessRules';
 import { PLATFORM } from '../config/platformConfig';
+import { writeHardenedPdfHeaders } from '../lib/pdfResponseHeaders';
 import { Router } from "express";
 import crypto from 'crypto';
 import {
@@ -280,8 +281,7 @@ import { createHash } from "crypto";
         }
       }
 
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      writeHardenedPdfHeaders(res, { filename: fileName, size: pdfBuffer.length });
       res.send(pdfBuffer);
     } catch (error: unknown) {
       log.error("Error generating invoice PDF:", error);

@@ -7,6 +7,7 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Request, Response } from 'express';
 import { requireWorkspaceRole, requireManager } from '../rbac';
+import { writeHardenedPdfHeaders } from '../lib/pdfResponseHeaders';
 import { 
   generateInvoiceFromTimesheets,
   generateInvoiceFromHours,
@@ -377,8 +378,10 @@ timesheetInvoiceRouter.get('/:invoiceId/pdf', requireManager, async (req: Reques
 
     const pdfBuffer = await generateInvoicePdfBuffer(pdfData);
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="invoice-${invoice.invoiceNumber}.pdf"`);
+    writeHardenedPdfHeaders(res, {
+      filename: `invoice-${invoice.invoiceNumber}.pdf`,
+      size: pdfBuffer.length,
+    });
     res.send(pdfBuffer);
   } catch (error: unknown) {
     log.error('[TimesheetInvoice] PDF download error:', error);

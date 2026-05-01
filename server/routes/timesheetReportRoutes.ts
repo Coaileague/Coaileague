@@ -19,6 +19,7 @@ import { employees, workspaces } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import PDFDocument from 'pdfkit';
 import { format } from 'date-fns';
+import { writeHardenedPdfHeaders } from '../lib/pdfResponseHeaders';
 import { createLogger } from '../lib/logger';
 const log = createLogger('TimesheetReportRoutes');
 
@@ -264,10 +265,11 @@ timesheetReportRouter.get('/export/pdf', requireManager, async (req: Request, re
 
     const doc = new PDFDocument({ margin: 50 });
     const filename = `timesheet-report-${format(startDate, 'yyyy-MM-dd')}-to-${format(endDate, 'yyyy-MM-dd')}.pdf`;
-    
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    
+
+    // Streaming PDF — hardened headers without Content-Length (chunked).
+    writeHardenedPdfHeaders(res, { filename, size: 0 });
+    res.removeHeader('Content-Length');
+
     doc.pipe(res);
 
     doc.fontSize(20).text('Timesheet Report', { align: 'center' });

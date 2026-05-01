@@ -1,6 +1,7 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
 import { NotificationDeliveryService } from '../services/notificationDeliveryService';
+import { writeHardenedPdfHeaders } from '../lib/pdfResponseHeaders';
 import { pool } from "../db";
 import { universalAudit, AUDIT_ACTIONS } from "../services/universalAuditService";
 import { requireAuth } from "../auth";
@@ -251,9 +252,9 @@ async function streamPdfFromStorage(pdfPath: string, filename: string, res: any)
       log.warn(`[RMS PDF] File not found in GCS: ${objectPath} (from stored path: ${pdfPath})`);
       return false;
     }
-    res.set('Content-Type', 'application/pdf');
-    res.set('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`);
-    res.set('Cache-Control', 'no-store');
+    // Streaming PDF — hardened headers (size:0 since GCS read is chunked).
+    writeHardenedPdfHeaders(res, { filename, size: 0, mode: 'inline' });
+    res.removeHeader('Content-Length');
     file.createReadStream()
       .on('error', (err: any) => { log.error('[RMS PDF] Stream error:', sanitizeError(err)); if (!res.headersSent) res.status(500).json({ error: sanitizeError(err) }); })
       .pipe(res);

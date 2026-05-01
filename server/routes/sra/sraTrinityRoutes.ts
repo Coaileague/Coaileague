@@ -14,6 +14,7 @@
 
 import { Router, Response } from 'express';
 import { db } from '../../db';
+import { writeHardenedPdfHeaders } from '../../lib/pdfResponseHeaders';
 import {
   sraAuditSessions, sraAccounts, sraFindings,
   sraEnforcementDocuments, workspaces, employees,
@@ -368,8 +369,10 @@ router.post('/generate-pdf', requireSRAAuth, async (req: SRARequest, res: Respon
     }, req);
 
     // Return PDF directly
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="SRA-Audit-Report-${sraSession.workspaceId.slice(0, 8)}-${Date.now()}.pdf"`);
+    writeHardenedPdfHeaders(res, {
+      filename: `SRA-Audit-Report-${sraSession.workspaceId.slice(0, 8)}-${Date.now()}.pdf`,
+      size: pdfBuffer.length,
+    });
     res.setHeader('X-SHA256-Hash', sha256Hash);
     res.setHeader('X-Document-Id', enfDoc.id);
     res.send(pdfBuffer);
@@ -416,8 +419,10 @@ router.get('/download/:docId', requireSRAAuth, async (req: SRARequest, res: Resp
 
     const pdfBuffer = Buffer.from(pdfBase64, 'base64');
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="SRA-Audit-Report-${doc.workspaceId.slice(0, 8)}.pdf"`);
+    writeHardenedPdfHeaders(res, {
+      filename: `SRA-Audit-Report-${doc.workspaceId.slice(0, 8)}.pdf`,
+      size: pdfBuffer.length,
+    });
     res.setHeader('X-SHA256-Hash', doc.sha256Hash);
     res.setHeader('X-Document-Id', doc.id);
     res.send(pdfBuffer);

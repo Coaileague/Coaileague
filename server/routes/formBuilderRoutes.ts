@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db } from "../db";
+import { writeHardenedPdfHeaders } from "../lib/pdfResponseHeaders";
 import {
   customForms,
   customFormSubmissions,
@@ -785,11 +786,7 @@ router.get("/forms/:formId/submissions/:submissionId/pdf", async (req: Authentic
     }
 
     const fileName = `${form.name.replace(/[^a-z0-9]/gi, "_")}_${submissionId.slice(0, 8)}.pdf`;
-    res.set({
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="${fileName}"`,
-      "Content-Length": pdfBuffer.length,
-    });
+    writeHardenedPdfHeaders(res, { filename: fileName, size: pdfBuffer.length, mode: "inline" });
     res.send(pdfBuffer);
   } catch (error: unknown) {
     log.error("[FormBuilder] Error generating submission PDF:", error);

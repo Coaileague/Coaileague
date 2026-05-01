@@ -1,6 +1,7 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
 import crypto from 'crypto';
+import { writeHardenedPdfHeaders } from '../lib/pdfResponseHeaders';
 import https from 'https';
 import http from 'http';
 import { storage } from "../storage";
@@ -652,12 +653,13 @@ router.get('/documents/:employeeId/packet', requireAuth, requireHRManager, async
     }
 
     const finalPDFBytes = await masterPDF.save();
+    const buffer = Buffer.from(finalPDFBytes);
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="onboarding-packet-${employee.firstName}-${employee.lastName}-${Date.now()}.pdf"`);
-    res.setHeader('Content-Length', finalPDFBytes.length.toString());
-
-    res.send(Buffer.from(finalPDFBytes));
+    writeHardenedPdfHeaders(res, {
+      filename: `onboarding-packet-${employee.firstName}-${employee.lastName}-${Date.now()}.pdf`,
+      size: buffer.length,
+    });
+    res.send(buffer);
 
     for (const document of documents) {
       await storage.logDocumentAccess({
