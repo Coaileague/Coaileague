@@ -60,7 +60,7 @@ _(no other active sessions)_
 
 ### 2026-05-01 · claude-debt-cleanup-LjP5K
 **Branch:** `claude/action-wiring-manifest-LjP5K`
-**Commit:** _(pending — will be appended after push)_
+**Commit:** `7ffb1ef`
 **What changed:** Trinity-law cleanup sweep. **§F = 0, §G = 0, §I = 0.**
 - **TRINITY.md §F (module-load SDK asserts) — 4 → 0.** All 4 sites now use
   the canonical lazy `getStripe()` factory in
