@@ -14,11 +14,28 @@ Latest verification branch: claude/verify-middleware-auth-YwwmJ (read-only audit
 
 ---
 
-## LAST VERIFICATION — Middleware + Auth (2026-05-02)
+## LAST VERIFICATION — Middleware + Auth + Full Build/Test Pass (2026-05-02)
 
 **Branch:** `claude/verify-middleware-auth-YwwmJ`
-**Scope:** middleware mount order, auth chain, RBAC guards, route mounts, front↔back coherence
+**Scope:** middleware mount order, auth chain, RBAC guards, route mounts, front↔back coherence; PLUS fresh `npm install`, server build, server boot smoke, full vitest suite.
 **Result:** ✅ **ZERO ERRORS · ZERO GAPS · ZERO BUGS**
+
+### Live Verification Pipeline (this session)
+
+| Step | Result | Notes |
+|---|---|---|
+| `npm install` | ✅ 1101 packages added | First attempt hit a transient registry blip on `playwright@1.59.1`; retry succeeded clean |
+| `node build.mjs` (server esbuild) | ✅ 0 errors | `dist/index.js` 38 MB |
+| Server boot smoke (dist/index.js + dummy DATABASE_URL) | ✅ Boots through all middleware + 15 domain mounts + AI Brain registry without error | DB-dependent calls fail later in async background, as expected with no real DB; exercised the full route-assembly path |
+| Full `vitest run` suite | ✅ 196 passed, 0 failed, 55 skipped (21 files) | Was 5 failed before the fix below |
+| `tsc --noEmit` | ⚠ 24,150 strict-mode errors | Pre-existing TS debt baseline; **not** a build gate (handoff has always said "esbuild: 0 errors") |
+
+### Bug fixed in this pass
+
+**File:** `tests/unit/trinity-workflows-17c.test.ts`
+**Problem:** 5/30 tests failed with `expected undefined not to be undefined` on `helpaiOrchestrator.getAction('billing.invoice_create' | 'billing.invoice_add_line_items')`. The test imports `actionRegistry` for its side effects, but registration was previously refactored out of the constructor into the async `initialize()` method (called from `server/index.ts:1607` at server boot). The test setup never awaited `initialize()`, so `ACTION_REGISTRY` was empty when the assertions ran.
+**Fix:** Added a top-level `beforeAll(async () => { const { aiBrainActionRegistry } = await import('.../actionRegistry'); await aiBrainActionRegistry.initialize(); })`. `initialize()` is idempotent (guarded by both `this.initialized` and a global flag), so this is safe alongside any caller that also initializes (e.g. server boot during integration tests).
+**Verified:** All 30 tests in the file pass; full suite goes from 5 failed → 0 failed.
 
 | Layer | Verdict | Notes |
 |---|---|---|

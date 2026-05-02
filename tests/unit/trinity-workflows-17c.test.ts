@@ -15,12 +15,23 @@
  * with simulated payloads.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import {
   requiresFinancialApproval,
   actorMeetsApprovalRequirement,
   DEFAULT_FINANCIAL_THRESHOLDS,
 } from '../../server/services/ai-brain/financialApprovalThresholds';
+
+// Ensure the AI Brain action registry is fully initialized before any test
+// that queries helpaiOrchestrator.getAction(...). Registration was moved out
+// of the constructor and into the async initialize() method (called from
+// server/index.ts at boot), so unit tests must await it explicitly.
+beforeAll(async () => {
+  const { aiBrainActionRegistry } = await import(
+    '../../server/services/ai-brain/actionRegistry'
+  );
+  await aiBrainActionRegistry.initialize();
+});
 
 // ─── Audit 3 — Amount-threshold approval gate ────────────────────────────────
 

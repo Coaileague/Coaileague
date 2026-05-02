@@ -1,6 +1,6 @@
 # CoAIleague — Complete System Map
 **Last updated:** 2026-05-02 · **Author:** Architect Claude · **HEAD:** 5c8f43b2
-**Last verified:** 2026-05-02 — Middleware + Auth wiring audit (claude/verify-middleware-auth-YwwmJ)
+**Last verified:** 2026-05-02 — Middleware + Auth wiring audit + full deps/build/test pass (claude/verify-middleware-auth-YwwmJ)
 
 > **PURPOSE:** Single source of truth for all routes, mounts, middleware, services, and client pages.
 > Before adding ANY new code — route, component, service, or hook — check this map first.
@@ -20,6 +20,19 @@
 | Architecture rules (1, 10) | ✅ HONORED | `featureStubRouter` is LAST mount; only justified inline routes in `routes.ts` (csrf-token util, /sms-consent legal, /api/sms/* webhook aliases, /api/marketing/enterprise-inquiry funnel) |
 
 **Overall: ZERO ERRORS · ZERO GAPS · ZERO BUGS in the middleware + auth surface.**
+
+### Build & Test Run (2026-05-02, fresh `npm install`)
+
+| Step | Result |
+|---|---|
+| `npm install` | ✅ 1101 packages, 0 vulnerabilities |
+| `node build.mjs` (server esbuild) | ✅ 0 errors → `dist/index.js` 38 MB |
+| Server boot smoke (dist/index.js, dummy DATABASE_URL) | ✅ All middleware mounted, AI Brain registry initialized, all 15 domain orchestrators wired, scheduler + WebSocket assembled with no errors before 25s timeout |
+| `vitest run` full suite | ✅ 196 passed / 0 failed / 55 skipped (was 5 failed before fix) |
+| `tsc --noEmit` | ⚠ 24,150 strict-mode errors (pre-existing TS debt baseline; NOT a build gate — esbuild is the gate per `npm run build`) |
+
+**Bug fixed in this verification pass:**
+- `tests/unit/trinity-workflows-17c.test.ts` — added a `beforeAll(async () => await aiBrainActionRegistry.initialize())` so the AI Brain action registry runs its async initialization before tests query `helpaiOrchestrator.getAction(...)`. Previously 5/30 tests in the file failed because action registration was moved out of the constructor and into the async `initialize()` method (called from `server/index.ts:1607` at boot) without updating the test setup.
 
 ---
 
