@@ -195,7 +195,7 @@ export const trinityRuntimeFlagsService = {
    */
   async updateFlagValue(
     key: string,
-    newValue: any,
+    newValue: unknown,
     actor: { type: ActorType; id?: string },
     reason: string,
     source: string = 'manual',

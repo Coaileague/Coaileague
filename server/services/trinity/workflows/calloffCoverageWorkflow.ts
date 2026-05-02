@@ -111,7 +111,7 @@ export async function executeCalloffCoverageWorkflow(
   let resolvedShiftId: string | null = params.shiftId ?? null;
 
   // ── 2. FETCH ────────────────────────────────────────────────────────────────
-  let shiftRow: any | null = null;
+  let shiftRow: Record<string, unknown> | null = null;
   try {
     shiftRow = await findCalloffShift({
       workspaceId: params.workspaceId,

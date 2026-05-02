@@ -168,6 +168,8 @@ export default function NotificationLog() {
     limit: number;
   }>({
     queryKey: ['/api/notifications/log', statusFilter, channelFilter, page],
+    enabled: true,
+    staleTime: 30_000,
     refetchInterval: 30_000,
   });
 

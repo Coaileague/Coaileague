@@ -231,13 +231,13 @@ export const auditHelpers = {
    * the fact of change is recorded but the raw values are never written to
    * audit_logs.metadata, preventing exfiltration via the audit trail.
    */
-  async employeeUpdated(req: Request, employeeId: string, before: any, after: unknown) {
+  async employeeUpdated(req: Request, employeeId: string, before: unknown, after: unknown) {
     // FIX [AUDIT LOG PII]: Scrub sensitive financial/identity fields before writing
     // to audit_logs. Without this, a manager updating payroll info would cause the
     // raw SSN and bank account number to be stored in the audit_logs.metadata JSONB
     // column, creating a secondary exfiltration path beyond the masked API response.
     const PII_FIELDS = ['ssn', 'taxId', 'bankAccountNumber', 'bankRoutingNumber', 'bankAccountType'];
-    const scrub = (obj: unknown): any => {
+    const scrub = (obj: unknown): Record<string, unknown> => {
       if (!obj || typeof obj !== 'object') return obj;
       const clean = { ...obj };
       for (const field of PII_FIELDS) {

@@ -600,7 +600,7 @@ export class TaxFormGeneratorService {
       const pdfBuffer = await this.generate940PDF(form940Data);
 
       // Stamp + save to vault
-      const workspace940 = await db.query.workspaces?.findFirst?.({ where: (w: unknown, { eq: e }: any) => e(w.id, workspaceId) });
+      const workspace940 = await db.query.workspaces?.findFirst?.({ where: (w: unknown, { eq: e }: { eq: (a: unknown, b: unknown) => unknown }) => e(w.id, workspaceId) });
       const vaultResult940 = await saveToVault({
         workspaceId,
         workspaceName: (workspace940 as Record<string,unknown>)?.name || workspaceId,
@@ -909,7 +909,7 @@ export class TaxFormGeneratorService {
       }
 
       // Stamp + save to vault
-      const workspace941 = await db.query.workspaces?.findFirst?.({ where: (w: unknown, { eq: e }: any) => e(w.id, workspaceId) });
+      const workspace941 = await db.query.workspaces?.findFirst?.({ where: (w: unknown, { eq: e }: { eq: (a: unknown, b: unknown) => unknown }) => e(w.id, workspaceId) });
       const vaultResult941 = await saveToVault({
         workspaceId,
         workspaceName: (workspace941 as Record<string,unknown>)?.name || workspaceId,

@@ -777,7 +777,7 @@ function ProposalCard({
   onDuplicate,
   onSendPortal,
 }: {
-  proposal: any;
+  proposal: Record<string, unknown>;
   onEdit: () => void;
   onDelete: () => void;
   onDownload: () => void;
@@ -856,7 +856,7 @@ export default function ProposalBuilderPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [portalModal, setPortalModal] = useState<{ open: boolean; url: string; contractId: string } | null>(null);
-  const [orgSignModal, setOrgSignModal] = useState<{ open: boolean; contract: any } | null>(null);
+  const [orgSignModal, setOrgSignModal] = useState<{ open: boolean; contract: Record<string, unknown> } | null>(null);
   const [orgSignerName, setOrgSignerName] = useState("");
   const [orgSignerEmail, setOrgSignerEmail] = useState(() => (user as Record<string,unknown>)?.email || "");
   const [orgSignerTitle, setOrgSignerTitle] = useState("");

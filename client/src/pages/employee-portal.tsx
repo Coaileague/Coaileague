@@ -75,16 +75,22 @@ export default function EmployeePortal() {
   // Fetch employee data
   const { data: employees = [], isLoading: employeesLoading } = useQuery<{ data: Employee[] }, Error, Employee[]>({
     queryKey: ["/api/employees"],
+    enabled: true,
+    staleTime: 30_000,
     select: (res) => res?.data ?? [],
   });
 
   const { data: shifts = [], isLoading: shiftsLoading } = useQuery<{ data: Shift[] }, Error, Shift[]>({
     queryKey: ["/api/shifts"],
+    enabled: true,
+    staleTime: 30_000,
     select: (res) => res?.data ?? [],
   });
 
   const { data: timeEntries = [], isLoading: entriesLoading } = useQuery<{ data: TimeEntry[] }, Error, TimeEntry[]>({
     queryKey: ["/api/time-entries"],
+    enabled: true,
+    staleTime: 30_000,
     select: (res) => res?.data ?? [],
   });
 

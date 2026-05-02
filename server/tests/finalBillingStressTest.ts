@@ -244,7 +244,7 @@ async function phase6_access_control_logic() {
   console.log('PHASE 6: Feature Access Control - Comprehensive Gate Tests');
   console.log('='.repeat(70));
 
-  const scenarios: Array<{ desc: string; feature: string; tier: any; uses: number; credits: number; expectAllowed: boolean; }> = [
+  const scenarios: Array<{ desc: string; feature: string; tier: string; uses: number; credits: number; expectAllowed: boolean; }> = [
     { desc: 'Free → core feature (basic_scheduling)', feature: 'basic_scheduling', tier: 'free', uses: 0, credits: 100, expectAllowed: true },
     { desc: 'Free → premium feature, no credits', feature: 'guard_tour_tracking', tier: 'free', uses: 0, credits: 0, expectAllowed: false },
     { desc: 'Free → elite feature', feature: 'trinity_staffing', tier: 'free', uses: 0, credits: 100, expectAllowed: false },

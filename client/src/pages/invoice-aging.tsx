@@ -152,6 +152,8 @@ function InvoiceTable({ invoices, isLoading }: { invoices: AgingBucket["invoices
 export default function InvoiceAging() {
   const { data, isLoading, error } = useQuery<AgingReport>({
     queryKey: ["/api/invoices/aging"],
+    enabled: true,
+    staleTime: 30_000,
   });
 
   const allInvoices = data ? [

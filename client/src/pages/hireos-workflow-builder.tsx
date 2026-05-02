@@ -31,7 +31,7 @@ const STEP_TYPES = [
 ];
 
 // Sortable step item component
-function SortableStepItem({ step, index, onEdit, onDelete, totalSteps }: any) {
+function SortableStepItem({ step, index, onEdit, onDelete, totalSteps }: Record<string, unknown>) {
   const {
     attributes,
     listeners,
@@ -114,7 +114,7 @@ function SortableStepItem({ step, index, onEdit, onDelete, totalSteps }: any) {
 }
 
 // Step editor dialog
-function StepEditorDialog({ open, onOpenChange, step, onSave, reportTemplates }: any) {
+function StepEditorDialog({ open, onOpenChange, step, onSave, reportTemplates }: Record<string, unknown>) {
   const [formData, setFormData] = useState({
     stepName: '',
     stepType: '',

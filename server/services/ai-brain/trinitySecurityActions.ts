@@ -15,7 +15,7 @@ import { createLogger } from '../../lib/logger';
 
 const log = createLogger('TrinitySecurityActions');
 
-const ok = (id: string, m: string, d: any, s: number): ActionResult =>
+const ok = (id: string, m: string, d: Record<string, unknown>, s: number): ActionResult =>
   ({ success: true, actionId: id, message: m, data: d, executionTimeMs: Date.now() - s });
 const fail = (id: string, m: string, s: number): ActionResult =>
   ({ success: false, actionId: id, message: m, executionTimeMs: Date.now() - s });

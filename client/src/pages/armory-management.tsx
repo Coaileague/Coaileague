@@ -124,6 +124,8 @@ export default function ArmoryManagement() {
 
   const { data: employees = [] } = useQuery<{ data: unknown[] }, Error, any[]>({
     queryKey: ["/api/employees"],
+    enabled: true,
+    staleTime: 30_000,
     select: (res) => res?.data ?? [],
   });
 

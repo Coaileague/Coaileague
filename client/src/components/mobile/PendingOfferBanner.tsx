@@ -34,6 +34,8 @@ export function PendingOfferBanner(): JSX.Element | null {
   const [, navigate] = useLocation();
   const { data } = useQuery<PendingOffersResponse>({
     queryKey: ["/api/shifts/offers/my/pending"],
+    enabled: true,
+    staleTime: 30_000,
     refetchInterval: 60_000, // quiet refresh each minute
   });
 

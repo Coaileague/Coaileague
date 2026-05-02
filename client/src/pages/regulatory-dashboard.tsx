@@ -143,7 +143,7 @@ function DocStatusPill({ label, onFile, fileUrl }: { label: string; onFile: bool
   );
 }
 
-function OfficerCard({ officer, expanded, onToggle }: { officer: any; expanded: boolean; onToggle: () => void }) {
+function OfficerCard({ officer, expanded, onToggle }: { officer: Record<string, unknown>; expanded: boolean; onToggle: () => void }) {
   const score = officer.complianceScore;
   const isBlocked = score?.isHardBlocked;
   const scoreTier = score?.tier?.replace(/_/g, " ") ?? "unknown";
@@ -384,7 +384,7 @@ function OfficerCard({ officer, expanded, onToggle }: { officer: any; expanded: 
   );
 }
 
-const Icon = ({ name, className }: any) => <span className={className}>●</span>;
+const Icon = ({ name: _name, className }: { name: string; className?: string }) => <span className={className}>●</span>;
 
 export default function RegulatoryDashboard() {
   const [token, setToken] = useState("");

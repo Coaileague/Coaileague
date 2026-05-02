@@ -216,7 +216,7 @@ function EquipmentCard({ item, onEdit, onAssign }: { item: unknown; onEdit: (ite
   );
 }
 
-function ReportLostDialog({ assignment, onClose }: { assignment: any; onClose: () => void }) {
+function ReportLostDialog({ assignment, onClose }: { assignment: Record<string, unknown>; onClose: () => void }) {
   const { toast } = useToast();
   const mutation = useMutation({
     mutationFn: () => apiRequest("POST", `/api/equipment/report-lost/${assignment.id}`),
@@ -251,7 +251,7 @@ function ReportLostDialog({ assignment, onClose }: { assignment: any; onClose: (
   );
 }
 
-function ReportDamageDialog({ assignment, onClose }: { assignment: any; onClose: () => void }) {
+function ReportDamageDialog({ assignment, onClose }: { assignment: Record<string, unknown>; onClose: () => void }) {
   const { toast } = useToast();
   const [damageNotes, setDamageNotes] = useState("");
   const [condition, setCondition] = useState("damaged");
@@ -308,7 +308,7 @@ function ReportDamageDialog({ assignment, onClose }: { assignment: any; onClose:
   );
 }
 
-function ReturnWithDeductionDialog({ assignment, onClose }: { assignment: any; onClose: () => void }) {
+function ReturnWithDeductionDialog({ assignment, onClose }: { assignment: Record<string, unknown>; onClose: () => void }) {
   const { toast } = useToast();
   const [condition, setCondition] = useState("good");
   const [deductionAmount, setDeductionAmount] = useState("");

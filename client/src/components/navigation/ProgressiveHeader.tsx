@@ -59,7 +59,7 @@ export function ProgressiveHeader({ pageTitle, className }: ProgressiveHeaderPro
   const handleOverlayMouseLeave = useCallback(() => {}, []);
   const toggleOverlay = useCallback((_source?: string) => {}, []);
   const closeOverlay = useCallback(() => {}, []);
-  const setActiveCategory = useCallback((_cat: any) => {}, []);
+  const setActiveCategory = useCallback((_cat: unknown) => {}, []);
 
   useEffect(() => {
     if (isTrinityOpen && isOpen) {

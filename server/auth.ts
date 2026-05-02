@@ -175,7 +175,7 @@ export async function recordSuccessfulLogin(userId: string): Promise<void> {
 interface CacheEntry { data: session.SessionData; expiresAt: number; }
 
 class FaultTolerantStore extends session.Store {
-  private inner: any;
+  private inner: unknown;
   private timeoutMs: number;
   private cache = new Map<string, CacheEntry>();
   private readonly CACHE_TTL_MS = 15 * 60 * 1000;

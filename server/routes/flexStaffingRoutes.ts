@@ -22,7 +22,7 @@ import { z } from 'zod';
 const log = createLogger('FlexStaffingRoutes');
 
 
-export function registerFlexStaffingRoutes(app: Express, requireAuth: any, attachWorkspaceId?: unknown) {
+export function registerFlexStaffingRoutes(app: Express, requireAuth: (req: unknown, res: unknown, next: unknown) => void, attachWorkspaceId?: unknown) {
   const router = Router();
 
   // ==================== CONTRACTORS ====================

@@ -42,6 +42,8 @@ export function useClientsTable(params: ClientsQueryParams = {}): UseQueryResult
 export function useClientLookup(): UseQueryResult<Client[]> {
   return useQuery({
     queryKey: ["/api/clients/lookup"],
+    enabled: true,
+    staleTime: 30_000,
     queryFn: () => apiFetch('/api/clients/lookup', ClientListResponse) as unknown as Promise<Client[]>,
   });
 }

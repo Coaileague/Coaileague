@@ -1401,7 +1401,7 @@ function MobileToolsPanel({
   testTools,
   handleQuickCommand,
   actions
-}: any) {
+}: Record<string, unknown>) {
   return (
     <Tabs defaultValue="health" className="w-full">
       <TabsList className="w-full grid grid-cols-4 h-8">

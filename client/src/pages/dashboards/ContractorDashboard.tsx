@@ -40,6 +40,8 @@ export default function ContractorDashboard() {
 
   const { data: shiftsRes, isLoading: shiftsLoading, isError: shiftsIsError, error: shiftsError, refetch: refetchShifts } = useQuery<any[] | { data: unknown[] }>({
     queryKey: ["/api/shifts"],
+    enabled: true,
+    staleTime: 30_000,
     staleTime: 30000,
   });
 

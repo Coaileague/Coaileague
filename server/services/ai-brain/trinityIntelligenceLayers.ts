@@ -1643,7 +1643,7 @@ export function registerClientBillingIntelligenceActions() {
 
     const analysis = contracts.map(contract => {
       const billing = invoiceMap.get(contract.clientId!);
-      const billingTerms: any = contract.billingTerms || {};
+      const billingTerms: Record<string, unknown> = contract.billingTerms || {};
       const minHoursMonthly = billingTerms.minimumHoursMonthly || null;
       const contractRate = billingTerms.hourlyRate || billingTerms.billRate || null;
       const billed = Number(billing?.totalBilled || 0);

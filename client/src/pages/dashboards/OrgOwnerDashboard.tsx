@@ -153,6 +153,8 @@ export default function OrgOwnerDashboard() {
     refetch: refetchClients,
   } = useQuery<{ data: unknown[] } | any[]>({
     queryKey: ["/api/clients"],
+    enabled: true,
+    staleTime: 30_000,
     staleTime: 60_000,
   });
 
@@ -164,6 +166,8 @@ export default function OrgOwnerDashboard() {
     refetch: refetchEmployees,
   } = useQuery<{ data: unknown[] }>({
     queryKey: ["/api/employees"],
+    enabled: true,
+    staleTime: 30_000,
     staleTime: 60_000,
   });
 
@@ -176,6 +180,8 @@ export default function OrgOwnerDashboard() {
   } = useQuery<any[]>({
     retry: false,
     queryKey: ["/api/invoices"],
+    enabled: true,
+    staleTime: 30_000,
     staleTime: 60_000,
   });
 

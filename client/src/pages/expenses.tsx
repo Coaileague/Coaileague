@@ -586,7 +586,7 @@ export default function ExpensesPage() {
   );
 }
 
-function ExpenseCard({ expense, getStatusBadge }: { expense: any; getStatusBadge: (status: string) => React.ReactNode }) {
+function ExpenseCard({ expense, getStatusBadge }: { expense: Record<string, unknown>; getStatusBadge: (status: string) => React.ReactNode }) {
   return (
     <Card data-testid={`card-expense-${expense.id}`}>
       <CardHeader>

@@ -86,11 +86,13 @@ function MetricCard({
   );
 }
 
-const Icon = ({ name, className }: any) => <span className={className}>●</span>;
+const Icon = ({ name: _name, className }: { name: string; className?: string }) => <span className={className}>●</span>;
 
 export default function CashFlowDashboard() {
   const { data, isLoading, error } = useQuery<CashFlowSummary>({
     queryKey: ["/api/invoices/cash-flow-summary"],
+    enabled: true,
+    staleTime: 30_000,
   });
 
   const netPositionColor =

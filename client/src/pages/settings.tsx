@@ -1299,7 +1299,7 @@ function WorkspaceSettingsForm({ workspace }: { workspace: Workspace }) {
     </Card>
   );
 }
-function InvoiceFinancialsForm({ workspace, updateWorkspaceMutation }: { workspace: Workspace, updateWorkspaceMutation: any }) {
+function InvoiceFinancialsForm({ workspace, updateWorkspaceMutation }: { workspace: Workspace; updateWorkspaceMutation: { mutate: (data: Record<string, unknown>) => void; isPending: boolean } }) {
   const form = useForm<InvoiceFinancialsFormValues>({
     resolver: zodResolver(invoiceFinancialsSchema),
     defaultValues: {
@@ -1495,7 +1495,7 @@ function InvoiceFinancialsForm({ workspace, updateWorkspaceMutation }: { workspa
   );
 }
 
-function PayrollFinancialsForm({ workspace, updateWorkspaceMutation }: { workspace: Record<string, unknown>, updateWorkspaceMutation: any }) {
+function PayrollFinancialsForm({ workspace, updateWorkspaceMutation }: { workspace: Record<string, unknown>; updateWorkspaceMutation: { mutate: (data: Record<string, unknown>) => void; isPending: boolean } }) {
   const form = useForm<PayrollFinancialsFormValues>({
     resolver: zodResolver(payrollFinancialsSchema),
     defaultValues: {

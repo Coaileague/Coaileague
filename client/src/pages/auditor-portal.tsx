@@ -47,14 +47,20 @@ export default function AuditorPortal() {
   // Fetch data
   const { data: invoices = [], isLoading: invLoading, isError: invError } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices"],
+    enabled: true,
+    staleTime: 30_000,
   });
 
   const { data: timeEntries = [], isLoading: timeLoading } = useQuery<TimeEntry[]>({
     queryKey: ["/api/time-entries"],
+    enabled: true,
+    staleTime: 30_000,
   });
 
   const { data: employees = [], isLoading: empLoading } = useQuery<Employee[]>({
     queryKey: ["/api/employees"],
+    enabled: true,
+    staleTime: 30_000,
   });
 
   const isLoading = invLoading || timeLoading || empLoading;

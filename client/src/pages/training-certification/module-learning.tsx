@@ -195,7 +195,7 @@ export default function ModuleLearningPage() {
     passed: boolean;
     overallScore: number;
     passingScore: number;
-    certificate: any;
+    certificate: Record<string, unknown>;
     missedTopics: string[];
     interventionRequired: boolean;
   } | null>(null);

@@ -620,7 +620,7 @@ export default function DocumentLibrary() {
   });
 
   const signMutation = useMutation({
-    mutationFn: ({ id, ...data }: any) => apiRequest('POST', `/api/documents/${id}/sign`, data),
+    mutationFn: ({  id, ...data  }: Record<string, unknown>) => apiRequest('POST', `/api/documents/${id}/sign`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
       setShowSignDialog(false);

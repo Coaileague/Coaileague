@@ -51,7 +51,7 @@ const SUPERVISOR_ROLES = ['org_owner', 'co_owner', 'org_admin', 'org_manager', '
 
 function checkCapability(
   capability: RBACCapability,
-  user: any,
+  user: Record<string, unknown>,
   isAuthenticated: boolean,
   positionCapabilities?: string[]
 ): boolean {
@@ -107,7 +107,7 @@ function checkCapability(
 
 function checkAccess(
   require: RBACCapability | RBACCapability[],
-  user: any,
+  user: Record<string, unknown>,
   isAuthenticated: boolean,
   positionCapabilities?: string[]
 ): RoleCheckResult {

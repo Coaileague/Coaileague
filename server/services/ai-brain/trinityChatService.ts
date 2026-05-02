@@ -2289,7 +2289,7 @@ Do NOT skip steps — decompose fully before concluding.`;
         WHERE id = ${workspaceId}
         LIMIT 1
       `);
-      const ws: any = (result?.rows ?? result ?? [])[0];
+      const ws: Record<string, unknown> = (result?.rows ?? result ?? [])[0];
       const itemId = ws?.plaid_item_id;
       const encryptedToken = ws?.plaid_access_token_encrypted;
       if (!itemId || !encryptedToken) return null;
@@ -2600,11 +2600,11 @@ Do NOT skip steps — decompose fully before concluding.`;
    */
   private buildSystemPrompt(
     mode: ConversationMode,
-    workspaceContext: any,
+    workspaceContext: Record<string, unknown>,
     buddySettings: TrinityBuddySettings | null,
     userName: string,
     recentInsights: unknown[],
-    memoryProfile: any,
+    memoryProfile: Record<string, unknown>,
     supportHistory?: unknown,
     workspaceId?: string,
     isSupportMode?: boolean,

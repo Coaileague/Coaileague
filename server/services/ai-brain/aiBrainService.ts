@@ -1470,7 +1470,7 @@ Constraints: ${JSON.stringify(enrichedInput.constraints, null, 2)}`;
   private async persistScheduleAssignments(
     workspaceId: string, 
     userId: string,
-    scheduleResult: any, 
+    scheduleResult: Record<string, unknown>, 
     jobId: string, 
     constraints?: { weekStart?: string; weekEnd?: string }
   ): Promise<void> {

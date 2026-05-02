@@ -274,7 +274,7 @@ export class TrinityEmailProcessor {
   }
 
   async processFormSubmission(
-    submission: any,
+    submission: Record<string, unknown>,
     submitAction: string | null,
     contextType: string | null,
     contextId: string | null

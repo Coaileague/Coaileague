@@ -823,7 +823,7 @@ Generate a JSON schedule with format:
 
   private async findAlternativeEmployee(
     workspaceId: string,
-    proposed: any,
+    proposed: Record<string, unknown>,
     employeeData: unknown[],
     existingShifts: unknown[]
   ): Promise<{ employeeId: string; reason: string; confidence: number } | null> {
@@ -926,7 +926,7 @@ Generate a JSON schedule with format:
   }
 
   private async generateSwapRecommendation(
-    shiftData: any,
+    shiftData: Record<string, unknown>,
     topCandidates: unknown[]
   ): Promise<string> {
     if (topCandidates.length === 0) {

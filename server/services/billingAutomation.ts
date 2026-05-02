@@ -316,7 +316,7 @@ export async function generateInvoiceForClient(
  */
 async function createInvoiceFromBillableSummary(
   workspaceId: string,
-  clientSummary: any, // ClientBillableSummary from aggregator
+  clientSummary: Record<string, unknown>, // ClientBillableSummary from aggregator
   warnings: string[],
   timeEntryIds: string[] // B1: received from caller for atomic marking
 ): Promise<Invoice | null> {

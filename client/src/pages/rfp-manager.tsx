@@ -65,7 +65,7 @@ export default function RFPManager() {
   });
 
   const updateStatus = useMutation({
-    mutationFn: ({ id, status, winLoss }: any) => apiRequest("PATCH", `/api/rfp/${id}`, { status, winLoss, workspaceId }),
+    mutationFn: ({  id, status, winLoss  }: Record<string, unknown>) => apiRequest("PATCH", `/api/rfp/${id}`, { status, winLoss, workspaceId }),
     onSuccess: () => { invalidate(); toast({ title: "Status updated" }); },
   });
 

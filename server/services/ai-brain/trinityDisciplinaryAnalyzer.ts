@@ -247,7 +247,7 @@ class TrinityDisciplinaryAnalyzer {
     return 'Pattern of complaints. Owner escalation. Consider assignment review and formal progressive discipline process.';
   }
 
-  private buildComplaintSuggestion(fiveW1H: Record<string, string>, emp: any, routeTo: string, priorComplaints: number, severity: string): string {
+  private buildComplaintSuggestion(fiveW1H: Record<string, string>, emp: Record<string, unknown>, routeTo: string, priorComplaints: number, severity: string): string {
     return `CLIENT COMPLAINT — 5W1H ANALYSIS COMPLETE\n\nOfficer: ${emp?.firstName} ${emp?.lastName}\nSeverity: ${severity.toUpperCase()}\nRoute to: ${routeTo.toUpperCase()}\n\n${Object.entries(fiveW1H).map(([k, v]) => `${k}: ${v}`).join('\n\n')}\n\nTrinity's assessment: ${priorComplaints === 0 ? 'First incident. Approach with a conversation, not a conclusion.' : 'Pattern emerging. Formal process recommended.'}`;
   }
 

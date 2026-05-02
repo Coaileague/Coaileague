@@ -53,7 +53,7 @@ export async function runAcmeMonthSimulation(opts?: { baseUrl?: string }): Promi
   let workspaceId = 'demo-workspace-00000000';
   let seedSummary = 'seed skipped (already present)';
   try {
-    const seedMod: any = await import('../../seed-acme-full');
+    const seedMod: Record<string, unknown> = await import('../../seed-acme-full');
     if (seedMod?.seedAcmeFullDemo) {
       log.info('[ACME] running seedAcmeFullDemo()');
       await seedMod.seedAcmeFullDemo();

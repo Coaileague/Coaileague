@@ -2378,7 +2378,7 @@ export const aiModels = pgTable("ai_models", {
   isActive: boolean("is_active").default(true),
   
   // Fallback configuration
-  fallbackModelId: varchar("fallback_model_id").references((): any => aiModels.id),
+  fallbackModelId: varchar("fallback_model_id").references((): unknown => aiModels.id),
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -2452,7 +2452,7 @@ export const aiTaskQueue = pgTable("ai_task_queue", {
   errorCode: varchar("error_code", { length: 50 }),
   
   // Fallback chain tracking
-  parentTaskId: varchar("parent_task_id").references((): any => aiTaskQueue.id),
+  parentTaskId: varchar("parent_task_id").references((): unknown => aiTaskQueue.id),
   fallbackReason: text("fallback_reason"),
   
   // User context

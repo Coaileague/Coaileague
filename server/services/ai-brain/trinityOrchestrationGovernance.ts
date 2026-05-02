@@ -491,7 +491,7 @@ class AutomationApprovalGate {
   private async createApprovalRequest(
     domain: AutomationDomain,
     workspaceId: string,
-    actionDetails: any,
+    actionDetails: Record<string, unknown>,
     riskSignals: string[],
     confidence: number
   ): Promise<string> {

@@ -1018,7 +1018,7 @@ function PayrollCalloutSection() {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-const Icon = ({ name, className }: any) => <span className={className}>●</span>;
+const Icon = ({ name: _name, className }: { name: string; className?: string }) => <span className={className}>●</span>;
 
 export default function PricingPage() {
   const [annual, setAnnual] = useState(false);

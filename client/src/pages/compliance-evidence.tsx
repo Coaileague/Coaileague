@@ -29,6 +29,8 @@ export default function ComplianceEvidencePage() {
 
   const { data: officers } = useQuery<any[]>({
     queryKey: ["/api/employees"],
+    enabled: true,
+    staleTime: 30_000,
   });
 
   // Mutations

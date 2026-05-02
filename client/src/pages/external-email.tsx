@@ -52,7 +52,7 @@ interface EmailDraft {
   createdAt: string;
 }
 
-function EmailRow({ email, onClick }: { email: { email: ExternalEmail; sentByUser: any }; onClick: () => void }) {
+function EmailRow({ email, onClick }: { email: { email: ExternalEmail; sentByUser: Record<string, unknown> }; onClick: () => void }) {
   const e = email.email;
   const status = EMAIL_STATUS[e.status as keyof typeof EMAIL_STATUS] || EMAIL_STATUS.pending;
   const StatusIcon = status.icon;

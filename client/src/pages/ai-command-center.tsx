@@ -807,7 +807,7 @@ function AgentTaskRow({ task, showScore }: { task: AgentTask; showScore?: boolea
 
 // ─── Shared Sub-Components ────────────────────────────────────────────────────
 
-function StatCard({ icon, label, value, loading }: any) {
+function StatCard({ icon, label, value, loading }: Record<string, unknown>) {
   return (
     <Card className="p-3 lg:p-4">
       <div className="flex items-center space-x-2 mb-1">
@@ -825,7 +825,7 @@ function StatCard({ icon, label, value, loading }: any) {
   );
 }
 
-function MetricCard({ label, value, icon }: any) {
+function MetricCard({ label, value, icon }: Record<string, unknown>) {
   return (
     <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
       <div className="flex-shrink-0">{icon}</div>

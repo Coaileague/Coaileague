@@ -34,14 +34,14 @@ export interface DocumentSource {
   botInstanceId: string;
   roomId: string;
   capturedAt: Date;
-  rawContent: any;
+  rawContent: unknown;
   messageIds?: string[];
   participantIds?: string[];
 }
 
 export interface ProcessedContent {
   status: 'pending' | 'processing' | 'complete' | 'error';
-  content: any;
+  content: unknown;
   pdfUrl?: string;
   generatedAt?: Date;
   processingNotes: string[];

@@ -463,7 +463,7 @@ export class TrinityStaffingSkill extends BaseSkill {
    */
   private async sendClientConfirmation(
     context: SkillContext,
-    payload: { workRequest: WorkRequest; assignedEmployees: EmployeeMatch[]; shiftDetails: any }
+    payload: { workRequest: WorkRequest; assignedEmployees: EmployeeMatch[]; shiftDetails: Record<string, unknown> }
   ): Promise<SkillResult<{ emailSent: boolean; confirmationId: string }>> {
     try {
       const deductionResult = await premiumFeatureGating.recordUsage(

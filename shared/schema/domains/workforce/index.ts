@@ -1029,7 +1029,7 @@ export const feedbackComments = pgTable("feedback_comments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   feedbackId: varchar("feedback_id").notNull(),
   userId: varchar("user_id").notNull(),
-  parentId: varchar("parent_id").references((): any => feedbackComments.id, { onDelete: 'cascade' }),
+  parentId: varchar("parent_id").references((): unknown => feedbackComments.id, { onDelete: 'cascade' }),
   
   content: text("content").notNull(),
   isFromAdmin: boolean("is_from_admin").default(false),

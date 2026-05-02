@@ -17,7 +17,7 @@ async function run() {
   console.log(' NEVER executes without Bryan approval');
   console.log('═══════════════════════════════════════════════════\n');
 
-  let db: any;
+  let db: unknown;
   try {
     const dbModule = await import('../../server/db');
     db = dbModule.db;

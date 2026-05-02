@@ -179,7 +179,7 @@ function PostOrderForm({ order, onClose }: { order?: unknown; onClose: () => voi
   );
 }
 
-function PostOrderCard({ order, onEdit, onViewAcks, onAcknowledge }: { order: any; onEdit: (o) => void; onViewAcks: (o) => void; onAcknowledge?: (o) => void }) {
+function PostOrderCard({ order, onEdit, onViewAcks, onAcknowledge }: { order: Record<string, unknown>; onEdit: (o) => void; onViewAcks: (o) => void; onAcknowledge?: (o) => void }) {
   const cfg = PRIORITY_CONFIG[order.priority] || PRIORITY_CONFIG.normal;
   const PriIcon = cfg.icon;
   const requirements: string[] = [];
@@ -257,7 +257,7 @@ function PostOrderCard({ order, onEdit, onViewAcks, onAcknowledge }: { order: an
   );
 }
 
-function AcknowledgmentDialog({ order, onClose }: { order: any; onClose: () => void }) {
+function AcknowledgmentDialog({ order, onClose }: { order: Record<string, unknown>; onClose: () => void }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [signature, setSignature] = useState({ agreed: false, signatureName: "", signedAt: "" });
@@ -358,7 +358,7 @@ function AcknowledgmentDialog({ order, onClose }: { order: any; onClose: () => v
   );
 }
 
-function AcknowledgmentTrackingPanel({ order, onClose }: { order: any; onClose: () => void }) {
+function AcknowledgmentTrackingPanel({ order, onClose }: { order: Record<string, unknown>; onClose: () => void }) {
   const { data: acks = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/post-orders/acknowledgments", order.id],
     enabled: !!order.id,

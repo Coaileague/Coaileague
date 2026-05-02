@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { spsOnboardingRoutes } from '../../server/routes/spsOnboardingRoutes';
 
-function listRoutes(router: any): Array<{ method: string; path: string }> {
+function listRoutes(router: Record<string, unknown>): Array<{ method: string; path: string }> {
   return (router?.stack || [])
     .filter((layer: unknown) => layer.route)
-    .flatMap((layer: any) =>
+    .flatMap((layer: Record<string, unknown>) =>
       Object.keys(layer.route.methods).map((method) => ({
         method: method.toUpperCase(),
         path: layer.route.path as string,

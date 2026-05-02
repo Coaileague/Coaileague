@@ -53,7 +53,7 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
 };
 
 // Status badge configuration
-const STATUS_CONFIG: Record<string, { label: string; variant: any; icon: string | React.ReactNode }> = {
+const STATUS_CONFIG: Record<string, { label: string; variant: string; icon: string | React.ReactNode }> = {
   uploaded: { label: "Uploaded", variant: "outline", icon: Clock },
   pending_review: { label: "Pending Review", variant: "secondary", icon: Clock },
   approved: { label: "Approved", variant: "default", icon: CheckCircle },
@@ -62,7 +62,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: any; icon: string 
   archived: { label: "Archived", variant: "outline", icon: FileText },
 };
 
-function DocumentCard({ document, onViewAccess, onLogAccess }: any) {
+function DocumentCard({ document, onViewAccess, onLogAccess }: Record<string, unknown>) {
   const StatusIcon = STATUS_CONFIG[document.status]?.icon || FileText;
   const isLocked = document.isImmutable && document.digitalSignatureHash;
 
@@ -247,7 +247,7 @@ function AccessLogDialog({ open, onOpenChange, documentId }: { open: boolean; on
   );
 }
 
-function PendingSignatureCard({ sig, onSign }: { sig: any; onSign: (sig) => void }) {
+function PendingSignatureCard({ sig, onSign }: { sig: Record<string, unknown>; onSign: (sig) => void }) {
   return (
     <Card className="hover-elevate border-amber-200 dark:border-amber-900" data-testid={`pending-sig-${sig.id}`}>
       <CardContent className="p-4">

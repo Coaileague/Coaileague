@@ -362,7 +362,7 @@ class LLMJudgeEvaluator {
    * Quick pass/fail check with single criterion
    */
   async quickCheck(
-    content: any,
+    content: unknown,
     criterion: string,
     threshold: number,
     workspaceId: string,

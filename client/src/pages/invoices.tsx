@@ -139,8 +139,8 @@ const invoicesPageConfig: CanvasPageConfig = {
     openSendDialog: (i: Invoice) => void;
     handleDownloadPdf: (id: string, n: string) => void;
     setSelectedInvoiceId: (id: string | null) => void;
-    markPaidMutation: any;
-    voidInvoiceMutation: any;
+    markPaidMutation: { mutate: (...args: unknown[]) => void; isPending: boolean };
+    voidInvoiceMutation: { mutate: (...args: unknown[]) => void; isPending: boolean };
     isAnyMutationPending: boolean;
   }) => {
     return (
@@ -772,7 +772,7 @@ export default function Invoices() {
   };
 
   const updateInvoiceMutation = useMutation({
-    mutationFn: async (data: { id: string; updates: any }) => {
+    mutationFn: async (data: { id: string; updates: Record<string, unknown> }) => {
       const response = await apiRequest("PATCH", `/api/invoices/${data.id}`, { ...data.updates, workspaceId });
       return response.json();
     },

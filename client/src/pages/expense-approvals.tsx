@@ -163,7 +163,7 @@ export default function ExpenseApprovalsPage() {
   }
 
   const MobileExpenseCard = ({ expense, onApprove, onDeny }: { 
-    expense: any; 
+    expense: Record<string, unknown>; 
     onApprove: () => void; 
     onDeny: () => void; 
   }) => (

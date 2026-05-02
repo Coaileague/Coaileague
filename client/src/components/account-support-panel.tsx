@@ -54,7 +54,7 @@ interface AccountSupportPanelProps {
   onAction?: (action: string, data?: unknown) => void;
 }
 
-const DialogStyledHeader = ({ children, ...props }: any) => <div className="flex items-center gap-2 pb-2 border-b border-border/40 mb-4" {...props}>{children}</div>;
+const DialogStyledHeader = ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => <div className="flex items-center gap-2 pb-2 border-b border-border/40 mb-4" {...props}>{children}</div>;
 
 export function AccountSupportPanel({ 
   isOpen, 

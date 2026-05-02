@@ -557,7 +557,7 @@ export default function RFPPipeline() {
   });
 
   const updateDealMutation = useMutation({
-    mutationFn: ({ id, ...data }: any) => apiRequest("PATCH", `/api/pipeline-deals/${id}`, data),
+    mutationFn: ({  id, ...data  }: Record<string, unknown>) => apiRequest("PATCH", `/api/pipeline-deals/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/pipeline-deals"] });
       queryClient.invalidateQueries({ queryKey: ["/api/pipeline-deals/stats"] });

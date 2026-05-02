@@ -452,7 +452,7 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
     const { broadcastToWorkspace } = await import('../websocket');
     broadcastToWorkspace(workspaceId, { type: 'employees_updated', action: 'created' });
 
-    const responsePayload: any = filterEmployeeForResponse(updatedEmployee || employee, createFilterContext(req));
+    const responsePayload: Record<string, unknown> = filterEmployeeForResponse(updatedEmployee || employee, createFilterContext(req));
     if (priorEmploymentRecord) {
       responsePayload.priorEmploymentDetected = true;
       responsePayload.priorEmploymentRecord = priorEmploymentRecord;

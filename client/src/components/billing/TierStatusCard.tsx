@@ -58,6 +58,8 @@ export function TierStatusCard({ className = '', showUpgradePrompt = true }: Tie
 
   const { data: employeeData } = useQuery<{ total: number }>({
     queryKey: ['/api/employees/count'],
+    enabled: true,
+    staleTime: 30_000,
     staleTime: 60 * 1000,
   });
 

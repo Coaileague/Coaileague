@@ -159,7 +159,7 @@ async function getAuditorEmailForAudit(auditId: string): Promise<string | null> 
 type ReminderStrike = '7d' | '72h' | '24h';
 
 async function sendReminderStrike(
-  timer: any,
+  timer: ReturnType<typeof setTimeout>,
   ownerUserId: string,
   strike: ReminderStrike,
 ): Promise<void> {

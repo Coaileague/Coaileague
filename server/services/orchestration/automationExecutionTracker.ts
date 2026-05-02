@@ -505,7 +505,7 @@ class AutomationExecutionTrackerService {
   }
 
   private async generateAISummary(
-    execution: any, 
+    execution: Record<string, unknown>, 
     params: UpdateExecutionParams
   ): Promise<string> {
     try {

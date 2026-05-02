@@ -33,7 +33,7 @@ export class AgentCache {
     this.cache.clear();
   }
 
-  get(key: string): any | null {
+  get(key: string): unknown | null {
     const entry = this.cache.get(key);
     
     if (!entry) {

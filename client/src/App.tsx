@@ -520,7 +520,7 @@ function MailHeaderButton({ onClick }: { onClick: () => void }) {
 
 
 // Compact top-right utility cluster - Fortune 500 aesthetic
-function AppUtilityCluster({ setLocation }: any) {
+function AppUtilityCluster({ setLocation }: Record<string, unknown>) {
   return (
     <div className="fixed top-3 right-4 z-50 flex items-center gap-2 bg-background/95 backdrop-blur-xl border rounded-lg shadow-sm px-3 py-2 max-w-[320px]">
       {/* Workspace Info */}

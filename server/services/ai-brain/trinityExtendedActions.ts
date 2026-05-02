@@ -118,7 +118,7 @@ export function registerExtendedActions() {
             AND pr.status IN ('processed', 'paid', 'approved')
         `);
 
-        const agg: any = (rows as unknown as unknown[])[0] || {};
+        const agg: Record<string, unknown> = (rows as unknown[])[0] || {};
         const totalSSMed = Number(agg.total_ss_tax || 0) + Number(agg.total_medicare_tax || 0);
         const totalTax   = Number(agg.federal_income_tax_withheld || 0) + totalSSMed;
 

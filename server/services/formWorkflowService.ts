@@ -418,7 +418,7 @@ class FormWorkflowService {
     }
   }
 
-  private findTemplate(templateId: string): any | null {
+  private findTemplate(templateId: string): Record<string, unknown> | null {
     const allCategories = Object.values(systemFormTemplates);
     for (const category of allCategories) {
       if (Array.isArray(category)) {

@@ -24,7 +24,7 @@ interface LedgerWriteParams {
   tx?: unknown;
 }
 
-async function getLastBalance(workspaceId: string, dbHandle: any = db): Promise<number> {
+async function getLastBalance(workspaceId: string, dbHandle: typeof db = db): Promise<number> {
   const [last] = await dbHandle.select({ balanceAfter: orgLedger.balanceAfter })
     .from(orgLedger)
     .where(eq(orgLedger.workspaceId, workspaceId))

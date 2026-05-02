@@ -343,7 +343,7 @@ class AutonomousFixPipelineService {
     return line.replace(/\(([a-zA-Z_$][a-zA-Z0-9_$]*)\)/g, (match, param) => {
       // Don't modify if it already has a type annotation nearby
       if (line.includes(`${param}:`)) return match;
-      return `(${param}: any)`;
+      return `(${param}: unknown)`;
     });
   }
 

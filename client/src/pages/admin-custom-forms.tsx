@@ -1083,7 +1083,7 @@ function SubmissionsViewer({ form, onBack }: { form: CustomForm; onBack: () => v
 // ─── Form List Card ───────────────────────────────────────────────────────────
 
 function FormCard({ form, onEdit, onDelete, onDuplicate, onViewSubmissions, analytics }:
-  { form: CustomForm; onEdit: () => void; onDelete: () => void; onDuplicate: () => void; onViewSubmissions: () => void; analytics: any }) {
+  { form: CustomForm; onEdit: () => void; onDelete: () => void; onDuplicate: () => void; onViewSubmissions: () => void; analytics?: { totalSubmissions?: number; lastSubmission?: string } }) {
   const fields = (form.template as unknown)?.fields || [];
   const fieldCounts = fields.reduce((acc: Record<string, number>, f: FormField) => {
     acc[f.type] = (acc[f.type] || 0) + 1;

@@ -42,7 +42,7 @@ export class UniversalConfigRegistry {
     return `${domain}:${key}:${workspaceId || 'global'}`;
   }
 
-  private getCached(cacheKey: string): any | undefined {
+  private getCached(cacheKey: string): unknown | undefined {
     const entry = this.cache.get(cacheKey);
     if (entry && entry.expiry > Date.now()) {
       return entry.value;

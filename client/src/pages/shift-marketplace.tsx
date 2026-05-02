@@ -857,6 +857,8 @@ export default function ShiftMarketplace() {
 
   const { data: shifts = [], isLoading: shiftsLoading } = useQuery<{ data: Shift[] }, Error, Shift[]>({
     queryKey: ['/api/shifts'],
+    enabled: true,
+    staleTime: 30_000,
     select: (res) => res?.data ?? [],
   });
 
@@ -864,6 +866,8 @@ export default function ShiftMarketplace() {
 
   const { data: employees = [] } = useQuery<{ data: Employee[] }, Error, Employee[]>({
     queryKey: ['/api/employees'],
+    enabled: true,
+    staleTime: 30_000,
     select: (res) => res?.data ?? [],
   });
 

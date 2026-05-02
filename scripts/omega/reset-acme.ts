@@ -25,7 +25,7 @@ async function run() {
   }
 
   console.log('Finding ACME workspace...');
-  let db: any;
+  let db: unknown;
   try {
     const dbModule = await import('../../server/db');
     db = dbModule.db;

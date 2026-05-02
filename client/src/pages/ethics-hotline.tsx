@@ -56,7 +56,7 @@ export default function EthicsHotline() {
   });
 
   const resolveReport = useMutation({
-    mutationFn: ({ id, status, resolution }: any) => apiRequest("PATCH", `/api/ethics/reports/${id}`, { status, resolution, workspaceId }),
+    mutationFn: ({  id, status, resolution  }: Record<string, unknown>) => apiRequest("PATCH", `/api/ethics/reports/${id}`, { status, resolution, workspaceId }),
     onSuccess: () => { invalidate(); setViewReport(null); toast({ title: "Report updated" }); },
   });
 

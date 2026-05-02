@@ -58,6 +58,8 @@ export default function HRTerminations() {
 
   const { data: employees = [] } = useQuery<{ data: Employee[] }, Error, Employee[]>({
     queryKey: ['/api/employees'],
+    enabled: true,
+    staleTime: 30_000,
     select: (res) => res?.data ?? [],
   });
 

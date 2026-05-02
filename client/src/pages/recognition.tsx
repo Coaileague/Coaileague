@@ -48,6 +48,8 @@ export default function RecognitionPage() {
 
   const { data: employees } = useQuery<any[]>({
     queryKey: ["/api/employees"],
+    enabled: true,
+    staleTime: 30_000,
   });
 
   const { data: myAwards, isLoading: isLoadingMyAwards } = useQuery<any[]>({

@@ -479,7 +479,7 @@ function SuggestionForm({ onSubmit, isSubmitting }: { onSubmit: (data: Record<st
 }
 
 // Recognition Form Component
-function RecognitionForm({ onSubmit, isSubmitting }: any) {
+function RecognitionForm({ onSubmit, isSubmitting }: Record<string, unknown>) {
   const [formData, setFormData] = useState({
     recognizedEmployeeId: '',
     reason: '',

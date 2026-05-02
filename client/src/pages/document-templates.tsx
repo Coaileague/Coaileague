@@ -54,8 +54,8 @@ interface Template {
   category: string;
   contentType: string;
   contentBody: string | null;
-  mergeFields: any;
-  signatureFields: any;
+  mergeFields: Record<string, unknown>[];
+  signatureFields: Record<string, unknown>[];
   requiresCountersign: boolean;
   autoSendOnEvent: string | null;
   expirationDays: number | null;

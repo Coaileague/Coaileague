@@ -72,7 +72,7 @@ async function getQuickBooksClient(workspaceId: string): Promise<any | null> {
  * Make authenticated request to QuickBooks API
  */
 async function qbRequest(
-  client: any,
+  client: Record<string, unknown>,
   method: string,
   endpoint: string,
   body?: unknown

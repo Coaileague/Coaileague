@@ -98,7 +98,7 @@ class TrinityRecognitionEngine {
   }
 
   /** TIER 1: Send immediately — DM or team broadcast */
-  private async deliverTier1(m: DetectedMilestone, template: any, message: string): Promise<void> {
+  private async deliverTier1(m: DetectedMilestone, template: Record<string, unknown>, message: string): Promise<void> {
     const { rows: emp } = await typedPool(`
       SELECT user_id, workspace_id FROM employees WHERE id = $1
     `, [m.employeeId]);
@@ -130,7 +130,7 @@ class TrinityRecognitionEngine {
   }
 
   /** TIER 2/3/4: Queue for human approval */
-  private async queueForApproval(m: DetectedMilestone, template: any, message: string, role: 'supervisor' | 'manager' | 'owner'): Promise<void> {
+  private async queueForApproval(m: DetectedMilestone, template: Record<string, unknown>, message: string, role: 'supervisor' | 'manager' | 'owner'): Promise<void> {
     // CATEGORY C — Raw SQL retained: ORDER BY | Tables: workspace_members | Verified: 2026-03-23
     const { rows: target } = await typedPool(`
       SELECT user_id FROM workspace_members

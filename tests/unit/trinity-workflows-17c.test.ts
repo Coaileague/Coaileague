@@ -183,12 +183,12 @@ import { logActionAudit, type ActionAuditInput } from '../../server/services/ai-
 // captures the row that the helper *would* persist.
 import * as dbModule from '../../server/db';
 
-interface CapturedInsert { table: Record<string, unknown>; values: any }
+interface CapturedInsert { table: Record<string, unknown>; values: Record<string, unknown> }
 function installInsertCapture(): { rows: CapturedInsert[]; restore: () => void } {
   const original = (dbModule as Record<string, unknown>).db.insert;
   const rows: CapturedInsert[] = [];
   (dbModule as Record<string, unknown>).db.insert = (table: Record<string, unknown>) => ({
-    values: async (values: any) => {
+    values: async (values: Record<string, unknown>) => {
       rows.push({ table, values });
       return undefined;
     },
@@ -419,7 +419,7 @@ describe('Phase 17C / Audit 3 — amount threshold enforced by billing.invoice_c
     const originalInsert = (liveDb as Record<string, unknown>).insert;
     let capturedInsert: unknown = null;
     (liveDb as Record<string, unknown>).insert = (table: Record<string, unknown>) => ({
-      values: (vals: any) => ({
+      values: (vals: Record<string, unknown>) => ({
         returning: async () => {
           capturedInsert = { table, vals };
           return [{ id: 'inv-new', ...vals }];

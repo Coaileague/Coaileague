@@ -174,7 +174,7 @@ function getRoleDot(workspaceRole: string | null | undefined, isArmed: boolean |
     isAnyMutationPending: boolean;
     inviteMutation: { mutate: (data: unknown) => void; isPending: boolean };
     approveMutation: { mutate: (data: unknown) => void; isPending: boolean };
-    deleteMutation: any;
+    deleteMutation: { mutate: (...args: unknown[]) => void; isPending: boolean };
     isSelected: boolean;
     onToggleSelect: (id: string) => void;
   }) => {

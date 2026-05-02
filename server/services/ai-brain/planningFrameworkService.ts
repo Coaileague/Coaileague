@@ -609,7 +609,7 @@ Respond as JSON:
   private buildPlanFromResponse(
     planId: string,
     request: PlanningRequest,
-    parsed: any,
+    parsed: Record<string, unknown>,
     framework: PlanningRequest['framework']
   ): ExecutionPlan {
     const steps: PlanStep[] = (parsed.steps || []).map((s: unknown, i: number) => ({

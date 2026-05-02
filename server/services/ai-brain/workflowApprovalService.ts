@@ -626,7 +626,7 @@ class WorkflowApprovalService {
 
   private assessRiskLevel(
     finding: GapFinding,
-    proposedFix: { affectedFiles: string[]; changes: any }
+    proposedFix: { affectedFiles: string[]; changes: Record<string, unknown> }
   ): string {
     // Base on severity
     if (finding.severity === 'critical' || finding.severity === 'blocker') {
@@ -677,7 +677,7 @@ class WorkflowApprovalService {
 
   private generateEndUserSummary(
     finding: GapFinding,
-    proposedFix: { affectedFiles: string[]; changes: any }
+    proposedFix: { affectedFiles: string[]; changes: Record<string, unknown> }
   ): string {
     const action = finding.gapType.includes('error') ? 'fix an error' : 'improve code';
     const scope = proposedFix.affectedFiles.length === 1 

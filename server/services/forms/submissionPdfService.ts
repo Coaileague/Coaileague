@@ -127,7 +127,7 @@ function renderSubmissionMeta(
 function renderField(
   doc: PDFKit.PDFDocument,
   field: TemplateField,
-  rawValue: any,
+  rawValue: unknown,
   index: number,
 ) {
   if (field.id.startsWith(LABEL_HIDDEN_PREFIX)) return;
@@ -222,7 +222,7 @@ function renderAcknowledgmentBlock(
 function renderSignatureBlock(
   doc: PDFKit.PDFDocument,
   field: TemplateField,
-  rawValue: any,
+  rawValue: unknown,
   signer: SubmissionSignerInfo,
 ) {
   // Force onto its own page if not enough room

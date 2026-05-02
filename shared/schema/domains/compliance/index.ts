@@ -114,7 +114,7 @@ export const companyPolicies = pgTable("company_policies", {
   
   // Versioning
   version: varchar("version").notNull(), // '1.0', '1.1', '2.0'
-  previousVersionId: varchar("previous_version_id").references((): any => companyPolicies.id),
+  previousVersionId: varchar("previous_version_id").references((): unknown => companyPolicies.id),
   
   // Status
   status: policyStatusEnum("status").default("draft"),

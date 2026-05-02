@@ -242,7 +242,7 @@ Respond with JSON containing: { valid: boolean, warnings: string[], recommendati
     }
 
     // 7. Transform solver output into shift objects with full metadata
-    const generatedShifts = solvedSchedule.assignments.map((assignment: unknown): any => {
+    const generatedShifts = solvedSchedule.assignments.map((assignment: unknown): Record<string, unknown> => {
       const emp = employeeIntelligence.find(e => e.employeeId === assignment.employeeId);
       const shiftReq = request.shiftRequirements[assignment.shiftIndex];
       const shiftHours = (shiftReq.endTime.getTime() - shiftReq.startTime.getTime()) / (1000 * 60 * 60);

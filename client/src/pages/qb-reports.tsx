@@ -617,7 +617,7 @@ const REPORT_COMPONENTS: Record<string, unknown> = {
   "workers-comp": WorkersCompReport,
 };
 
-const Icon = ({ name, className }: any) => <span className={className}>●</span>;
+const Icon = ({ name: _name, className }: { name: string; className?: string }) => <span className={className}>●</span>;
 
 export default function QBReports() {
   const { toast } = useToast();

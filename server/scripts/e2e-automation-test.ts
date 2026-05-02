@@ -19,8 +19,8 @@ import { EmailService } from '../services/emailService';
 interface TestResult {
   name: string;
   passed: boolean;
-  expected: any;
-  actual: any;
+  expected: unknown;
+  actual: unknown;
   details?: string;
 }
 
@@ -40,7 +40,7 @@ function logSubHeader(title: string): void {
   console.log('─'.repeat(50));
 }
 
-function assertEqual(name: string, expected: any, actual: any, tolerance: number = 0.01): boolean {
+function assertEqual(name: string, expected: unknown, actual: unknown, tolerance: number = 0.01): boolean {
   totalTests++;
   let passed = false;
   

@@ -368,6 +368,8 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
   
   const { data: notificationsData, isLoading: notificationsLoading, refetch } = useQuery<NotificationsData>({
     queryKey: ["/api/notifications/combined"],
+    enabled: true,
+    staleTime: 30_000,
     refetchInterval: 30000,
   });
 

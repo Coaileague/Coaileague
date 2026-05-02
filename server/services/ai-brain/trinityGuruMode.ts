@@ -649,7 +649,7 @@ class TrinityGuruMode {
   // 3. SAFE SELF-EVOLUTION FRAMEWORK
   // -------------------------------------------------------------------------
   
-  async proposeEvolution(parameter: string, currentValue: any, proposedValue: unknown): Promise<EvolutionImprovement | null> {
+  async proposeEvolution(parameter: string, currentValue: unknown, proposedValue: unknown): Promise<EvolutionImprovement | null> {
     const rule = EVOLUTION_RULES.find(r => r.parameter === parameter);
     if (!rule) {
       log.info(`[Evolution] Unknown parameter: ${parameter}`);

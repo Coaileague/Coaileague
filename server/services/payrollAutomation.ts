@@ -1939,7 +1939,7 @@ export interface PayrollEntryExecutionResult {
 }
 
 export async function executePayrollEntry(
-  entry: any,
+  entry: Record<string, unknown>,
   workspaceId: string,
   hasStripeConnect: boolean
 ): Promise<PayrollEntryExecutionResult> {

@@ -357,7 +357,7 @@ export function registerChangePropagationActions() {
         lineItemsScanned: items.length,
         lineItemsUpdated: items.filter(i => Math.abs(parseFloat(String(i.unitPrice || '0')) - oldRateNum) <= rateTolerance).length,
         newTotal: invoiceRunningTotal.toFixed(2),
-        impact: anyItemUpdated
+        impact: boolean
           ? `Line items recalculated at new rate $${newRate}/hr. New total: $${invoiceRunningTotal.toFixed(2)}`
           : 'No line items matched old rate — manual review recommended',
         dueDate: (inv as Record<string, unknown>).dueDate,

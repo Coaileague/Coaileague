@@ -113,6 +113,8 @@ export function useWorkflowProposals() {
   // Fetch invoice proposals
   const invoiceQuery = useQuery<InvoiceProposal[]>({
     queryKey: ['/api/invoices/proposals'],
+    enabled: true,
+    staleTime: 30_000,
   });
   
   // Fetch payroll proposals

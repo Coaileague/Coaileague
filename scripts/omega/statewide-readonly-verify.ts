@@ -33,7 +33,7 @@ async function run() {
   console.log('═══════════════════════════════════════════════════\n');
 
   // ── Connect to DB ─────────────────────────────────────────────────────────
-  let db: any;
+  let db: unknown;
   try {
     const dbModule = await import('../../server/db');
     db = dbModule.db;

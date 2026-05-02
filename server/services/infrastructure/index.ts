@@ -300,12 +300,12 @@ export async function getInfrastructureHealth(): Promise<{
     distributedTracing: { status: string; stats: Record<string,unknown> };
     connectionPooling: { status: string; stats: Record<string,unknown> };
     rateLimiting: { status: string; stats: Record<string,unknown> };
-    healthCheck: { status: string; aggregate: any };
-    metrics: { status: string; overview: any };
+    healthCheck: { status: string; aggregate: Record<string, unknown> };
+    metrics: { status: string; overview: Record<string, unknown> };
   };
   q3: {
     circuitBreaker: { status: string; stats: Record<string,unknown> };
-    slaMonitoring: { status: string; compliance: any };
+    slaMonitoring: { status: string; compliance: Record<string, unknown> };
   };
   q4: {
     disasterRecovery: { status: string; stats: Record<string,unknown> };

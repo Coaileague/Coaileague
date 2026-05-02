@@ -169,7 +169,7 @@ export default function SalesCRM() {
   });
 
   const updateLeadMutation = useMutation({
-    mutationFn: ({ id, ...data }: any) => apiRequest("PATCH", `/api/crm/${id}`, data),
+    mutationFn: ({  id, ...data  }: Record<string, unknown>) => apiRequest("PATCH", `/api/crm/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm"] });
       toast({ title: "Lead updated" });

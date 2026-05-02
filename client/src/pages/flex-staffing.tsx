@@ -69,7 +69,7 @@ interface GigApplication {
   user?: { id: string; firstName: string; lastName: string; email: string };
 }
 
-function ContractorCard({ contractor, onView }: { contractor: { contractor: FlexContractor; user: any }; onView: () => void }) {
+function ContractorCard({ contractor, onView }: { contractor: { contractor: FlexContractor; user: Record<string, unknown> }; onView: () => void }) {
   const c = contractor.contractor;
   const u = contractor.user;
   const name = u?.firstName && u?.lastName ? `${u.firstName} ${u.lastName}` : u?.email || "Unknown";

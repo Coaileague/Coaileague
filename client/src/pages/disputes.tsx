@@ -130,7 +130,7 @@ export default function DisputesPage() {
     createMutation.mutate(data);
   };
 
-  const getDsBadgeColor = (status: string | null): any => {
+  const getDsBadgeColor = (status: string | null): string => {
     switch (status) {
       case 'pending': return 'warning';
       case 'under_review': return 'info';
@@ -337,7 +337,7 @@ function DisputeDetailDialog({
   isOpen: boolean; 
   onClose: () => void;
   isHROrManager: boolean;
-  user: any;
+  user: Record<string, unknown>;
 }) {
   const { toast } = useToast();
   const [resolveFormOpen, setResolveFormOpen] = useState(false);

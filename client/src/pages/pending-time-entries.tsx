@@ -73,6 +73,8 @@ export default function PendingTimeEntries() {
   // Fetch all employees for filter dropdown
   const { data: allEmployees = [] } = useQuery<{ data: Employee[] }, Error, Employee[]>({
     queryKey: ['/api/employees'],
+    enabled: true,
+    staleTime: 30_000,
     select: (res) => res?.data ?? [],
   });
 

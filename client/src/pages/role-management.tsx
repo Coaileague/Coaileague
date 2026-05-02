@@ -52,6 +52,8 @@ export default function RoleManagement() {
   // Fetch all employees in workspace
   const { data: employees = [], isLoading } = useQuery<{ data: Employee[] }, Error, Employee[]>({
     queryKey: ['/api/employees'],
+    enabled: true,
+    staleTime: 30_000,
     select: (res) => res?.data ?? [],
   });
 

@@ -21,7 +21,7 @@ const C = {
 };
 
 interface PdfOptions {
-  session: { id: string; workspaceId: string; currentStep: number; completedSteps: any };
+  session: { id: string; workspaceId: string; currentStep: number; completedSteps: string[] };
   workspaceId: string;
   forms: {
     f1: unknown; f2: unknown; f3: unknown; f4: unknown; f5: unknown;

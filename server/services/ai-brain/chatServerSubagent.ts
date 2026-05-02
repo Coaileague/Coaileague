@@ -118,7 +118,7 @@ class ChatServerHealthManager {
   private issues: Map<string, ChatServerIssue> = new Map();
   private healingActions: Map<string, SelfHealingAction> = new Map();
   private uxSuggestions: Map<string, UXImprovement> = new Map();
-  private lastKnownGoodState: any = null;
+  private lastKnownGoodState: unknown = null;
   private diagnosticInterval: NodeJS.Timeout | null = null;
   private selfAwareness: ChatServerSelfAwareness;
 

@@ -252,7 +252,7 @@ async function chaosSemanticAiTriage(workspaceId: string): Promise<ChaosTestRow>
     // Dynamic import via Function() so TypeScript doesn't try to resolve
     // the optional Trinity staffing-intake module at compile time.
     const dynImport = new Function('p', 'return import(p)') as (p: string) => Promise<unknown>;
-    const mod: any = await dynImport('../../trinity/staffingIntake').catch(() => null);
+    const mod: Record<string, unknown> = await dynImport('../../trinity/staffingIntake').catch(() => null);
     if (mod?.parseStaffingRequest) {
       const out = await mod.parseStaffingRequest({ workspaceId, body: sample });
       parsedLevel = out?.armedLevel ?? out?.level ?? 'unknown';

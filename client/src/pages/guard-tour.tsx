@@ -644,7 +644,7 @@ function PatrolReport({ tourId }: { tourId: string }) {
   );
 }
 
-function TourDetail({ tour, onBack }: { tour: any; onBack: () => void }) {
+function TourDetail({ tour, onBack }: { tour: Record<string, unknown>; onBack: () => void }) {
   const { user } = useAuth();
   const workspaceId = (user as Record<string,unknown>)?.workspaceId;
   const [activeTab, setActiveTab] = useState("checkpoints");
@@ -724,7 +724,7 @@ function TourDetail({ tour, onBack }: { tour: any; onBack: () => void }) {
   );
 }
 
-function TourCard({ tour, onEdit, onView }: { tour: any; onEdit: (t) => void; onView: (t) => void }) {
+function TourCard({ tour, onEdit, onView }: { tour: Record<string, unknown>; onEdit: (t) => void; onView: (t) => void }) {
   const cfg = STATUS_CONFIG[tour.status] || STATUS_CONFIG.active;
   const StatusIcon = cfg.icon;
   return (

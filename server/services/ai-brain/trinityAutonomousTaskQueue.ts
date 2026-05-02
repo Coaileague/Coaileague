@@ -247,7 +247,7 @@ class TrinityAutonomousTaskQueue {
 
   private buildEscalationReport(
     taskId: string,
-    taskData: any,
+    taskData: Record<string, unknown>,
     attemptLog: AttemptRecord[],
     lastFailureClass: FailureClass
   ): HumanEscalationReport {

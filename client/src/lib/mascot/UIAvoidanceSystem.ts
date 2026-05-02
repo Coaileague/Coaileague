@@ -6,4 +6,4 @@ export type UIElementType = any;
 export type SafeZone = any;
 export type MascotPosition = any;
 export type AvoidanceConfig = any;
-export const uiAvoidanceSystem = (..._args: unknown[]): any => {};
+export const uiAvoidanceSystem = (..._args: unknown[]): void => {};

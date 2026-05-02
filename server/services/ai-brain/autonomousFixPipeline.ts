@@ -774,7 +774,7 @@ class AutonomousFixPipelineService {
       findingId,
       finding.description,
       finding.filePath ? [finding.filePath] : [],
-      async (attempt, suggestedApproach, revisedPatches) => {
+      async (attempt: unknown, suggestedApproach: unknown, revisedPatches: unknown) => {
         // Rollback previous attempt if it exists
         if (lastOperationId) {
           await trinityCodeOps.rollbackOperation(lastOperationId);

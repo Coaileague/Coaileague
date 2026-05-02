@@ -5,7 +5,7 @@ import { employerRatingsService } from '../services/employerRatingsService';
 import { compositeScoresService } from '../services/compositeScoresService';
 import '../types';
 
-export function registerRatingsRoutes(app: Express, requireAuth: any, requireManager: any, readLimiter: unknown) {
+export function registerRatingsRoutes(app: Express, requireAuth: (req: unknown, res: unknown, next: unknown) => void, requireManager: (req: unknown, res: unknown, next: unknown) => void, readLimiter: unknown) {
   const ratingsRouter = Router();
 
   ratingsRouter.get("/employer", requireAuth, readLimiter, async (req: Request, res: Response) => {

@@ -413,7 +413,7 @@ Provide a JSON response with:
    * Check schema compliance
    */
   private checkSchemaCompliance(
-    output: any,
+    output: unknown,
     schema: Record<string, unknown>
   ): ReflectionIssue[] {
     const issues: ReflectionIssue[] = [];

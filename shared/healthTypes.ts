@@ -67,6 +67,6 @@ export interface ServiceIncidentReportPayload {
     url?: string;
     userAgent?: string;
     viewport?: { width: number; height: number };
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
