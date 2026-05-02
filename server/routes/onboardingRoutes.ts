@@ -16,7 +16,7 @@
 
 import { sanitizeError } from '../middleware/errorHandler';
 import { AuthenticatedRequest } from '../rbac';
-import { Router, Response} from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { onboardingPipelineService, type PipelineStatus } from '../services/onboardingPipelineService';
 import { isFeatureEnabled } from '@shared/platformConfig';
 import { PLATFORM } from '../config/platformConfig';
@@ -44,7 +44,7 @@ function releaseBulkImportLock(workspaceId: string) {
   bulkImportLocks.delete(workspaceId);
 }
 
-const ensureOnboardingEnabled = (req: AuthenticatedRequest, res: Response, next: unknown) => {
+const ensureOnboardingEnabled = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   if (!isFeatureEnabled('enableOnboardingPipeline')) {
     return res.status(403).json({ 
       error: 'Onboarding pipeline feature is not enabled',
@@ -54,7 +54,7 @@ const ensureOnboardingEnabled = (req: AuthenticatedRequest, res: Response, next:
   next();
 };
 
-const requireWorkspace = (req: AuthenticatedRequest, res: Response, next: unknown) => {
+const requireWorkspace = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const workspaceId = req.workspaceId || req.user?.workspaceId || req.session?.workspaceId;
   if (!workspaceId) {
     return res.status(403).json({ error: 'No workspace selected' });

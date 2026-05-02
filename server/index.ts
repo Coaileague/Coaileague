@@ -1924,7 +1924,7 @@ self.addEventListener('activate', async () => {
     // Serve static assets (JS, CSS, images) — skips /api/* routes automatically
     app.use(expressStatic(distPath, { index: false }));
     // SPA catch-all: serve index.html for all non-API navigation requests
-    app.get('*', (req: unknown, res: unknown, next: unknown) => {
+    app.get('*', (req: Request, res: Response, next: NextFunction) => {
       if (req.path.startsWith('/api/') || req.path.startsWith('/ws/')) {
         return next();
       }
@@ -1938,7 +1938,7 @@ self.addEventListener('activate', async () => {
     log.info('[Startup] Early static serving registered — SPA routes handled before API middleware');
   } else {
     // dist/public not built yet — serve placeholder for all non-API routes
-    app.get('*', (req: unknown, res: unknown, next: unknown) => {
+    app.get('*', (req: Request, res: Response, next: NextFunction) => {
       if (req.path.startsWith('/api/') || req.path.startsWith('/ws/')) return next();
       res.status(200).send('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>CoAIleague</title></head><body style="margin:0;background:#0f172a;color:#e2e8f0;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui"><div style="text-align:center"><h1 style="color:#7c3aed">CoAIleague</h1><p>Deploying... <button onclick="location.reload()" style="background:#7c3aed;color:white;border:none;padding:8px 20px;border-radius:6px;cursor:pointer">Reload</button></p></div><script>setTimeout(()=>location.reload(),15000)</script></body></html>');
     });

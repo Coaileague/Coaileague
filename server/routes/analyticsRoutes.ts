@@ -1,5 +1,5 @@
 import { sanitizeError } from '../middleware/errorHandler';
-import { Router } from "express";
+import { Router, type Response, type NextFunction } from "express";
 import { db, pool } from "../db";
 import { z } from "zod";
 import os from "os";
@@ -39,7 +39,7 @@ const ANALYTICS_TIER_OVERRIDES: Record<string, SubscriptionTier> = {
 };
 const DEFAULT_ANALYTICS_TIER: SubscriptionTier = 'professional';
 
-router.use((req: AuthenticatedRequest, res: unknown, next: unknown) => {
+router.use((req: AuthenticatedRequest, res: unknown, next: NextFunction) => {
   const path = req.path;
   const requiredTier: SubscriptionTier = ANALYTICS_TIER_OVERRIDES[path] ?? DEFAULT_ANALYTICS_TIER;
   return requirePlan(requiredTier)(req, res, next);
