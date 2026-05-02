@@ -66,7 +66,7 @@ import { z } from "zod";
 import { shiftChatroomWorkflowService } from "../services/shiftChatroomWorkflowService";
 import { approveShift, rejectShift, getPendingShifts, bulkApproveShifts, getApprovalStats } from "../services/shiftApprovalService";
 import { shiftRemindersService } from "../services/shiftRemindersService";
-import * as notificationHelpers from "../notifications";
+import * as notificationHelpers from '../notifications';
 import { sendShiftAssignmentEmail } from "../services/emailCore";
 import { employeeDocumentOnboardingService } from "../services/employeeDocumentOnboardingService";
 import { checkSchedulingEligibility, checkRequiredCertifications } from "../services/compliance/trinityComplianceEngine";

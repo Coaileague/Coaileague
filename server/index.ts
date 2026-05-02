@@ -165,7 +165,7 @@ async function cleanupAndVerifyPort(port: number): Promise<boolean> {
 import { ensureWorkspaceAccess } from './middleware/workspaceScope';
 import { requireAuth } from './rbac';
 import { scheduleNonBlocking } from './lib/scheduleNonBlocking';
-import { initializeNotifications } from "./services/notificationInit";
+import { initializeNotifications } from "./services/notificationBootstrap";
 import { aiBrainMasterOrchestrator } from "./services/ai-brain/aiBrainMasterOrchestrator";
 import { platformEventBus } from "./services/platformEventBus";
 // handlePlatformChangeEvent import removed - no longer used as subscriber (dual-path dedup fix)

@@ -48,7 +48,7 @@ import {
   documentVault,
   clientBillingSettings,
 } from '@shared/schema';
-import * as notificationHelpers from "../notifications";
+import * as notificationHelpers from '../notifications';
 import { format } from "date-fns";
 import PDFDocument from "pdfkit";
 

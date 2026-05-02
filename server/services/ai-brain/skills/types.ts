@@ -1,4 +1,4 @@
-import type { AuthenticatedRequest } from '../../../rbac';
+import type { AuthenticatedRequest } from '../../rbac';
 import type { Response } from 'express';
 
 /**

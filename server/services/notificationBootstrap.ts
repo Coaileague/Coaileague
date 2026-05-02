@@ -6,7 +6,7 @@ import aiNotificationService from "./aiNotificationService"; // For maintenance 
 import { typedExec } from '../lib/typedSql';
 import { createLogger } from '../lib/logger';
 import { PLATFORM_WORKSPACE_ID } from './billing/billingConstants';
-const log = createLogger('notificationInit');
+const log = createLogger('notificationBootstrap');
 
 
 const INITIAL_UPDATES = [

@@ -9,7 +9,7 @@ import {
 import { sql, eq, and, gte, lte, inArray, isNull, count } from "drizzle-orm";
 import { requireAuth, requireManager, type AuthenticatedRequest } from "../rbac";
 import { storage } from "../storage";
-import * as notificationHelpers from "../notifications";
+import * as notificationHelpers from '../notifications';
 import { broadcastToWorkspace, broadcastNotificationToUser } from "../websocket";
 import { calculateInvoiceLineItem, sumFinancialValues, toFinancialString, formatCurrency } from '../services/financialCalculator';
 import { format } from 'date-fns';

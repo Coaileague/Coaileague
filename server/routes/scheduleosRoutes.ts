@@ -21,7 +21,7 @@ import { sql, eq, and, or, isNull, isNotNull, inArray, desc, gte, lte } from "dr
 import { z } from "zod";
 import { stripe } from "../routes";
 import { isStripeConfigured } from "../services/billing/stripeClient";
-import * as notificationHelpers from "../notifications";
+import * as notificationHelpers from '../notifications';
 import { createLogger } from '../lib/logger';
 import type { WorkspaceWithExtras } from '@shared/types/domainExtensions';
 const log = createLogger('ScheduleosRoutes');
