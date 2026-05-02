@@ -33,7 +33,7 @@ function sraRequest(method: string, path: string, body?: unknown) {
     method,
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     credentials: "include",
-    body: body ? JSON.stringify(body) : undefined,
+    body: body ? JSON.stringify(body) : null,
   }).then(r => r.json());
 }
 

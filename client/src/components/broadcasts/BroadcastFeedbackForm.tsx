@@ -129,7 +129,7 @@ export function BroadcastFeedbackForm({
         content: data.content,
         category: data.category,
         allowFollowup: data.allowFollowup,
-        contactMethod: data.allowFollowup ? data.contactMethod : undefined,
+        contactMethod: data.allowFollowup ? data.contactMethod : null,
       });
       onOpenChange(false);
       form.reset();

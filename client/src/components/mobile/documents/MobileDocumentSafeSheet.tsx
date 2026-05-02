@@ -74,8 +74,8 @@ export function MobileDocumentSafeSheet({
     () => [
       "/api/document-vault",
       {
-        search: search || undefined,
-        category: category || undefined,
+        search: search || null,
+        category: category || null,
         limit: PAGE_SIZE,
         offset: 0,
       },

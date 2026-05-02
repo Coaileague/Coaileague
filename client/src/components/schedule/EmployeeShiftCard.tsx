@@ -117,7 +117,7 @@ export const EmployeeShiftCard = memo(function EmployeeShiftCard({
     <Card 
       className="overflow-hidden touch-manipulation" 
       data-testid={`employee-card-${employee.id}`}
-      style={positionCatColor ? { borderLeftWidth: '4px', borderLeftColor: positionCatColor.color, borderLeftStyle: 'solid' } : undefined}
+      style={positionCatColor ? { borderLeftWidth: '4px', borderLeftColor: positionCatColor.color, borderLeftStyle: 'solid' } : null}
     >
       <CardHeader className="bg-muted/50 border-b p-2 sm:p-3">
         <div className="flex items-center justify-between gap-2">
@@ -183,11 +183,11 @@ export const EmployeeShiftCard = memo(function EmployeeShiftCard({
               key={shift.id}
               shift={shift}
               role={role}
-              onView={onViewShift ? () => onViewShift(shift) : undefined}
-              onEdit={canEdit && onEditShift ? () => onEditShift(shift) : undefined}
-              onDelete={canEdit && onDeleteShift ? () => onDeleteShift(shift) : undefined}
-              onDuplicate={canEdit && onDuplicateShift ? () => onDuplicateShift(shift) : undefined}
-              onSwap={onSwapShift ? () => onSwapShift(shift) : undefined}
+              onView={onViewShift ? () => onViewShift(shift) : null}
+              onEdit={canEdit && onEditShift ? () => onEditShift(shift) : null}
+              onDelete={canEdit && onDeleteShift ? () => onDeleteShift(shift) : null}
+              onDuplicate={canEdit && onDuplicateShift ? () => onDuplicateShift(shift) : null}
+              onSwap={onSwapShift ? () => onSwapShift(shift) : null}
               canEdit={canEdit}
               showBreakCompliance={showBreakCompliance}
             />
@@ -244,7 +244,7 @@ function ShiftBlock({ shift, role, onView, onEdit, onDelete, onDuplicate, onSwap
     officerId: shift.employeeId,
     isPublished: shift.status === 'published',
     clockedIn: (shift as Record<string,unknown>).clockedIn || false,
-    status: shift.status || undefined,
+    status: shift.status || null,
   });
   const isActive = shiftStatus.key === 'active';
   const isUnfilled = shiftStatus.key === 'unfilled';

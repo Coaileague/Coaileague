@@ -486,7 +486,7 @@ export function UniversalFormRenderer({
       const res = await apiRequest("POST", "/api/document-forms/submit", {
         templateId,
         formData: payload.formData,
-        gpsData: payload.gpsData ?? undefined,
+        gpsData: payload.gpsData ?? null,
       });
       return res.json();
     },
@@ -592,7 +592,7 @@ export function UniversalFormRenderer({
           )}
         </div>
         <VerificationStamp
-          data={buildVerificationData({ gpsData: gpsData, documentId: submissionId ?? undefined })}
+          data={buildVerificationData({ gpsData: gpsData, documentId: submissionId ?? null })}
         />
         {onCancel && (
           <Button variant="outline" onClick={onCancel} data-testid="button-close-after-submit">

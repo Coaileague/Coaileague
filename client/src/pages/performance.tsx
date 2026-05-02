@@ -650,9 +650,9 @@ function CreateDisciplinaryDialog({ open, onClose }: { open: boolean; onClose: (
         ...data,
         evidenceUrls: data.evidenceUrls
           ? data.evidenceUrls.split(',').map((u) => u.trim()).filter(Boolean)
-          : undefined,
-        effectiveDate: data.effectiveDate || undefined,
-        expiryDate: data.expiryDate || undefined,
+          : null,
+        effectiveDate: data.effectiveDate || null,
+        expiryDate: data.expiryDate || null,
       };
       return apiRequest('POST', '/api/performance/disciplinary', payload);
     },
@@ -898,7 +898,7 @@ function CreateReviewDialog({ open, onClose }: { open: boolean; onClose: () => v
                           min={1}
                           max={5}
                           {...field}
-                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
                           value={field.value ?? ''}
                           data-testid={`input-${name}`}
                         />

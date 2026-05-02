@@ -459,7 +459,7 @@ export function toSubagentExecutionResult(task: TrinityTask): {
     error: task.output?.success === false ? {
       code: 'TASK_FAILED',
       message: task.escalationReason || 'Task failed',
-    } : undefined,
+    } : null,
     durationMs: endTime - startTime,
     confidenceScore: task.overallConfidence,
   };

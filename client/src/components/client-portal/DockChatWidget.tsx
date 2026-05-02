@@ -199,7 +199,7 @@ export default function DockChatWidget({
       const result = await apiRequest("POST", "/api/clients/dockchat/message", {
         sessionId,
         message: msg,
-        evidenceText: evidenceText || undefined,
+        evidenceText: evidenceText || null,
       });
 
       addBotMessage(result.message);

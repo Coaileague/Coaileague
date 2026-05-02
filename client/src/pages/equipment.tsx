@@ -460,7 +460,7 @@ function AssignEquipmentDialog({ item, onClose }: { item: { id: string; name: st
             equipmentItemId: item.id,
             employeeId,
             conditionAtCheckout,
-            expectedReturnDate: expectedReturnDate || undefined,
+            expectedReturnDate: expectedReturnDate || null,
             notes,
             workspaceId,
           })}

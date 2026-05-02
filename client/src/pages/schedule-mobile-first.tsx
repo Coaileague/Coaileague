@@ -77,7 +77,7 @@ function getShiftStatusStyling(shift: Shift): {
     officerId: shift.employeeId,
     isPublished: shift.status === 'published' || shift.status === 'scheduled',
     clockedIn: (shift as Record<string,unknown>).clockedIn || false,
-    status: shift.status || undefined,
+    status: shift.status || null,
   });
   
   // Map centralized config to component styling
@@ -1301,9 +1301,9 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
         canEdit={canEdit}
         onEdit={handleEditShift}
         onDelete={handleDeleteShift}
-        onClaimShift={currentEmployee?.id ? handleClaimShift : undefined}
-        onDuplicate={canEdit ? handleDuplicateShift : undefined}
-        onQuickDuplicate={canEdit ? handleQuickDuplicate : undefined}
+        onClaimShift={currentEmployee?.id ? handleClaimShift : null}
+        onDuplicate={canEdit ? handleDuplicateShift : null}
+        onQuickDuplicate={canEdit ? handleQuickDuplicate : null}
         quickDuplicatePending={isQuickDuplicating}
         onRequestSwap={handleRequestSwap}
       />

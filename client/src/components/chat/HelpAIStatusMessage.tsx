@@ -114,7 +114,7 @@ export function HelpAIStatusMessage({
             fontSize: 11,
             fontWeight: 700,
             color: colors.primary,
-            animation: !isComplete ? "coai-pulse-glow 2s ease-in-out infinite" : undefined,
+            animation: !isComplete ? "coai-pulse-glow 2s ease-in-out infinite" : null,
             boxShadow: !isComplete ? `0 0 8px ${colors.primary}44` : "none",
             transition: "all 0.4s",
           }}
@@ -139,7 +139,7 @@ export function HelpAIStatusMessage({
           boxShadow: !isComplete ? `inset 0 0 0 1px ${colors.primary}22` : "none",
           animation: state === "critical" && !isComplete
             ? "coai-critical-pulse 1s infinite"
-            : undefined,
+            : null,
         }}
       >
         {/* Shimmer sweep overlay */}

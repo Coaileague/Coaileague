@@ -210,7 +210,7 @@ export default function DocumentTemplatesPage() {
   const [form, setForm] = useState({ ...EMPTY_FORM });
 
   const { data, isLoading, isError, refetch } = useQuery<{ items: Template[]; total: number }>({
-    queryKey: ["/api/document-templates", { category: categoryFilter === "all" ? undefined : categoryFilter, search: searchTerm || undefined }],
+    queryKey: ["/api/document-templates", { category: categoryFilter === "all" ? undefined : categoryFilter, search: searchTerm || null }],
   });
 
   const createMutation = useMutation({

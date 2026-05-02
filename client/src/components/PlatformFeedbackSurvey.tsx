@@ -62,7 +62,7 @@ export function PlatformFeedbackSurvey({ open, onClose, workspaceId }: Props) {
   const questions: Question[] = survey?.questions || [];
   const current = questions[step];
   const progress = questions.length > 0 ? ((step + 1) / questions.length) * 100 : 0;
-  const answer = current ? answers[current.id] : undefined;
+  const answer = current ? answers[current.id] : null;
   const canAdvance = !current?.required || (answer !== undefined && answer !== "");
 
   function handleClose() {

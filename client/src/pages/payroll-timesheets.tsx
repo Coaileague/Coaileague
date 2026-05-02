@@ -416,7 +416,7 @@ function CreateTimesheetModal({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ employeeId, periodStart, periodEnd, notes: notes || undefined }),
+        body: JSON.stringify({ employeeId, periodStart, periodEnd, notes: notes || null }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -591,7 +591,7 @@ function TimesheetDetailView({
     mutationFn: async () => {
       const entries = days.map((d) => {
         const key = format(d, "yyyy-MM-dd");
-        return { date: key, hours: Number(hourMap[key]) || 0, notes: noteMap[key] || undefined };
+        return { date: key, hours: Number(hourMap[key]) || 0, notes: noteMap[key] || null };
       });
       const res = await fetch(`/api/timesheets/${timesheetId}/entries`, {
         method: "PUT",

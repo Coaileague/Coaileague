@@ -355,7 +355,7 @@ export function TrinityThoughtBar({
     <div
       className={cn("trinity-thought-bar relative flex-shrink-0 overflow-hidden", className)}
       style={{
-        height: undefined, // set via CSS classes
+        height: null, // set via CSS classes
         backgroundColor: "#0F172A",
         borderBottom: `1px solid ${(colors?.border ?? TRINITY_FALLBACK_COLORS.border)}`,
       }}
@@ -602,8 +602,8 @@ function BouncingDots({ color, active }: { color: string; active: boolean }) {
             borderRadius: "50%",
             backgroundColor: color,
             opacity: active ? 1 : 0.25,
-            animation: active ? "coai-bounce-dot 1.2s ease-in-out infinite" : undefined,
-            animationDelay: active ? `${i * 0.15}s` : undefined,
+            animation: active ? "coai-bounce-dot 1.2s ease-in-out infinite" : null,
+            animationDelay: active ? `${i * 0.15}s` : null,
           }}
         />
       ))}
@@ -640,7 +640,7 @@ function ThreadPills({
                 ? `${(colors?.primary ?? TRINITY_FALLBACK_COLORS.primary)}22`
                 : "transparent",
               color: isCrit ? "#FCA5A5" : isActive ? (colors?.text ?? TRINITY_FALLBACK_COLORS.text) : `${(colors?.text ?? TRINITY_FALLBACK_COLORS.text)}55`,
-              animation: isCrit ? "coai-critical-pulse 1s infinite" : undefined,
+              animation: isCrit ? "coai-critical-pulse 1s infinite" : null,
               whiteSpace: "nowrap",
             }}
             data-testid={`thread-pill-${t.name}`}

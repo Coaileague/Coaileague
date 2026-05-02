@@ -106,7 +106,7 @@ export function ScheduleFilters({
     const counts: Record<string, number> = {};
     POSITION_CATEGORIES.forEach(cat => {
       counts[cat.id] = employees.filter(emp => {
-        const pos = (emp as Record<string, unknown>).position ? getPositionById((emp as Record<string, unknown>).position) : undefined;
+        const pos = (emp as Record<string, unknown>).position ? getPositionById((emp as Record<string, unknown>).position) : null;
         return pos?.category === cat.id;
       }).length;
     });
@@ -116,7 +116,7 @@ export function ScheduleFilters({
   const armedCounts = useMemo(() => {
     let armed = 0, unarmed = 0;
     employees.forEach(emp => {
-      const pos = (emp as Record<string, unknown>).position ? getPositionById((emp as Record<string, unknown>).position) : undefined;
+      const pos = (emp as Record<string, unknown>).position ? getPositionById((emp as Record<string, unknown>).position) : null;
       if (pos?.armedStatus === 'armed') armed++;
       else if (pos?.armedStatus === 'unarmed') unarmed++;
     });
@@ -191,7 +191,7 @@ export function ScheduleFilters({
                     <Label 
                       htmlFor={`client-${client.id}`} 
                       className="text-sm flex-1 cursor-pointer break-words leading-tight"
-                      title={client.address || undefined}
+                      title={client.address || null}
                     >
                       {client.companyName || `${client.firstName} ${client.lastName}`.trim() || 'Unknown Client'}
                     </Label>

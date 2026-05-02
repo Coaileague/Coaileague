@@ -141,8 +141,8 @@ function AddLeadDialog({ onCreated }: { onCreated: () => void }) {
         </div>
         <Button data-testid="button-submit-lead" onClick={() => createMutation.mutate({
           ...form,
-          estimatedContractValue: form.estimatedContractValue ? parseFloat(form.estimatedContractValue) : undefined,
-          estimatedOfficersNeeded: form.estimatedOfficersNeeded ? parseInt(form.estimatedOfficersNeeded) : undefined,
+          estimatedContractValue: form.estimatedContractValue ? parseFloat(form.estimatedContractValue) : null,
+          estimatedOfficersNeeded: form.estimatedOfficersNeeded ? parseInt(form.estimatedOfficersNeeded) : null,
         })} disabled={!form.companyName || createMutation.isPending}>
           {createMutation.isPending ? "Creating..." : "Create Lead"}
         </Button>

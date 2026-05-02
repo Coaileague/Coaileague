@@ -208,7 +208,7 @@ function DemoTenantTab(): JSX.Element {
       setResult(r);
       toast({
         title: r.created ? "Demo tenant created" : "Demo tenant already exists",
-        description: r.workspaceName ? `Workspace: ${r.workspaceName}` : undefined,
+        description: r.workspaceName ? `Workspace: ${r.workspaceName}` : null,
       });
     },
     onError: (err) => {

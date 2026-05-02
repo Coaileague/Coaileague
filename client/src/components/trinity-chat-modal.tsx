@@ -199,7 +199,7 @@ export function TrinityModalProvider({ children }: { children: React.ReactNode }
         role: turn.role as 'user' | 'assistant',
         content: turn.content,
         timestamp: new Date(turn.createdAt),
-        confidence: turn.role === 'assistant' ? 'high' as ConfidenceLevel : undefined,
+        confidence: turn.role === 'assistant' ? 'high' as ConfidenceLevel : null,
       }));
       setMessages(loadedMessages);
     }
@@ -1073,14 +1073,14 @@ function TrinityModal({ onClose }: TrinityModalProps) {
         totalCredits: data.usage.totalCredits || data.usage.total_credits || 0,
         balanceRemaining: data.usage.balanceRemaining || data.usage.balance_remaining || 0,
         unlimitedCredits: data.usage.unlimited || data.usage.unlimited_credits || false,
-        tier: data.usage.tier || undefined,
-        monthlyAllowance: data.usage.monthlyAllowance || data.usage.monthly_allowance || undefined,
+        tier: data.usage.tier || null,
+        monthlyAllowance: data.usage.monthlyAllowance || data.usage.monthly_allowance || null,
         actions: (data.usage.actions || []).map((a: unknown) => ({
           model: a.model || 'unknown',
           tokens: a.tokens || 0,
           credits: a.credits || 0,
         })),
-      } : undefined;
+      } : null;
 
       const assistantMessage: Message = {
         id: `msg-${Date.now()}-assistant`,
@@ -1122,7 +1122,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
     if (chatMutation.isPending) return;
 
     const text = inputValue.trim() || (pendingImages.length > 0 ? 'Please analyze this image.' : '');
-    const images = pendingImages.length > 0 ? [...pendingImages] : undefined;
+    const images = pendingImages.length > 0 ? [...pendingImages] : null;
 
     const userMessage: Message = {
       id: `msg-${Date.now()}-user`,

@@ -42,7 +42,7 @@ function calculateTokenCost(tokens: number, model: TokenModel): number {
 }
 
 // GRANDFATHERED_TENANT_ID comes from env — undefined in test env (safe)
-const GRANDFATHERED_TENANT_ID = process.env.GRANDFATHERED_TENANT_ID || undefined;
+const GRANDFATHERED_TENANT_ID = process.env.GRANDFATHERED_TENANT_ID || null;
 
 function isFreeForTrinity(workspaceId: string | null | undefined): boolean {
   if (isBillingExcluded(workspaceId)) return true;

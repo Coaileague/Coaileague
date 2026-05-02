@@ -272,7 +272,7 @@ function ProfileTabContent() {
       const res = await apiRequest('PATCH', '/api/auth/profile', {
         firstName: data.firstName,
         lastName: data.lastName,
-        phone: data.phone || undefined,
+        phone: data.phone || null,
       });
       return res.json();
     },
@@ -2635,16 +2635,16 @@ export default function Settings() {
       const ws = workspace;
       setAutoInvoicingEnabled(ws.autoInvoicingEnabled ?? true);
       setInvoiceSchedule(ws.invoiceSchedule || "monthly");
-      setInvoiceCustomDays(ws.invoiceCustomDays || undefined);
+      setInvoiceCustomDays(ws.invoiceCustomDays || null);
       setInvoiceGenerationDay(ws.invoiceGenerationDay || 1);
       setAutoPayrollEnabled(ws.autoPayrollEnabled ?? true);
       setPayrollSchedule(ws.payrollSchedule || "biweekly");
-      setPayrollCustomDays(ws.payrollCustomDays || undefined);
+      setPayrollCustomDays(ws.payrollCustomDays || null);
       setPayrollProcessDay(ws.payrollProcessDay || 1);
       setPayrollCutoffDay(ws.payrollCutoffDay || 15);
       setAutoSchedulingEnabled(ws.autoSchedulingEnabled ?? true);
       setScheduleGenerationInterval(ws.scheduleGenerationInterval || "weekly");
-      setScheduleCustomDays(ws.scheduleCustomDays || undefined);
+      setScheduleCustomDays(ws.scheduleCustomDays || null);
       setScheduleAdvanceNoticeDays(ws.scheduleAdvanceNoticeDays || 7);
       setScheduleGenerationDay(ws.scheduleGenerationDay ?? 0);
       setLaborLawJurisdiction(ws.laborLawJurisdiction || "US-FEDERAL");
@@ -2793,7 +2793,7 @@ export default function Settings() {
       await updateInvoicingMutation.mutateAsync({
         autoInvoicingEnabled,
         invoiceSchedule,
-        invoiceCustomDays: invoiceSchedule === 'custom' ? invoiceCustomDays : undefined,
+        invoiceCustomDays: invoiceSchedule === 'custom' ? invoiceCustomDays : null,
         invoiceGenerationDay,
       });
     } catch {
@@ -2806,7 +2806,7 @@ export default function Settings() {
       await updatePayrollMutation.mutateAsync({
         autoPayrollEnabled,
         payrollSchedule,
-        payrollCustomDays: payrollSchedule === 'custom' ? payrollCustomDays : undefined,
+        payrollCustomDays: payrollSchedule === 'custom' ? payrollCustomDays : null,
         payrollProcessDay,
         payrollCutoffDay,
       });
@@ -2820,7 +2820,7 @@ export default function Settings() {
       await updateSchedulingMutation.mutateAsync({
         autoSchedulingEnabled,
         scheduleGenerationInterval,
-        scheduleCustomDays: scheduleGenerationInterval === 'custom' ? scheduleCustomDays : undefined,
+        scheduleCustomDays: scheduleGenerationInterval === 'custom' ? scheduleCustomDays : null,
         scheduleAdvanceNoticeDays,
         scheduleGenerationDay,
       });
@@ -3090,7 +3090,7 @@ export default function Settings() {
                       updateSchedulingMutation.mutate({
                         autoSchedulingEnabled: checked,
                         scheduleGenerationInterval,
-                        scheduleCustomDays: scheduleGenerationInterval === 'custom' ? scheduleCustomDays : undefined,
+                        scheduleCustomDays: scheduleGenerationInterval === 'custom' ? scheduleCustomDays : null,
                         scheduleAdvanceNoticeDays,
                         scheduleGenerationDay,
                       });
@@ -3146,7 +3146,7 @@ export default function Settings() {
                       updateInvoicingMutation.mutate({
                         autoInvoicingEnabled: checked,
                         invoiceSchedule,
-                        invoiceCustomDays: invoiceSchedule === 'custom' ? invoiceCustomDays : undefined,
+                        invoiceCustomDays: invoiceSchedule === 'custom' ? invoiceCustomDays : null,
                         invoiceGenerationDay,
                       });
                     }}
@@ -3169,7 +3169,7 @@ export default function Settings() {
                       updatePayrollMutation.mutate({
                         autoPayrollEnabled: checked,
                         payrollSchedule,
-                        payrollCustomDays: payrollSchedule === 'custom' ? payrollCustomDays : undefined,
+                        payrollCustomDays: payrollSchedule === 'custom' ? payrollCustomDays : null,
                         payrollProcessDay,
                         payrollCutoffDay,
                       });
@@ -3749,11 +3749,11 @@ export default function Settings() {
                   sendInviteMutation.mutate({
                     firstName: first,
                     lastName: last,
-                    phone: invitePhone.trim() || undefined,
+                    phone: invitePhone.trim() || null,
                     email: emailVal,
                     role: inviteRole,
-                    organizationalTitle: inviteTitle || undefined,
-                    licenseTypes: inviteLicenseTypes.length > 0 ? inviteLicenseTypes : undefined,
+                    organizationalTitle: inviteTitle || null,
+                    licenseTypes: inviteLicenseTypes.length > 0 ? inviteLicenseTypes : null,
                   });
                 }}
                 disabled={
@@ -4939,7 +4939,7 @@ export default function Settings() {
                   id="invoiceCustomDays"
                   type="number"
                   value={invoiceCustomDays || ''}
-                  onChange={(e) => setInvoiceCustomDays(parseInt(e.target.value) || undefined)}
+                  onChange={(e) => setInvoiceCustomDays(parseInt(e.target.value) || null)}
                   disabled={!autoInvoicingEnabled || updateInvoicingMutation.isPending}
                   data-testid="input-invoice-custom-days"
                 />
@@ -5018,7 +5018,7 @@ export default function Settings() {
                   id="payrollCustomDays"
                   type="number"
                   value={payrollCustomDays || ''}
-                  onChange={(e) => setPayrollCustomDays(parseInt(e.target.value) || undefined)}
+                  onChange={(e) => setPayrollCustomDays(parseInt(e.target.value) || null)}
                   disabled={!autoPayrollEnabled || updatePayrollMutation.isPending}
                   data-testid="input-payroll-custom-days"
                 />
@@ -5116,7 +5116,7 @@ export default function Settings() {
                   id="scheduleCustomDays"
                   type="number"
                   value={scheduleCustomDays || ''}
-                  onChange={(e) => setScheduleCustomDays(parseInt(e.target.value) || undefined)}
+                  onChange={(e) => setScheduleCustomDays(parseInt(e.target.value) || null)}
                   disabled={!autoSchedulingEnabled || updateSchedulingMutation.isPending}
                   data-testid="input-schedule-custom-days"
                 />

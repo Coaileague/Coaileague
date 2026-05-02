@@ -1337,7 +1337,7 @@ function NotificationCard({
   const isTrinityAdvisory = notifBadge.type === 'TRINITY ADVISORY';
   const confidenceScore = notification.metadata?.riskScore !== undefined
     ? Math.round(100 - notification.metadata.riskScore * 100)
-    : undefined;
+    : null;
 
   const handleAskTrinity = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -2662,8 +2662,8 @@ function NotificationsPopoverInner({ user }: { user: Record<string, unknown> }) 
             isOpen={true}
             onClose={() => setOpen(false)}
             onAskTrinity={handleAskTrinityFromUNS}
-            platformRole={accessPlatformRole || userPlatformRole || undefined}
-            workspaceRole={workspaceRole || undefined}
+            platformRole={accessPlatformRole || userPlatformRole || null}
+            workspaceRole={workspaceRole || null}
           />
         </PopoverContent>
       </Popover>

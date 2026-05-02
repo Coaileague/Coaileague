@@ -141,7 +141,7 @@ async function runTests() {
     console.error('\n❌ Test failed with error:');
     console.error(error instanceof Error ? error.message : String(error));
     console.error('\nStack trace:');
-    console.error(error instanceof Error ? error.stack : undefined);
+    console.error(error instanceof Error ? error.stack : null);
   } finally {
     process.exit(0);
   }

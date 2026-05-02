@@ -494,7 +494,7 @@ export default function OrgManagement() {
     orgStatusMutation.mutate({
       orgId: selectedOrg.id,
       action: pendingAction.action,
-      reason: pendingAction.requiresReason ? actionReason : undefined,
+      reason: pendingAction.requiresReason ? actionReason : null,
     });
   };
 
@@ -508,7 +508,7 @@ export default function OrgManagement() {
         <Shield className="h-3 w-3" />
         Support Override Active
       </Badge>
-    ) : undefined,
+    ) : null,
   };
 
   const orgContent = (

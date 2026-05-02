@@ -166,7 +166,7 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
         ? 'audio/mp4'
         : '';
 
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : null);
       mediaRecorderRef.current = recorder;
 
       recorder.ondataavailable = (e) => {

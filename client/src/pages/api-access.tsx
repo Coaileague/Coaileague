@@ -114,7 +114,7 @@ export default function ApiAccess() {
       name: newKeyName || "API Key",
       permissions,
       rateLimit: parseInt(newRateLimit) || 1000,
-      expiresAt: newExpiresAt || undefined,
+      expiresAt: newExpiresAt || null,
     });
   };
 

@@ -296,7 +296,7 @@ export default function FieldReports() {
     submitReportMutation.mutate({
       reportType: selectedType,
       title,
-      data: { ...formData, aiAnalysis: aiAnalysis || undefined },
+      data: { ...formData, aiAnalysis: aiAnalysis || null },
     });
   };
 

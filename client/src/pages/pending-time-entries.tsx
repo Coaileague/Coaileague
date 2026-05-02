@@ -267,7 +267,7 @@ export default function PendingTimeEntries() {
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <div className="space-y-2">
               <Label htmlFor="filter-employee">Employee</Label>
-              <Select value={employeeFilter} onValueChange={(val) => setEmployeeFilter(val || undefined)}>
+              <Select value={employeeFilter} onValueChange={(val) => setEmployeeFilter(val || null)}>
                 <SelectTrigger id="filter-employee" data-testid="select-filter-employee">
                   <SelectValue placeholder="All employees" />
                 </SelectTrigger>
@@ -284,7 +284,7 @@ export default function PendingTimeEntries() {
 
             <div className="space-y-2">
               <Label htmlFor="filter-client">Client</Label>
-              <Select value={clientFilter} onValueChange={(val) => setClientFilter(val || undefined)}>
+              <Select value={clientFilter} onValueChange={(val) => setClientFilter(val || null)}>
                 <SelectTrigger id="filter-client" data-testid="select-filter-client">
                   <SelectValue placeholder="All clients" />
                 </SelectTrigger>

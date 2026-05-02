@@ -401,7 +401,7 @@ export default function OnboardingPage() {
       <Clock className="w-4 h-4 mr-1" />
       {progress.daysUntilTrialExpires} days left in trial
     </Badge>
-  ) : undefined;
+  ) : null;
 
   const pageConfig: CanvasPageConfig = {
     id: 'onboarding',

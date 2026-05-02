@@ -235,7 +235,7 @@ export default function AvailabilityPage() {
           endTime: a.endTime,
           status: (a.status as unknown) || "available",
           isRecurring: a.isRecurring ?? true,
-          notes: a.notes || undefined,
+          notes: a.notes || null,
         }))
       );
     }
@@ -252,7 +252,7 @@ export default function AvailabilityPage() {
           endTime: a.endTime,
           status: (a.status as unknown) || "available",
           isRecurring: a.isRecurring ?? true,
-          notes: a.notes || undefined,
+          notes: a.notes || null,
         }))
       );
     }

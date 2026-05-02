@@ -150,7 +150,7 @@ export function DataSummaryCard({
           <Accordion 
             type="single" 
             collapsible 
-            value={isExpanded ? "details" : undefined}
+            value={isExpanded ? "details" : null}
             onValueChange={(value) => setIsExpanded(value === "details")}
             className="border-t border-border"
           >

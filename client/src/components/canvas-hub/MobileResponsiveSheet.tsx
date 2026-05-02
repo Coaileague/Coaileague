@@ -32,7 +32,7 @@ export function MobileResponsiveSheet({
       <SheetContent
         side={side}
         className={cn("p-0 flex flex-col", className)}
-        style={maxHeight ? { maxHeight } : undefined}
+        style={maxHeight ? { maxHeight } : null}
         showCloseButton={showCloseButton}
       >
         {showDragIndicator && (

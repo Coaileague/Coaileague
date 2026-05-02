@@ -181,9 +181,9 @@ const EmployeeSidebarCard = memo(function EmployeeSidebarCard({
       )}
       style={{ 
         height: ROW_HEIGHT,
-        borderLeftWidth: catColor ? '3px' : undefined,
-        borderLeftColor: catColor ? catColor.color : undefined,
-        borderLeftStyle: catColor ? 'solid' : undefined,
+        borderLeftWidth: catColor ? '3px' : null,
+        borderLeftColor: catColor ? catColor.color : null,
+        borderLeftStyle: catColor ? 'solid' : null,
       }}
       onClick={() => onToggleExpand(employee.id)}
       data-testid={`employee-sidebar-${employee.id}`}
@@ -301,10 +301,10 @@ const DraggableShiftBlock = memo(function DraggableShiftBlock({
     borderWidth: '2px',
     borderStyle: 'solid',
     borderLeftWidth: '4px',
-    borderColor: positionCatColor ? positionCatColor.color : undefined,
-    borderTopColor: positionCatColor ? `${positionCatColor.color}40` : undefined,
-    borderRightColor: positionCatColor ? `${positionCatColor.color}40` : undefined,
-    borderBottomColor: positionCatColor ? `${positionCatColor.color}40` : undefined,
+    borderColor: positionCatColor ? positionCatColor.color : null,
+    borderTopColor: positionCatColor ? `${positionCatColor.color}40` : null,
+    borderRightColor: positionCatColor ? `${positionCatColor.color}40` : null,
+    borderBottomColor: positionCatColor ? `${positionCatColor.color}40` : null,
   };
 
   if (transform && !isDragging) {
@@ -437,9 +437,9 @@ function ShiftDragOverlay({
         borderStyle: 'solid',
         borderLeftWidth: '4px',
         borderColor: positionCatColor ? positionCatColor.color : 'hsl(var(--primary))',
-        borderTopColor: positionCatColor ? `${positionCatColor.color}40` : undefined,
-        borderRightColor: positionCatColor ? `${positionCatColor.color}40` : undefined,
-        borderBottomColor: positionCatColor ? `${positionCatColor.color}40` : undefined,
+        borderTopColor: positionCatColor ? `${positionCatColor.color}40` : null,
+        borderRightColor: positionCatColor ? `${positionCatColor.color}40` : null,
+        borderBottomColor: positionCatColor ? `${positionCatColor.color}40` : null,
         transform: 'scale(1.05)',
       }}
       data-testid="shift-drag-overlay"
@@ -806,7 +806,7 @@ export function ScheduleGrid({
                       <DraggableShiftBlock
                         key={shift.id}
                         shift={shift}
-                        client={shift.clientId ? clientMap.get(shift.clientId) : undefined}
+                        client={shift.clientId ? clientMap.get(shift.clientId) : null}
                         dayStart={dayStart}
                         onShiftClick={onShiftClick}
                         employeePosition={employeePositionMap.get(employee.id)}
@@ -863,8 +863,8 @@ export function ScheduleGrid({
           {activeShift && (
             <ShiftDragOverlay
               shift={activeShift}
-              client={activeShift.clientId ? clientMap.get(activeShift.clientId) : undefined}
-              employeePosition={activeShift.employeeId ? employeePositionMap.get(activeShift.employeeId) : undefined}
+              client={activeShift.clientId ? clientMap.get(activeShift.clientId) : null}
+              employeePosition={activeShift.employeeId ? employeePositionMap.get(activeShift.employeeId) : null}
             />
           )}
         </DragOverlay>

@@ -38,7 +38,7 @@ export class PageCrawler {
     
     this.browser = await chromium.launch({
       headless: true,
-      executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined,
+      executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || null,
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
     

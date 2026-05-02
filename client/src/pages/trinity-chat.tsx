@@ -145,7 +145,7 @@ export default function TrinityChat() {
       ...prev,
       { id: crypto.randomUUID(), role: 'user', content: message, createdAt: new Date() },
     ]);
-    chatMutation.mutate({ message, sessionId: sessionId || undefined });
+    chatMutation.mutate({ message, sessionId: sessionId || null });
     setMessage('');
   };
 

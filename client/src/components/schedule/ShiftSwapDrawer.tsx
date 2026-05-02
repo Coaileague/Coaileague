@@ -170,7 +170,7 @@ export function ShiftSwapDrawer({
     requestSwapMutation.mutate({
       shiftId: shift.id,
       targetEmployeeId: selectedEmployeeId,
-      notes: notes || undefined,
+      notes: notes || null,
     });
   };
 

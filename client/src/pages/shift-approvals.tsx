@@ -39,7 +39,7 @@ function ApprovalCard({ approval, onDecision }: { approval: Approval; onDecision
   const handleDecision = async (decision: 'approved' | 'rejected') => {
     setIsPending(true);
     try {
-      await onDecision(approval.id, decision, note || undefined);
+      await onDecision(approval.id, decision, note || null);
     } finally {
       setIsPending(false);
       setShowNote(false);

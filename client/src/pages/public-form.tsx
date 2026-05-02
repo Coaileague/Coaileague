@@ -368,7 +368,7 @@ export default function PublicFormPage() {
       <FormShell
         variant="public"
         title="Form Unavailable"
-        description={error || undefined}
+        description={error || null}
       >
         <div className="flex flex-col items-center gap-3 py-4 text-center">
           <div className="h-12 w-12 rounded-full bg-destructive/10 grid place-items-center">
@@ -415,7 +415,7 @@ export default function PublicFormPage() {
     <FormShell
       variant="public"
       title={formData.title}
-      description={formData.description || undefined}
+      description={formData.description || null}
       expiresAt={formData.expiresAt}
       branding={formData.branding || null}
       subtitle={

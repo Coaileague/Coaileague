@@ -102,7 +102,7 @@ export function useOrgStatusNotification(workspaceId?: string) {
     }
 
     // Get message (with customizations if available)
-    const message = getCustomizedOrgMessage(status.status, customization || undefined, {
+    const message = getCustomizedOrgMessage(status.status, customization || null, {
       daysRemaining: status.metadata?.daysRemaining,
       trialEndDate: status.metadata?.trialEndDate,
       maintenanceEndTime: status.metadata?.maintenanceEndTime,
@@ -113,7 +113,7 @@ export function useOrgStatusNotification(workspaceId?: string) {
       title: message.title,
       description: message.description,
       variant: message.severity === "error" ? "destructive" : "default",
-      duration: message.autoClose || undefined,
+      duration: message.autoClose || null,
     });
 
     // Navigate if action specified

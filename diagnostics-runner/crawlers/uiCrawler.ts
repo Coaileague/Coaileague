@@ -252,7 +252,7 @@ export class UICrawler {
       consoleErrors.push({
         type: 'pageerror',
         message: error instanceof Error ? error.message : String(error),
-        stackTrace: error instanceof Error ? error.stack : undefined
+        stackTrace: error instanceof Error ? error.stack : null
       });
     });
     

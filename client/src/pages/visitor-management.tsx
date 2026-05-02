@@ -198,8 +198,8 @@ function CheckInForm({ preRegistrations, onSuccess }: { preRegistrations: unknow
   const mutation = useMutation({
     mutationFn: () => apiRequest('POST', '/api/visitor-management/checkin', {
       ...form,
-      expectedDeparture: form.expectedDeparture || undefined,
-      preRegistrationId: form.preRegistrationId || undefined,
+      expectedDeparture: form.expectedDeparture || null,
+      preRegistrationId: form.preRegistrationId || null,
     }),
     onSuccess: async (res) => {
       const data = await res.json().catch(() => ({}));
@@ -382,8 +382,8 @@ function PreRegistrationList() {
   const createMutation = useMutation({
     mutationFn: () => apiRequest('POST', '/api/visitor-management/pre-registrations', {
       ...form,
-      expectedArrival: form.expectedArrival || undefined,
-      expectedDeparture: form.expectedDeparture || undefined,
+      expectedArrival: form.expectedArrival || null,
+      expectedDeparture: form.expectedDeparture || null,
     }),
     onSuccess: () => {
       toast({ title: 'Pre-Registration Created', description: `${form.expectedVisitorName} has been pre-registered.` });

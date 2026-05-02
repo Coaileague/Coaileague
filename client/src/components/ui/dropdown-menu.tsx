@@ -42,7 +42,7 @@ const DropdownMenuSubContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.SubContent>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent>
 >(({ className, ...props }, ref) => (
-  <DropdownMenuPrimitive.Portal container={typeof document !== 'undefined' ? document.body : undefined}>
+  <DropdownMenuPrimitive.Portal container={typeof document !== 'undefined' ? document.body : null}>
     <DropdownMenuPrimitive.SubContent
       ref={ref}
       className={cn(
@@ -60,7 +60,7 @@ const DropdownMenuContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
 >(({ className, sideOffset = 8, ...props }, ref) => (
-  <DropdownMenuPrimitive.Portal container={typeof document !== 'undefined' ? document.body : undefined}>
+  <DropdownMenuPrimitive.Portal container={typeof document !== 'undefined' ? document.body : null}>
     <DropdownMenuPrimitive.Content
       ref={ref}
       sideOffset={sideOffset}

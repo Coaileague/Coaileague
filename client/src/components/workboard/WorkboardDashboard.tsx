@@ -489,8 +489,8 @@ export default function WorkboardDashboard() {
   const retryTask = useRetryWorkboardTask();
   
   const queryParams = useMemo(() => ({
-    status: statusFilter !== 'all' ? statusFilter : undefined,
-    priority: priorityFilter !== 'all' ? priorityFilter : undefined,
+    status: statusFilter !== 'all' ? statusFilter : null,
+    priority: priorityFilter !== 'all' ? priorityFilter : null,
     limit: 50,
   }), [statusFilter, priorityFilter]);
   

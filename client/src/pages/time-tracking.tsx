@@ -632,9 +632,9 @@ export default function TimeTracking() {
 
     clockInMutation.mutate({
       employeeId: selectedEmployee,
-      clientId: selectedClient && selectedClient !== "none" ? selectedClient : undefined,
-      shiftId: selectedShift && selectedShift !== "none" ? selectedShift : undefined,
-      notes: notes || undefined,
+      clientId: selectedClient && selectedClient !== "none" ? selectedClient : null,
+      shiftId: selectedShift && selectedShift !== "none" ? selectedShift : null,
+      notes: notes || null,
       hourlyRate,
       gpsLatitude: gpsData.latitude,
       gpsLongitude: gpsData.longitude,
@@ -1061,7 +1061,7 @@ export default function TimeTracking() {
               tabs={[
                 { id: 'clock', label: 'Clock In/Out' },
                 { id: 'timesheet', label: 'Timesheets' },
-                ...(canApprove ? [{ id: 'approvals', label: 'Approvals', count: pendingApprovals > 0 ? pendingApprovals : undefined }] : []),
+                ...(canApprove ? [{ id: 'approvals', label: 'Approvals', count: pendingApprovals > 0 ? pendingApprovals : null }] : []),
                 ...(canApprove && !isSimpleMode ? [{ id: 'reports', label: 'Reports' }] : []),
               ]}
               activeTab={view}

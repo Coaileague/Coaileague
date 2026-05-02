@@ -1132,7 +1132,7 @@ function DateDivider({ date }: { date: Date }) {
   yesterday.setDate(yesterday.getDate() - 1);
   const isYesterday = d.toDateString() === yesterday.toDateString();
 
-  const label = isToday ? "Today" : isYesterday ? "Yesterday" : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: d.getFullYear() !== now.getFullYear() ? "numeric" : undefined });
+  const label = isToday ? "Today" : isYesterday ? "Yesterday" : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: d.getFullYear() !== now.getFullYear() ? "numeric" : null });
 
   return (
     <div className="flex items-center justify-center py-2.5" data-testid="date-divider">
@@ -2273,10 +2273,10 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
                     isNewMessage && "animate-in fade-in slide-in-from-bottom-2 duration-200"
                   )}
                   data-testid={`chat-msg-${msg.id}`}
-                  onTouchStart={isMobile ? (e) => handleTouchStart(e, msg.id) : undefined}
-                  onTouchMove={isMobile ? handleTouchMove : undefined}
-                  onTouchEnd={isMobile ? () => { if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; } } : undefined}
-                  onClick={isMobile ? () => handleDoubleTap(msg.id) : undefined}
+                  onTouchStart={isMobile ? (e) => handleTouchStart(e, msg.id) : null}
+                  onTouchMove={isMobile ? handleTouchMove : null}
+                  onTouchEnd={isMobile ? () => { if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; } } : null}
+                  onClick={isMobile ? () => handleDoubleTap(msg.id) : null}
                 >
                   {!isOwn && !isGrouped && (
                     <span className="text-[10px] font-medium text-muted-foreground mb-0.5 px-2 inline-flex items-center gap-1">
@@ -2319,7 +2319,7 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
                           {isMediaMessage[1].includes("image") && (() => {
                             const atIdx = isMediaMessage[1].indexOf(" @ ");
                             const imgGpsAddress = atIdx !== -1 ? isMediaMessage[1].slice(atIdx + 3).trim() : null;
-                            const ts = msg.createdAt ? (msg.createdAt instanceof Date ? msg.createdAt.toISOString() : String(msg.createdAt)) : undefined;
+                            const ts = msg.createdAt ? (msg.createdAt instanceof Date ? msg.createdAt.toISOString() : String(msg.createdAt)) : null;
                             const timeLabel = msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
                             return (
                               <div>
@@ -2328,7 +2328,7 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
                                     src={isMediaMessage[2]}
                                     alt="Shared image"
                                     loading="lazy"
-                                    onClick={() => setLightboxData({ src: isMediaMessage[2], senderName: msg.senderName || undefined, timestamp: ts, filename: msg.attachmentName || undefined, gpsAddress: imgGpsAddress || undefined })}
+                                    onClick={() => setLightboxData({ src: isMediaMessage[2], senderName: msg.senderName || null, timestamp: ts, filename: msg.attachmentName || null, gpsAddress: imgGpsAddress || null })}
                                     className="cursor-pointer"
                                     data-testid={`img-preview-${msg.id}`}
                                   />
@@ -2397,7 +2397,7 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
                           "opacity-0 group-hover:opacity-100",
                           isOwn ? "-left-1" : "-right-1"
                         )}
-                        style={{ visibility: activeMessageMenu === msg.id ? "visible" : undefined }}
+                        style={{ visibility: activeMessageMenu === msg.id ? "visible" : null }}
                         onClick={(e) => { e.stopPropagation(); setActiveMessageMenu(activeMessageMenu === msg.id ? null : msg.id); }}
                         data-testid={`button-msg-menu-${msg.id}`}
                       >
@@ -2412,7 +2412,7 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
                         conversationId={roomId}
                         onClose={() => setActiveMessageMenu(null)}
                         onReply={() => setReplyingTo({ id: msg.id, senderName: msg.senderName || "Unknown", message: msgContent })}
-                        onEdit={isOwn ? () => { setEditingMessage({ id: msg.id, message: msgContent }); setInput(msgContent); } : undefined}
+                        onEdit={isOwn ? () => { setEditingMessage({ id: msg.id, message: msgContent }); setInput(msgContent); } : null}
                         onForward={() => setForwardingMessageId(msg.id)}
                       />
                     )}
@@ -2810,7 +2810,7 @@ function BubblePopup() {
         height: activeChatRoom ? "600px" : "min(620px, 78vh)",
         left: `${position.x}px`,
         top: `${position.y}px`,
-        cursor: isDragging ? "grabbing" : undefined,
+        cursor: isDragging ? "grabbing" : null,
       }}
       onPointerDown={handleDragStart}
       onPointerMove={handleDragMove}

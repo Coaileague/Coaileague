@@ -90,7 +90,7 @@ export default function OutreachPage() {
 
   const sendMutation = useMutation({
     mutationFn: async (candidates: { companyName: string; email: string; contactName?: string; website: string; services?: string[] }[]) => {
-      const res = await apiRequest("POST", "/api/sales/outreach/send", { candidates, customMessage: customMessage || undefined });
+      const res = await apiRequest("POST", "/api/sales/outreach/send", { candidates, customMessage: customMessage || null });
       return res.json();
     },
     onSuccess: (data) => {

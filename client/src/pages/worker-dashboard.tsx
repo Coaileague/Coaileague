@@ -836,7 +836,7 @@ function WorkerDashboardInner() {
         } catch (_) {}
       }
       const url = `/api/time-entries/${action === "in" ? "clock-in" : "clock-out"}`;
-      const idempotencyKey = action === "in" ? crypto.randomUUID() : undefined;
+      const idempotencyKey = action === "in" ? crypto.randomUUID() : null;
       const body = { timestamp: new Date().toISOString(), location, idempotencyKey };
       const type = action === "in" ? ("clock-in" as const) : ("clock-out" as const);
       const result = await fetchWithOfflineFallback(url, "POST", body, type);
@@ -1412,7 +1412,7 @@ function WorkerDashboardInner() {
                               const reason = typeof window !== "undefined"
                                 ? window.prompt("Reason for declining (optional):") || ""
                                 : "";
-                              denyShiftMutation.mutate({ shiftId: shift.id, denialReason: reason || undefined });
+                              denyShiftMutation.mutate({ shiftId: shift.id, denialReason: reason || null });
                             }}
                             disabled={isPending}
                             data-testid={`button-deny-shift-${shift.id}`}

@@ -694,7 +694,7 @@ export default function CanonicalConfigPage() {
             setEditingValue(null);
           }}
           groupKey={addingToGroup || editingValue?.group_key || ""}
-          existing={editingValue || undefined}
+          existing={editingValue || null}
           onSaved={() => {
             setAddingToGroup(null);
             setEditingValue(null);

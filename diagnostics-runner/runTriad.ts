@@ -21,7 +21,7 @@ async function main() {
   
   const getArg = (name: string): string | undefined => {
     const arg = args.find(a => a.startsWith(`--${name}=`));
-    return arg ? arg.split('=')[1] : undefined;
+    return arg ? arg.split('=')[1] : null;
   };
   
   const hasFlag = (name: string): boolean => {
@@ -62,7 +62,7 @@ async function main() {
       username: testUsername || '',
       password: testPassword || '',
       bypassSecret
-    } : undefined
+    } : null
   };
   
   try {
@@ -97,7 +97,7 @@ async function main() {
     console.error('❌ TRINITY TRIAD FAILED');
     console.error('=======================');
     console.error(error instanceof Error ? error.message : String(error));
-    console.error(error instanceof Error ? error.stack : undefined);
+    console.error(error instanceof Error ? error.stack : null);
     process.exit(1);
   }
 }

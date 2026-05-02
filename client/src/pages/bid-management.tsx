@@ -126,7 +126,7 @@ export default function BidManagementPage() {
           </Button>
         }
         title={selected.prospect_name}
-        subtitle={selected.contact_name ? `${selected.contact_name} · ${selected.contact_email || ""}` : undefined}
+        subtitle={selected.contact_name ? `${selected.contact_name} · ${selected.contact_email || ""}` : null}
         badges={
           <>
             <Badge className={cfg.color}>{cfg.label}</Badge>
@@ -175,7 +175,7 @@ export default function BidManagementPage() {
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => {
                   const r = window.prompt("Loss reason (optional):");
-                  updateStageMutation.mutate({ id: selected.id, stage: "lost", loss_reason: r || undefined });
+                  updateStageMutation.mutate({ id: selected.id, stage: "lost", loss_reason: r || null });
                 }} data-testid="button-mark-lost">
                   <XCircle className="w-3 h-3 mr-1" /> Mark Lost
                 </Button>

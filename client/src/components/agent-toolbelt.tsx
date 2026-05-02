@@ -79,7 +79,7 @@ export function AgentToolbelt({
 
   const handleMacro = (macroText: string) => {
     if (onMacroInsert) {
-      onMacroInsert(macroText, selectedUserId || undefined);
+      onMacroInsert(macroText, selectedUserId || null);
     }
     const targetInfo = selectedUserName ? ` for ${selectedUserName}` : "";
     toast({
@@ -90,7 +90,7 @@ export function AgentToolbelt({
 
   const handleRequestFile = (fileType: string) => {
     if (onRequestFile) {
-      onRequestFile(fileType, selectedUserId || undefined);
+      onRequestFile(fileType, selectedUserId || null);
     }
     const targetInfo = selectedUserName ? ` from ${selectedUserName}` : " from user";
     toast({
@@ -101,7 +101,7 @@ export function AgentToolbelt({
 
   const handleKBLink = (article: typeof kbArticles[0]) => {
     if (onSendKBLink) {
-      onSendKBLink(`[KB] **${article.title}**: ${window.location.origin}${article.url}`, selectedUserId || undefined);
+      onSendKBLink(`[KB] **${article.title}**: ${window.location.origin}${article.url}`, selectedUserId || null);
     }
     const targetInfo = selectedUserName ? ` to ${selectedUserName}` : "";
     toast({

@@ -241,11 +241,11 @@ export default function CredentialWalletPage() {
   const addMutation = useMutation({
     mutationFn: (data: typeof addForm) => apiRequest('POST', '/api/credentials', {
       name: data.name,
-      issuingOrganization: data.issuingOrganization || undefined,
-      certificationNumber: data.certificationNumber || undefined,
+      issuingOrganization: data.issuingOrganization || null,
+      certificationNumber: data.certificationNumber || null,
       issuedDate: data.issuedDate,
-      expiryDate: data.expiryDate || undefined,
-      certificateUrl: data.certificateUrl || undefined,
+      expiryDate: data.expiryDate || null,
+      certificateUrl: data.certificateUrl || null,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/credentials/wallet'] });

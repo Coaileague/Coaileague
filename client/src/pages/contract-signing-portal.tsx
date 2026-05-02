@@ -378,14 +378,14 @@ export default function ContractSigningPortal({ token }: { token: string }) {
     signMutation.mutate({
       signerName: signerName.trim(),
       signerEmail: signerEmail.trim(),
-      signerTitle: signerTitle.trim() || undefined,
+      signerTitle: signerTitle.trim() || null,
       signatureType,
       signatureData,
       consentText: "I agree that my electronic signature is the legal equivalent of my manual signature.",
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       clientInitials: sectionInitials,
-      governmentIdData: govIdDataUrl || undefined,
-      governmentIdType: govIdType || undefined,
+      governmentIdData: govIdDataUrl || null,
+      governmentIdType: govIdType || null,
     });
   };
 

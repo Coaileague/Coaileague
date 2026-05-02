@@ -160,7 +160,7 @@ export default function CashFlowDashboard() {
           amount={data?.moneyExpected ?? 0}
           icon={Clock}
           color="text-blue-600 dark:text-blue-400"
-          subtext={data ? `${data.expectedCount} outstanding invoice${data.expectedCount !== 1 ? "s" : ""}` : undefined}
+          subtext={data ? `${data.expectedCount} outstanding invoice${data.expectedCount !== 1 ? "s" : ""}` : null}
           isLoading={isLoading}
         />
         <MetricCard
@@ -168,7 +168,7 @@ export default function CashFlowDashboard() {
           amount={data?.moneyOverdue ?? 0}
           icon={AlertCircle}
           color={data && data.moneyOverdue > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"}
-          subtext={data ? `${data.overdueCount} overdue invoice${data.overdueCount !== 1 ? "s" : ""}` : undefined}
+          subtext={data ? `${data.overdueCount} overdue invoice${data.overdueCount !== 1 ? "s" : ""}` : null}
           isLoading={isLoading}
         />
         <MetricCard

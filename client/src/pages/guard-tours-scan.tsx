@@ -68,7 +68,7 @@ export default function GuardTourScanPage(): JSX.Element {
     await apiRequest("POST", "/api/guard-tours/scans", {
       tourId: activeTour.id,
       checkpointId: match.id,
-      employeeId: employeeId || undefined,
+      employeeId: employeeId || null,
       scannedAt: new Date().toISOString(),
       scanMethod: "qr",
       status: "completed",

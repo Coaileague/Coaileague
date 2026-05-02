@@ -120,10 +120,10 @@ function CreateWorkOrderDialog({ onCreated }: { onCreated: () => void }) {
         </div>
         <Button data-testid="button-submit-wo" onClick={() => createMutation.mutate({
           ...form,
-          estimatedHours: form.estimatedHours ? parseFloat(form.estimatedHours) : undefined,
-          billingRate: form.billingRate ? parseFloat(form.billingRate) : undefined,
-          scheduledStart: form.scheduledStart || undefined,
-          scheduledEnd: form.scheduledEnd || undefined,
+          estimatedHours: form.estimatedHours ? parseFloat(form.estimatedHours) : null,
+          billingRate: form.billingRate ? parseFloat(form.billingRate) : null,
+          scheduledStart: form.scheduledStart || null,
+          scheduledEnd: form.scheduledEnd || null,
         })} disabled={!form.title || createMutation.isPending}>
           {createMutation.isPending ? "Creating..." : "Create Work Order"}
         </Button>

@@ -119,7 +119,7 @@ Respond in this exact JSON format:
             : [],
           estimatedEffort: parsed.estimatedEffort || 'medium',
           confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
-          relatedIssues: Array.isArray(parsed.relatedIssues) ? parsed.relatedIssues : undefined
+          relatedIssues: Array.isArray(parsed.relatedIssues) ? parsed.relatedIssues : null
         };
         
         await this.recordThought(

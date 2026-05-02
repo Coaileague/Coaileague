@@ -619,7 +619,7 @@ export default function TrinityAgentDashboard() {
                                 {confidenceBadge(
                                   item.confidence_score !== undefined
                                     ? item.confidence_score
-                                    : undefined,
+                                    : null,
                                 )}
                               </div>
                               <div className="flex items-center gap-3 text-xs text-white/40 flex-wrap">
