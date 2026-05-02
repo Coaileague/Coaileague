@@ -1831,6 +1831,75 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         return updated;
       });
 
+      // If a compliance override was applied, deduct from the officer's
+      // CoAIleague score, log the bypass to the audit trail, and trigger a
+      // fresh workspace compliance snapshot. Fire-and-forget so a scoring
+      // failure can never roll back a successful shift claim.
+      if (bypassedCompliance) {
+        const bypassActorId = userId;
+        const bypassMeta = {
+          shiftId,
+          missingReasons: eligibility.reasons,
+          isDev: process.env.NODE_ENV === 'development',
+          actorRole: (employee.workspaceRole || '').toLowerCase(),
+          actorPlatformRole: (req.platformRole || '').toLowerCase(),
+        };
+
+        Promise.allSettled([
+          // 1. Officer score deduction (-15 by default — see scoring service).
+          import('../services/automation/coaileagueScoringService').then(({ coaileagueScoringService }) =>
+            coaileagueScoringService.processEvent(
+              workspaceId,
+              employee.id,
+              'compliance_bypass',
+              {
+                referenceId: shiftId,
+                referenceType: 'shift',
+                metadata: bypassMeta,
+                triggeredBy: bypassActorId,
+                isAutomatic: true,
+              },
+            ),
+          ),
+          // 2. Immutable audit-log entry for the bypass itself.
+          import('../services/audit-logger').then(({ auditLogger }) =>
+            auditLogger.logEvent(
+              {
+                actorId: bypassActorId,
+                actorType: 'END_USER',
+                workspaceId,
+                ipAddress: req.ip,
+                userAgent: req.get('user-agent') || undefined,
+              },
+              {
+                eventType: 'compliance_bypass_shift_pickup',
+                aggregateId: shiftId,
+                aggregateType: 'shift',
+                payload: {
+                  employeeId: employee.id,
+                  ...bypassMeta,
+                },
+              },
+              { autoCommit: true },
+            ),
+          ),
+          // 3. Recompute + snapshot the workspace-level compliance score so
+          //    the tenant overall score reflects the bypass. notifyOwners
+          //    inside the monitor will alert org_owner / co_owner if the
+          //    drop crosses the configured threshold.
+          import('../services/complianceScoreMonitor').then(({ snapshotAndMonitor }) =>
+            snapshotAndMonitor(workspaceId),
+          ),
+        ]).then(results => {
+          results.forEach((r, i) => {
+            if (r.status === 'rejected') {
+              const stage = ['officer-score', 'audit-log', 'workspace-snapshot'][i];
+              log.error(`[Shift Marketplace] compliance-bypass post-step ${stage} failed:`, r.reason);
+            }
+          });
+        });
+      }
+
       res.json({
         ...updatedShift,
         complianceWarning: bypassedCompliance

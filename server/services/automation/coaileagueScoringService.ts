@@ -69,6 +69,7 @@ export type ScoringEventType =
   | 'manual_adjustment'
   | 'document_missing_critical' | 'document_expired_critical' | 'document_approved' | 'document_rejected'
   | 'compliance_suspension' | 'compliance_reinstatement'
+  | 'compliance_bypass'
   | 'grievance_score_adjustment';
 
 export interface ScoringWeights {
@@ -146,6 +147,11 @@ export const DEFAULT_POINT_VALUES: Record<ScoringEventType, number> = {
   document_rejected: -5,
   compliance_suspension: -25,
   compliance_reinstatement: 5,
+  // Officer claimed a shift while compliance documents were incomplete via an
+  // authorized override. Penalty sized to sit between a missing critical
+  // document (-15) and a suspension (-25) — enough to be felt on the officer
+  // and tenant compliance scores until paperwork is completed.
+  compliance_bypass: -15,
   grievance_score_adjustment: 0,
 };
 
