@@ -325,10 +325,10 @@ export function filterClientsForResponse<T extends Record<string, unknown>>(
 /**
  * Create filter context from an Express request object.
  */
-export function createFilterContext(req: unknown): FilterContext {
+export function createFilterContext(req: import("express").Request): FilterContext {
   return {
-    workspaceRole: req.workspaceRole || req.user?.workspaceRole,
-    platformRole: req.platformRole || req.user?.platformRole,
+    workspaceRole: (req as { workspaceRole?: string }).workspaceRole || req.user?.workspaceRole,
+    platformRole: (req as { platformRole?: string }).platformRole || req.user?.platformRole,
     requestingUserId: req.user?.id,
     allowAll: false,
   };

@@ -887,7 +887,7 @@ export const requireSupportStaff: RequestHandler = async (req, res, next) => {
 };
 
 // Dual auth middleware: Supports both session-based AND Replit OAuth
-export const requireAnyAuth: RequestHandler = async (req: unknown, res, next) => {
+export const requireAnyAuth: RequestHandler = async (req, res, next) => {
   // Try session-based auth first
   if (req.session?.userId) {
     const [user] = await db.select().from(users).where(eq(users.id, req.session.userId)).limit(1);

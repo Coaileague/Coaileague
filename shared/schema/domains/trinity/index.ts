@@ -205,7 +205,7 @@ export const aiUsageEvents = pgTable("ai_usage_events", {
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-  providerCostUsd: decimal("provider_cost_usd").default(0),
+  providerCostUsd: decimal("provider_cost_usd").default('0'),
   aiModel: varchar("ai_model"),
   creditsDeducted: integer("credits_deducted").default(0),
 }, (table) => ({
