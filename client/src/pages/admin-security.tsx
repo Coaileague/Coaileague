@@ -61,7 +61,7 @@ export default function AdminSecurity() {
       const aBody = await aRes.json();
       if (oBody.ok) setOverrides(oBody.overrides || []);
       if (aBody.ok) setAllowlist(aBody.entries || []);
-    } catch (e: unknown) { setError(e?.message); }
+    } catch (e: unknown) { setError((e instanceof Error ? e.message : String(e))); }
     setLoading(false);
   }
 

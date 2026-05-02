@@ -201,7 +201,7 @@ router.post("/api/auth/register", async (req, res) => {
       const { saveSessionAsync } = await import('../services/session/sessionWorkspaceService');
       await saveSessionAsync(req);
     } catch (sessionErr: unknown) {
-      log.error('[Auth] Session save failed after successful login:', sessionErr?.message);
+      log.error('[Auth] Session save failed after successful login:', (sessionErr instanceof Error ? sessionErr.message : String(sessionErr)));
       // Return a clear, actionable error rather than a generic 500
       return res.status(503).json({
         message: 'Login succeeded but your session could not be saved. This is usually a temporary database issue. Please try again in a few seconds.',
@@ -226,7 +226,7 @@ router.post("/api/auth/register", async (req, res) => {
   } catch (error) {
     if (error instanceof z.ZodError) {
       log.error("[Registration] Zod validation failed:", error.errors);
-      const fieldErrors = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      const fieldErrors = error.errors.map(e => `${e.path.join('.')}: ${(e instanceof Error ? e.message : String(e))}`).join(', ');
       return res.status(400).json({
         message: fieldErrors || "Please check your form fields",
         errors: error.errors,
@@ -802,7 +802,7 @@ router.post("/api/auth/login", async (req, res) => {
       const { saveSessionAsync } = await import('../services/session/sessionWorkspaceService');
       await saveSessionAsync(req);
     } catch (sessionErr: unknown) {
-      log.error('[Auth] Session save failed after successful login:', sessionErr?.message);
+      log.error('[Auth] Session save failed after successful login:', (sessionErr instanceof Error ? sessionErr.message : String(sessionErr)));
       // Return a clear, actionable error rather than a generic 500
       return res.status(503).json({
         message: 'Login succeeded but your session could not be saved. This is usually a temporary database issue. Please try again in a few seconds.',
@@ -954,7 +954,7 @@ router.post("/api/auth/mfa/verify", async (req, res) => {
       const { saveSessionAsync } = await import('../services/session/sessionWorkspaceService');
       await saveSessionAsync(req);
     } catch (sessionErr: unknown) {
-      log.error('[Auth] Session save failed after successful login:', sessionErr?.message);
+      log.error('[Auth] Session save failed after successful login:', (sessionErr instanceof Error ? sessionErr.message : String(sessionErr)));
       // Return a clear, actionable error rather than a generic 500
       return res.status(503).json({
         message: 'Login succeeded but your session could not be saved. This is usually a temporary database issue. Please try again in a few seconds.',
@@ -1360,14 +1360,14 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
           });
           log.info(`[Auth] Linked user ${freshUser.id} to owned workspace ${effectiveWorkspaceId} and created employee record`);
         } catch (createError: unknown) {
-          log.warn(`[Auth] Failed to link workspace or create employee record for org_owner:`, createError?.message || createError);
+          log.warn(`[Auth] Failed to link workspace or create employee record for org_owner:`, (createError instanceof Error ? createError.message : String(createError)) || createError);
         }
       } else if (workspaceWasDynamicallyResolved) {
         // Employee record already exists — just persist the workspace link
         await db.update(users)
           .set({ currentWorkspaceId: effectiveWorkspaceId, updatedAt: new Date() })
           .where(eq(users.id, freshUser.id))
-          .catch((err: unknown) => log.warn('[Auth] Failed to persist workspace link:', err?.message));
+          .catch((err: unknown) => log.warn('[Auth] Failed to persist workspace link:', (err instanceof Error ? err.message : String(err))));
         log.info(`[Auth] Dynamically linked user ${freshUser.id} to owned workspace ${effectiveWorkspaceId}`);
       }
     }
@@ -1413,7 +1413,7 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
             description: `Login blocked for workspace '${paymentResult.workspaceName}' — ${paymentResult.reason}`,
             workspaceId: paymentResult.workspaceId,
             metadata: { userId: freshUser.id, workspaceName: paymentResult.workspaceName, reason: paymentResult.reason, isOwner: true },
-          }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+          }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
         } catch (logError) {
           log.error('[PaymentEnforcement] Failed to log audit:', logError);
         }
@@ -1507,7 +1507,7 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
     },
   });
   } catch (error: unknown) {
-    log.error('[Auth] /api/auth/me error:', error?.message || error);
+    log.error('[Auth] /api/auth/me error:', (error instanceof Error ? error.message : String(error)) || error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
@@ -2075,7 +2075,7 @@ router.post("/api/auth/sms-otp/verify", async (req, res) => {
       const { saveSessionAsync } = await import('../services/session/sessionWorkspaceService');
       await saveSessionAsync(req);
     } catch (sessionErr: unknown) {
-      log.error('[Auth] Session save failed after successful login:', sessionErr?.message);
+      log.error('[Auth] Session save failed after successful login:', (sessionErr instanceof Error ? sessionErr.message : String(sessionErr)));
       // Return a clear, actionable error rather than a generic 500
       return res.status(503).json({
         message: 'Login succeeded but your session could not be saved. This is usually a temporary database issue. Please try again in a few seconds.',

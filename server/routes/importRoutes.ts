@@ -397,7 +397,7 @@ router.post("/employees", async (req: Request, res: Response) => {
 
             invited++;
           } catch (inviteErr : unknown) {
-            log.warn(`[ImportRoutes] Invite/email failed for row ${emp.rowNumber}:`, inviteErr?.message);
+            log.warn(`[ImportRoutes] Invite/email failed for row ${emp.rowNumber}:`, (inviteErr instanceof Error ? inviteErr.message : String(inviteErr)));
           }
         }
       } catch (error: unknown) {

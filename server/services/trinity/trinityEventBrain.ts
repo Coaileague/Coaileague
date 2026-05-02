@@ -58,7 +58,7 @@ async function autoExecute(
       }`,
     );
   } catch (err: unknown) {
-    log.warn(`[EventBrain] Auto-execute failed ${actionId}:`, err?.message);
+    log.warn(`[EventBrain] Auto-execute failed ${actionId}:`, (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -79,7 +79,7 @@ async function queueWithEscalation(
       risk,
     );
   } catch (err: unknown) {
-    log.warn(`[EventBrain] queueForApproval failed ${actionId}:`, err?.message);
+    log.warn(`[EventBrain] queueForApproval failed ${actionId}:`, (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -520,7 +520,7 @@ const EVENT_HANDLERS: Record<string, EventHandlerConfig> = {
           }).catch(() => {});
         }
       } catch (err: unknown) {
-        log.warn('[EventBrain] member_joined welcome failed (non-fatal):', err?.message);
+        log.warn('[EventBrain] member_joined welcome failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
     },
   },
@@ -542,7 +542,7 @@ export const trinityEventBrain = {
       try {
         await handler.handler(event);
       } catch (err: unknown) {
-        log.warn(`[EventBrain] Handler failed for ${event.type}:`, err?.message);
+        log.warn(`[EventBrain] Handler failed for ${event.type}:`, (err instanceof Error ? err.message : String(err)));
       }
     });
   },

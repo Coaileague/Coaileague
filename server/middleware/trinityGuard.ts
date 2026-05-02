@@ -42,7 +42,7 @@ async function logInjectionAttempt(
       [eventType, severity, ip, path, method, description, JSON.stringify({ threats })]
     );
   } catch (err: unknown) {
-    log.warn('[TrinityGuard] security_audit_log write failed:', err?.message);
+    log.warn('[TrinityGuard] security_audit_log write failed:', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -247,7 +247,7 @@ export function trinityGuardMiddleware(req: Request, res: Response, next: NextFu
   }
 
   // Persist to security_audit_log for SOC2 / audit trail (Rule 9 compliance)
-  logInjectionAttempt(mostSevere.type, mostSevere.severity, ip, path, method, mostSevere.description, threats).catch((err: unknown) => log.warn('[TrinityGuard] logInjectionAttempt failed (non-blocking):', err?.message));
+  logInjectionAttempt(mostSevere.type, mostSevere.severity, ip, path, method, mostSevere.description, threats).catch((err: unknown) => log.warn('[TrinityGuard] logInjectionAttempt failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
   // Fire internal lightweight event — Trinity's subagents subscribe to this
   platformEventBus.emit('security_threat_detected', {
@@ -288,7 +288,7 @@ export function trinityGuardMiddleware(req: Request, res: Response, next: NextFu
         blockedUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       },
       visibility: 'platform_staff',
-    }).catch((err: unknown) => log.warn('[TrinityGuard] EventBus publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[TrinityGuard] EventBus publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     res.status(403).json({ error: 'Request blocked: security violation detected' });
     return;

@@ -187,7 +187,7 @@ incidentPipelineRouter.post("/", requireAuth, ensureWorkspaceAccess, async (req:
           log.info(`[IncidentPipeline] PDF vaulted for incident ${incident.incident_number} — vault id ${vaultResult.vault.id}`);
         }
       } catch (pdfErr : unknown) {
-        log.warn(`[IncidentPipeline] PDF vault failed for ${id} (non-fatal):`, pdfErr?.message);
+        log.warn(`[IncidentPipeline] PDF vault failed for ${id} (non-fatal):`, (pdfErr instanceof Error ? pdfErr.message : String(pdfErr)));
       }
     });
 

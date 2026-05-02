@@ -19,7 +19,7 @@ export const payrollExportService = {
       log.info(`[PayrollExport] Exported ${stubs.length} pay stubs for run ${payrollRunId}`);
       return { success: true, rows: stubs.length, format: 'json' };
     } catch (err: unknown) {
-      log.error(`[PayrollExport] Export failed: ${err?.message}`);
+      log.error(`[PayrollExport] Export failed: ${(err instanceof Error ? err.message : String(err))}`);
       return { success: false, rows: 0, format: 'json' };
     }
   },

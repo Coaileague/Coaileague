@@ -1163,7 +1163,7 @@ helpaiRouter.get('/auditor/brief', requireAuth, async (req: AuthenticatedRequest
 
     res.json({ brief, greeting });
   } catch (err: unknown) {
-    log.error('[HelpAI] Auditor brief error:', err?.message);
+    log.error('[HelpAI] Auditor brief error:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to generate audit brief' });
   }
 });

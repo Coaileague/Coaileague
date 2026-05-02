@@ -161,7 +161,7 @@ async function trackJobExecution(jobName: string, fn: () => Promise<unknown>): P
     entry.completedAt = new Date();
     entry.status = 'failed';
     entry.durationMs = entry.completedAt.getTime() - entry.startedAt.getTime();
-    entry.error = err?.message || String(err);
+    entry.error = (err instanceof Error ? err.message : String(err)) || String(err);
     if (jobInfo) jobInfo.lastStatus = 'failed';
 
     if (dbLogId) {
@@ -2964,7 +2964,7 @@ export function startAutonomousScheduler() {
       const { processSMSOutbox } = await import('./sms/smsQueueService');
       await processSMSOutbox();
     } catch (err: unknown) {
-      log.warn('[Cron] SMS outbox worker error:', err?.message);
+      log.warn('[Cron] SMS outbox worker error:', (err instanceof Error ? err.message : String(err)));
     }
   });
   log.info('SMS Outbox Worker registered', { schedule: '* * * * * (every minute)' });
@@ -3627,7 +3627,7 @@ export function startAutonomousScheduler() {
             await aiMeteringService.rollupDailySummary(ws.id, dateStr);
             rolled++;
           } catch (rollupErr: unknown) {
-            log.warn('[AutonomousScheduler] AI usage rollup failed for workspace', { workspaceId: ws.id, date: dateStr, error: rollupErr?.message });
+            log.warn('[AutonomousScheduler] AI usage rollup failed for workspace', { workspaceId: ws.id, date: dateStr, error: (rollupErr instanceof Error ? rollupErr.message : String(rollupErr)) });
           }
         }
         log.info('AI usage daily summary rollup complete', { date: dateStr, workspaces: rolled });
@@ -4188,7 +4188,7 @@ export function startAutonomousScheduler() {
       for (const wsId of workspaceIds) {
         await trinityMemoryOptimizer.runNightlyConsolidation(wsId)
           .then(() => { processed++; })
-          .catch((e) => log.warn('DreamCycle memory consolidation failed', { wsId, error: e?.message ?? e }));
+          .catch((e) => log.warn('DreamCycle memory consolidation failed', { wsId, error: (e instanceof Error ? e.message : String(e)) ?? e }));
       }
       log.info('Trinity Memory Consolidation complete', { workspacesProcessed: processed });
     });
@@ -4209,7 +4209,7 @@ export function startAutonomousScheduler() {
       for (const wsId of workspaceIds) {
         const insights = await trinitySocialGraphEngine.recalculateWorkspaceGraph(wsId)
           .catch((e) => {
-            log.warn('DreamCycle social graph recalc failed', { wsId, error: e?.message ?? e });
+            log.warn('DreamCycle social graph recalc failed', { wsId, error: (e instanceof Error ? e.message : String(e)) ?? e });
             return [];
           });
         totalInsights += insights.length;
@@ -4233,7 +4233,7 @@ export function startAutonomousScheduler() {
       for (const wsId of workspaceIds) {
         const breakthroughs = await trinityIncubationEngine.runDreamCycle(wsId)
           .catch((e) => {
-            log.warn('DreamCycle incubation failed', { wsId, error: e?.message ?? e });
+            log.warn('DreamCycle incubation failed', { wsId, error: (e instanceof Error ? e.message : String(e)) ?? e });
             return [];
           });
         totalBreakthroughs += breakthroughs.length;
@@ -4257,7 +4257,7 @@ export function startAutonomousScheduler() {
       for (const wsId of workspaceIds) {
         await trinityTemporalConsciousnessEngine.runNightlyArcUpdate(wsId)
           .then(() => { processed++; })
-          .catch((e) => log.warn('DreamCycle arc update failed', { wsId, error: e?.message ?? e }));
+          .catch((e) => log.warn('DreamCycle arc update failed', { wsId, error: (e instanceof Error ? e.message : String(e)) ?? e }));
       }
       log.info('Trinity Temporal Arc Update complete', { workspacesProcessed: processed });
     });
@@ -4278,7 +4278,7 @@ export function startAutonomousScheduler() {
       for (const wsId of workspaceIds) {
         await trinityNarrativeIdentityEngine.writeNightlyChapter(wsId)
           .then(() => { processed++; })
-          .catch((e) => log.warn('DreamCycle narrative update failed', { wsId, error: e?.message ?? e }));
+          .catch((e) => log.warn('DreamCycle narrative update failed', { wsId, error: (e instanceof Error ? e.message : String(e)) ?? e }));
       }
       log.info('Trinity Narrative Update complete', { workspacesProcessed: processed });
     });
@@ -4389,7 +4389,7 @@ export function startAutonomousScheduler() {
   platformChangeMonitor.initEventDrivenScanning().then(() => {
     log.info('Platform Change Monitor event-driven scanning activated — significant events trigger immediate scans');
   }).catch((err: unknown) => {
-    log.error('Failed to initialize event-driven scanning', { error: err?.message || String(err) });
+    log.error('Failed to initialize event-driven scanning', { error: (err instanceof Error ? err.message : String(err)) || String(err) });
   });
 
   // Shift Escalation Scanner — every 30 min: fire 72h/24h/4h unassigned-shift alerts

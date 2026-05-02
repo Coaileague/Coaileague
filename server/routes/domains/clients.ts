@@ -94,7 +94,7 @@ export function mountClientRoutes(app: Express): void {
         },
       });
     } catch (err: unknown) {
-      res.status(400).json({ message: err?.message || 'Handshake failed' });
+      res.status(400).json({ message: (err instanceof Error ? err.message : String(err)) || 'Handshake failed' });
     }
   });
 

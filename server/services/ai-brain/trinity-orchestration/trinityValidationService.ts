@@ -144,7 +144,7 @@ class ClaudeService {
           triggeredByUserId: params.context.userId,
           responseTimeMs: latencyMs,
         });
-      }).catch((err: unknown) => log.warn('[AIMeter] recordAiCall failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[AIMeter] recordAiCall failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
       await aiActionLogger.logClaudeAction({
         actionType: 'claude_request_completed',

@@ -147,7 +147,7 @@ export function registerDocumentLibraryRoutes(app: Express, requireAuth: (req: u
               version: (doc as Record<string, unknown>).version || 1,
             });
           } catch (err: unknown) {
-            log.warn('[SOP] Indexing failed (non-fatal):', err?.message);
+            log.warn('[SOP] Indexing failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
           }
         });
       }

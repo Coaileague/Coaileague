@@ -86,7 +86,7 @@ async function findEmployeeByPhone(fromPhone: string) {
     );
     return r.rows[0] || null;
   } catch (e: unknown) {
-    log.warn('[KeywordRouter] employee lookup failed:', e?.message);
+    log.warn('[KeywordRouter] employee lookup failed:', (e instanceof Error ? e.message : String(e)));
     return null;
   }
 }
@@ -223,7 +223,7 @@ async function handleComplaintOrRequest(
     });
 
     notifyHumanAgents({ supportCase: sc, workspaceId }).catch((e: unknown) =>
-      log.warn('[KeywordRouter] notify human agents failed (non-fatal):', e?.message)
+      log.warn('[KeywordRouter] notify human agents failed (non-fatal):', (e instanceof Error ? e.message : String(e)))
     );
 
     const lead = kind === 'complaint'
@@ -231,7 +231,7 @@ async function handleComplaintOrRequest(
       : `Trinity: Got it — your request is filed. Case ${sc.case_number}. We'll follow up shortly.`;
     return lead;
   } catch (err: unknown) {
-    log.warn('[KeywordRouter] complaint/request case create failed:', err?.message);
+    log.warn('[KeywordRouter] complaint/request case create failed:', (err instanceof Error ? err.message : String(err)));
     return `Trinity: I logged your message but couldn't open a case automatically. A human will reach out soon.`;
   }
 }
@@ -256,7 +256,7 @@ async function handleVerify(args: string[], officer: Record<string, unknown>, fr
     });
     return `Trinity: Verification request received for "${target}". Case ${sc.case_number}. To protect employee privacy, we will respond in writing within 2 business days.`;
   } catch (err: unknown) {
-    log.warn('[KeywordRouter] verify case create failed:', err?.message);
+    log.warn('[KeywordRouter] verify case create failed:', (err instanceof Error ? err.message : String(err)));
     return `Trinity: We received your verification request and will respond in writing within 2 business days.`;
   }
 }
@@ -279,7 +279,7 @@ async function handleStatus(officer: Record<string, unknown>, fromPhone: string)
     const summary = (c.issue_summary || '').slice(0, 80);
     return `Trinity: Most recent case ${c.case_number} is ${c.status}. ("${summary}")`;
   } catch (err: unknown) {
-    log.warn('[KeywordRouter] status lookup failed:', err?.message);
+    log.warn('[KeywordRouter] status lookup failed:', (err instanceof Error ? err.message : String(err)));
     return `Trinity: I couldn't pull your case status right now. Try again in a moment.`;
   }
 }
@@ -320,7 +320,7 @@ async function handleEmergency(args: string[], body: string, fromPhone: string):
 
     // Fire the notification non-blocking — speed matters here.
     notifyHumanAgents({ supportCase: sc, workspaceId }).catch((e: unknown) =>
-      log.warn('[KeywordRouter] emergency notify failed (non-fatal):', e?.message)
+      log.warn('[KeywordRouter] emergency notify failed (non-fatal):', (e instanceof Error ? e.message : String(e)))
     );
 
     // Best-effort: publish a high-priority platform event too.
@@ -337,7 +337,7 @@ async function handleEmergency(args: string[], body: string, fromPhone: string):
       `If you are in immediate danger, call 9-1-1 now. Reply SAFE when you're no longer in danger.`
     );
   } catch (err: unknown) {
-    log.error('[KeywordRouter] emergency handler failed:', err?.message);
+    log.error('[KeywordRouter] emergency handler failed:', (err instanceof Error ? err.message : String(err)));
     return `Trinity: Your emergency alert is received. If you are in immediate danger, call 9-1-1 now. Our on-call team has been paged.`;
   }
 }
@@ -398,7 +398,7 @@ export async function handleTrinitySmsKeyword(params: {
         try {
           await placeSupervisorWelfareCall({ fromPhone: params.fromPhone, baseUrl: params.baseUrl });
         } catch (e: unknown) {
-          log.warn('[KeywordRouter] Welfare call failed (non-fatal):', e?.message);
+          log.warn('[KeywordRouter] Welfare call failed (non-fatal):', (e instanceof Error ? e.message : String(e)));
         }
       }
       return verificationFailureMessageSms();
@@ -543,7 +543,7 @@ async function handleSchedule(fromPhone: string): Promise<string> {
     });
     return `Trinity: ${firstName}, your next shifts: ${lines.join('; ')}. Full detail in the app.`;
   } catch (err: unknown) {
-    log.warn('[KeywordRouter] SCHEDULE lookup failed:', err?.message);
+    log.warn('[KeywordRouter] SCHEDULE lookup failed:', (err instanceof Error ? err.message : String(err)));
     return `Trinity: I couldn't pull your schedule right now. Please try again in a moment or open the app.`;
   }
 }
@@ -590,7 +590,7 @@ async function handlePay(fromPhone: string): Promise<string> {
     const summary = parts.length ? parts.join(', ') : 'details available in the app';
     return `Trinity: ${firstName}, your most recent pay: ${summary}. Full stub in the app under Payroll > Pay Stubs.`;
   } catch (err: unknown) {
-    log.warn('[KeywordRouter] PAY lookup failed:', err?.message);
+    log.warn('[KeywordRouter] PAY lookup failed:', (err instanceof Error ? err.message : String(err)));
     return `Trinity: I couldn't pull your pay info right now. Please try again in a moment or open the app.`;
   }
 }
@@ -635,7 +635,7 @@ async function handleCalloff(
       `Supervisor notified. Rest up.`
     ).trim();
   } catch (err: unknown) {
-    log.error('[KeywordRouter] CALLOFF workflow error:', err?.message);
+    log.error('[KeywordRouter] CALLOFF workflow error:', (err instanceof Error ? err.message : String(err)));
     return `Trinity: We received your calloff but hit an error routing coverage. Your supervisor has been paged.`;
   }
 }

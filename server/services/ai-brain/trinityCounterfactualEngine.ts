@@ -105,7 +105,7 @@ class TrinityCounterfactualEngine {
 
       return simulation;
     } catch (err: unknown) {
-      log.warn(`[CounterfactualEngine] Simulation failed (non-fatal): ${err?.message}`);
+      log.warn(`[CounterfactualEngine] Simulation failed (non-fatal): ${(err instanceof Error ? err.message : String(err))}`);
       return null;
     }
   }

@@ -231,7 +231,7 @@ class TrinityActionReasonerService {
           },
         });
       } catch (err: unknown) {
-        log.warn('[ActionReasoner] Failed to publish trinity_labor_law_flag (non-fatal):', err?.message);
+        log.warn('[ActionReasoner] Failed to publish trinity_labor_law_flag (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
     }
 
@@ -254,7 +254,7 @@ class TrinityActionReasonerService {
           },
         });
       } catch (err: unknown) {
-        log.warn('[ActionReasoner] Failed to publish trinity_action_blocked (non-fatal):', err?.message);
+        log.warn('[ActionReasoner] Failed to publish trinity_action_blocked (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
     }
 

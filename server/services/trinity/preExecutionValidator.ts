@@ -58,7 +58,7 @@ async function logValidationDecision(
       createdAt: new Date(),
     });
   } catch (err: unknown) {
-    log.warn('[PreExecutionValidator] Audit log write failed (non-blocking):', err?.message);
+    log.warn('[PreExecutionValidator] Audit log write failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -304,7 +304,7 @@ export async function validateBeforeExecution(
     await logValidationDecision(actionId, workspaceId, PASSED);
     return PASSED;
   } catch (err: unknown) {
-    log.error('[PreExecutionValidator] Check threw unexpectedly:', err?.message);
+    log.error('[PreExecutionValidator] Check threw unexpectedly:', (err instanceof Error ? err.message : String(err)));
     // Fail CLOSED for high-risk action categories — cannot allow mutation on validator error
     const HIGH_RISK_CATEGORIES = ['payroll', 'invoicing', 'billing', 'scheduling', 'admin', 'compliance', 'tax'];
     const actionCategory = actionId.split('.')[0];
@@ -315,7 +315,7 @@ export async function validateBeforeExecution(
     try {
       await logValidationDecision(actionId, workspaceId, result);
     } catch (auditErr: unknown) {
-      log.warn('[PreExecutionValidator] Audit log write failed (non-fatal):', auditErr?.message);
+      log.warn('[PreExecutionValidator] Audit log write failed (non-fatal):', (auditErr instanceof Error ? auditErr.message : String(auditErr)));
     }
     return result;
   }

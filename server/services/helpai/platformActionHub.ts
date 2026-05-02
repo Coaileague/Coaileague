@@ -803,7 +803,7 @@ class PlatformActionHub {
           return {
             success: false,
             actionId: request.actionId,
-            message: `AI query failed: ${err?.message || 'Unknown error'}`,
+            message: `AI query failed: ${(err instanceof Error ? err.message : String(err)) || 'Unknown error'}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -2076,7 +2076,7 @@ class PlatformActionHub {
             executionTimeMs: Date.now() - startTime,
           };
         } catch (err: unknown) {
-          return { success: false, actionId: request.actionId, message: err?.message || 'Failed to draft reply', executionTimeMs: Date.now() - startTime };
+          return { success: false, actionId: request.actionId, message: (err instanceof Error ? err.message : String(err)) || 'Failed to draft reply', executionTimeMs: Date.now() - startTime };
         }
       },
     });
@@ -2118,7 +2118,7 @@ class PlatformActionHub {
           };
           return { success: true, actionId: request.actionId, message: 'Thread summary generated', data: summary, executionTimeMs: Date.now() - startTime };
         } catch (err: unknown) {
-          return { success: false, actionId: request.actionId, message: err?.message || 'Failed to summarize thread', executionTimeMs: Date.now() - startTime };
+          return { success: false, actionId: request.actionId, message: (err instanceof Error ? err.message : String(err)) || 'Failed to summarize thread', executionTimeMs: Date.now() - startTime };
         }
       },
     });
@@ -2165,7 +2165,7 @@ class PlatformActionHub {
             executionTimeMs: Date.now() - startTime,
           };
         } catch (err: unknown) {
-          return { success: false, actionId: request.actionId, message: err?.message || 'Failed to check SLA', executionTimeMs: Date.now() - startTime };
+          return { success: false, actionId: request.actionId, message: (err instanceof Error ? err.message : String(err)) || 'Failed to check SLA', executionTimeMs: Date.now() - startTime };
         }
       },
     });
@@ -3344,7 +3344,7 @@ class PlatformActionHub {
         createdAt: sql`now()`,
       });
     } catch (telErr: unknown) {
-      log.warn('[Trinity Telemetry] Invocation log failed (non-blocking):', telErr?.message);
+      log.warn('[Trinity Telemetry] Invocation log failed (non-blocking):', (telErr instanceof Error ? telErr.message : String(telErr)));
     }
   }
 

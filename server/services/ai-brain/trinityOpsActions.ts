@@ -177,8 +177,8 @@ export function registerOpsActions() {
         });
       } catch (e: unknown) {
         failed++;
-        errors.push(e?.message || 'Unknown error');
-        log.warn('[TrinityOpsActions] bulk.import_clients: failed to insert client', { workspaceId, data, error: e?.message });
+        errors.push((e instanceof Error ? e.message : String(e)) || 'Unknown error');
+        log.warn('[TrinityOpsActions] bulk.import_clients: failed to insert client', { workspaceId, data, error: (e instanceof Error ? e.message : String(e)) });
       }
     }
     return { imported, failed, errors };
@@ -199,7 +199,7 @@ export function registerOpsActions() {
         imported++;
       } catch (e: unknown) {
         failed++;
-        log.warn('[TrinityOpsActions] bulk.import_time_entries: failed to insert entry', { workspaceId, error: e?.message });
+        log.warn('[TrinityOpsActions] bulk.import_time_entries: failed to insert entry', { workspaceId, error: (e instanceof Error ? e.message : String(e)) });
       }
     }
     return { imported, failed };

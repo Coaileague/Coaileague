@@ -143,7 +143,7 @@ export async function analyzeSubtext(
       recommendedAdjustment,
     };
   } catch (err: unknown) {
-    log.warn('[SubtextDetector] Analysis failed (non-fatal):', err?.message);
+    log.warn('[SubtextDetector] Analysis failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     return {
       subtextScore: 0,
       statedSentiment: 'unknown',

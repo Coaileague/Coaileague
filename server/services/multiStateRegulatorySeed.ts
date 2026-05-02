@@ -116,7 +116,7 @@ async function seedOne(seed: StateSeed): Promise<boolean> {
     `);
     return true;
   } catch (err: unknown) {
-    log.warn(`[multiStateSeed] ${seed.stateCode} seed failed:`, err?.message);
+    log.warn(`[multiStateSeed] ${seed.stateCode} seed failed:`, (err instanceof Error ? err.message : String(err)));
     return false;
   }
 }

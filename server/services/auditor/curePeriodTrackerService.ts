@@ -209,7 +209,7 @@ async function sendReminderStrike(
       body,
     });
   } catch (err: unknown) {
-    log.warn(`[CurePeriod] In-app ${strike} alert failed (non-fatal):`, err?.message);
+    log.warn(`[CurePeriod] In-app ${strike} alert failed (non-fatal):`, (err instanceof Error ? err.message : String(err)));
   }
 
   if (config.alsoEmail) {
@@ -223,7 +223,7 @@ async function sendReminderStrike(
         body: { ...body, html: `<p style="font-weight:bold;color:#e74c3c;">${config.message}</p>` },
       });
     } catch (err: unknown) {
-      log.warn(`[CurePeriod] Email ${strike} alert failed (non-fatal):`, err?.message);
+      log.warn(`[CurePeriod] Email ${strike} alert failed (non-fatal):`, (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -238,7 +238,7 @@ async function sendReminderStrike(
         body:            { message: config.message },
       });
     } catch (err: unknown) {
-      log.warn(`[CurePeriod] SMS ${strike} alert failed (non-fatal):`, err?.message);
+      log.warn(`[CurePeriod] SMS ${strike} alert failed (non-fatal):`, (err instanceof Error ? err.message : String(err)));
     }
   }
 }
@@ -305,7 +305,7 @@ async function convertToAutoFail(timer: unknown): Promise<void> {
           },
         });
       } catch (err: unknown) {
-        log.warn(`[CurePeriod] Auto-FAIL ${channel} alert failed (non-fatal):`, err?.message);
+        log.warn(`[CurePeriod] Auto-FAIL ${channel} alert failed (non-fatal):`, (err instanceof Error ? err.message : String(err)));
       }
     }
   }
@@ -322,7 +322,7 @@ async function convertToAutoFail(timer: unknown): Promise<void> {
         emailType: 'compliance_alert',
       });
     } catch (err: unknown) {
-      log.warn('[CurePeriod] Auditor auto-FAIL email failed (non-fatal):', err?.message);
+      log.warn('[CurePeriod] Auditor auto-FAIL email failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -378,7 +378,7 @@ export async function runCureHeartbeat(): Promise<{
         await convertToAutoFail(timer);
         autoFailed++;
       } catch (err: unknown) {
-        log.error('[CurePeriod] Auto-FAIL conversion error:', err?.message);
+        log.error('[CurePeriod] Auto-FAIL conversion error:', (err instanceof Error ? err.message : String(err)));
       }
       continue;
     }
@@ -393,7 +393,7 @@ export async function runCureHeartbeat(): Promise<{
         );
         reminders24h++;
       } catch (err: unknown) {
-        log.warn('[CurePeriod] 24h reminder failed (non-fatal):', err?.message);
+        log.warn('[CurePeriod] 24h reminder failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
       continue;
     }
@@ -408,7 +408,7 @@ export async function runCureHeartbeat(): Promise<{
         );
         reminders72h++;
       } catch (err: unknown) {
-        log.warn('[CurePeriod] 72h reminder failed (non-fatal):', err?.message);
+        log.warn('[CurePeriod] 72h reminder failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
       continue;
     }
@@ -423,7 +423,7 @@ export async function runCureHeartbeat(): Promise<{
         );
         reminders7d++;
       } catch (err: unknown) {
-        log.warn('[CurePeriod] 7d reminder failed (non-fatal):', err?.message);
+        log.warn('[CurePeriod] 7d reminder failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
     }
   }

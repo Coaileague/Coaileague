@@ -81,7 +81,7 @@ export async function runMissedClockInSweep(): Promise<MissedClockInSweepResult>
   try {
     missing = await findMissedClockIns();
   } catch (err: unknown) {
-    result.errors.push(`scan:${err?.message}`);
+    result.errors.push(`scan:${(err instanceof Error ? err.message : String(err))}`);
     return result;
   }
 
@@ -124,7 +124,7 @@ export async function runMissedClockInSweep(): Promise<MissedClockInSweepResult>
         if (advanced) result.escalated++;
       }
     } catch (err: unknown) {
-      result.errors.push(`${miss.shiftId}:${err?.message}`);
+      result.errors.push(`${miss.shiftId}:${(err instanceof Error ? err.message : String(err))}`);
     }
   }
 
@@ -205,7 +205,7 @@ async function startMissedClockInWorkflow(miss: {
         })
         .where(eq(auditLogs.id, record.id));
     } catch (err: unknown) {
-      log.warn('[missed-clockin] start metadata write failed:', err?.message);
+      log.warn('[missed-clockin] start metadata write failed:', (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -257,7 +257,7 @@ async function advanceToCall(
 
     return callResult.success;
   } catch (err: unknown) {
-    log.warn('[missed-clockin] welfare call failed, escalating:', err?.message);
+    log.warn('[missed-clockin] welfare call failed, escalating:', (err instanceof Error ? err.message : String(err)));
     await advanceToEscalation(auditId, meta, miss);
     return false;
   }
@@ -321,7 +321,7 @@ async function advanceToEscalation(
         metadata: { shiftId: miss.shiftId, employeeId: miss.employeeId },
       } as unknown);
     } catch (err: unknown) {
-      log.warn('[missed-clockin] event publish failed:', err?.message);
+      log.warn('[missed-clockin] event publish failed:', (err instanceof Error ? err.message : String(err)));
     }
 
     await db
@@ -346,7 +346,7 @@ async function advanceToEscalation(
       .where(eq(auditLogs.id, auditId));
     return true;
   } catch (err: unknown) {
-    log.warn('[missed-clockin] escalation failed:', err?.message);
+    log.warn('[missed-clockin] escalation failed:', (err instanceof Error ? err.message : String(err)));
     return false;
   }
 }
@@ -379,7 +379,7 @@ async function markResolved(
       })
       .where(eq(auditLogs.id, auditId));
   } catch (err: unknown) {
-    log.warn('[missed-clockin] resolve update failed:', err?.message);
+    log.warn('[missed-clockin] resolve update failed:', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -457,7 +457,7 @@ async function findExistingWorkflow(
       createdAt: row.createdAt,
     };
   } catch (err: unknown) {
-    log.warn('[missed-clockin] existing-workflow lookup failed:', err?.message);
+    log.warn('[missed-clockin] existing-workflow lookup failed:', (err instanceof Error ? err.message : String(err)));
     return null;
   }
 }

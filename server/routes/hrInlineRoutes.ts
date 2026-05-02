@@ -923,7 +923,7 @@ router.post("/invites/accept", requireAuth, async (req: AuthenticatedRequest, re
           invite.workspaceId
         );
       } catch (err: unknown) {
-        log.warn('[InviteAccept] Post-accept onboarding setup failed (non-blocking):', err?.message);
+        log.warn('[InviteAccept] Post-accept onboarding setup failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
       }
     })();
 

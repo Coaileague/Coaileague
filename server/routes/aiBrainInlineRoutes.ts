@@ -486,7 +486,7 @@ router.post("/dream-state/trigger", requireOwner, async (req: AuthenticatedReque
     trinityDreamState.runFullCycle().then((results) => {
       log.info(`[DreamState] Manual trigger complete — ${results.length} workspaces processed`);
     }).catch((err) => {
-      log.error('[DreamState] Manual trigger failed:', err?.message);
+      log.error('[DreamState] Manual trigger failed:', (err instanceof Error ? err.message : String(err)));
     });
   } catch (err: unknown) {
     res.status(500).json({ error: 'Failed to trigger dream state', detail: sanitizeError(err) });

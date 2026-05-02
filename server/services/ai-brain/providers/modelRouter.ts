@@ -550,7 +550,7 @@ class ModelRouter {
           await this.healthCheck();
         }
       } catch (error: unknown) {
-        log.warn('[ModelRouter] Health loop error (will retry):', error?.message || 'unknown');
+        log.warn('[ModelRouter] Health loop error (will retry):', (error instanceof Error ? error.message : String(error)) || 'unknown');
       }
     }, HEALTH_CHECK_INTERVAL_MS);
   }

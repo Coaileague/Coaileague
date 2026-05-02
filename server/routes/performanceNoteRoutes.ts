@@ -67,7 +67,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
       workspaceId,
       metadata: { noteId: note.id, employeeId: parsed.data.employeeId, noteType: parsed.data.noteType },
       visibility: 'supervisor',
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     res.status(201).json(note);
   } catch (err: unknown) {

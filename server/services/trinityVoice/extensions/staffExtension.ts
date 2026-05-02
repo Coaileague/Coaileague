@@ -142,7 +142,7 @@ export function handleStaff(params: {
       `<Redirect method="POST">${baseUrl}/api/voice/staff-menu?${qs}</Redirect>`
     );
   } catch (err: unknown) {
-    log.error('[staffExtension/handleStaff] Error:', err?.message);
+    log.error('[staffExtension/handleStaff] Error:', (err instanceof Error ? err.message : String(err)));
     return twiml(say('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }
 }
@@ -188,7 +188,7 @@ export function handleClockInStep1(params: {
       say('No entry received. Goodbye.')
     );
   } catch (err: unknown) {
-    log.error('[staffExtension/handleClockInStep1] Error:', err?.message);
+    log.error('[staffExtension/handleClockInStep1] Error:', (err instanceof Error ? err.message : String(err)));
     return twiml(say('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }
 }
@@ -223,7 +223,7 @@ export function handleCollectPin(params: {
       say('No PIN received. Goodbye.')
     );
   } catch (err: unknown) {
-    log.error('[staffExtension/handleCollectPin] Error:', err?.message);
+    log.error('[staffExtension/handleCollectPin] Error:', (err instanceof Error ? err.message : String(err)));
     return twiml(say('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }
 }
@@ -595,7 +595,7 @@ export function handleClockOutStep1(params: {
       say('No entry received. Goodbye.')
     );
   } catch (err: unknown) {
-    log.error('[staffExtension/handleClockOutStep1] Error:', err?.message);
+    log.error('[staffExtension/handleClockOutStep1] Error:', (err instanceof Error ? err.message : String(err)));
     return twiml(say('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }
 }
@@ -628,7 +628,7 @@ export function handleCollectClockOutPin(params: {
       say('No PIN received. Goodbye.')
     );
   } catch (err: unknown) {
-    log.error('[staffExtension/handleCollectClockOutPin] Error:', err?.message);
+    log.error('[staffExtension/handleCollectClockOutPin] Error:', (err instanceof Error ? err.message : String(err)));
     return twiml(say('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }
 }
@@ -689,7 +689,7 @@ export async function processClockOut(params: {
       ? twiml(say(`Salida registrada, ${emp.firstName}. Referencia ${ref.split('').join(' ')}. Gracias por su turno. Adiós.`, 'es'))
       : twiml(say(`Clocked out, ${emp.firstName}. Reference ${ref.split('').join(' ')}. Thanks for your shift. Goodbye.`));
   } catch (err: unknown) {
-    log.error('[staffExtension/processClockOut] Error:', err?.message);
+    log.error('[staffExtension/processClockOut] Error:', (err instanceof Error ? err.message : String(err)));
     return twiml(say('We encountered an error processing your clock-out. Please try again. Goodbye.'));
   }
 }
@@ -728,7 +728,7 @@ export function handleCallOff(params: {
       say('Your call-off has been recorded. A supervisor has been notified. Goodbye.')
     );
   } catch (err: unknown) {
-    log.error('[staffExtension/handleCallOff] Error:', err?.message);
+    log.error('[staffExtension/handleCallOff] Error:', (err instanceof Error ? err.message : String(err)));
     return twiml(say('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }
 }
@@ -767,7 +767,7 @@ export function handleStaffSupport(params: {
       say('Your message has been received. We will follow up with you shortly. Goodbye.')
     );
   } catch (err: unknown) {
-    log.error('[staffExtension/handleStaffSupport] Error:', err?.message);
+    log.error('[staffExtension/handleStaffSupport] Error:', (err instanceof Error ? err.message : String(err)));
     return twiml(say('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }
 }

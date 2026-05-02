@@ -299,11 +299,11 @@ router.get("/stats", async (req: AuthenticatedRequest, res) => {
   } catch (error: unknown) {
     const err = error as unknown;
     log.error("[analytics/stats] error:", {
-      message: err?.message,
-      code: err?.code,
+      message: (err instanceof Error ? err.message : String(err)),
+      code: (err as NodeJS.ErrnoException).code,
       detail: err?.detail,
       query: err?.query,
-      stack: err?.stack?.split('\n').slice(0, 5).join('\n'),
+      stack: (err instanceof Error ? err.stack : undefined)?.split('\n').slice(0, 5).join('\n'),
     });
     res.status(500).json({ error: "Failed to load stats" });
   }

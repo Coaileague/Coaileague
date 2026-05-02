@@ -272,7 +272,7 @@ Return ONLY the JSON object, no other text.`;
 
     return result;
   } catch (err: unknown) {
-    log.error('[TOPSVerification] Vision analysis failed:', err?.message);
+    log.error('[TOPSVerification] Vision analysis failed:', (err instanceof Error ? err.message : String(err)));
     return {
       status: 'suspicious',
       detectedStatus: null,

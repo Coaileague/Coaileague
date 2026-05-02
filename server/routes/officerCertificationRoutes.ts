@@ -498,7 +498,7 @@ router.post('/attempts/:id/final-exam', async (req: AuthenticatedRequest, res) =
             expiresAt: expiresAt!.toISOString(),
             officerName,
           },
-        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
       } catch { /* non-fatal */ }
 
       // Update training completion percentage (fire-and-forget)
@@ -512,7 +512,7 @@ router.post('/attempts/:id/final-exam', async (req: AuthenticatedRequest, res) =
         } catch (pctErr) {
           log.warn('[CertRoutes] Training completion pct update failed (non-fatal):', pctErr);
         }
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
     } else if (interventionCreated) {
       try {
         platformEventBus.publish({
@@ -531,7 +531,7 @@ router.post('/attempts/:id/final-exam', async (req: AuthenticatedRequest, res) =
             missedTopics,
             officerName,
           },
-        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
       } catch { /* non-fatal */ }
     }
 

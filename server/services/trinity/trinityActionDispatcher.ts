@@ -303,7 +303,7 @@ export async function queueForApproval(
         ],
       );
     } catch (fallbackErr: unknown) {
-      log.warn('[Dispatcher] approval insert failed:', fallbackErr?.message);
+      log.warn('[Dispatcher] approval insert failed:', (fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)));
     }
   }
 
@@ -319,7 +319,7 @@ export async function queueForApproval(
         metadata: { actionType: actionId, risk, approvalId: resolvedId },
       } as unknown);
     } catch (err: unknown) {
-      log.warn('[Dispatcher] pending_approval event publish failed (non-fatal):', err?.message);
+      log.warn('[Dispatcher] pending_approval event publish failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     }
   });
 
@@ -484,7 +484,7 @@ export async function dispatchFromChat(
       context.platformRole,
     );
   } catch (govErr: unknown) {
-    log.warn('[Dispatcher] Governance evaluation error (falling back to risk tier):', govErr?.message);
+    log.warn('[Dispatcher] Governance evaluation error (falling back to risk tier):', (govErr instanceof Error ? govErr.message : String(govErr)));
     governance = {
       canExecute: true,
       requiresApproval: intent.risk !== 'low',
@@ -540,15 +540,15 @@ export async function dispatchFromChat(
         : `\n\n⏳ **Approval needed** — I've queued \`${intent.actionId}\` for manager approval (${intent.risk} risk). Reason: ${intent.reason}. Check **Approvals** in your dashboard. Expires in ${intent.risk === 'high' ? '4' : '24'} hours.`,
     };
   } catch (err: unknown) {
-    log.warn('[Dispatcher] Dispatch failed:', err?.message);
+    log.warn('[Dispatcher] Dispatch failed:', (err instanceof Error ? err.message : String(err)));
     return {
       detected: true,
       executed: false,
       queued: false,
       status: 'error',
       actionId: intent.actionId,
-      error: err?.message,
-      appendToResponse: `\n\n⚠️ I understood what you want but hit an error executing it: ${err?.message}.`,
+      error: (err instanceof Error ? err.message : String(err)),
+      appendToResponse: `\n\n⚠️ I understood what you want but hit an error executing it: ${(err instanceof Error ? err.message : String(err))}.`,
     };
   }
 }

@@ -88,7 +88,7 @@ export async function runAnomalyWatchSweep(): Promise<AnomalyWatchResult> {
   try {
     workspaces = await listActiveWorkspaces();
   } catch (err: unknown) {
-    result.errors.push(`workspaces:${err?.message}`);
+    result.errors.push(`workspaces:${(err instanceof Error ? err.message : String(err))}`);
     return result;
   }
 
@@ -111,8 +111,8 @@ export async function runAnomalyWatchSweep(): Promise<AnomalyWatchResult> {
         await recordAnomaly(a);
       }
     } catch (err: unknown) {
-      result.errors.push(`${workspaceId}:${err?.message}`);
-      log.warn(`[anomalyWatch] workspace ${workspaceId} failed:`, err?.message);
+      result.errors.push(`${workspaceId}:${(err instanceof Error ? err.message : String(err))}`);
+      log.warn(`[anomalyWatch] workspace ${workspaceId} failed:`, (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -190,7 +190,7 @@ async function findGpsFraud(workspaceId: string): Promise<Anomaly[]> {
       })
       .filter((a: unknown): a is Anomaly => !!a);
   } catch (err: unknown) {
-    log.warn('[anomalyWatch] gps_fraud lookup failed:', err?.message);
+    log.warn('[anomalyWatch] gps_fraud lookup failed:', (err instanceof Error ? err.message : String(err)));
     return [];
   }
 }
@@ -231,7 +231,7 @@ async function findCoverageGaps(workspaceId: string): Promise<Anomaly[]> {
       },
     }));
   } catch (err: unknown) {
-    log.warn('[anomalyWatch] coverage_gap lookup failed:', err?.message);
+    log.warn('[anomalyWatch] coverage_gap lookup failed:', (err instanceof Error ? err.message : String(err)));
     return [];
   }
 }
@@ -264,7 +264,7 @@ async function findIncidentPatterns(workspaceId: string): Promise<Anomaly[]> {
       details: { clientId: row.client_id, incidentCount: row.incident_count },
     }));
   } catch (err: unknown) {
-    log.warn('[anomalyWatch] incident_pattern lookup failed:', err?.message);
+    log.warn('[anomalyWatch] incident_pattern lookup failed:', (err instanceof Error ? err.message : String(err)));
     return [];
   }
 }
@@ -310,7 +310,7 @@ async function findGhostEmployees(workspaceId: string): Promise<Anomaly[]> {
       details: { employeeId: row.employee_id },
     }));
   } catch (err: unknown) {
-    log.warn('[anomalyWatch] ghost_employee lookup failed:', err?.message);
+    log.warn('[anomalyWatch] ghost_employee lookup failed:', (err instanceof Error ? err.message : String(err)));
     return [];
   }
 }
@@ -366,7 +366,7 @@ async function findBillingAnomalies(workspaceId: string): Promise<Anomaly[]> {
       },
     }));
   } catch (err: unknown) {
-    log.warn('[anomalyWatch] billing_anomaly lookup failed:', err?.message);
+    log.warn('[anomalyWatch] billing_anomaly lookup failed:', (err instanceof Error ? err.message : String(err)));
     return [];
   }
 }
@@ -447,7 +447,7 @@ async function notify(a: Anomaly): Promise<boolean> {
       metadata: { workflow: WORKFLOW_NAME, ...a },
     } as unknown);
   } catch (err: unknown) {
-    log.warn('[anomalyWatch] event publish failed (non-fatal):', err?.message);
+    log.warn('[anomalyWatch] event publish failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 
   await logActionAudit({
@@ -515,7 +515,7 @@ async function recordAnomaly(a: Anomaly): Promise<void> {
       ],
     );
   } catch (err: unknown) {
-    log.warn('[anomalyWatch] audit write failed (non-fatal):', err?.message);
+    log.warn('[anomalyWatch] audit write failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -640,7 +640,7 @@ export async function detectFutureShiftGuardCardExpiry(workspaceId: string): Pro
       });
     }
   } catch (err: unknown) {
-    log.warn('[AnomalyWatch] Future shift guard card check failed:', err?.message);
+    log.warn('[AnomalyWatch] Future shift guard card check failed:', (err instanceof Error ? err.message : String(err)));
   }
   return out;
 }
@@ -721,7 +721,7 @@ export async function detectBillRateMismatch(workspaceId: string): Promise<Anoma
       });
     }
   } catch (err: unknown) {
-    log.warn('[AnomalyWatch] Bill rate mismatch check failed:', err?.message);
+    log.warn('[AnomalyWatch] Bill rate mismatch check failed:', (err instanceof Error ? err.message : String(err)));
   }
   return out;
 }

@@ -183,7 +183,7 @@ router.get('/status', async (_req: Request, res: Response) => {
         : 'Ready — log in with owner@acme-security.test / admin123',
     });
   } catch (e: unknown) {
-    return res.status(500).json({ error: e?.message });
+    return res.status(500).json({ error: (e instanceof Error ? e.message : String(e)) });
   }
 });
 

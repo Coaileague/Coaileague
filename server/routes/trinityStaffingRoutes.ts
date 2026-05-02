@@ -349,7 +349,7 @@ router.post('/webhook-token', async (req: AuthenticatedRequest, res) => {
     const config = trinityStaffingOrchestrator.generateWebhookToken(workspaceId, userId);
 
     // Persist to DB so token survives server restarts
-    persistWebhookConfig(workspaceId, config.webhookToken, config.webhookSecret, userId).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    persistWebhookConfig(workspaceId, config.webhookToken, config.webhookSecret, userId).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
     
     res.json({
       success: true,

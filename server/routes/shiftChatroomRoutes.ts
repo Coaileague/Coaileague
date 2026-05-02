@@ -341,7 +341,7 @@ router.post('/dar/:darId/approve', async (req: AuthenticatedRequest, res) => {
       description: `Daily Activity Report approved for ${dar.employeeName || 'officer'}`,
       workspaceId,
       metadata: { darId: dar.id, shiftId: dar.shiftId, approvedBy: userId, timestamp: new Date().toISOString() },
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     res.json({ success: true, darId: dar.id, status: 'verified' });
   } catch (err: unknown) {

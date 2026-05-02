@@ -118,7 +118,7 @@ export function GuardTourScanner({
       setStatus({
         ok: false,
         text:
-          err?.name === "NotAllowedError"
+          (err instanceof Error ? err.name : "Error") === "NotAllowedError"
             ? "Camera permission denied. Enable camera access in settings or enter the code manually."
             : (err as Error)?.message || "Could not start camera.",
       });

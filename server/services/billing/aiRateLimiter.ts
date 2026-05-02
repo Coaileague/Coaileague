@@ -117,7 +117,7 @@ class AIRateLimiter {
         metadata: { limitType: type, count, limit, timestamp: new Date().toISOString() },
       }).catch((err) => log.warn('[aiRateLimiter] Fire-and-forget failed:', err));
     } catch (err: unknown) {
-      log.warn('[AIRateLimiter] Rate limit alert emission failed (non-fatal):', err?.message);
+      log.warn('[AIRateLimiter] Rate limit alert emission failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     }
   }
 

@@ -99,7 +99,7 @@ async function fetchClientContext(params: {
       `${row.open_invoices ?? 0} open invoices.`
     );
   } catch (e: unknown) {
-    log.warn('[clientExtension] Context enrichment failed (non-fatal):', e?.message);
+    log.warn('[clientExtension] Context enrichment failed (non-fatal):', (e instanceof Error ? e.message : String(e)));
     return '';
   }
 }
@@ -180,7 +180,7 @@ export async function handleClientSupport(params: {
       )
     );
   } catch (err: unknown) {
-    log.error('[clientExtension] Error:', err?.message);
+    log.error('[clientExtension] Error:', (err instanceof Error ? err.message : String(err)));
     return twiml(sayEn('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }
 }

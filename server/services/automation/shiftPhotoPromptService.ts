@@ -105,7 +105,7 @@ export async function promptOverdueShiftPhotos(): Promise<{
       });
       prompted++;
     } catch (err: unknown) {
-      log.warn('[PhotoPrompt] chatroom system message failed (non-fatal):', err?.message);
+      log.warn('[PhotoPrompt] chatroom system message failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     }
 
     // 2. Push notification to the officer's device via NDS.
@@ -138,7 +138,7 @@ export async function promptOverdueShiftPhotos(): Promise<{
         });
       }
     } catch (err: unknown) {
-      log.warn('[PhotoPrompt] NDS push failed (non-fatal):', err?.message);
+      log.warn('[PhotoPrompt] NDS push failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     }
 
     // 3. Supervisor escalation when critically overdue.
@@ -154,7 +154,7 @@ export async function promptOverdueShiftPhotos(): Promise<{
         });
         supervisorAlerts++;
       } catch (err: unknown) {
-        log.warn('[PhotoPrompt] supervisor alert failed (non-fatal):', err?.message);
+        log.warn('[PhotoPrompt] supervisor alert failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
     }
   }
@@ -212,7 +212,7 @@ async function notifySupervisorOfMissingPhotos(params: {
         },
       });
     } catch (err: unknown) {
-      log.warn('[PhotoPrompt] supervisor alert per-user failed:', err?.message);
+      log.warn('[PhotoPrompt] supervisor alert per-user failed:', (err instanceof Error ? err.message : String(err)));
     }
   }
 }

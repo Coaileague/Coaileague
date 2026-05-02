@@ -135,7 +135,7 @@ async function gatherTargetData(
       }
     }
   } catch (err: unknown) {
-    log.warn('[Deliberation] Data gather failed (non-fatal):', err?.message);
+    log.warn('[Deliberation] Data gather failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
   return data;
 }
@@ -197,7 +197,7 @@ Deliberate. Return JSON:
     const parsed: unknown = JSON.parse(cleaned);
     return { ...parsed, dataPoints };
   } catch (err: unknown) {
-    log.error('[Deliberation] AI reasoning failed:', err?.message);
+    log.error('[Deliberation] AI reasoning failed:', (err instanceof Error ? err.message : String(err)));
     return {
       verdict: 'pause_and_warn',
       headline: 'Trinity could not complete analysis — human review required',
@@ -234,7 +234,7 @@ export async function persistDeliberationDocuments(
         JSON.stringify({ content: doc.content, generatedBy: 'trinity_deliberation', requestType: ctx.requestType }),
       ]);
     } catch (err: unknown) {
-      log.warn('[Deliberation] Document persist failed (non-fatal):', err?.message);
+      log.warn('[Deliberation] Document persist failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     }
   }
 }

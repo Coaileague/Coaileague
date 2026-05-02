@@ -77,7 +77,7 @@ class HttpWebhookAdapter implements ErrorTrackerAdapter {
         signal: AbortSignal.timeout(2000),
       });
     } catch (err: unknown) {
-      log.warn('[errorTracker] webhook capture failed (non-fatal):', err?.message);
+      log.warn('[errorTracker] webhook capture failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     }
   }
 }
@@ -116,7 +116,7 @@ export function captureError(event: TrackedError): void {
       out.catch((err) => log.warn('[errorTracker] capture promise rejected', err));
     }
   } catch (err: unknown) {
-    log.warn('[errorTracker] capture threw (non-fatal):', err?.message);
+    log.warn('[errorTracker] capture threw (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }
 

@@ -66,7 +66,7 @@ export class TrinityEmailProcessor {
           await this.handleMainInboxEmail(storedEmail, workspace, sender);
       }
     } catch (err: unknown) {
-      log.error('Error processing inbound email:', err?.message);
+      log.error('Error processing inbound email:', (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -204,7 +204,7 @@ export class TrinityEmailProcessor {
       });
       log.info(`Trinity replied to ${params.toAddress} from ${params.fromAddress}`);
     } catch (err: unknown) {
-      log.warn('[TrinityEmailProcessor] replyToEmail via NDS failed:', err?.message);
+      log.warn('[TrinityEmailProcessor] replyToEmail via NDS failed:', (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -269,7 +269,7 @@ export class TrinityEmailProcessor {
       };
       await processInboundEmail(parsed);
     } catch (err: unknown) {
-      log.warn('[trinityEmailProcessor] _delegateToFullPipeline failed (non-fatal):', err?.message);
+      log.warn('[trinityEmailProcessor] _delegateToFullPipeline failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     }
   }
 

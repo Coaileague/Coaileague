@@ -109,7 +109,7 @@ export function registerProactiveMonitors(adapter: SchedulerAdapter): void {
       });
       log.info(`[${job.jobName}] registered`, { schedule: job.schedule });
     } catch (err: unknown) {
-      log.error(`[${job.jobName}] registration failed:`, err?.message);
+      log.error(`[${job.jobName}] registration failed:`, (err instanceof Error ? err.message : String(err)));
     }
   }
 }

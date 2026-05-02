@@ -158,7 +158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       } catch (err: unknown) {
         if (attempt === maxAttempts) {
-          log.warn(`[Startup] ${name} failed after ${maxAttempts} attempts (non-blocking):`, err?.message);
+          log.warn(`[Startup] ${name} failed after ${maxAttempts} attempts (non-blocking):`, (err instanceof Error ? err.message : String(err)));
           return;
         }
         const delay = Math.min(attempt * 3000, 15000);
@@ -435,7 +435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await seedWithRetry(seedRootUser, 'seedRootUser');
     const { seedPlatformWorkspace } = await import("./seed-platform-workspace");
     await seedWithRetry(seedPlatformWorkspace, 'seedPlatformWorkspace');
-  }).catch(err => log.warn('[Startup] Background seed error:', err?.message));
+  }).catch(err => log.warn('[Startup] Background seed error:', (err instanceof Error ? err.message : String(err))));
 
   // ============================================================================
   // WEBSOCKET SETUP
@@ -533,8 +533,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
       } catch (err: unknown) {
-        log.error('[DevQuickLogin] Error:', err?.message);
-        return res.status(500).json({ success: false, error: err?.message });
+        log.error('[DevQuickLogin] Error:', (err instanceof Error ? err.message : String(err)));
+        return res.status(500).json({ success: false, error: (err instanceof Error ? err.message : String(err)) });
       }
     });
     log.info('[DevQuickLogin] Dev quick-login endpoint active at POST /api/dev/quick-login');
@@ -1123,12 +1123,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         log.info("[EnterpriseInquiry] Lead persisted to DB for:", email);
       } catch (dbErr: unknown) {
-        log.error("[EnterpriseInquiry] DB persist failed (non-fatal):", dbErr?.message);
+        log.error("[EnterpriseInquiry] DB persist failed (non-fatal):", (dbErr instanceof Error ? dbErr.message : String(dbErr)));
       }
 
       return res.status(200).json({ success: true, message: "Inquiry received — we will be in touch within 24 hours." });
     } catch (err: unknown) {
-      log.error("[EnterpriseInquiry] Error:", err?.message);
+      log.error("[EnterpriseInquiry] Error:", (err instanceof Error ? err.message : String(err)));
       return res.status(500).json({ error: "Failed to submit inquiry" });
     }
   });
@@ -1148,14 +1148,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       : 500;
     const requestId = (req.headers["x-request-id"] as string) ?? "";
     log.error(
-      `[GlobalErrorHandler] ${req.method} ${req.path} → HTTP ${status}: ${err?.message ?? "unknown error"}` +
+      `[GlobalErrorHandler] ${req.method} ${req.path} → HTTP ${status}: ${(err instanceof Error ? err.message : String(err)) ?? "unknown error"}` +
       (requestId ? ` (reqId: ${requestId})` : ""),
-      err?.stack ? `\n${err instanceof Error ? err.stack : undefined}` : ""
+      (err instanceof Error ? err.stack : undefined) ? `\n${err instanceof Error ? err.stack : undefined}` : ""
     );
     if (res.headersSent) return;
     res.status(status).json({
       error: status >= 500 ? "Internal server error" : (err instanceof Error ? err.message : String(err) || "Request failed"),
-      ...(process.env.NODE_ENV !== "production" && status >= 500 ? { detail: err?.message } : {}),
+      ...(process.env.NODE_ENV !== "production" && status >= 500 ? { detail: (err instanceof Error ? err.message : String(err)) } : {}),
     });
   });
 

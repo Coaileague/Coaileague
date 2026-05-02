@@ -65,7 +65,7 @@ export async function runWeeklyBriefSweep(): Promise<WeeklyBriefResult> {
   try {
     workspaces = await listActiveWorkspaces();
   } catch (err: unknown) {
-    result.errors.push(`workspaces:${err?.message}`);
+    result.errors.push(`workspaces:${(err instanceof Error ? err.message : String(err))}`);
     return result;
   }
 
@@ -78,8 +78,8 @@ export async function runWeeklyBriefSweep(): Promise<WeeklyBriefResult> {
       result.workspacesBriefed++;
       result.deliveries += sent;
     } catch (err: unknown) {
-      result.errors.push(`${workspaceId}:${err?.message}`);
-      log.warn(`[weeklyBrief] workspace ${workspaceId} failed:`, err?.message);
+      result.errors.push(`${workspaceId}:${(err instanceof Error ? err.message : String(err))}`);
+      log.warn(`[weeklyBrief] workspace ${workspaceId} failed:`, (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -114,7 +114,7 @@ export async function sendWeeklyBriefForWorkspace(
       });
       delivered++;
     } catch (err: unknown) {
-      log.warn(`[weeklyBrief] in-app send failed for ${o.userId}:`, err?.message);
+      log.warn(`[weeklyBrief] in-app send failed for ${o.userId}:`, (err instanceof Error ? err.message : String(err)));
     }
 
     if (o.email) {
@@ -134,7 +134,7 @@ export async function sendWeeklyBriefForWorkspace(
           idempotencyKey: `weeklybrief-email-${workspaceId}-${o.userId}-${weekKey}`,
         });
       } catch (err: unknown) {
-        log.warn(`[weeklyBrief] email send failed for ${o.userId}:`, err?.message);
+        log.warn(`[weeklyBrief] email send failed for ${o.userId}:`, (err instanceof Error ? err.message : String(err)));
       }
     }
   }
@@ -149,7 +149,7 @@ export async function sendWeeklyBriefForWorkspace(
       metadata: { workflow: WORKFLOW_NAME, snapshot: snap, triggerSource },
     } as unknown);
   } catch (err: unknown) {
-    log.warn('[weeklyBrief] event publish failed (non-fatal):', err?.message);
+    log.warn('[weeklyBrief] event publish failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 
   await recordBriefed(workspaceId, isoWeekKey(new Date()), triggerSource, snap);
@@ -376,7 +376,7 @@ async function fetchOwnerRecipients(workspaceId: string): Promise<OwnerRecipient
     );
     return r.rows.map((row: unknown) => ({ userId: row.user_id, email: row.email || null }));
   } catch (err: unknown) {
-    log.warn('[weeklyBrief] owner lookup failed:', err?.message);
+    log.warn('[weeklyBrief] owner lookup failed:', (err instanceof Error ? err.message : String(err)));
     return [];
   }
 }
@@ -424,6 +424,6 @@ async function recordBriefed(
       ],
     );
   } catch (err: unknown) {
-    log.warn('[weeklyBrief] audit write failed (non-fatal):', err?.message);
+    log.warn('[weeklyBrief] audit write failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }

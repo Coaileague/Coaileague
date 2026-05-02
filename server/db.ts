@@ -193,7 +193,7 @@ const _originalConnect = pool.connect.bind(pool);
     const client = await _originalConnect(...args);
     return client;
   } catch (err: unknown) {
-    recordDbFailure(err?.message);
+    recordDbFailure((err instanceof Error ? err.message : String(err)));
     throw err;
   }
 };
@@ -217,7 +217,7 @@ export async function probeDbConnection(): Promise<boolean> {
       client.release();
     }
   } catch (err: unknown) {
-    recordDbFailure(err?.message);
+    recordDbFailure((err instanceof Error ? err.message : String(err)));
     return false;
   }
 }

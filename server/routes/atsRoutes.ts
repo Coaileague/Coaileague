@@ -224,7 +224,7 @@ router.post("/applicants", requireAuth, async (req: AuthenticatedRequest, res) =
       description: `Trinity Score: ${score}/100. ${score >= 80 ? 'HIGH SCORE — Review recommended.' : ''}`,
       workspaceId: wid,
       metadata: { applicantId: id, score }
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     const r = await db.$client.query(`SELECT * FROM applicants WHERE id = $1 AND workspace_id = $2`, [id, wid]);
     res.status(201).json(r.rows[0]);
@@ -259,7 +259,7 @@ router.patch("/applicants/:id/status", requireAuth, async (req: AuthenticatedReq
         description: 'New hire triggers employee onboarding flow.',
         workspaceId: wid,
         metadata: { applicantId: req.params.id }
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
     }
     const r = await db.$client.query(`SELECT * FROM applicants WHERE id = $1 AND workspace_id = $2`, [req.params.id, wid]);
     res.json(r.rows[0]);

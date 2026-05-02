@@ -513,7 +513,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
             unbilledHours: genInv.unbilledHours,
             source: 'auto_generate',
           },
-        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
       }
 
       for (const genInv of generatedInvoices) {
@@ -726,7 +726,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
         userId,
         metadata: { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, sentTo: client.email, clientId: invoice.clientId },
         visibility: 'manager',
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
       res.json({ 
         success: true, 
@@ -1023,7 +1023,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
         userId,
         metadata: { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, total: validated.totalAmount, clientId: validated.clientId, status: 'draft' },
         visibility: 'manager',
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
       notificationHelpers.createInvoiceCreatedNotification(
         { storage: storage as unknown },
@@ -1238,7 +1238,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
             newStatus: status,
           },
           visibility: 'manager',
-        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
       }
 
       storage.createAuditLog({
@@ -1254,7 +1254,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
           voidReason: status === 'void' ? updateData.voidReason : undefined,
           voidedBy: status === 'void' ? userId : undefined
         },
-      }).catch(err => log.warn('[InvoiceRoutes] SOC2 audit log write failed (invoice update):', err?.message));
+      }).catch(err => log.warn('[InvoiceRoutes] SOC2 audit log write failed (invoice update):', (err instanceof Error ? err.message : String(err))));
 
       res.json(updated);
     } catch (error: unknown) {
@@ -1354,7 +1354,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
           unbilledEntriesReleased: unbilledCount,
         },
         visibility: 'manager',
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
       storage.createAuditLog({
         workspaceId: workspace.id,
@@ -1364,7 +1364,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
         entityId: id,
         changes: { before: { status: preCancelState?.status || 'active' }, after: { status: 'cancelled' }, unbilledEntriesReleased: unbilledCount },
         metadata: { isSensitiveData: true, complianceTag: 'soc2' },
-      }).catch(err => log.warn('[InvoiceRoutes] SOC2 audit log write failed (invoice delete):', err?.message));
+      }).catch(err => log.warn('[InvoiceRoutes] SOC2 audit log write failed (invoice delete):', (err instanceof Error ? err.message : String(err))));
 
       res.json(cancelled);
     } catch (error: unknown) {
@@ -1585,7 +1585,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
           clientId: updated.clientId,
         },
         visibility: 'manager',
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
       // Non-blocking: send invoice paid confirmation email to org_owner
       (async () => {
@@ -1713,14 +1713,14 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
                 const { financialProcessingFeeService } = await import('../services/billing/financialProcessingFeeService');
                 await financialProcessingFeeService.recordInvoiceFee({ workspaceId: workspace.id, referenceId: id });
               } catch (err: unknown) {
-                log.warn('[MarkPaid] Fee ledger record failed (non-fatal):', err?.message);
+                log.warn('[MarkPaid] Fee ledger record failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
               }
               // Platform revenue tracking: write to platform_revenue table
               try {
                 const { recordMiddlewareFeeCharge } = await import('../services/finance/middlewareFeeService');
                 await recordMiddlewareFeeCharge(workspace.id, 'invoice_payment', feeResult.amountCents, id);
               } catch (err: unknown) {
-                log.warn('[MarkPaid] Platform revenue record failed (non-fatal):', err?.message);
+                log.warn('[MarkPaid] Platform revenue record failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
               }
             }
           }
@@ -1864,7 +1864,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
         entityId: invoice.id,
         changes: { after: { invoiceNumber: invoice.invoiceNumber, total: total.toFixed(2), clientId, timeEntryCount: timeEntries.length, source: 'generate_from_time' } },
         metadata: { isSensitiveData: true, complianceTag: 'soc2' },
-      }).catch(err => log.warn('[InvoiceRoutes] SOC2 audit log write failed (invoice generate):', err?.message));
+      }).catch(err => log.warn('[InvoiceRoutes] SOC2 audit log write failed (invoice generate):', (err instanceof Error ? err.message : String(err))));
 
       res.json(invoice);
     } catch (error: unknown) {
@@ -2747,7 +2747,7 @@ router.post('/portal/:accessToken/invoice/:invoiceId/dispute', async (req, res) 
       performedBy: `portal:${portal.clientId}`,
       metadata: { reason: reason || 'No reason provided', clientId: portal.clientId, source: 'client_portal' },
       createdAt: new Date(),
-    }).catch((err: unknown) => log.warn('[BillingAudit] billing_audit_log write failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[BillingAudit] billing_audit_log write failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     // LAW 21 — Notify org owner of client-initiated invoice dispute
     (async () => {

@@ -70,7 +70,7 @@ router.post('/', async (req, res) => {
       title: `Plaid Webhook: ${webhook_type || 'UNKNOWN'}/${webhook_code || 'UNKNOWN'}`,
       description: `Plaid pushed ${webhook_type} webhook — code: ${webhook_code}${transfer_id ? `, transfer: ${transfer_id}` : ''}`,
       metadata: { webhookType: webhook_type, webhookCode: webhook_code, transferId: transfer_id, eventType: event_type },
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     if (webhook_type !== 'TRANSFER' || !transfer_id) return;
 
@@ -124,7 +124,7 @@ router.post('/', async (req, res) => {
           ne(plaidTransferAttempts.status, 'completed'),
         ));
       } catch (attemptErr : unknown) {
-        log.warn('[PlaidWebhook] plaid_transfer_attempts completion update failed (non-fatal):', attemptErr?.message);
+        log.warn('[PlaidWebhook] plaid_transfer_attempts completion update failed (non-fatal):', (attemptErr instanceof Error ? attemptErr.message : String(attemptErr)));
       }
     }
 
@@ -163,7 +163,7 @@ router.post('/', async (req, res) => {
             amount: stub.netPay,
             source: 'webhook',
           },
-        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
       } else if (status === 'failed' || status === 'returned') {
         platformEventBus.publish({
           type: 'payroll_transfer_failed',
@@ -180,7 +180,7 @@ router.post('/', async (req, res) => {
             failureReason,
             source: 'webhook',
           },
-        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
       }
     }
   } catch (err: unknown) {

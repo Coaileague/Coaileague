@@ -484,7 +484,7 @@ const constraints: CriticalConstraint[] = [
             `ALTER TYPE audit_action ADD VALUE IF NOT EXISTS '${value.replace(/'/g, "''")}'`,
           );
         } catch (err: unknown) {
-          log.warn(`[auditAction] Failed to add enum value ${value}: ${err?.message?.slice(0, 120)}`);
+          log.warn(`[auditAction] Failed to add enum value ${value}: ${(err instanceof Error ? err.message : String(err))?.slice(0, 120)}`);
         }
       }
     },
@@ -571,7 +571,7 @@ const constraints: CriticalConstraint[] = [
         );
       } catch (err: unknown) {
         // Already an identity column or not possible — either way, nothing to do.
-        log.warn(`[somatic_pattern_library] identity alter skipped: ${err?.message?.slice(0, 120)}`);
+        log.warn(`[somatic_pattern_library] identity alter skipped: ${(err instanceof Error ? err.message : String(err))?.slice(0, 120)}`);
       }
     },
   },
@@ -947,7 +947,7 @@ const constraints: CriticalConstraint[] = [
           );
           log.info(`[criticalConstraints] dropped NOT NULL on audit_logs.${r.column_name}`);
         } catch (err: unknown) {
-          log.warn(`[criticalConstraints] failed to drop NOT NULL on audit_logs.${r.column_name}: ${err?.message?.slice(0, 120)}`);
+          log.warn(`[criticalConstraints] failed to drop NOT NULL on audit_logs.${r.column_name}: ${(err instanceof Error ? err.message : String(err))?.slice(0, 120)}`);
         }
       }
     },
@@ -1240,7 +1240,7 @@ const constraints: CriticalConstraint[] = [
         } catch (err: unknown) {
           failed++;
           log.warn(
-            `[phaseU] Failed on ${a.table}.${a.column}: ${err?.message?.slice(0, 160)}`,
+            `[phaseU] Failed on ${a.table}.${a.column}: ${(err instanceof Error ? err.message : String(err))?.slice(0, 160)}`,
           );
         }
       }
@@ -1335,7 +1335,7 @@ const constraints: CriticalConstraint[] = [
             `ALTER TABLE workspace_ai_periods ADD COLUMN IF NOT EXISTS "${col.name}" ${col.type}`,
           );
         } catch (err: unknown) {
-          log.warn(`[workspace_ai_periods] Failed to add ${col.name}: ${err?.message?.slice(0, 120)}`);
+          log.warn(`[workspace_ai_periods] Failed to add ${col.name}: ${(err instanceof Error ? err.message : String(err))?.slice(0, 120)}`);
         }
       }
     },
@@ -1399,7 +1399,7 @@ const constraints: CriticalConstraint[] = [
             `ALTER TABLE ai_call_log ADD COLUMN IF NOT EXISTS "${col.name}" ${col.type}`,
           );
         } catch (err: unknown) {
-          log.warn(`[ai_call_log] Failed to add ${col.name}: ${err?.message?.slice(0, 120)}`);
+          log.warn(`[ai_call_log] Failed to add ${col.name}: ${(err instanceof Error ? err.message : String(err))?.slice(0, 120)}`);
         }
       }
     },
@@ -1497,11 +1497,11 @@ async function backfillGenRandomUuidDefaults(): Promise<{ scanned: number; patch
         patched++;
       } catch (err: unknown) {
         failed++;
-        log.warn(`[idDefaultBackfill] Failed on ${r.table_name}.id: ${err?.message?.slice(0, 120)}`);
+        log.warn(`[idDefaultBackfill] Failed on ${r.table_name}.id: ${(err instanceof Error ? err.message : String(err))?.slice(0, 120)}`);
       }
     }
   } catch (err: unknown) {
-    log.error(`[idDefaultBackfill] Scan failed: ${err?.message}`);
+    log.error(`[idDefaultBackfill] Scan failed: ${(err instanceof Error ? err.message : String(err))}`);
   }
   return { scanned, patched, failed };
 }
@@ -1609,7 +1609,7 @@ async function scanTimestampDefaultDrift(schemaTables: Record<string, unknown>):
       );
       driftRows = rows;
     } catch (err: unknown) {
-      log.warn(`[timestampDefaultDrift] Failed to scan ${tableCfg.name}: ${err?.message?.slice(0, 120)}`);
+      log.warn(`[timestampDefaultDrift] Failed to scan ${tableCfg.name}: ${(err instanceof Error ? err.message : String(err))?.slice(0, 120)}`);
       continue;
     }
 
@@ -1622,7 +1622,7 @@ async function scanTimestampDefaultDrift(schemaTables: Record<string, unknown>):
         log.info(`[timestampDefaultDrift] set DEFAULT NOW() on ${tableCfg.name}.${r.column_name}`);
       } catch (err: unknown) {
         result.columnsFailed++;
-        log.warn(`[timestampDefaultDrift] Failed on ${tableCfg.name}.${r.column_name}: ${err?.message?.slice(0, 120)}`);
+        log.warn(`[timestampDefaultDrift] Failed on ${tableCfg.name}.${r.column_name}: ${(err instanceof Error ? err.message : String(err))?.slice(0, 120)}`);
       }
     }
   }
@@ -1708,7 +1708,7 @@ async function scanMissingColumns(schemaTables: Record<string, unknown>): Promis
       );
       liveRows = rows;
     } catch (err: unknown) {
-      log.warn(`[missingColumnDrift] Failed to scan ${tableCfg.name}: ${err?.message?.slice(0, 120)}`);
+      log.warn(`[missingColumnDrift] Failed to scan ${tableCfg.name}: ${(err instanceof Error ? err.message : String(err))?.slice(0, 120)}`);
       continue;
     }
     const livePresent = new Set(liveRows.map((r) => r.column_name));
@@ -1726,7 +1726,7 @@ async function scanMissingColumns(schemaTables: Record<string, unknown>): Promis
         sqlType = (col as Record<string, unknown>).getSQLType();
       } catch (err: unknown) {
         log.warn(
-          `[missingColumnDrift] ${tableCfg.name}.${col.name}: could not resolve SQL type (${err?.message?.slice(0, 80)}), skipping`
+          `[missingColumnDrift] ${tableCfg.name}.${col.name}: could not resolve SQL type (${(err instanceof Error ? err.message : String(err))?.slice(0, 80)}), skipping`
         );
         result.columnsFailed++;
         continue;
@@ -1782,7 +1782,7 @@ async function scanMissingColumns(schemaTables: Record<string, unknown>): Promis
       } catch (err: unknown) {
         result.columnsFailed++;
         log.warn(
-          `[missingColumnDrift] Failed on ${tableCfg.name}.${col.name}: ${err?.message?.slice(0, 160)}`
+          `[missingColumnDrift] Failed on ${tableCfg.name}.${col.name}: ${(err instanceof Error ? err.message : String(err))?.slice(0, 160)}`
         );
         continue;
       }
@@ -1801,7 +1801,7 @@ async function scanMissingColumns(schemaTables: Record<string, unknown>): Promis
           );
         } catch (err: unknown) {
           log.warn(
-            `[missingColumnDrift] Could not tighten ${tableCfg.name}.${col.name} to NOT NULL (existing NULL rows?): ${err?.message?.slice(0, 120)}`
+            `[missingColumnDrift] Could not tighten ${tableCfg.name}.${col.name} to NOT NULL (existing NULL rows?): ${(err instanceof Error ? err.message : String(err))?.slice(0, 120)}`
           );
         }
       }
@@ -1872,7 +1872,7 @@ async function scanNotNullDrift(schemaTables: Record<string, unknown>): Promise<
       );
       driftRows = rows;
     } catch (err: unknown) {
-      log.warn(`[notNullDrift] Failed to scan ${tableCfg.name}: ${err?.message?.slice(0, 120)}`);
+      log.warn(`[notNullDrift] Failed to scan ${tableCfg.name}: ${(err instanceof Error ? err.message : String(err))?.slice(0, 120)}`);
       continue;
     }
 
@@ -1891,7 +1891,7 @@ async function scanNotNullDrift(schemaTables: Record<string, unknown>): Promise<
         log.info(`[notNullDrift] dropped NOT NULL on ${tableCfg.name}.${r.column_name} (schema says nullable, live DB had NOT NULL)`);
       } catch (err: unknown) {
         result.columnsFailed++;
-        log.warn(`[notNullDrift] Failed on ${tableCfg.name}.${r.column_name}: ${err?.message?.slice(0, 120)}`);
+        log.warn(`[notNullDrift] Failed on ${tableCfg.name}.${r.column_name}: ${(err instanceof Error ? err.message : String(err))?.slice(0, 120)}`);
       }
     }
   }
@@ -1917,7 +1917,7 @@ export async function ensureCriticalConstraints(): Promise<void> {
       log.info(`[criticalConstraints] Installed: ${c.name}`);
     } catch (err: unknown) {
       failed++;
-      log.error(`[criticalConstraints] Failed to install ${c.name}: ${err?.message}`, { error: err });
+      log.error(`[criticalConstraints] Failed to install ${c.name}: ${(err instanceof Error ? err.message : String(err))}`, { error: err });
     }
   }
 
@@ -1987,6 +1987,6 @@ export async function ensureCriticalConstraints(): Promise<void> {
       );
     }
   } catch (err: unknown) {
-    log.error(`[schemaDrift] Scan failed: ${err?.message}`, { error: err });
+    log.error(`[schemaDrift] Scan failed: ${(err instanceof Error ? err.message : String(err))}`, { error: err });
   }
 }

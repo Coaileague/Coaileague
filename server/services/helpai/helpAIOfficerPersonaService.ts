@@ -84,7 +84,7 @@ export async function getOfficerPersona(
       reliabilityScore,
     };
   } catch (err: unknown) {
-    log.warn('[OfficerPersona] Failed to load persona (non-fatal):', err?.message);
+    log.warn('[OfficerPersona] Failed to load persona (non-fatal):', (err instanceof Error ? err.message : String(err)));
     return null;
   }
 }
@@ -208,7 +208,7 @@ export async function updateOfficerProfile(opts: {
       });
     }
   } catch (err: unknown) {
-    log.warn('[OfficerPersona] Profile update failed (non-fatal):', err?.message);
+    log.warn('[OfficerPersona] Profile update failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }
 

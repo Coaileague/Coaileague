@@ -61,8 +61,8 @@ export async function runAcmeMonthSimulation(opts?: { baseUrl?: string }): Promi
     }
     if (seedMod?.DEMO_WORKSPACE_ID) workspaceId = seedMod.DEMO_WORKSPACE_ID;
   } catch (err: unknown) {
-    log.warn(`[ACME] seed step warning: ${err?.message}`);
-    seedSummary = `seed warning: ${err?.message ?? String(err)}`;
+    log.warn(`[ACME] seed step warning: ${(err instanceof Error ? err.message : String(err))}`);
+    seedSummary = `seed warning: ${(err instanceof Error ? err.message : String(err)) ?? String(err)}`;
   }
 
   // ── 2. Provision the regulatory auditor login ─────────────────────────────

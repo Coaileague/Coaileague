@@ -146,7 +146,7 @@ class TrinityMemoryOptimizer {
         if (consolidateResult) consolidated = consolidateResult.recordsConsolidated;
       }
     } catch (err: unknown) {
-      log.warn(`[MemoryOptimizer] Nightly consolidation for ${workspaceId} failed (non-fatal):`, err?.message);
+      log.warn(`[MemoryOptimizer] Nightly consolidation for ${workspaceId} failed (non-fatal):`, (err instanceof Error ? err.message : String(err)));
     }
 
     return {

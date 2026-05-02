@@ -251,7 +251,7 @@ export async function initiateTransfer(opts: {
       transferResponse = await client.transferCreate(transferCreateBody);
       break; // success
     } catch (err: unknown) {
-      const status = err?.response?.status ?? err?.status;
+      const status = (err as Record<string, unknown>).response?.status ?? (err as Record<string, unknown>).status;
       const isRateLimit = status === 429 || err?.error_code === 'RATE_LIMIT_EXCEEDED';
       if (isRateLimit && attempt < MAX_PLAID_RETRIES) {
         const backoff = PLAID_RETRY_BASE_MS * Math.pow(2, attempt - 1); // 1s, 2s, 4s
@@ -300,7 +300,7 @@ export async function verifyBankAccount(accessToken: string): Promise<{ valid: b
       status: account.verification_status || 'active',
     };
   } catch (err: unknown) {
-    return { valid: false, status: err?.message || 'verification_error' };
+    return { valid: false, status: (err instanceof Error ? err.message : String(err)) || 'verification_error' };
   }
 }
 

@@ -673,7 +673,7 @@ export class InboundOpportunityAgent {
     
     return {
       success: false,
-      message: result.error?.message || 'Failed to process email',
+      message: result.error || 'Failed to process email',
     };
   }
   
@@ -922,10 +922,10 @@ Return ONLY the JSON array, no markdown, no explanations.`;
         // Validation-failures (e.g. "No qualified employees available") throw
         // from executionPipeline. Record the failure so the caller can
         // escalate rather than swallowing the error in a batch short-circuit.
-        log.warn(`[InboundOpportunityAgent] Shift ${shift.id} staffing failed: ${err?.message}`);
+        log.warn(`[InboundOpportunityAgent] Shift ${shift.id} staffing failed: ${(err instanceof Error ? err.message : String(err))}`);
         results.push({
           success: false,
-          message: err?.message || 'Staffing failed',
+          message: (err instanceof Error ? err.message : String(err)) || 'Staffing failed',
           data: { stagedShiftId: shift.id },
         });
       }
@@ -1229,7 +1229,7 @@ Return ONLY the JSON array, no markdown, no explanations.`;
     
     return {
       success: false,
-      message: result.error?.message || 'Failed to staff shift',
+      message: result.error || 'Failed to staff shift',
     };
   }
   
@@ -1366,7 +1366,7 @@ Consider: qualifications match, reliability history, preference match, availabil
             idempotencyKey: `stage-b-escalate-${workspaceId}-${referenceNumber || 'na'}-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}`,
           });
         } catch (mgrErr: unknown) {
-          log.warn(`[InboundOpportunityAgent] Manager escalation email failed for ${manager.email}: ${mgrErr?.message}`);
+          log.warn(`[InboundOpportunityAgent] Manager escalation email failed for ${manager.email}: ${(mgrErr instanceof Error ? mgrErr.message : String(mgrErr))}`);
         }
       }
 
@@ -1393,11 +1393,11 @@ Consider: qualifications match, reliability history, preference match, availabil
             idempotencyKey: `stage-b-escalate-sender-${workspaceId}-${referenceNumber || 'na'}`,
           });
         } catch (senderErr: unknown) {
-          log.warn(`[InboundOpportunityAgent] Sender escalation email failed for ${senderEmail}: ${senderErr?.message}`);
+          log.warn(`[InboundOpportunityAgent] Sender escalation email failed for ${senderEmail}: ${(senderErr instanceof Error ? senderErr.message : String(senderErr))}`);
         }
       }
     } catch (err: unknown) {
-      log.error('[InboundOpportunityAgent] escalateUnfillableShifts failed:', err?.message);
+      log.error('[InboundOpportunityAgent] escalateUnfillableShifts failed:', (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -1672,7 +1672,7 @@ Consider: qualifications match, reliability history, preference match, availabil
                 });
                 notifications.push(`system:drop_notifications_sent:${(processResult as ProcessResult).claimKey}`);
               } catch (dropErr: unknown) {
-                log.warn('[IOA] sendDropNotifications error (non-fatal):', dropErr?.message);
+                log.warn('[IOA] sendDropNotifications error (non-fatal):', (dropErr instanceof Error ? dropErr.message : String(dropErr)));
               }
             }
 
@@ -1702,7 +1702,7 @@ Consider: qualifications match, reliability history, preference match, availabil
     
     return {
       success: false,
-      message: result.error?.message || 'Failed to process acceptance',
+      message: result.error || 'Failed to process acceptance',
     };
   }
   
@@ -2041,7 +2041,7 @@ Return JSON:
     
     return {
       success: false,
-      message: result.error?.message || 'Failed to notify contractor',
+      message: result.error || 'Failed to notify contractor',
     };
   }
   

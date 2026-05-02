@@ -1274,7 +1274,7 @@ class AIBrainMasterOrchestrator {
         }
         return { allowed: true };
       } catch (err: unknown) {
-        return { allowed: false, reason: `Dual-AI gate unavailable: ${err?.message ?? 'unknown'}` };
+        return { allowed: false, reason: `Dual-AI gate unavailable: ${(err instanceof Error ? err.message : String(err)) ?? 'unknown'}` };
       }
     };
 
@@ -1335,7 +1335,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: false,
             actionId: request.actionId,
-            message: error?.message ?? String(error),
+            message: (error instanceof Error ? error.message : String(error)) ?? String(error),
             executionTimeMs: Date.now() - startTime,
           };
         }

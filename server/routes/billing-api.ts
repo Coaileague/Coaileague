@@ -1531,7 +1531,7 @@ billingRouter.get('/invoice-preview', requireAuth, async (req: AuthenticatedRequ
       });
     } catch (stripeErr: unknown) {
       // invoice_upcoming_none → no pending invoice; return empty preview gracefully.
-      if (stripeErr?.code === 'invoice_upcoming_none') {
+      if ((stripeErr as NodeJS.ErrnoException).code === 'invoice_upcoming_none') {
         return res.json({
           pendingItems: [],
           totalCents: 0,
@@ -1577,7 +1577,7 @@ billingRouter.get('/invoice-preview', requireAuth, async (req: AuthenticatedRequ
       currency: upcoming.currency,
     });
   } catch (err: unknown) {
-    log.error(`[BillingApi] invoice-preview failed: ${err?.message}`);
+    log.error(`[BillingApi] invoice-preview failed: ${(err instanceof Error ? err.message : String(err))}`);
     res.status(500).json({ error: 'Failed to fetch invoice preview' });
   }
 });

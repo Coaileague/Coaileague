@@ -151,7 +151,7 @@ export async function recordVerdict(params: RecordVerdictParams): Promise<Record
         params.violationPdfBuffer, params.violationPdfMime,
       );
     } catch (err: unknown) {
-      log.warn('[Citation] Violation PDF upload failed (non-fatal):', err?.message);
+      log.warn('[Citation] Violation PDF upload failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -239,7 +239,7 @@ async function notifyOwnerVerdict(
         body,
       });
     } catch (err: unknown) {
-      log.warn(`[Citation] ${channel} notification failed (non-fatal):`, err?.message);
+      log.warn(`[Citation] ${channel} notification failed (non-fatal):`, (err instanceof Error ? err.message : String(err)));
     }
   }
 }
@@ -296,7 +296,7 @@ export async function submitPaymentProof(
         Number(citation.fine_amount),
       );
     } catch (err: unknown) {
-      log.warn('[Citation] Money order upload failed (non-fatal):', err?.message);
+      log.warn('[Citation] Money order upload failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     }
   }
 

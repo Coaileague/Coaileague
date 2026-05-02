@@ -77,7 +77,7 @@ export async function requireLegalAcceptance(
       return;
     }
   } catch (err: unknown) {
-    log.warn('Legal acceptance check failed (non-blocking):', err?.message);
+    log.warn('Legal acceptance check failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
   }
 
   next();

@@ -1014,7 +1014,7 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
             };
           }
         } catch (err: unknown) {
-          log.warn('[HelpAI] Staffing intent detection failed (non-fatal):', err?.message);
+          log.warn('[HelpAI] Staffing intent detection failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
         }
 
         const aiResult = await this.generateResponse(message, {
@@ -1184,7 +1184,7 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
         );
         if (rows[0]?.slug) orgSlug = rows[0].slug;
       } catch (slugErr: unknown) {
-        log.warn(`[HelpAI] Staffing slug lookup failed (non-fatal): ${slugErr?.message}`);
+        log.warn(`[HelpAI] Staffing slug lookup failed (non-fatal): ${(slugErr instanceof Error ? slugErr.message : String(slugErr))}`);
       }
 
       await db.insert(supportTickets).values({
@@ -1223,7 +1223,7 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
         state: HelpAIState.ASSISTING,
       };
     } catch (err: unknown) {
-      log.warn(`[HelpAI] Staffing intake creation failed (non-fatal): ${err?.message}`);
+      log.warn(`[HelpAI] Staffing intake creation failed (non-fatal): ${(err instanceof Error ? err.message : String(err))}`);
       return null;
     }
   }

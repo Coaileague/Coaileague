@@ -219,7 +219,7 @@ router.post("/trades", requireAuth, async (req: AuthenticatedRequest, res) => {
             },
           });
         } catch (ndsErr: unknown) {
-          console.warn('[ShiftTrade] NDS shift_trade_request failed (non-fatal):', ndsErr?.message);
+          console.warn('[ShiftTrade] NDS shift_trade_request failed (non-fatal):', (ndsErr instanceof Error ? ndsErr.message : String(ndsErr)));
         }
       }
     } else {
@@ -252,7 +252,7 @@ router.post("/trades", requireAuth, async (req: AuthenticatedRequest, res) => {
             },
           });
         } catch (ndsErr: unknown) {
-          console.warn('[ShiftTrade] NDS manager notify failed (non-fatal):', ndsErr?.message);
+          console.warn('[ShiftTrade] NDS manager notify failed (non-fatal):', (ndsErr instanceof Error ? ndsErr.message : String(ndsErr)));
         }
       }
     }
@@ -312,7 +312,7 @@ router.post("/trades/:id/accept", requireAuth, async (req: AuthenticatedRequest,
           },
         });
       } catch (ndsErr: unknown) {
-        console.warn('[ShiftTrade] NDS shift_trade_accepted failed (non-fatal):', ndsErr?.message);
+        console.warn('[ShiftTrade] NDS shift_trade_accepted failed (non-fatal):', (ndsErr instanceof Error ? ndsErr.message : String(ndsErr)));
       }
     }
     res.json(rows[0]);
@@ -358,7 +358,7 @@ router.post("/trades/:id/reject", requireAuth, async (req: AuthenticatedRequest,
         });
       }
     } catch (ndsErr: unknown) {
-      console.warn('[ShiftTrade] NDS shift_trade_declined failed (non-fatal):', ndsErr?.message);
+      console.warn('[ShiftTrade] NDS shift_trade_declined failed (non-fatal):', (ndsErr instanceof Error ? ndsErr.message : String(ndsErr)));
     }
     res.json(rows[0]);
   } catch (err: unknown) { res.status(500).json({ error: sanitizeError(err) }); }
@@ -501,7 +501,7 @@ router.post("/trades/:id/manager-approve", requireManager, async (req: Authentic
             url: `/schedule`,
             tradeId: trade.id,
           },
-        }).catch(err => log.warn('[ShiftTrading] NDS shift_trade_approved failed (non-blocking):', err?.message));
+        }).catch(err => log.warn('[ShiftTrading] NDS shift_trade_approved failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
       }
     }
     res.json(rows[0]);

@@ -106,7 +106,7 @@ export function mountSchedulingRoutes(app: Express): void {
       const handoffs = await shiftHandoffService.getPendingForOfficer(employee.id);
       return res.json(handoffs[0] ?? null);
     } catch (error : unknown) {
-      log.error("[ShiftHandoff] Failed to fetch pending handoff:", error?.message || String(error));
+      log.error("[ShiftHandoff] Failed to fetch pending handoff:", (error instanceof Error ? error.message : String(error)) || String(error));
       return res.status(500).json({ message: "Failed to fetch pending handoff" });
     }
   });

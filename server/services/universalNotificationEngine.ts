@@ -1134,8 +1134,8 @@ export class UniversalNotificationEngine {
       // violations, FK constraint failures, etc. The previous one-liner
       // hid the real cause.
       log.error("[UniversalNotificationEngine] Error creating platform update:", {
-        message: error?.message,
-        code: error?.code,
+        message: (error instanceof Error ? error.message : String(error)),
+        code: (error as NodeJS.ErrnoException).code,
         detail: error?.detail,
         column: error?.column,
         constraint: error?.constraint,

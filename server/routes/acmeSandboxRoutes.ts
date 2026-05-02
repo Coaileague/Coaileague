@@ -64,7 +64,7 @@ acmeSandboxRouter.post('/run', refuseInProd, async (req: Request, res: Response)
     });
   } catch (err: unknown) {
     log.error('[ACME-Sandbox] /run failed', err);
-    res.status(500).json({ ok: false, error: err?.message ?? String(err) });
+    res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) ?? String(err) });
   }
 });
 
@@ -84,7 +84,7 @@ acmeSandboxRouter.get('/artifacts', async (req: Request, res: Response) => {
     const items = await listFakeArtifacts(wsId);
     res.json({ ok: true, count: items.length, items });
   } catch (err: unknown) {
-    res.status(500).json({ ok: false, error: err?.message });
+    res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
   }
 });
 
@@ -98,7 +98,7 @@ acmeSandboxRouter.get('/artifacts/:id', async (req: Request, res: Response) => {
     const body = await fs.readFile(a.diskPath);
     res.type(a.mimeType).send(body);
   } catch (err: unknown) {
-    res.status(500).json({ ok: false, error: err?.message });
+    res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
   }
 });
 
@@ -110,7 +110,7 @@ acmeSandboxRouter.post('/auditor/seed', refuseInProd, async (req: Request, res: 
     const seed = await seedRegulatoryAuditor({ workspaceId, baseUrl });
     res.json({ ok: true, auditor: seed });
   } catch (err: unknown) {
-    res.status(500).json({ ok: false, error: err?.message });
+    res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
   }
 });
 
@@ -121,7 +121,7 @@ acmeSandboxRouter.get('/webhook-log', async (req: Request, res: Response) => {
     const rows = await listWebhookLog(wsId, limit);
     res.json({ ok: true, count: rows.length, rows });
   } catch (err: unknown) {
-    res.status(500).json({ ok: false, error: err?.message });
+    res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
   }
 });
 

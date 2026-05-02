@@ -89,7 +89,7 @@ export async function runPreShiftIntelligenceSweep(): Promise<PreShiftSweepResul
   try {
     upcoming = await findUpcomingShifts();
   } catch (err: unknown) {
-    result.errors.push(`scan:${err?.message}`);
+    result.errors.push(`scan:${(err instanceof Error ? err.message : String(err))}`);
     return result;
   }
 
@@ -116,8 +116,8 @@ export async function runPreShiftIntelligenceSweep(): Promise<PreShiftSweepResul
         await recordNotified(flag);
       }
     } catch (err: unknown) {
-      result.errors.push(`${shift.shiftId}:${err?.message}`);
-      log.warn(`[preShiftIntel] shift ${shift.shiftId} failed:`, err?.message);
+      result.errors.push(`${shift.shiftId}:${(err instanceof Error ? err.message : String(err))}`);
+      log.warn(`[preShiftIntel] shift ${shift.shiftId} failed:`, (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -281,7 +281,7 @@ async function notify(flag: PreShiftFlag, shift: UpcomingShift): Promise<boolean
       },
     } as unknown);
   } catch (err: unknown) {
-    log.warn('[preShiftIntel] event publish failed (non-fatal):', err?.message);
+    log.warn('[preShiftIntel] event publish failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 
   await logActionAudit({
@@ -399,7 +399,7 @@ async function findExpiringCerts(shift: UpcomingShift): Promise<CertFlag[]> {
       expired: Number(row.days_until_expiry ?? 0) < 0,
     }));
   } catch (err: unknown) {
-    log.warn('[preShiftIntel] cert lookup failed:', err?.message);
+    log.warn('[preShiftIntel] cert lookup failed:', (err instanceof Error ? err.message : String(err)));
     return [];
   }
 }
@@ -467,7 +467,7 @@ async function recordNotified(flag: PreShiftFlag): Promise<void> {
       ],
     );
   } catch (err: unknown) {
-    log.warn('[preShiftIntel] audit write failed (non-fatal):', err?.message);
+    log.warn('[preShiftIntel] audit write failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }
 

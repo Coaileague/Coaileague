@@ -43,7 +43,7 @@ export class VoiceSmsMeteringService {
             params.officerEmployeeId ?? null, params.callType,
           ]);
         } catch (e: unknown) {
-          log.warn('[VoiceMetering] Protected workspace log failed:', e?.message || String(e));
+          log.warn('[VoiceMetering] Protected workspace log failed:', (e instanceof Error ? e.message : String(e)) || String(e));
         }
         return { billedCents: 0, isIncluded: true, blocked: false };
       }
@@ -127,7 +127,7 @@ export class VoiceSmsMeteringService {
             ) VALUES ($1,'sms_outbound','outbound',$2,true,0,0,0,$3)
           `, [params.workspaceId, params.messageSid, params.callType]);
         } catch (e: unknown) {
-          log.warn('[VoiceMetering] Protected workspace SMS log failed:', e?.message || String(e));
+          log.warn('[VoiceMetering] Protected workspace SMS log failed:', (e instanceof Error ? e.message : String(e)) || String(e));
         }
         return { billedCents: 0, isIncluded: true, blocked: false };
       }

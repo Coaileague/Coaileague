@@ -153,7 +153,7 @@ class SharedKnowledgeGraph {
           }
           await this.instance.loadFromDatabase();
         } catch (err: unknown) {
-          log.warn('[SharedKnowledgeGraph] DB load deferred startup failed (non-fatal):', err?.message);
+          log.warn('[SharedKnowledgeGraph] DB load deferred startup failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
         }
       }, 5000);
     }

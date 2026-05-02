@@ -557,13 +557,13 @@ export async function resolveTrinityContext(userId: string, workspaceId?: string
   const [orgIntelResult, platformDiagResult] = await Promise.all([
     shouldGatherOrgIntel
       ? gatherOrgIntelligence(effectiveWorkspaceId, userId).catch((err: unknown) => {
-          log.warn('[TrinityContext] gatherOrgIntelligence failed:', err?.message);
+          log.warn('[TrinityContext] gatherOrgIntelligence failed:', (err instanceof Error ? err.message : String(err)));
           return undefined;
         })
       : Promise.resolve(undefined),
     trinityMode === 'guru'
       ? gatherPlatformDiagnostics().catch((err: unknown) => {
-          log.warn('[TrinityContext] gatherPlatformDiagnostics failed:', err?.message);
+          log.warn('[TrinityContext] gatherPlatformDiagnostics failed:', (err instanceof Error ? err.message : String(err)));
           return undefined;
         })
       : Promise.resolve(undefined),

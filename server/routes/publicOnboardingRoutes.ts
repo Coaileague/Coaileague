@@ -568,7 +568,7 @@ router.post('/submit/:applicationId', publicFormLimiter, async (req, res) => {
             log.info(`[Onboarding] Queued tenant doc for signing: ${doc.fileName} → ${application.email}`);
           }
         } catch (err: unknown) {
-          log.warn('[Onboarding] Tenant doc queue failed (non-fatal):', err?.message);
+          log.warn('[Onboarding] Tenant doc queue failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
         }
       });
     }
@@ -589,7 +589,7 @@ router.post('/submit/:applicationId', publicFormLimiter, async (req, res) => {
         actionUrl: '/employees',
         priority: 'high',
         idempotencyKey: `approval_required-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${managerId}`
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
     }
 
     log.info(`[PublicOnboarding] Application ${applicationId} submitted — ${application.firstName} ${application.lastName} pending review`);
@@ -842,7 +842,7 @@ router.post('/workspace-invite/register', async (req, res) => {
           }
         }
       } catch (err: unknown) {
-        log.warn('[CrossTenantScore] Hire lookup failed (non-fatal):', err?.message);
+        log.warn('[CrossTenantScore] Hire lookup failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
     });
 
@@ -1082,7 +1082,7 @@ router.post('/plaid/link-token', publicFormLimiter, async (req, res) => {
     const result = await createLinkToken({ userId: applicationId, workspaceId, purpose: 'employee_dd' });
     res.json(result);
   } catch (err: unknown) {
-    log.error('[PublicOnboarding] plaid link-token error:', err?.message);
+    log.error('[PublicOnboarding] plaid link-token error:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: sanitizeError(err) || 'Failed to create Plaid link token' });
   }
 });
@@ -1115,7 +1115,7 @@ router.post('/plaid/exchange', publicFormLimiter, async (req, res) => {
 
     res.json({ success: true, institutionName: details.institutionName, mask: details.mask });
   } catch (err: unknown) {
-    log.error('[PublicOnboarding] plaid exchange error:', err?.message);
+    log.error('[PublicOnboarding] plaid exchange error:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: sanitizeError(err) || 'Failed to exchange Plaid token' });
   }
 });

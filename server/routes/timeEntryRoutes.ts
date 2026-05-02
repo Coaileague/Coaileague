@@ -279,7 +279,7 @@ const router = Router();
         workspaceId,
         payload: { count: 1, entryIds: [updated.id], approvedBy: userId },
         metadata: { source: 'timeEntryRoutes.single_approve' },
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
       // Phase 20 — Trinity invoice lifecycle workflow. Scheduled non-blocking
       // so the approval HTTP response doesn't wait on PDF / email dispatch.
@@ -515,7 +515,7 @@ const router = Router();
           workspaceId,
           payload: { count: updated.length, entryIds: updated.map(e => e.id), approvedBy: userId },
           metadata: { source: 'timeEntryRoutes.bulk_approve' },
-        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
         // Phase 20 — Trinity invoice lifecycle workflow per entry (de-duped
         // inside the workflow if the client is already invoiced for the day).
@@ -707,7 +707,7 @@ const router = Router();
         description: `Officer ${employeeName} submitted a manual override: ${reasonCode}`,
         workspaceId: workspace.id,
         metadata: { employeeId: employee.id, employeeName, shiftId, siteId, siteName, reasonCode, reasonDetail }
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
       res.status(201).json({ id, message: "Override submitted — supervisor notified." });
     } catch (error: unknown) {
@@ -808,7 +808,7 @@ const router = Router();
           clockOut: clockOut.toISOString(),
         },
         visibility: 'supervisor',
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
       res.json(updated);
     } catch (error: unknown) {

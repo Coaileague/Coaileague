@@ -23,7 +23,7 @@ function auditExport(req: AuthenticatedRequest, category: string, filename: stri
     entityId: category,
     description: `Regulatory export: ${category} — file: ${filename}`,
     metadata: { category, filename, filters: filters || {}, ip: req.ip, userAgent: req.headers['user-agent'] },
-  }).catch((err: unknown) => log.warn('[ExportAudit] Failed to write export audit log', { category, error: err?.message }));
+  }).catch((err: unknown) => log.warn('[ExportAudit] Failed to write export audit log', { category, error: (err instanceof Error ? err.message : String(err)) }));
 }
 
 router.post("/employees", requireManager, async (req: AuthenticatedRequest, res) => {
@@ -298,7 +298,7 @@ router.post("/tenant-takeout", requireOwner, async (req: AuthenticatedRequest, r
         );
         return ((r as Record<string, unknown>).rows ?? []) as T[];
       } catch (err: unknown) {
-        log.warn(`[tenant-takeout] ${table} export failed:`, err?.message);
+        log.warn(`[tenant-takeout] ${table} export failed:`, (err instanceof Error ? err.message : String(err)));
         return [];
       }
     };
@@ -322,7 +322,7 @@ router.post("/tenant-takeout", requireOwner, async (req: AuthenticatedRequest, r
       `);
       ndaAcceptances = ((r as Record<string, unknown>).rows ?? []);
     } catch (err: unknown) {
-      log.warn('[tenant-takeout] auditor_nda_acceptances export failed:', err?.message);
+      log.warn('[tenant-takeout] auditor_nda_acceptances export failed:', (err instanceof Error ? err.message : String(err)));
     }
 
     const takeout = {

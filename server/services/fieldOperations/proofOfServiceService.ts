@@ -206,7 +206,7 @@ class ProofOfServiceService {
         chainOfCustodyHash: genesisSignature,
       });
     } catch (err: unknown) {
-      log.error(`[POS] Failed to persist photo ${id}:`, err?.message);
+      log.error(`[POS] Failed to persist photo ${id}:`, (err instanceof Error ? err.message : String(err)));
       throw err;
     }
 

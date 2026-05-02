@@ -99,7 +99,7 @@ class CoveragePipelineService {
           await this.checkExpiredRequests();
         });
       } catch (error : unknown) {
-        log.warn('Check cycle failed (will retry)', { error: error?.message || 'unknown' });
+        log.warn('Check cycle failed (will retry)', { error: (error instanceof Error ? error.message : String(error)) || 'unknown' });
       }
     }, COVERAGE_CHECK_INTERVAL_MS);
 

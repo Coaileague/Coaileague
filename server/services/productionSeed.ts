@@ -721,8 +721,8 @@ export async function runProductionDataCleanup(): Promise<void> {
       } catch (err: unknown) {
         // Don't log the entire txn abort cascade — just the original failure.
         // 25P02 = aborted transaction state, 42P01 = missing table — both expected.
-        if (err?.code !== '25P02' && err?.code !== '42P01') {
-          log.info(`🧹 [${label}] failed (non-fatal): ${err?.message}`);
+        if ((err as NodeJS.ErrnoException).code !== '25P02' && (err as NodeJS.ErrnoException).code !== '42P01') {
+          log.info(`🧹 [${label}] failed (non-fatal): ${(err instanceof Error ? err.message : String(err))}`);
         }
       }
     };
@@ -1207,6 +1207,6 @@ export async function resetDemoAccountLocks(): Promise<void> {
     `);
     log.info('[DemoReset] Dev demo account locks cleared');
   } catch (err: unknown) {
-    log.info('[DemoReset] Could not reset demo locks (non-fatal):', err?.message);
+    log.info('[DemoReset] Could not reset demo locks (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }

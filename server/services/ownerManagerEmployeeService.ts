@@ -246,7 +246,7 @@ export async function ensureUserHasEmployeeRecord(
     description: `${userRole} employee record created for ${user.email} in workspace ${workspaceId}`,
     workspaceId,
     metadata: { employeeId: newEmployee.id, userId: user.id, role: userRole, source: 'owner_manager_employee_service', isRoleHolder: ROLE_HOLDER_ROLES.includes(userRole as RoleHolderRole) },
-  }).catch((err: unknown) => log.warn('[OwnerManagerEmployeeService] publish employee_hired failed:', err.message));
+  }).catch((err: unknown) => log.warn('[OwnerManagerEmployeeService] publish employee_hired failed:', (err instanceof Error ? err.message : String(err))));
 
   return {
     userId,

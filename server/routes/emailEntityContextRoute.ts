@@ -187,7 +187,7 @@ router.get('/api/email/entity-context', requireAuth, async (req: AuthenticatedRe
     });
 
   } catch (error : unknown) {
-    log.error('[EmailEntityContext] Error:', error?.message);
+    log.error('[EmailEntityContext] Error:', (error instanceof Error ? error.message : String(error)));
     return res.json({ entity: null, stats: null, suggestedActions: [] });
   }
 });

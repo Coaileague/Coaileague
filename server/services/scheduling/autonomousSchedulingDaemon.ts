@@ -389,7 +389,7 @@ class AutonomousSchedulingDaemonService {
             notifyWorkspaceFailure(
               workspace.id,
               'Autonomous Scheduling Failed',
-              `The automatic shift scheduling could not complete for this cycle: ${error?.message || 'Unknown error'}`,
+              `The automatic shift scheduling could not complete for this cycle: ${(error instanceof Error ? error.message : String(error)) || 'Unknown error'}`,
               {
                 actionUrl: '/scheduling',
                 pipelineName: 'autonomous-scheduling-daemon',

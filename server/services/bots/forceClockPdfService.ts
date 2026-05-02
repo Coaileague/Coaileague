@@ -267,7 +267,7 @@ class ForceClockPdfService {
       return { success: true, documentId: docId };
     } catch (err: unknown) {
       log.error(`[ForceClockPdf] Error generating report for workspace ${workspaceId}:`, err);
-      return { success: false, error: err?.message || String(err) };
+      return { success: false, error: (err instanceof Error ? err.message : String(err)) || String(err) };
     }
   }
 

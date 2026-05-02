@@ -68,7 +68,7 @@ export function handleEmergency(params: {
       say('Your message has been received. A supervisor will contact you immediately.')
     );
   } catch (err: unknown) {
-    log.error('[emergencyExtension] Error:', err?.message);
+    log.error('[emergencyExtension] Error:', (err instanceof Error ? err.message : String(err)));
     return twiml(say('We encountered an error. If this is a life-threatening emergency please hang up and call 9-1-1. Otherwise press 0 to return to the main menu.'));
   }
 }

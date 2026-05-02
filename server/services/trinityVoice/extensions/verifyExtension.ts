@@ -59,7 +59,7 @@ export function handleEmploymentVerification(params: {
       say(fallback, lang)
     );
   } catch (err: unknown) {
-    log.error('[verifyExtension] Error:', err?.message);
+    log.error('[verifyExtension] Error:', (err instanceof Error ? err.message : String(err)));
     return twiml(say('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }
 }

@@ -104,7 +104,7 @@ class HelpAIProactiveMonitor {
       // visible in Railway logs. No logic change.
       log.error('[HelpAIProactiveMonitor] Cycle error', {
         message: err instanceof Error ? err.message : String(err),
-        code: err?.code,
+        code: (err as NodeJS.ErrnoException).code,
         detail: err?.detail,
         column: err?.column,
         constraint: err?.constraint,
@@ -112,7 +112,7 @@ class HelpAIProactiveMonitor {
         schema: err?.schema,
         where: err?.where,
         routine: err?.routine,
-        stack: err?.stack?.split('\n').slice(0, 8).join(' | '),
+        stack: (err instanceof Error ? err.stack : undefined)?.split('\n').slice(0, 8).join(' | '),
       });
     }
   }
@@ -170,12 +170,12 @@ class HelpAIProactiveMonitor {
       // OBSERVABILITY: surface full PG error context (see cycle-error block above).
       log.error(`[HelpAIProactiveMonitor] Workspace ${workspaceId} error`, {
         message: err instanceof Error ? err.message : String(err),
-        code: err?.code,
+        code: (err as NodeJS.ErrnoException).code,
         detail: err?.detail,
         column: err?.column,
         constraint: err?.constraint,
         table: err?.table,
-        stack: err?.stack?.split('\n').slice(0, 8).join(' | '),
+        stack: (err instanceof Error ? err.stack : undefined)?.split('\n').slice(0, 8).join(' | '),
       });
     } finally {
       this.runningWorkspaces.delete(workspaceId);

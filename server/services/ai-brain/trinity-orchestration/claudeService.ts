@@ -24,7 +24,7 @@ export const claudeService = {
       log.debug(`[ClaudeService] ${MODEL} responded (${response.usage.output_tokens} tokens)`);
       return text;
     } catch (err: unknown) {
-      log.error(`[ClaudeService] API call failed: ${err?.message}`);
+      log.error(`[ClaudeService] API call failed: ${(err instanceof Error ? err.message : String(err))}`);
       throw err;
     }
   },
@@ -39,7 +39,7 @@ export const claudeService = {
       });
       return response.content.find(b => b.type === 'text')?.text ?? '';
     } catch (err: unknown) {
-      log.error(`[ClaudeService] Context call failed: ${err?.message}`);
+      log.error(`[ClaudeService] Context call failed: ${(err instanceof Error ? err.message : String(err))}`);
       throw err;
     }
   },

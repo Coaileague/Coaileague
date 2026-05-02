@@ -605,7 +605,7 @@ class WeeklyBillingRunServiceImpl {
             const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
             await recordMiddlewareFeeCharge(workspaceId, 'invoice_processing', feeResult.amountCents, invoice.id);
           } catch (err: unknown) {
-            log.warn('[WeeklyBilling] Invoice fee revenue record failed (non-fatal):', err?.message);
+            log.warn('[WeeklyBilling] Invoice fee revenue record failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
           }
         }
       } catch (feeErr: unknown) {
@@ -644,7 +644,7 @@ class WeeklyBillingRunServiceImpl {
               const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
               await recordMiddlewareFeeCharge(workspaceId, 'seat_overage', overageResult.amountCents, workspaceId);
             } catch (err: unknown) {
-              log.warn('[WeeklyBilling] Seat overage revenue record failed (non-fatal):', err?.message);
+              log.warn('[WeeklyBilling] Seat overage revenue record failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
             }
           }
         }
@@ -680,7 +680,7 @@ class WeeklyBillingRunServiceImpl {
               const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
               await recordMiddlewareFeeCharge(workspaceId, 'credit_overage', creditOverageResult.amountCents, workspaceId);
             } catch (err: unknown) {
-              log.warn('[WeeklyBilling] Credit overage revenue record failed (non-fatal):', err?.message);
+              log.warn('[WeeklyBilling] Credit overage revenue record failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
             }
           }
         }
@@ -739,12 +739,12 @@ class WeeklyBillingRunServiceImpl {
               const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
               await recordMiddlewareFeeCharge(workspaceId, 'storage_overage', storageOverageResult.amountCents, workspaceId);
             } catch (err: unknown) {
-              log.warn('[WeeklyBilling] Storage overage revenue record failed (non-fatal):', err?.message);
+              log.warn('[WeeklyBilling] Storage overage revenue record failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
             }
           }
         }
       } catch (storageOverageErr: unknown) {
-        const msg = `Storage overage charge exception: ${storageOverageErr?.message}`;
+        const msg = `Storage overage charge exception: ${(storageOverageErr instanceof Error ? storageOverageErr.message : String(storageOverageErr))}`;
         log.error(`[WeeklyBilling] ${msg}`);
         billingExceptions.push(msg);
       }
@@ -766,12 +766,12 @@ class WeeklyBillingRunServiceImpl {
               const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
               await recordMiddlewareFeeCharge(workspaceId, 'voice_sms_overage', voiceSmsResult.amountCents, workspaceId);
             } catch (err: unknown) {
-              log.warn('[WeeklyBilling] Voice/SMS overage revenue record failed (non-fatal):', err?.message);
+              log.warn('[WeeklyBilling] Voice/SMS overage revenue record failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
             }
           }
         }
       } catch (voiceSmsErr: unknown) {
-        const msg = `Voice/SMS overage charge exception: ${voiceSmsErr?.message}`;
+        const msg = `Voice/SMS overage charge exception: ${(voiceSmsErr instanceof Error ? voiceSmsErr.message : String(voiceSmsErr))}`;
         log.error(`[WeeklyBilling] ${msg}`);
         billingExceptions.push(msg);
       }
@@ -803,7 +803,7 @@ class WeeklyBillingRunServiceImpl {
           },
         });
       } catch (auditErr: unknown) {
-        log.warn('[WeeklyBilling] overage_cycle_complete audit log failed (non-fatal):', auditErr?.message);
+        log.warn('[WeeklyBilling] overage_cycle_complete audit log failed (non-fatal):', (auditErr instanceof Error ? auditErr.message : String(auditErr)));
       }
 
       if (totalAmount > 0) {

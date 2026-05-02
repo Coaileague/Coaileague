@@ -444,7 +444,7 @@ export async function markInvoicePaid(
       paymentIntentId: paymentIntentId || null,
       total: Number(invoice.total),
     },
-  }).catch((err: unknown) => log.warn('[EventBus] invoice_paid publish failed (non-blocking):', err?.message));
+  }).catch((err: unknown) => log.warn('[EventBus] invoice_paid publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
   return {
     success: true,

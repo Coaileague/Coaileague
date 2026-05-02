@@ -297,7 +297,7 @@ export async function ensureSessionsTable(): Promise<void> {
     `);
   } catch (err: unknown) {
     // Non-fatal — connect-pg-simple will also attempt this on first write
-    console.warn('[Auth] Sessions table ensure (non-fatal):', err?.message?.slice(0, 100));
+    console.warn('[Auth] Sessions table ensure (non-fatal):', (err instanceof Error ? err.message : String(err))?.slice(0, 100));
   }
 }
 
@@ -756,10 +756,10 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
 
   next();
   } catch (err: unknown) {
-    if (err?.message?.includes('CircuitBreaker') || err?.message?.includes('circuit is open')) {
+    if ((err instanceof Error ? err.message : String(err))?.includes('CircuitBreaker') || (err instanceof Error ? err.message : String(err))?.includes('circuit is open')) {
       return res.status(503).json({ message: "Database temporarily unavailable — please try again shortly" });
     }
-    log.error('requireAuth unexpected error', { error: err?.message, path: req.path });
+    log.error('requireAuth unexpected error', { error: (err instanceof Error ? err.message : String(err)), path: req.path });
     return res.status(500).json({ message: "Authentication error" });
   }
 };
@@ -1064,7 +1064,7 @@ export async function resetPassword(
 export function setupAuth(app: Express) {
   // Ensure sessions table exists before session middleware — fixes black screen on Railway
   ensureSessionsTable().catch((e: unknown) =>
-    console.warn('[Auth] Session table bootstrap:', e?.message?.slice(0, 100))
+    console.warn('[Auth] Session table bootstrap:', (e instanceof Error ? e.message : String(e))?.slice(0, 100))
   );
   app.set("trust proxy", 1);
   app.use(getSession());

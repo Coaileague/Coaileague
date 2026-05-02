@@ -68,7 +68,7 @@ export const timeAnomalyDetection = {
       log.info(`[TimeAnomalyDetection] Found ${anomalies.length} anomalies in ${workspaceId}`);
       return anomalies;
     } catch (err: unknown) {
-      log.warn(`[TimeAnomalyDetection] Scan failed: ${err?.message}`);
+      log.warn(`[TimeAnomalyDetection] Scan failed: ${(err instanceof Error ? err.message : String(err))}`);
       return anomalies;
     }
   },

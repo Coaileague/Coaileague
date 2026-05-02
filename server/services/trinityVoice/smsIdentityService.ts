@@ -99,7 +99,7 @@ export async function verifyByPhone(phone: string): Promise<VerificationResult> 
       },
     };
   } catch (err: unknown) {
-    log.error('[SmsIdentity] Phone verification error:', err?.message);
+    log.error('[SmsIdentity] Phone verification error:', (err instanceof Error ? err.message : String(err)));
     return { verified: false, identity: null, failReason: 'no_record', isNewOfficer: false };
   }
 }
@@ -153,7 +153,7 @@ export async function verifyByEmployeeNumber(
       },
     };
   } catch (err: unknown) {
-    log.error('[SmsIdentity] Employee number verification error:', err?.message);
+    log.error('[SmsIdentity] Employee number verification error:', (err instanceof Error ? err.message : String(err)));
     return { verified: false, identity: null, failReason: 'no_record', isNewOfficer: false };
   }
 }
@@ -174,7 +174,7 @@ export async function logFailedVerification(
 
     log.warn(`[SmsIdentity] Failed verification from ${phone}: ${reason}`);
   } catch (err: unknown) {
-    log.warn('[SmsIdentity] Could not log failure:', err?.message);
+    log.warn('[SmsIdentity] Could not log failure:', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -205,6 +205,6 @@ export async function notifyManagementUnverified(
     ]);
     log.info(`[SmsIdentity] Management notified of unverified contact from ${phone}`);
   } catch (err: unknown) {
-    log.warn('[SmsIdentity] Could not notify management:', err?.message);
+    log.warn('[SmsIdentity] Could not notify management:', (err instanceof Error ? err.message : String(err)));
   }
 }

@@ -915,7 +915,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
           title: shift.title,
         },
         visibility: 'manager',
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
       // 📡 REAL-TIME: Additional shift_assigned event so employee schedule views update instantly
       if (shift.employeeId) {
@@ -1329,7 +1329,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
           title: shift.title,
         },
         visibility: 'manager',
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
       // 📡 REAL-TIME: If an employee was assigned/reassigned, fire specific shift_assigned event
       if (isManualAssignment && shift.employeeId) {
@@ -1480,7 +1480,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
           startTime: shift?.startTime,
         },
         visibility: 'manager',
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
       
       // D12-GAP-FIX: Clean up orphaned shift rooms associated with this shift.
       // When a shift is deleted, any shift_chat rooms tied to it become orphaned —
@@ -2048,7 +2048,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         workspaceId,
         metadata: { shiftId: req.params.id, employeeId, action: 'acknowledged' },
         visibility: 'manager',
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
       res.json({
         success: true,
@@ -2080,7 +2080,7 @@ router.post('/:id/accept', requireEmployee, async (req: AuthenticatedRequest, re
     broadcastShiftUpdate(workspaceId, 'shift_updated', updated);
     res.json({ success: true, shift: updated });
   } catch (err: unknown) {
-    log.error('[ShiftRoutes] Accept shift failed:', err?.message);
+    log.error('[ShiftRoutes] Accept shift failed:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ message: sanitizeError(err) || 'Failed to accept shift' });
   }
 });
@@ -2121,7 +2121,7 @@ router.post('/:id/mark-calloff', requireEmployee, async (req: AuthenticatedReque
 
     res.json({ success: true, shift: calledOffShift });
   } catch (err: unknown) {
-    log.error('[ShiftRoutes] Mark calloff failed:', err?.message);
+    log.error('[ShiftRoutes] Mark calloff failed:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ message: sanitizeError(err) || 'Failed to record calloff' });
   }
 });
@@ -2175,7 +2175,7 @@ router.post('/:id/mark-calloff', requireEmployee, async (req: AuthenticatedReque
           clientId: shift.clientId,
         },
         visibility: 'manager',
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
       // IDEMPOTENCY CHECK: Prevent duplicate replacements on retry
       const existingReplacement = await db
@@ -2819,7 +2819,7 @@ router.post('/:id/mark-calloff', requireEmployee, async (req: AuthenticatedReque
                             distanceMeters: Math.round(distanceM),
                           },
                         }).catch((notifErr: unknown) => {
-                          log.warn('[ShiftGPS] Geofence notification failed (non-blocking):', notifErr?.message);
+                          log.warn('[ShiftGPS] Geofence notification failed (non-blocking):', (notifErr instanceof Error ? notifErr.message : String(notifErr)));
                         });
                       }
                     } catch (ndsErr) {
@@ -3296,7 +3296,7 @@ router.post('/:id/proof-of-service', requireEmployee, async (req: AuthenticatedR
     broadcastShiftUpdate(workspaceId, 'shift_updated', updated);
     res.json({ success: true, shift: updated });
   } catch (err: unknown) {
-    log.error('[ShiftRoutes] proof-of-service failed:', err?.message);
+    log.error('[ShiftRoutes] proof-of-service failed:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ message: sanitizeError(err) || 'Failed to submit proof of service' });
   }
 });

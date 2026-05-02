@@ -74,7 +74,7 @@ export async function isAuditorEmailAllowed(email: string, workspaceId: string):
     );
     return r.rows.length > 0;
   } catch (err: unknown) {
-    log.warn('[AuditorAccess] allowlist check failed (deny-fallback):', err?.message);
+    log.warn('[AuditorAccess] allowlist check failed (deny-fallback):', (err instanceof Error ? err.message : String(err)));
     return false;
   }
 }
@@ -104,7 +104,7 @@ export async function addAuditorAllowlist(params: {
     );
     return { success: true };
   } catch (err: unknown) {
-    log.warn('[AuditorAccess] addAllowlist failed:', err?.message);
+    log.warn('[AuditorAccess] addAllowlist failed:', (err instanceof Error ? err.message : String(err)));
     return { success: false };
   }
 }
@@ -343,7 +343,7 @@ async function ensureTables(): Promise<void> {
     bootstrapped = true;
     log.info('[AuditorAccess] Bootstrap complete');
   } catch (err: unknown) {
-    log.warn('[AuditorAccess] Bootstrap failed (non-fatal):', err?.message);
+    log.warn('[AuditorAccess] Bootstrap failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -462,7 +462,7 @@ export async function processAuditorIntake(params: IntakeParams): Promise<{
       });
       inviteSent = !!sendResult.success;
     } catch (e: unknown) {
-      log.warn('[AuditorAccess] Invite email failed (non-fatal):', e?.message);
+      log.warn('[AuditorAccess] Invite email failed (non-fatal):', (e instanceof Error ? e.message : String(e)));
     }
 
     await pool.query(
@@ -473,8 +473,8 @@ export async function processAuditorIntake(params: IntakeParams): Promise<{
 
     return { success: true, auditorId, auditId, inviteSent };
   } catch (err: unknown) {
-    log.error('[AuditorAccess] Intake failed:', err?.message);
-    return { success: false, reason: err?.message };
+    log.error('[AuditorAccess] Intake failed:', (err instanceof Error ? err.message : String(err)));
+    return { success: false, reason: (err instanceof Error ? err.message : String(err)) };
   }
 }
 
@@ -519,8 +519,8 @@ export async function claimInvite(params: {
 
     return { success: true, auditorId: row.id };
   } catch (err: unknown) {
-    log.error('[AuditorAccess] Claim invite failed:', err?.message);
-    return { success: false, reason: err?.message };
+    log.error('[AuditorAccess] Claim invite failed:', (err instanceof Error ? err.message : String(err)));
+    return { success: false, reason: (err instanceof Error ? err.message : String(err)) };
   }
 }
 
@@ -558,7 +558,7 @@ export async function authenticateAuditor(email: string): Promise<{
 
     return { ok: true, auditorId: row.id, passwordHash: row.password_hash };
   } catch (err: unknown) {
-    log.error('[AuditorAccess] Authenticate failed:', err?.message);
+    log.error('[AuditorAccess] Authenticate failed:', (err instanceof Error ? err.message : String(err)));
     return { ok: false, reason: 'not_found' };
   }
 }
@@ -573,7 +573,7 @@ export async function recordSuccessfulAuth(auditorId: string, ip?: string, ua?: 
       [auditorId, ip || null, ua || null]
     );
   } catch (err: unknown) {
-    log.warn('[AuditorAccess] recordSuccessfulAuth failed (non-fatal):', err?.message);
+    log.warn('[AuditorAccess] recordSuccessfulAuth failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -590,7 +590,7 @@ export async function listAuditsForAuditor(auditorId: string): Promise<any[]> {
     );
     return r.rows;
   } catch (err: unknown) {
-    log.warn('[AuditorAccess] listAuditsForAuditor failed:', err?.message);
+    log.warn('[AuditorAccess] listAuditsForAuditor failed:', (err instanceof Error ? err.message : String(err)));
     return [];
   }
 }
@@ -613,8 +613,8 @@ export async function requestNewAudit(params: {
     );
     return { success: true, auditId: r.rows[0].id };
   } catch (err: unknown) {
-    log.error('[AuditorAccess] requestNewAudit failed:', err?.message);
-    return { success: false, reason: err?.message };
+    log.error('[AuditorAccess] requestNewAudit failed:', (err instanceof Error ? err.message : String(err)));
+    return { success: false, reason: (err instanceof Error ? err.message : String(err)) };
   }
 }
 
@@ -630,7 +630,7 @@ export async function closeAudit(auditId: string, closedBy?: string): Promise<{ 
     );
     return { success: true };
   } catch (err: unknown) {
-    log.warn('[AuditorAccess] closeAudit failed:', err?.message);
+    log.warn('[AuditorAccess] closeAudit failed:', (err instanceof Error ? err.message : String(err)));
     return { success: false };
   }
 }
@@ -649,7 +649,7 @@ export async function extendAudit(auditId: string, days = 30): Promise<{ success
     );
     return { success: true };
   } catch (err: unknown) {
-    log.warn('[AuditorAccess] extendAudit failed:', err?.message);
+    log.warn('[AuditorAccess] extendAudit failed:', (err instanceof Error ? err.message : String(err)));
     return { success: false };
   }
 }
@@ -702,7 +702,7 @@ export async function recordNdaAcceptance(params: {
     );
     return { success: true, version };
   } catch (err: unknown) {
-    log.warn('[AuditorAccess] recordNdaAcceptance failed:', err?.message);
+    log.warn('[AuditorAccess] recordNdaAcceptance failed:', (err instanceof Error ? err.message : String(err)));
     return { success: false, version };
   }
 }
@@ -957,7 +957,7 @@ async function ensureRegulatorNotificationTable(): Promise<void> {
     `);
     regNotifBootstrapped = true;
   } catch (err: unknown) {
-    log.warn('[AuditorAccess] regulator-notif bootstrap failed:', err?.message);
+    log.warn('[AuditorAccess] regulator-notif bootstrap failed:', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -988,7 +988,7 @@ export async function logRegulatorNotification(params: {
     );
     return { id: r.rows[0]?.id ?? null, success: true };
   } catch (err: unknown) {
-    log.warn('[AuditorAccess] logRegulatorNotification failed:', err?.message);
+    log.warn('[AuditorAccess] logRegulatorNotification failed:', (err instanceof Error ? err.message : String(err)));
     return { id: null, success: false };
   }
 }
@@ -1025,7 +1025,7 @@ export async function expireOldAudits(): Promise<{ closed: number }> {
     );
     return { closed: r.rowCount ?? 0 };
   } catch (err: unknown) {
-    log.warn('[AuditorAccess] expireOldAudits failed:', err?.message);
+    log.warn('[AuditorAccess] expireOldAudits failed:', (err instanceof Error ? err.message : String(err)));
     return { closed: 0 };
   }
 }

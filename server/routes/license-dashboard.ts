@@ -220,7 +220,7 @@ router.post('/:certId/revoke', ensureWorkspaceAccess, async (req: Request, res: 
         previousStatus: cert.status,
         certificationNumber: cert.certificationNumber,
       },
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     // Find active/upcoming shifts for this employee and flag them
     const now = new Date();
@@ -275,7 +275,7 @@ router.post('/:certId/revoke', ensureWorkspaceAccess, async (req: Request, res: 
             shiftDate: new Date(shift.startTime).toISOString(),
             reason,
           },
-        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
       }
       shiftsNotified++;
     }
@@ -373,7 +373,7 @@ router.get('/export/:stateCode/csv', ensureWorkspaceAccess, async (req: Request,
       entityType: 'compliance',
       entityId: workspaceId,
       metadata: { stateCode: normalizedState, regulatoryBody, recordCount: certs.length },
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     const filename = `license-export-${normalizedState}-${new Date().toISOString().slice(0, 10)}.csv`;
 

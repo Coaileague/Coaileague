@@ -70,7 +70,7 @@ export async function runWellnessCheckSweep(): Promise<WellnessSweepResult> {
   try {
     candidates = await findLongShiftClockouts();
   } catch (err: unknown) {
-    result.errors.push(`scan:${err?.message}`);
+    result.errors.push(`scan:${(err instanceof Error ? err.message : String(err))}`);
     return result;
   }
 
@@ -88,8 +88,8 @@ export async function runWellnessCheckSweep(): Promise<WellnessSweepResult> {
       if (sent) result.smsSent++;
       await recordSent(c);
     } catch (err: unknown) {
-      result.errors.push(`${c.timeEntryId}:${err?.message}`);
-      log.warn(`[officerWellness] ${c.timeEntryId} failed:`, err?.message);
+      result.errors.push(`${c.timeEntryId}:${(err instanceof Error ? err.message : String(err))}`);
+      log.warn(`[officerWellness] ${c.timeEntryId} failed:`, (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -122,11 +122,11 @@ export async function runWellnessStaleSweep(): Promise<WellnessStaleResult> {
         await markNoReply(row.workspace_id, row.id, row.employee_id, row.time_entry_id);
         result.noReplyNoted++;
       } catch (err: unknown) {
-        result.errors.push(`${row.id}:${err?.message}`);
+        result.errors.push(`${row.id}:${(err instanceof Error ? err.message : String(err))}`);
       }
     }
   } catch (err: unknown) {
-    result.errors.push(`sweep:${err?.message}`);
+    result.errors.push(`sweep:${(err instanceof Error ? err.message : String(err))}`);
   }
 
   return result;
@@ -179,7 +179,7 @@ export async function handleWellnessReply(params: {
         ],
       );
     } catch (err: unknown) {
-      log.warn('[officerWellness] resolve-ok write failed:', err?.message);
+      log.warn('[officerWellness] resolve-ok write failed:', (err instanceof Error ? err.message : String(err)));
     }
     await logActionAudit({
       actionId: 'trinity.officer_wellness.resolved',
@@ -218,10 +218,10 @@ export async function handleWellnessReply(params: {
     try {
       await notifyHumanAgents({ supportCase: sc, workspaceId: params.workspaceId });
     } catch (e: unknown) {
-      log.warn('[officerWellness] notify agents failed (non-fatal):', e?.message);
+      log.warn('[officerWellness] notify agents failed (non-fatal):', (e instanceof Error ? e.message : String(e)));
     }
   } catch (err: unknown) {
-    log.warn('[officerWellness] support case create failed:', err?.message);
+    log.warn('[officerWellness] support case create failed:', (err instanceof Error ? err.message : String(err)));
   }
 
   try {
@@ -243,7 +243,7 @@ export async function handleWellnessReply(params: {
       ],
     );
   } catch (err: unknown) {
-    log.warn('[officerWellness] resolve-help write failed:', err?.message);
+    log.warn('[officerWellness] resolve-help write failed:', (err instanceof Error ? err.message : String(err)));
   }
 
   await logActionAudit({
@@ -361,7 +361,7 @@ async function sendCheckInSms(c: WellnessCandidate): Promise<boolean> {
         metadata: { timeEntryId: c.timeEntryId, employeeId: c.employeeId, hoursWorked: hours },
       } as unknown);
     } catch (err: unknown) {
-      log.warn('[officerWellness] event publish failed (non-fatal):', err?.message);
+      log.warn('[officerWellness] event publish failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     }
   }
   return res.success;
@@ -389,7 +389,7 @@ async function recordSent(c: WellnessCandidate): Promise<void> {
       ],
     );
   } catch (err: unknown) {
-    log.warn('[officerWellness] audit write failed (non-fatal):', err?.message);
+    log.warn('[officerWellness] audit write failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }
 

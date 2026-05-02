@@ -159,7 +159,7 @@ class SupervisoryAgentService {
       }
 
     } catch (error : unknown) {
-      log.warn('[SupervisoryAgent] Health check failed (will retry next interval):', error?.message || 'unknown');
+      log.warn('[SupervisoryAgent] Health check failed (will retry next interval):', (error instanceof Error ? error.message : String(error)) || 'unknown');
     }
   }
 

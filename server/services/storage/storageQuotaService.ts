@@ -163,10 +163,10 @@ export async function recordStorageUsage(
 
     // Fire threshold warnings asynchronously (non-blocking)
     emitStorageWarnings(workspaceId).catch((err) =>
-      log.warn(`[StorageQuota] Warning emit failed for ${workspaceId}:`, err?.message)
+      log.warn(`[StorageQuota] Warning emit failed for ${workspaceId}:`, (err instanceof Error ? err.message : String(err)))
     );
   } catch (err: unknown) {
-    log.error(`[StorageQuota] recordStorageUsage failed ws=${workspaceId} cat=${category}:`, err?.message);
+    log.error(`[StorageQuota] recordStorageUsage failed ws=${workspaceId} cat=${category}:`, (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -189,7 +189,7 @@ export async function releaseStorageUsage(
     // Re-check warning thresholds (may need to clear a fired warning)
     emitStorageWarnings(workspaceId).catch(() => null);
   } catch (err: unknown) {
-    log.warn(`[StorageQuota] releaseStorageUsage failed: ${err?.message}`);
+    log.warn(`[StorageQuota] releaseStorageUsage failed: ${(err instanceof Error ? err.message : String(err))}`);
   }
 }
 
@@ -309,7 +309,7 @@ export async function emitStorageWarnings(workspaceId: string): Promise<void> {
       }
     }
   } catch (err: unknown) {
-    log.warn(`[StorageQuota] emitStorageWarnings failed for ${workspaceId}:`, err?.message);
+    log.warn(`[StorageQuota] emitStorageWarnings failed for ${workspaceId}:`, (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -368,6 +368,6 @@ export async function ensureStorageTables(): Promise<void> {
     `);
     log.info('[StorageQuota] Tables ensured (storage_usage, storage_warning_state)');
   } catch (err: unknown) {
-    log.warn('[StorageQuota] ensureStorageTables:', err?.message);
+    log.warn('[StorageQuota] ensureStorageTables:', (err instanceof Error ? err.message : String(err)));
   }
 }

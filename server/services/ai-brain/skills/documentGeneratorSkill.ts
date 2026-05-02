@@ -321,7 +321,7 @@ Requirements:
 
       return result.text || `${sectionTitle}: Please edit this section with your specific content.`;
     } catch (e: unknown) {
-      log.warn(`[DocumentGenerator] Section generation failed for "${sectionTitle}": ${e?.message}`);
+      log.warn(`[DocumentGenerator] Section generation failed for "${sectionTitle}": ${(e instanceof Error ? e.message : String(e))}`);
       return `${sectionTitle}: Please edit this section with your specific content.`;
     }
   }

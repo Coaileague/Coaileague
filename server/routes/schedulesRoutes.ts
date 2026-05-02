@@ -258,11 +258,11 @@ router.post('/publish', requireManager, async (req: AuthenticatedRequest, res) =
   <p><a href="${appUrl}/schedule" style="background:#1e3a5f;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;margin-top:8px;">View Full Schedule</a></p>
   <p style="color:#9ca3af;font-size:12px;margin-top:24px;">You received this because you are an employee at this organization. Log in to view or request changes.</p>
 </div>`,
-          }).catch((emailErr: unknown) => log.warn(`Schedule email failed for ${emp.email}:`, emailErr?.message));
+          }).catch((emailErr: unknown) => log.warn(`Schedule email failed for ${emp.email}:`, (emailErr instanceof Error ? emailErr.message : String(emailErr))));
         }
         log.info(`[SchedulePublish] Sent schedule emails to ${empDetails.filter(e => e.email).length} employees for week ${weekStartFormatted}`);
       } catch (emailErr: unknown) {
-        log.warn('[SchedulePublish] Email dispatch failed (non-blocking):', emailErr?.message);
+        log.warn('[SchedulePublish] Email dispatch failed (non-blocking):', (emailErr instanceof Error ? emailErr.message : String(emailErr)));
       }
     });
 
@@ -285,7 +285,7 @@ router.post('/publish', requireManager, async (req: AuthenticatedRequest, res) =
         publishedBy: userId,
       },
       visibility: 'manager',
-    }).catch((err: unknown) => log.warn('[EventBus] schedule_published publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] schedule_published publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     res.json({ success: true, published, message: `Schedule published. ${employeesAffected} employees notified.` });
   } catch (error: unknown) {
@@ -640,7 +640,7 @@ router.post('/auto-fill/preflight', requireManager, async (req: AuthenticatedReq
       },
     });
   } catch (err: unknown) {
-    log.error('[Schedules] Preflight check failed:', err?.message);
+    log.error('[Schedules] Preflight check failed:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to run preflight check' });
   }
 });

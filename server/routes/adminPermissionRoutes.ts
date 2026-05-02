@@ -122,7 +122,7 @@ router.patch('/workspaces/:wsId/matrix', requireSupportManager, async (req, res)
       entityId: wsId,
       changeType: 'update',
       metadata: { role, featureKey, enabled, source: 'platform_staff' },
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
     broadcastToWorkspace(wsId, {
       type: 'permission_update',
       role,
@@ -158,7 +158,7 @@ router.delete('/workspaces/:wsId/matrix', requireSupportManager, async (req, res
       entityId: wsId,
       changeType: 'delete',
       metadata: { role, featureKey, reset: true, source: 'platform_staff' },
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
     broadcastToWorkspace(wsId, {
       type: 'permission_update',
       role,
@@ -273,7 +273,7 @@ router.patch('/workspaces/:wsId/users/:userId/role', requireSupportManager, asyn
       changeType: 'update',
       changes: { workspaceRole: { old: target.workspaceRole, new: workspaceRole } },
       metadata: { reason: reason ?? 'Platform admin role change', source: 'platform_staff' },
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     broadcastToWorkspace(wsId, {
       type: 'permission_update',

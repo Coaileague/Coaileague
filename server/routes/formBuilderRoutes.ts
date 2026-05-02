@@ -601,7 +601,7 @@ router.post("/forms/:formId/submissions/:submissionId/submit", async (req: Authe
           },
         });
       } catch (notifErr : unknown) {
-        log.warn('[FormBuilder] Approval notification failed (non-fatal):', notifErr?.message);
+        log.warn('[FormBuilder] Approval notification failed (non-fatal):', (notifErr instanceof Error ? notifErr.message : String(notifErr)));
       }
     }
 
@@ -696,7 +696,7 @@ router.post("/forms/:formId/submissions/:submissionId/approve", async (req: Auth
           ipAddress: req.ip || null,
         });
       } catch (sigErr : unknown) {
-        log.warn('[FormBuilder] Signature record failed (non-fatal):', sigErr?.message);
+        log.warn('[FormBuilder] Signature record failed (non-fatal):', (sigErr instanceof Error ? sigErr.message : String(sigErr)));
       }
     }
 
@@ -732,7 +732,7 @@ router.post("/forms/:formId/submissions/:submissionId/approve", async (req: Auth
           },
         });
       } catch (notifErr : unknown) {
-        log.warn('[FormBuilder] Decision notification failed (non-fatal):', notifErr?.message);
+        log.warn('[FormBuilder] Decision notification failed (non-fatal):', (notifErr instanceof Error ? notifErr.message : String(notifErr)));
       }
     }
 

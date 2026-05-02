@@ -214,7 +214,7 @@ export async function seedMonthlyShifts(): Promise<{ seeded: number; message: st
     };
 
   } catch (err: unknown) {
-    log.error('[ShiftSeed] Failed:', err?.message);
-    return { seeded: 0, message: `Failed: ${err?.message}` };
+    log.error('[ShiftSeed] Failed:', (err instanceof Error ? err.message : String(err)));
+    return { seeded: 0, message: `Failed: ${(err instanceof Error ? err.message : String(err))}` };
   }
 }

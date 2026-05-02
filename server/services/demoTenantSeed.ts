@@ -149,13 +149,13 @@ export async function seedDemoTenant(): Promise<DemoSeedResult> {
       counts: { clients: 5, employees: 6, shifts: 5, invoices: 2 },
     };
   } catch (err: unknown) {
-    log.error('[demoTenantSeed] failed:', err?.message);
+    log.error('[demoTenantSeed] failed:', (err instanceof Error ? err.message : String(err)));
     return {
       success: false,
       workspaceId: DEMO_WORKSPACE_ID,
       workspaceName: DEMO_WORKSPACE_NAME,
       created: false,
-      message: err?.message || 'Demo tenant seed failed',
+      message: (err instanceof Error ? err.message : String(err)) || 'Demo tenant seed failed',
     };
   }
 }

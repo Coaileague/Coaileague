@@ -64,7 +64,7 @@ export async function runRevenueAtRiskSweep(): Promise<RevenueAtRiskResult> {
   try {
     workspaces = await listActiveWorkspaces();
   } catch (err: unknown) {
-    result.errors.push(`workspaces:${err?.message}`);
+    result.errors.push(`workspaces:${(err instanceof Error ? err.message : String(err))}`);
     return result;
   }
 
@@ -84,8 +84,8 @@ export async function runRevenueAtRiskSweep(): Promise<RevenueAtRiskResult> {
       result.unfilledShiftsFlagged += per.unfilledShiftsFlagged;
       result.totalAtRiskDollars += per.totalAtRiskDollars;
     } catch (err: unknown) {
-      result.errors.push(`${workspaceId}:${err?.message}`);
-      log.warn(`[revenueAtRisk] workspace ${workspaceId} failed:`, err?.message);
+      result.errors.push(`${workspaceId}:${(err instanceof Error ? err.message : String(err))}`);
+      log.warn(`[revenueAtRisk] workspace ${workspaceId} failed:`, (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -227,7 +227,7 @@ export async function runRevenueAtRiskForWorkspace(workspaceId: string): Promise
       metadata: { workflow: WORKFLOW_NAME, ...tally },
     } as unknown);
   } catch (err: unknown) {
-    log.warn('[revenueAtRisk] event publish failed (non-fatal):', err?.message);
+    log.warn('[revenueAtRisk] event publish failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 
   await logActionAudit({
@@ -317,7 +317,7 @@ async function findExpiringContracts(workspaceId: string): Promise<ExpiringContr
       clientName: row.client_name,
     }));
   } catch (err: unknown) {
-    log.warn('[revenueAtRisk] contract lookup failed:', err?.message);
+    log.warn('[revenueAtRisk] contract lookup failed:', (err instanceof Error ? err.message : String(err)));
     return [];
   }
 }
@@ -360,7 +360,7 @@ async function findChurnRiskClients(workspaceId: string): Promise<ChurnClient[]>
       daysInactive: Number(row.days_inactive || 0),
     }));
   } catch (err: unknown) {
-    log.warn('[revenueAtRisk] churn lookup failed:', err?.message);
+    log.warn('[revenueAtRisk] churn lookup failed:', (err instanceof Error ? err.message : String(err)));
     return [];
   }
 }
@@ -396,7 +396,7 @@ async function findUnfilledShifts(workspaceId: string): Promise<UnfilledShift[]>
       ageHours: Math.floor(Number(row.age_hours || 0)),
     }));
   } catch (err: unknown) {
-    log.warn('[revenueAtRisk] unfilled shift lookup failed:', err?.message);
+    log.warn('[revenueAtRisk] unfilled shift lookup failed:', (err instanceof Error ? err.message : String(err)));
     return [];
   }
 }
@@ -549,6 +549,6 @@ async function recordFlag(
       ],
     );
   } catch (err: unknown) {
-    log.warn('[revenueAtRisk] audit write failed (non-fatal):', err?.message);
+    log.warn('[revenueAtRisk] audit write failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }

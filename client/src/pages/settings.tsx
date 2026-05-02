@@ -1029,7 +1029,7 @@ function WorkspaceSettingsForm({ workspace }: { workspace: Workspace }) {
     onError: (error: unknown) => {
       toast({
         title: "Failed to save settings",
-        description: error?.message || "An error occurred while saving your settings.",
+        description: (error instanceof Error ? error.message : String(error)) || "An error occurred while saving your settings.",
         variant: "destructive",
       });
     },

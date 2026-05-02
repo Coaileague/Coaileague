@@ -540,12 +540,12 @@ router.post("/:id/submit", async (req: AuthenticatedRequest, res) => {
         });
       }
     } catch (notifErr: unknown) {
-      log.warn("[payrollTimesheets] Submit notification failed (non-fatal):", notifErr?.message);
+      log.warn("[payrollTimesheets] Submit notification failed (non-fatal):", (notifErr instanceof Error ? notifErr.message : String(notifErr)));
     }
 
     return res.json(updated);
   } catch (err: unknown) {
-    if (err?.code === 'CONFLICT' || err?.message?.startsWith('CONFLICT:')) {
+    if ((err as NodeJS.ErrnoException).code === 'CONFLICT' || (err instanceof Error ? err.message : String(err))?.startsWith('CONFLICT:')) {
       const status = err instanceof Error ? err.message : String(err).split(':')[1] || 'unknown';
       return res.status(409).json({ message: `Timesheet is already ${status} — cannot submit`, code: 'CONFLICT' });
     }
@@ -622,12 +622,12 @@ router.post("/:id/approve", async (req: AuthenticatedRequest, res) => {
         });
       }
     } catch (notifErr: unknown) {
-      log.warn("[payrollTimesheets] Approval notification failed (non-fatal):", notifErr?.message);
+      log.warn("[payrollTimesheets] Approval notification failed (non-fatal):", (notifErr instanceof Error ? notifErr.message : String(notifErr)));
     }
 
     return res.json(updated);
   } catch (err: unknown) {
-    if (err?.code === 'CONFLICT' || err?.message?.startsWith('CONFLICT:')) {
+    if ((err as NodeJS.ErrnoException).code === 'CONFLICT' || (err instanceof Error ? err.message : String(err))?.startsWith('CONFLICT:')) {
       const status = err instanceof Error ? err.message : String(err).split(':')[1] || 'unknown';
       return res.status(409).json({ message: `Timesheet is already ${status} — cannot approve`, code: 'CONFLICT' });
     }
@@ -713,12 +713,12 @@ router.post("/:id/reject", async (req: AuthenticatedRequest, res) => {
         });
       }
     } catch (notifErr: unknown) {
-      log.warn("[payrollTimesheets] Rejection notification failed (non-fatal):", notifErr?.message);
+      log.warn("[payrollTimesheets] Rejection notification failed (non-fatal):", (notifErr instanceof Error ? notifErr.message : String(notifErr)));
     }
 
     return res.json(updated);
   } catch (err: unknown) {
-    if (err?.code === 'CONFLICT' || err?.message?.startsWith('CONFLICT:')) {
+    if ((err as NodeJS.ErrnoException).code === 'CONFLICT' || (err instanceof Error ? err.message : String(err))?.startsWith('CONFLICT:')) {
       const status = err instanceof Error ? err.message : String(err).split(':')[1] || 'unknown';
       return res.status(409).json({ message: `Timesheet is already ${status} — cannot reject`, code: 'CONFLICT' });
     }

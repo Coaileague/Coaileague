@@ -946,6 +946,6 @@ setTimeout(async () => {
     aiBrainAuthorizationService.loadPausesFromDB();
     aiBrainAuthorizationService.loadKillSwitchFromDB();
   } catch (err: unknown) {
-    log.warn('[AIBrainAuth] Startup pause reload failed (non-blocking):', err?.message);
+    log.warn('[AIBrainAuth] Startup pause reload failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
   }
 }, 120000);

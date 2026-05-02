@@ -715,7 +715,7 @@ class BehavioralMonitoringService {
           await this.updateProfile(subagentId, modelTier);
         }
       } catch (error : unknown) {
-        log.warn('[BehavioralMonitoring] Analysis failed (will retry):', error?.message || 'unknown');
+        log.warn('[BehavioralMonitoring] Analysis failed (will retry):', (error instanceof Error ? error.message : String(error)) || 'unknown');
       }
     }, 5 * 60 * 1000).unref();
   }

@@ -600,7 +600,7 @@ class TrinityKnowledgeService {
             `[TrinityKnowledge] Failed to seed module ${mod.moduleKey}`,
             {
               message: err instanceof Error ? err.message : String(err),
-              code: err?.code,
+              code: (err as NodeJS.ErrnoException).code,
               detail: err?.detail,
               column: err?.column,
               constraint: err?.constraint,
@@ -608,7 +608,7 @@ class TrinityKnowledgeService {
               schema: err?.schema,
               where: err?.where,
               routine: err?.routine,
-              stack: err?.stack?.split('\n').slice(0, 6).join(' | '),
+              stack: (err instanceof Error ? err.stack : undefined)?.split('\n').slice(0, 6).join(' | '),
             }
           );
         }

@@ -73,8 +73,8 @@ router.post("/demo-tenant-seed", requirePlatformAdmin, async (_req: Authenticate
     if (!result.success) return res.status(500).json(result);
     res.json(result);
   } catch (err: unknown) {
-    log.error('[DevRoutes] demo-tenant-seed failed:', err?.message);
-    res.status(500).json({ error: err?.message || 'Demo tenant seed failed' });
+    log.error('[DevRoutes] demo-tenant-seed failed:', (err instanceof Error ? err.message : String(err)));
+    res.status(500).json({ error: (err instanceof Error ? err.message : String(err)) || 'Demo tenant seed failed' });
   }
 });
 
@@ -90,8 +90,8 @@ router.post("/compliance-snapshot/:workspaceId", requirePlatformAdmin, async (re
     const result = await snapshotAndMonitor(req.params.workspaceId);
     res.json(result);
   } catch (err: unknown) {
-    log.error('[DevRoutes] compliance-snapshot failed:', err?.message);
-    res.status(500).json({ error: err?.message || 'Compliance snapshot failed' });
+    log.error('[DevRoutes] compliance-snapshot failed:', (err instanceof Error ? err.message : String(err)));
+    res.status(500).json({ error: (err instanceof Error ? err.message : String(err)) || 'Compliance snapshot failed' });
   }
 });
 
@@ -107,8 +107,8 @@ router.post("/seed-multi-state-regulatory", requirePlatformAdmin, async (_req: A
     const result = await seedMultiStateRegulatory();
     res.json(result);
   } catch (err: unknown) {
-    log.error('[DevRoutes] multi-state seed failed:', err?.message);
-    res.status(500).json({ error: err?.message || 'Multi-state seed failed' });
+    log.error('[DevRoutes] multi-state seed failed:', (err instanceof Error ? err.message : String(err)));
+    res.status(500).json({ error: (err instanceof Error ? err.message : String(err)) || 'Multi-state seed failed' });
   }
 });
 
@@ -126,8 +126,8 @@ router.post("/retention-scan", requirePlatformAdmin, async (_req: AuthenticatedR
     const result = await runRetentionScan();
     res.json(result);
   } catch (err: unknown) {
-    log.error('[DevRoutes] retention-scan failed:', err?.message);
-    res.status(500).json({ error: err?.message || 'Retention scan failed' });
+    log.error('[DevRoutes] retention-scan failed:', (err instanceof Error ? err.message : String(err)));
+    res.status(500).json({ error: (err instanceof Error ? err.message : String(err)) || 'Retention scan failed' });
   }
 });
 

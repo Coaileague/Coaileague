@@ -61,7 +61,7 @@ export const alternativeStrategyService = {
       log.debug(`[AlternativeStrategy] Generated ${strategies.length} strategies for shift ${shiftId}`);
       return strategies;
     } catch (err: unknown) {
-      log.warn(`[AlternativeStrategy] Failed: ${err?.message}`);
+      log.warn(`[AlternativeStrategy] Failed: ${(err instanceof Error ? err.message : String(err))}`);
       return [];
     }
   },

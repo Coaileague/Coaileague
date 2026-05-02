@@ -64,7 +64,7 @@ export function handleSales(params: {
       say('Thank you. Have a great day.')
     );
   } catch (err: unknown) {
-    log.error('[salesExtension] Error:', err?.message);
+    log.error('[salesExtension] Error:', (err instanceof Error ? err.message : String(err)));
     return twiml(s('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }
 }

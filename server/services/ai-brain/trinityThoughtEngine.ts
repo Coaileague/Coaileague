@@ -197,8 +197,8 @@ class TrinityThoughtEngine {
       };
     } catch (error : unknown) {
       // Extract the meaningful error message — PostgreSQL errors bury the cause in .message or .detail
-      const errMsg = error?.message || error?.detail || String(error);
-      const errCode = error?.code || 'unknown';
+      const errMsg = (error instanceof Error ? error.message : String(error)) || String(error)?.detail || String(error);
+      const errCode = (error as NodeJS.ErrnoException).code || 'unknown';
       log.warn(`[TrinityThoughtEngine] Failed to record thought (non-fatal, degrading gracefully): [${errCode}] ${errMsg}`);
       // Thought recording is observability — it must never crash the operational flow
       // Return a synthetic result so callers can continue

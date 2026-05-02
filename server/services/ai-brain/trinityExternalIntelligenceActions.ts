@@ -40,7 +40,7 @@ function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Pro
         return { 
           success: false, 
           actionId,
-          message: err?.message || 'Unknown error',
+          message: (err instanceof Error ? err.message : String(err)) || 'Unknown error',
           executionTimeMs: 0
         };
       }

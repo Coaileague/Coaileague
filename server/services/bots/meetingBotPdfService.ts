@@ -280,7 +280,7 @@ class MeetingBotPdfService {
 
       return { success: true, documentId: docId, summaryText: aiSummary };
     } catch (err: unknown) {
-      return { success: false, error: err?.message || String(err) };
+      return { success: false, error: (err instanceof Error ? err.message : String(err)) || String(err) };
     }
   }
 

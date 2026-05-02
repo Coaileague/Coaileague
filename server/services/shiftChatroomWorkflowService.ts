@@ -190,7 +190,7 @@ class ShiftChatroomWorkflowService {
           });
         }
       } catch (memberErr: unknown) {
-        log.warn('[ShiftChatroom] provisionChatroom: failed to pre-add member (non-fatal):', memberErr?.message);
+        log.warn('[ShiftChatroom] provisionChatroom: failed to pre-add member (non-fatal):', (memberErr instanceof Error ? memberErr.message : String(memberErr)));
       }
     }
 

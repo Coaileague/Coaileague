@@ -2830,7 +2830,7 @@ export class TrinitySchedulingAI {
         const wsCtx = await workspaceContextService.getFullContext(context.workspaceId);
         orgContext = `\nORGANIZATION CONTEXT:\n${wsCtx.summary}\n`;
       } catch (err: unknown) {
-        log.warn(`[TrinityScheduler] Failed to load org context for workspace ${context.workspaceId}:`, err?.message);
+        log.warn(`[TrinityScheduler] Failed to load org context for workspace ${context.workspaceId}:`, (err instanceof Error ? err.message : String(err)));
       }
 
       const prompt = `You are Trinity, an expert security company scheduler. Analyze this scheduling decision:

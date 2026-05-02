@@ -246,7 +246,7 @@ router.post('/recognition/schedules', async (req: AuthenticatedRequest, res: Res
 
     return res.status(201).json({ success: true, data: { scheduleId } });
   } catch (err: unknown) {
-    if (err?.name === 'ZodError') return res.status(400).json({ error: err.errors });
+    if ((err instanceof Error ? err.name : "Error") === 'ZodError') return res.status(400).json({ error: err.errors });
     log.error('[RevenueRoutes] create schedule error', { error: err instanceof Error ? err.message : String(err) });
     return res.status(500).json({ error: 'Internal server error' });
   }

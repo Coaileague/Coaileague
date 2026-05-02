@@ -146,7 +146,7 @@ export async function run1099JanuaryScan(taxYear: number): Promise<{
             idempotencyKey: `form_1099_filing_required-${Math.floor(Date.now() / (6 * 60 * 60 * 1000))}-${ws.ownerId}`,
               contractors: filingCandidates.map(r => ({ id: r.employeeId, name: r.employeeName, total: r.totalPaidInYear })),
             },
-          }).catch((e: unknown) => log.warn('Failed to send 1099 notification', { error: e.message }));
+          }).catch((e: unknown) => log.warn('Failed to send 1099 notification', { error: (e instanceof Error ? e.message : String(e)) }));
 
           log.info('1099 filing notification sent', { workspaceId: ws.id, count: filingCandidates.length });
         }

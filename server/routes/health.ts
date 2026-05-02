@@ -221,7 +221,7 @@ apiHealthRouter.get('/slo', async (_req: Request, res: Response) => {
     const { SLO_TARGETS } = await import('../lib/sloConfig');
     res.json({ ok: true, targets: SLO_TARGETS });
   } catch (err: unknown) {
-    res.status(500).json({ ok: false, error: err?.message || 'Failed to load SLO config' });
+    res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) || 'Failed to load SLO config' });
   }
 });
 
@@ -238,7 +238,7 @@ apiHealthRouter.post('/error-tracker-test', (_req: Request, res: Response) => {
       note: 'Synthetic event fired. Check the configured observability backend. If no backend is configured, the event was no-op.',
     });
   } catch (err: unknown) {
-    res.status(500).json({ ok: false, error: err?.message || 'Unknown failure' });
+    res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) || 'Unknown failure' });
   }
 });
 

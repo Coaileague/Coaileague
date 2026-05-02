@@ -105,7 +105,7 @@ async function fireTokenAlert(
       });
     }
   } catch (err: unknown) {
-    log.warn('[TokenUsageService] Failed to fire token alert — non-blocking', { workspaceId, level, err: err?.message });
+    log.warn('[TokenUsageService] Failed to fire token alert — non-blocking', { workspaceId, level, err: (err instanceof Error ? err.message : String(err)) });
   }
 }
 
@@ -201,7 +201,7 @@ export async function recordTokenUsage(params: RecordTokenUsageParams): Promise<
       featureName: featureName ?? null,
     });
   } catch (err: unknown) {
-    log.error(`[TokenUsageService] Failed to write token_usage_log — non-blocking: ${err?.message}`, { workspaceId, actionType });
+    log.error(`[TokenUsageService] Failed to write token_usage_log — non-blocking: ${(err instanceof Error ? err.message : String(err))}`, { workspaceId, actionType });
     return;
   }
 
@@ -234,7 +234,7 @@ export async function recordTokenUsage(params: RecordTokenUsageParams): Promise<
       isFounderExempt = !!(ws?.founderExemption);
     }
   } catch (err: unknown) {
-    log.warn(`[TokenUsageService] Could not fetch workspace tier — defaulting to trial, no alerts: ${err?.message}`, { workspaceId });
+    log.warn(`[TokenUsageService] Could not fetch workspace tier — defaulting to trial, no alerts: ${(err instanceof Error ? err.message : String(err))}`, { workspaceId });
   }
 
   // STEP 4: Upsert token_usage_monthly (always, even for billingExempt sandboxes)
@@ -244,7 +244,7 @@ export async function recordTokenUsage(params: RecordTokenUsageParams): Promise<
   try {
     usageStats = await upsertMonthlyUsage(workspaceId, tokensTotal, allowance);
   } catch (err: unknown) {
-    log.error(`[TokenUsageService] Failed to upsert token_usage_monthly — non-blocking: ${err?.message}`, { workspaceId });
+    log.error(`[TokenUsageService] Failed to upsert token_usage_monthly — non-blocking: ${(err instanceof Error ? err.message : String(err))}`, { workspaceId });
     return;
   }
 
@@ -267,7 +267,7 @@ export async function recordTokenUsage(params: RecordTokenUsageParams): Promise<
       await fireTokenAlert(workspaceId, 'warning', percentUsed, totalTokensUsed, allowance);
     }
   } catch (err: unknown) {
-    log.warn(`[TokenUsageService] Alert dispatch failed — non-blocking: ${err?.message}`, { workspaceId });
+    log.warn(`[TokenUsageService] Alert dispatch failed — non-blocking: ${(err instanceof Error ? err.message : String(err))}`, { workspaceId });
   }
 }
 
@@ -277,6 +277,6 @@ export async function recordTokenUsage(params: RecordTokenUsageParams): Promise<
 // ============================================================================
 export function recordTokenUsageAsync(params: RecordTokenUsageParams): void {
   recordTokenUsage(params).catch((err: unknown) => {
-    log.error(`[TokenUsageService] Unhandled error in async token write: ${err?.message}`, { workspaceId: params.workspaceId });
+    log.error(`[TokenUsageService] Unhandled error in async token write: ${(err instanceof Error ? err.message : String(err))}`, { workspaceId: params.workspaceId });
   });
 }

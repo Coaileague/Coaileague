@@ -442,7 +442,7 @@ async function handleTrinityMention(wid: string, roomId: string, uid: string, co
   } catch (err: unknown) {
     try {
       const { createLogger } = await import("../lib/logger");
-      createLogger("DockChatTrinity").warn("Trinity mention failed (non-fatal):", err?.message);
+      createLogger("DockChatTrinity").warn("Trinity mention failed (non-fatal):", (err instanceof Error ? err.message : String(err)));
     } catch { /* non-fatal */ }
   }
 

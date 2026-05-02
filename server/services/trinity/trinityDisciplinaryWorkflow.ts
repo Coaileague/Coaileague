@@ -291,7 +291,7 @@ Generate the appropriate ${isContractor ? 'Letter of Dissatisfaction' : 'discipl
     });
     raw = response?.text || '';
   } catch (err: unknown) {
-    log.warn('[TrinityDisciplinary] Gemini call failed, falling back to template:', err?.message);
+    log.warn('[TrinityDisciplinary] Gemini call failed, falling back to template:', (err instanceof Error ? err.message : String(err)));
   }
 
   const parsed = parseDraftJSON(raw);

@@ -125,7 +125,7 @@ export async function logWorkflowStart(
   } catch (err: unknown) {
     log.warn('[workflowLogger] Non-fatal: start insert failed', {
       workflow: params.workflowName,
-      error: err?.message,
+      error: (err instanceof Error ? err.message : String(err)),
     });
     return {
       id: null,
@@ -177,7 +177,7 @@ export async function logWorkflowStep(
     log.warn('[workflowLogger] Non-fatal: step update failed', {
       workflow: record.workflowName,
       step,
-      error: err?.message,
+      error: (err instanceof Error ? err.message : String(err)),
     });
   }
 }
@@ -246,7 +246,7 @@ export async function logWorkflowComplete(
   } catch (err: unknown) {
     log.warn('[workflowLogger] Non-fatal: complete update failed', {
       workflow: record.workflowName,
-      error: err?.message,
+      error: (err instanceof Error ? err.message : String(err)),
     });
   }
 }

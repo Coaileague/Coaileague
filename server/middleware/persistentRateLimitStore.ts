@@ -67,7 +67,7 @@ async function ensureTable(): Promise<boolean> {
       `);
       return true;
     } catch (err: unknown) {
-      log.warn(`[PersistentRateLimit] table init failed (falling back to in-memory): ${err?.message}`);
+      log.warn(`[PersistentRateLimit] table init failed (falling back to in-memory): ${(err instanceof Error ? err.message : String(err))}`);
       return false;
     }
   })();

@@ -34,7 +34,7 @@ function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Pro
         const data = await fn(req.params || {});
         return { success: true, data } as unknown;
       } catch (err: unknown) {
-        return { success: false, error: err?.message || 'Unknown error' } as unknown;
+        return { success: false, error: (err instanceof Error ? err.message : String(err)) || 'Unknown error' } as unknown;
       }
     },
   };

@@ -61,7 +61,7 @@ async function recordNudgeSent(runId: string, workspaceId: string, urgencyBand: 
       [workspaceId, runId, JSON.stringify({ urgency_band: urgencyBand, sent_at: new Date().toISOString() })]
     );
   } catch (err: unknown) {
-    log.warn(`[PayrollDeadlineNudge] Failed to record nudge audit for run ${runId}:`, err?.message);
+    log.warn(`[PayrollDeadlineNudge] Failed to record nudge audit for run ${runId}:`, (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -161,14 +161,14 @@ export async function runPayrollDeadlineNudge(): Promise<NudgeResult> {
         nudgesSent++;
         log.info(`[PayrollDeadlineNudge] Nudged workspace=${run.workspace_id} run=${run.id} status=${run.status} hoursLeft=${hoursLeft} urgency=${urgencyBand}`);
       } catch (innerErr: unknown) {
-        log.warn(`[PayrollDeadlineNudge] Failed for run ${run.id}:`, innerErr?.message);
+        log.warn(`[PayrollDeadlineNudge] Failed for run ${run.id}:`, (innerErr instanceof Error ? innerErr.message : String(innerErr)));
       }
     }
 
     log.info(`[PayrollDeadlineNudge] Complete — workspacesChecked=${workspacesChecked}, nudgesSent=${nudgesSent}, nudgesSkipped=${nudgesSkipped}`);
     return { nudgesSent, nudgesSkipped, workspacesChecked };
   } catch (err: unknown) {
-    log.error('[PayrollDeadlineNudge] Fatal error:', err?.message);
+    log.error('[PayrollDeadlineNudge] Fatal error:', (err instanceof Error ? err.message : String(err)));
     return { nudgesSent: 0, nudgesSkipped: 0, workspacesChecked: 0 };
   }
 }

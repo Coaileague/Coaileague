@@ -1080,12 +1080,12 @@ export async function chargeStorageOverageFee(params: {
       description,
     };
   } catch (err: unknown) {
-    log.error(`[StorageOverage] Stripe charge failed for workspace ${workspaceId}: ${err?.message}`);
+    log.error(`[StorageOverage] Stripe charge failed for workspace ${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
     return {
       success: false,
       amountCents: totalCents,
       description,
-      error: err?.message ?? 'stripe_error',
+      error: (err instanceof Error ? err.message : String(err)) ?? 'stripe_error',
     };
   }
 }
@@ -1212,12 +1212,12 @@ export async function chargeVoiceSmsOverageFee(params: {
       description,
     };
   } catch (err: unknown) {
-    log.error(`[VoiceSmsOverage] Stripe charge failed for workspace ${workspaceId}: ${err?.message}`);
+    log.error(`[VoiceSmsOverage] Stripe charge failed for workspace ${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
     return {
       success: false,
       amountCents: totalCents,
       description,
-      error: err?.message ?? 'stripe_error',
+      error: (err instanceof Error ? err.message : String(err)) ?? 'stripe_error',
     };
   }
 }

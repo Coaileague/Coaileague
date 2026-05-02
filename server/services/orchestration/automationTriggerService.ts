@@ -116,31 +116,31 @@ class AutomationTriggerService {
     platformEventBus.subscribe('quickbooks_connected', { name: 'AutomationTrigger-QBConnected', handler: async (event) => {
       try {
         await this.handleIntegrationConnected(event.workspaceId, 'quickbooks');
-      } catch (e: unknown) { log.warn('[AutomationTrigger] quickbooks_connected handler error:', e?.message); }
+      } catch (e: unknown) { log.warn('[AutomationTrigger] quickbooks_connected handler error:', (e instanceof Error ? e.message : String(e))); }
     }});
 
     platformEventBus.subscribe('quickbooks_flow_complete', { name: 'AutomationTrigger-QBFlowComplete', handler: async (event) => {
       try {
         await this.handleDataSyncComplete(event.workspaceId, event.payload);
-      } catch (e: unknown) { log.warn('[AutomationTrigger] quickbooks_flow_complete handler error:', e?.message); }
+      } catch (e: unknown) { log.warn('[AutomationTrigger] quickbooks_flow_complete handler error:', (e instanceof Error ? e.message : String(e))); }
     }});
 
     platformEventBus.subscribe('employees_imported', { name: 'AutomationTrigger-EmployeesImported', handler: async (event) => {
       try {
         await this.handleEmployeeImportComplete(event.workspaceId, event.payload);
-      } catch (e: unknown) { log.warn('[AutomationTrigger] employees_imported handler error:', e?.message); }
+      } catch (e: unknown) { log.warn('[AutomationTrigger] employees_imported handler error:', (e instanceof Error ? e.message : String(e))); }
     }});
 
     platformEventBus.subscribe('schedule_published', { name: 'AutomationTrigger-SchedulePublished', handler: async (event) => {
       try {
         await this.handleSchedulePublished(event.workspaceId, event.payload);
-      } catch (e: unknown) { log.warn('[AutomationTrigger] schedule_published handler error:', e?.message); }
+      } catch (e: unknown) { log.warn('[AutomationTrigger] schedule_published handler error:', (e instanceof Error ? e.message : String(e))); }
     }});
 
     platformEventBus.subscribe('time_entries_approved', { name: 'AutomationTrigger-TimeEntriesApproved', handler: async (event) => {
       try {
         await this.handleTimeEntriesApproved(event.workspaceId, event.payload);
-      } catch (e: unknown) { log.warn('[AutomationTrigger] time_entries_approved handler error:', e?.message); }
+      } catch (e: unknown) { log.warn('[AutomationTrigger] time_entries_approved handler error:', (e instanceof Error ? e.message : String(e))); }
     }});
 
     // ── Financial lifecycle automation triggers ──────────────────────────────
@@ -158,7 +158,7 @@ class AutomationTriggerService {
       await db.update(invoices)
         .set({ status: 'paid', updatedAt: new Date() } as Record<string, unknown>)
         .where(and(eq(invoices.id, invoiceId), sql`${invoices.status} NOT IN ('void', 'cancelled', 'refunded')`))
-        .catch((e: unknown) => log.warn('[AutomationTrigger] invoice_paid DB update skipped:', e?.message));
+        .catch((e: unknown) => log.warn('[AutomationTrigger] invoice_paid DB update skipped:', (e instanceof Error ? e.message : String(e))));
       log.info(`[AutomationTrigger] invoice_paid — AR close-out complete for invoice ${invoiceId}`);
     }});
 
@@ -210,7 +210,7 @@ class AutomationTriggerService {
         }
         log.info(`[AutomationTrigger] payroll_run_paid — notified ${notified}/${entries.length} employee(s)`);
       } catch (e: unknown) {
-        log.warn('[AutomationTrigger] payroll_run_paid employee notification error:', e?.message);
+        log.warn('[AutomationTrigger] payroll_run_paid employee notification error:', (e instanceof Error ? e.message : String(e)));
       }
     }});
 
@@ -225,10 +225,10 @@ class AutomationTriggerService {
       await db.update(invoices)
         .set({ status: 'overdue', updatedAt: new Date() } as Record<string, unknown>)
         .where(and(eq(invoices.id, invoiceId), sql`${invoices.status} NOT IN ('paid', 'void', 'cancelled')`))
-        .catch((e: unknown) => log.warn('[AutomationTrigger] invoice_overdue status update skipped:', e?.message));
+        .catch((e: unknown) => log.warn('[AutomationTrigger] invoice_overdue status update skipped:', (e instanceof Error ? e.message : String(e))));
       // Trigger the automated collections sweep for this workspace
       await runOverdueCollectionsSweep(workspaceId)
-        .catch((e: unknown) => log.warn('[AutomationTrigger] invoice_overdue collections sweep error:', e?.message));
+        .catch((e: unknown) => log.warn('[AutomationTrigger] invoice_overdue collections sweep error:', (e instanceof Error ? e.message : String(e))));
       log.info(`[AutomationTrigger] invoice_overdue — status updated + collections sweep triggered for ${workspaceId}`);
     }});
 

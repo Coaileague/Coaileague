@@ -304,7 +304,7 @@ class AdaptiveSupervisionRouter {
         createdAt: new Date(),
       });
     } catch (persistErr : unknown) {
-      log.warn('[Handoff] Persist start failed (non-fatal):', persistErr?.message);
+      log.warn('[Handoff] Persist start failed (non-fatal):', (persistErr instanceof Error ? persistErr.message : String(persistErr)));
     }
 
     try {
@@ -369,7 +369,7 @@ class AdaptiveSupervisionRouter {
           .set({ status: 'resolved', resolvedAt: new Date() })
           .where(eq(supervisorHandoffs.id, handoffId));
       } catch (persistErr : unknown) {
-        log.warn('[Handoff] Persist resolve failed (non-fatal):', persistErr?.message);
+        log.warn('[Handoff] Persist resolve failed (non-fatal):', (persistErr instanceof Error ? persistErr.message : String(persistErr)));
       }
     }
   }

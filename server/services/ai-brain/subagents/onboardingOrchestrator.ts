@@ -112,7 +112,7 @@ class OnboardingOrchestrator {
       changeType: 'action',
       metadata: { sourceCount: sources.length, skipGamification, skipDataMigration, validateOnly },
     }).catch((auditErr: unknown) => {
-      this.log.warn('[Onboarding] Audit log (start) failed:', auditErr?.message);
+      this.log.warn('[Onboarding] Audit log (start) failed:', (auditErr instanceof Error ? auditErr.message : String(auditErr)));
     });
 
     const result: OnboardingResult = {
@@ -310,7 +310,7 @@ class OnboardingOrchestrator {
         warningCount: result.warnings.length,
       },
     }).catch((auditErr: unknown) => {
-      this.log.warn('[Onboarding] Audit log (complete) failed:', auditErr?.message);
+      this.log.warn('[Onboarding] Audit log (complete) failed:', (auditErr instanceof Error ? auditErr.message : String(auditErr)));
     });
 
     this.log.info(`Onboarding completed in ${result.duration}ms:`, result.summary);

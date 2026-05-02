@@ -292,7 +292,7 @@ export async function initializeHolidays(): Promise<void> {
     // another round-trip through production logs.
     log.error('[HolidayService] Initialization failed (non-fatal)', {
       message: err instanceof Error ? err.message : String(err),
-      code: err?.code,
+      code: (err as NodeJS.ErrnoException).code,
       detail: err?.detail,
       column: err?.column,
       constraint: err?.constraint,
@@ -300,7 +300,7 @@ export async function initializeHolidays(): Promise<void> {
       schema: err?.schema,
       where: err?.where,
       routine: err?.routine,
-      stack: err?.stack?.split('\n').slice(0, 8).join(' | '),
+      stack: (err instanceof Error ? err.stack : undefined)?.split('\n').slice(0, 8).join(' | '),
     });
   }
 }

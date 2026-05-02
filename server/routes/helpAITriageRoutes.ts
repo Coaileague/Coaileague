@@ -569,7 +569,7 @@ router.post('/triage', requireAuth, async (req: AuthenticatedRequest, res: Respo
           });
         }
       } catch (auditErr: unknown) {
-        log.warn('[HelpAITriage] Audit intelligence failed, falling back to pattern handler:', auditErr?.message);
+        log.warn('[HelpAITriage] Audit intelligence failed, falling back to pattern handler:', (auditErr instanceof Error ? auditErr.message : String(auditErr)));
       }
 
       // Fallback: simple pattern-based handler when AI layer fails
@@ -699,7 +699,7 @@ router.post('/triage', requireAuth, async (req: AuthenticatedRequest, res: Respo
 
     // Background: promote qualified FAQ candidates (fire-and-forget)
     if (workspaceId) {
-      promoteQualifiedFaqCandidates().catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      promoteQualifiedFaqCandidates().catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
     }
 
     return res.status(201).json({

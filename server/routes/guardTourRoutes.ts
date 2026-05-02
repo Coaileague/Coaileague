@@ -135,7 +135,7 @@ router.patch("/tours/:id", async (req: AuthenticatedRequest, res) => {
             officerId: (tour as Record<string,unknown>).assignedEmployeeId || null,
           });
         } catch (e: unknown) {
-          log.warn('[GuardTour] PDF generation failed:', e?.message || String(e));
+          log.warn('[GuardTour] PDF generation failed:', (e instanceof Error ? e.message : String(e)) || String(e));
         }
       })();
     }

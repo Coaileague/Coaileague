@@ -52,7 +52,7 @@ async function ensureTables(): Promise<void> {
     `);
     bootstrapped = true;
   } catch (err: unknown) {
-    log.warn('[SmsAbusePrevention] Bootstrap failed (non-fatal):', err?.message);
+    log.warn('[SmsAbusePrevention] Bootstrap failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -83,7 +83,7 @@ export async function checkAndRecordRate(fromPhone: string, keyword?: string): P
     );
     return { allowed: true, countLastHour: countLastHour + 1 };
   } catch (err: unknown) {
-    log.warn('[SmsAbusePrevention] rate-check failed (open):', err?.message);
+    log.warn('[SmsAbusePrevention] rate-check failed (open):', (err instanceof Error ? err.message : String(err)));
     return { allowed: true, countLastHour: 0 };
   }
 }
@@ -139,7 +139,7 @@ export async function recordVerificationFailure(params: {
     }
     return { triggerWelfareCheck: trigger, failuresInWindow };
   } catch (err: unknown) {
-    log.warn('[SmsAbusePrevention] failure-record failed:', err?.message);
+    log.warn('[SmsAbusePrevention] failure-record failed:', (err instanceof Error ? err.message : String(err)));
     return { triggerWelfareCheck: false, failuresInWindow: 0 };
   }
 }
@@ -196,7 +196,7 @@ export async function placeSupervisorWelfareCall(params: {
     });
     return { placed: !!result.success, reason: result.error };
   } catch (err: unknown) {
-    log.warn('[SmsAbusePrevention] welfare-call placement failed:', err?.message);
-    return { placed: false, reason: err?.message };
+    log.warn('[SmsAbusePrevention] welfare-call placement failed:', (err instanceof Error ? err.message : String(err)));
+    return { placed: false, reason: (err instanceof Error ? err.message : String(err)) };
   }
 }

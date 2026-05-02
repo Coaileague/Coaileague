@@ -43,7 +43,7 @@ export async function broadcastSettingsUpdated(
   try {
     broadcastToWorkspace(workspaceId, payload);
   } catch (err: unknown) {
-    log.warn(`[SettingsSync] websocket broadcast failed for ${workspaceId}: ${err?.message}`);
+    log.warn(`[SettingsSync] websocket broadcast failed for ${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
   }
 
   // 2. Fan out to ALL descendants (recursive — not just direct children).
@@ -73,7 +73,7 @@ export async function broadcastSettingsUpdated(
       frontier = next;
     }
   } catch (err: unknown) {
-    log.warn(`[SettingsSync] sub-tenant fan-out failed for ${workspaceId}: ${err?.message}`);
+    log.warn(`[SettingsSync] sub-tenant fan-out failed for ${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
   }
 
   // 3. Publish to the platform event bus so server-side services can react.
@@ -87,6 +87,6 @@ export async function broadcastSettingsUpdated(
       metadata: { scope, changedFields, updatedAt },
     });
   } catch (err: unknown) {
-    log.warn(`[SettingsSync] event bus publish failed for ${workspaceId}: ${err?.message}`);
+    log.warn(`[SettingsSync] event bus publish failed for ${workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
   }
 }

@@ -189,7 +189,7 @@ export async function synthesizeStripeInvoiceWebhook(
     handlerMsg = result.message || result.error || 'no message';
   } catch (err: unknown) {
     handlerOk = false;
-    handlerMsg = `Handler threw: ${err?.message ?? String(err)}`;
+    handlerMsg = `Handler threw: ${(err instanceof Error ? err.message : String(err)) ?? String(err)}`;
   }
 
   // Snapshot state after
@@ -307,7 +307,7 @@ export async function synthesizePlaidAchWebhook(
     }
   } catch (err: unknown) {
     handlerOk = false;
-    handlerMsg = `Plaid sim flip failed: ${err?.message ?? String(err)}`;
+    handlerMsg = `Plaid sim flip failed: ${(err instanceof Error ? err.message : String(err)) ?? String(err)}`;
   }
 
   const after = await pool.query(

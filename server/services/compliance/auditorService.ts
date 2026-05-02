@@ -45,7 +45,7 @@ export const auditorService = {
         },
       };
     } catch (err: unknown) {
-      log.error(`[AuditorService] Report failed: ${err?.message}`);
+      log.error(`[AuditorService] Report failed: ${(err instanceof Error ? err.message : String(err))}`);
       return null;
     }
   },

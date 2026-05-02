@@ -441,7 +441,7 @@ router.get('/pending-approvals', requireAuth, async (req: AuthenticatedRequest, 
       .limit(50);
     res.json({ approvals: pending });
   } catch (err: unknown) {
-    log.error('[TrinityScheduling] pending-approvals GET failed:', err?.message);
+    log.error('[TrinityScheduling] pending-approvals GET failed:', (err instanceof Error ? err.message : String(err)));
     res.json({ approvals: [] }); // graceful empty on schema miss
   }
 });

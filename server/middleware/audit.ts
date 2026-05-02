@@ -146,7 +146,7 @@ export async function createAuditLog(
       changes: changes ? { data: { old: null, new: changes } } : null,
       metadata: { endpoint: `${req.method} ${req.path}`, requestId: requestId || req.requestId, ...(options?.metadata || {}) },
       sourceRoute: `${req.method} ${req.path}`,
-    }).catch((err: unknown) => log.warn('[AuditLog] Async write failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[AuditLog] Async write failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
   } catch (error) {
     log.error('Failed to create audit log:', error);
   }
@@ -205,7 +205,7 @@ export async function createAuditLogFromContext(
       changeType: (['create', 'update', 'delete'].includes(action) ? action : 'action') as unknown,
       changes: changes ? { data: { old: null, new: changes } } : null,
       metadata: options?.metadata || {},
-    }).catch((err: unknown) => log.warn('[AuditLog] Async write failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[AuditLog] Async write failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
   } catch (error) {
     log.error('Failed to create audit log from context:', error);
   }

@@ -700,7 +700,7 @@ export function broadcastUserScopedNotification(
             client.send(payload);
             sentCount++;
           } catch (sendErr: unknown) {
-            log.warn('User-scoped WS send failed — dead connection', { userId, error: sendErr?.message });
+            log.warn('User-scoped WS send failed — dead connection', { userId, error: (sendErr instanceof Error ? sendErr.message : String(sendErr)) });
           }
         }
       }
@@ -832,7 +832,7 @@ export function broadcastTrinityAlertToSupport(message: WsPayload) {
           client.send(payload);
           sentCount++;
         } catch (sendErr: unknown) {
-          log.warn('broadcastTrinityAlertToSupport: WS send failed — dead connection', { role, error: sendErr?.message });
+          log.warn('broadcastTrinityAlertToSupport: WS send failed — dead connection', { role, error: (sendErr instanceof Error ? sendErr.message : String(sendErr)) });
         }
       }
     }
@@ -997,7 +997,7 @@ export function broadcastToUser(userId: string, data: WsPayload): number {
       ws.send(payload);
       sentCount++;
     } catch (sendErr: unknown) {
-      log.warn('broadcastToUser: WS send failed', { userId, error: sendErr?.message });
+      log.warn('broadcastToUser: WS send failed', { userId, error: (sendErr instanceof Error ? sendErr.message : String(sendErr)) });
     }
   });
 
@@ -1342,7 +1342,7 @@ export function setupWebSocket(server: Server) {
             try {
               client.send(payload);
             } catch (sendErr: unknown) {
-              log.warn('Room lifecycle broadcaster send failed — dead connection', { roomId, error: sendErr?.message });
+              log.warn('Room lifecycle broadcaster send failed — dead connection', { roomId, error: (sendErr instanceof Error ? sendErr.message : String(sendErr)) });
             }
           }
         });
@@ -1370,7 +1370,7 @@ export function setupWebSocket(server: Server) {
               try {
                 client.send(eventPayload);
               } catch (sendErr: unknown) {
-                log.warn('IRC emitter room send failed — dead connection', { targetRoom, error: sendErr?.message });
+                log.warn('IRC emitter room send failed — dead connection', { targetRoom, error: (sendErr instanceof Error ? sendErr.message : String(sendErr)) });
               }
             }
           }
@@ -5697,7 +5697,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                 currentViolationCount = await storage.getUserViolationCount(ws.userId);
               } catch (tableError: unknown) {
                 // If abuse_violations table doesn't exist, treat as first violation
-                if (tableError?.code === '42P01') {
+                if ((tableError as NodeJS.ErrnoException).code === '42P01') {
                   log.warn('abuse_violations table not found, treating as first violation');
                   currentViolationCount = 0;
                 } else {
@@ -5729,7 +5729,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                 });
               } catch (violationError: unknown) {
                 // If abuse_violations table doesn't exist, just log the warning
-                if (violationError?.code === '42P01') {
+                if ((violationError as NodeJS.ErrnoException).code === '42P01') {
                   log.warn('abuse_violations table not found, skipping violation logging');
                 } else {
                   log.error('Error logging abuse violation', { error: violationError });

@@ -15,6 +15,6 @@ export async function notifyWhatsNew(workspaceId: string, headline: string, deta
       [workspaceId, headline, detail]
     );
   } catch (err: unknown) {
-    log.debug(`[GamificationWhatsNew] Could not write update: ${err?.message?.slice(0, 80)}`);
+    log.debug(`[GamificationWhatsNew] Could not write update: ${(err instanceof Error ? err.message : String(err))?.slice(0, 80)}`);
   }
 }

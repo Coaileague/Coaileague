@@ -885,7 +885,7 @@ class SupportActionsService {
         );
         emailSent = true;
       } catch (emailErr : unknown) {
-        emailError = emailErr?.message || 'Unknown email error';
+        emailError = (emailErr instanceof Error ? emailErr.message : String(emailErr)) || 'Unknown email error';
         log.error('[SupportActions] Password reset email failed:', emailErr);
       }
 

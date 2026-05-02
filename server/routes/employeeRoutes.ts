@@ -623,7 +623,7 @@ router.patch('/:id', async (req: AuthenticatedRequest, res) => {
         description: `Employee role/position updated${titleChanged ? ` — title: ${oldOrgTitle || 'none'} → ${newOrgTitle || 'none'}` : ''}${roleChanged ? ` — role: ${oldWorkspaceRole || 'none'} → ${newWorkspaceRole || 'none'}` : ''}`,
         workspaceId,
         metadata: { employeeId: req.params.id, previousTitle: oldOrgTitle || null, newTitle: newOrgTitle || null, previousRole: oldWorkspaceRole || null, newRole: newWorkspaceRole || null, previousPosition: oldPosition || null, newPosition: newPosition || null, updatedBy: userId },
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
       broadcastToWorkspace(workspaceId, {
         type: 'EMPLOYEE_POSITION_CHANGED',

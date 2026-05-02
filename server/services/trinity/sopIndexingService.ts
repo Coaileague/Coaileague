@@ -51,7 +51,7 @@ export async function indexSOPForTrinity(params: IndexSOPParams): Promise<void> 
       description = doc.description || null;
     }
   } catch (err: unknown) {
-    log.warn('[SOPIndex] Lookup failed (non-fatal):', err?.message);
+    log.warn('[SOPIndex] Lookup failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 
   // Compose the indexed text: description + filename are the reliable signal
@@ -80,7 +80,7 @@ export async function indexSOPForTrinity(params: IndexSOPParams): Promise<void> 
       [workspaceId, documentId, category, version, extractedText],
     );
   } catch (err: unknown) {
-    log.warn('[SOPIndex] DB upsert failed:', err?.message);
+    log.warn('[SOPIndex] DB upsert failed:', (err instanceof Error ? err.message : String(err)));
     return;
   }
 
@@ -97,7 +97,7 @@ export async function indexSOPForTrinity(params: IndexSOPParams): Promise<void> 
           metadata: { documentId, category, version },
         });
       } catch (err: unknown) {
-        log.warn('[SOPIndex] event publish failed:', err?.message);
+        log.warn('[SOPIndex] event publish failed:', (err instanceof Error ? err.message : String(err)));
       }
     });
   }
@@ -136,7 +136,7 @@ export async function getSOPContextForTrinity(
 
     return sections.join('\n\n---\n\n');
   } catch (err: unknown) {
-    log.warn('[SOPIndex] Context fetch failed:', err?.message);
+    log.warn('[SOPIndex] Context fetch failed:', (err instanceof Error ? err.message : String(err)));
     return '';
   }
 }

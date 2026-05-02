@@ -278,7 +278,7 @@ router.post('/pay-invoice', requireAuth, async (req: AuthenticatedRequest, res) 
           ).catch((err: Error) => log.warn('[PayInvoice] Fee ledger import failed:', err instanceof Error ? err.message : String(err)));
         }
       } catch (feeErr: unknown) {
-        log.warn('[PayInvoice] Middleware fee charge failed (non-blocking):', feeErr?.message);
+        log.warn('[PayInvoice] Middleware fee charge failed (non-blocking):', (feeErr instanceof Error ? feeErr.message : String(feeErr)));
       }
 
       broadcastToWorkspace(workspace.id, {
@@ -315,7 +315,7 @@ router.post('/pay-invoice', requireAuth, async (req: AuthenticatedRequest, res) 
           source: 'stripe_pay_invoice',
         },
         visibility: 'manager',
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
     }
 
     res.json({ 
@@ -899,7 +899,7 @@ router.get('/stripe-health', requireAuth, async (req, res) => {
     checks.stripeConnected = 'connected';
     checks.stripeLiveMode = balance.livemode ? 'live' : 'test';
   } catch (stripeErr: unknown) {
-    checks.stripeConnected = `failed: ${stripeErr?.message || 'unknown'}`;
+    checks.stripeConnected = `failed: ${(stripeErr instanceof Error ? stripeErr.message : String(stripeErr)) || 'unknown'}`;
     issues.push('Stripe API connection failed');
   }
 
@@ -913,7 +913,7 @@ router.get('/stripe-health', requireAuth, async (req, res) => {
     checks.webhookRegistered = ourWebhook ? ourWebhook.url : 'not found';
     if (!ourWebhook) issues.push('Stripe webhook not registered');
   } catch (err: unknown) {
-    checks.webhookRegistered = `unverified: ${err?.message || 'unknown'}`;
+    checks.webhookRegistered = `unverified: ${(err instanceof Error ? err.message : String(err)) || 'unknown'}`;
   }
 
   res.json({

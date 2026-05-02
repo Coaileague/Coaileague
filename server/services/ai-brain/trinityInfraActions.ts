@@ -179,7 +179,7 @@ export function registerInfraActions() {
         qbEntityId = result.invoiceId;
         syncSuccess = true;
       } catch (err: unknown) {
-        syncError = err?.message || 'QB push failed';
+        syncError = (err instanceof Error ? err.message : String(err)) || 'QB push failed';
       }
     } else {
       syncError = 'No active QuickBooks connection — sync queued for when QB is connected';
@@ -293,7 +293,7 @@ export function registerInfraActions() {
         qbEntityId = receipt.receiptId;
         syncSuccess = true;
       } catch (err: unknown) {
-        syncError = err?.message || 'QB payroll sync failed';
+        syncError = (err instanceof Error ? err.message : String(err)) || 'QB payroll sync failed';
       }
     } else {
       syncError = 'No active QuickBooks connection — payroll sync queued for next connection';

@@ -165,7 +165,7 @@ class StripeConnectPayoutService {
           payload: { accountId: account.id },
         },
         { generateHash: true }
-      ).catch((err: unknown) => log.warn('[StripeConnect] Audit log failed for account_created — operation succeeded but audit record missing', { employeeId, workspaceId, error: err?.message }));
+      ).catch((err: unknown) => log.warn('[StripeConnect] Audit log failed for account_created — operation succeeded but audit record missing', { employeeId, workspaceId, error: (err instanceof Error ? err.message : String(err)) }));
 
       // Generate onboarding link
       const onboardingUrl = await this.createOnboardingLink(account.id, workspaceId);
@@ -325,7 +325,7 @@ class StripeConnectPayoutService {
             });
           }
         } catch (notifyErr: unknown) {
-          log.warn('[StripeConnect] Notification for tracking error also failed (non-fatal):', notifyErr?.message);
+          log.warn('[StripeConnect] Notification for tracking error also failed (non-fatal):', (notifyErr instanceof Error ? notifyErr.message : String(notifyErr)));
         }
       }
 
@@ -361,7 +361,7 @@ class StripeConnectPayoutService {
             });
           }
         } catch (notifyErr: unknown) {
-          log.warn('[StripeConnect] Notification for payout log error also failed (non-fatal):', notifyErr?.message);
+          log.warn('[StripeConnect] Notification for payout log error also failed (non-fatal):', (notifyErr instanceof Error ? notifyErr.message : String(notifyErr)));
         }
       }
 
@@ -388,7 +388,7 @@ class StripeConnectPayoutService {
               description: `Stripe Connect payout fee: $${(feeResult.amountCents / 100).toFixed(2)}`,
             });
           } catch (ledgerErr: unknown) {
-            log.warn('[StripeConnect] Payout fee ledger record failed (non-fatal):', ledgerErr?.message);
+            log.warn('[StripeConnect] Payout fee ledger record failed (non-fatal):', (ledgerErr instanceof Error ? ledgerErr.message : String(ledgerErr)));
           }
 
           // Platform revenue tracking: write to platform_revenue table
@@ -396,7 +396,7 @@ class StripeConnectPayoutService {
             const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
             await recordMiddlewareFeeCharge(workspaceId, 'payout_processing', feeResult.amountCents, payrollEntryId);
           } catch (revenueErr: unknown) {
-            log.warn('[StripeConnect] Payout revenue record failed (non-fatal):', revenueErr?.message);
+            log.warn('[StripeConnect] Payout revenue record failed (non-fatal):', (revenueErr instanceof Error ? revenueErr.message : String(revenueErr)));
           }
         }
       } catch (feeErr) {
@@ -417,7 +417,7 @@ class StripeConnectPayoutService {
           },
         },
         { generateHash: true }
-      ).catch((err: unknown) => log.warn('[StripeConnect] Audit log failed for payout_sent — payout succeeded but audit record missing', { payrollEntryId, transferId: transfer.id, amount: netPay, workspaceId, error: err?.message }));
+      ).catch((err: unknown) => log.warn('[StripeConnect] Audit log failed for payout_sent — payout succeeded but audit record missing', { payrollEntryId, transferId: transfer.id, amount: netPay, workspaceId, error: (err instanceof Error ? err.message : String(err)) }));
 
       return {
         success: true,

@@ -109,8 +109,8 @@ If ANY criterion is not met, verified must be false. Err on the side of caution 
       authorizationDate: parsed.authorization_date ? String(parsed.authorization_date) : undefined,
     };
   } catch (err: unknown) {
-    log.error('[AuditGate] Verification threw:', err?.message);
-    return { verified: false, reasoning: `Verification error: ${err?.message}` };
+    log.error('[AuditGate] Verification threw:', (err instanceof Error ? err.message : String(err)));
+    return { verified: false, reasoning: `Verification error: ${(err instanceof Error ? err.message : String(err))}` };
   }
 }
 
@@ -214,7 +214,7 @@ async function sendTenantSafeUnlockAlerts(params: {
       body: alertBody,
     });
   } catch (err: unknown) {
-    log.warn('[AuditGate] In-app alert failed (non-fatal):', err?.message);
+    log.warn('[AuditGate] In-app alert failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 
   // Email alert
@@ -240,7 +240,7 @@ async function sendTenantSafeUnlockAlerts(params: {
       },
     });
   } catch (err: unknown) {
-    log.warn('[AuditGate] Email alert failed (non-fatal):', err?.message);
+    log.warn('[AuditGate] Email alert failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 
   // SMS alert
@@ -256,7 +256,7 @@ async function sendTenantSafeUnlockAlerts(params: {
       },
     });
   } catch (err: unknown) {
-    log.warn('[AuditGate] SMS alert failed (non-fatal):', err?.message);
+    log.warn('[AuditGate] SMS alert failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 
   // Mark alerts sent in the immutable log
@@ -268,7 +268,7 @@ async function sendTenantSafeUnlockAlerts(params: {
       [params.accessLogId],
     );
   } catch (err: unknown) {
-    log.warn('[AuditGate] Failed to mark alerts sent (non-fatal):', err?.message);
+    log.warn('[AuditGate] Failed to mark alerts sent (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -369,7 +369,7 @@ export async function submitAuditorPaperwork(
         ownerUserId,
       });
     } catch (err: unknown) {
-      log.warn('[AuditGate] Alert dispatch failed (non-fatal):', err?.message);
+      log.warn('[AuditGate] Alert dispatch failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     }
   } else {
     log.warn('[AuditGate] No tenant owner found for workspace', params.workspaceId);

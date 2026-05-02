@@ -173,7 +173,7 @@ export class ServiceOrchestrationWatchdog {
       try {
         await this.scanForOrphanServices();
       } catch (error : unknown) {
-        log.warn('[ServiceWatchdog] Scan failed (will retry):', error?.message || 'unknown');
+        log.warn('[ServiceWatchdog] Scan failed (will retry):', (error instanceof Error ? error.message : String(error)) || 'unknown');
       }
     }, this.SCAN_INTERVAL_MS);
 

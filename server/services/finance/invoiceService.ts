@@ -44,8 +44,8 @@ export const invoiceService = {
       }
       return { success: false, message: result.error || 'Failed to send invoice' };
     } catch (err: unknown) {
-      log.error('sendInvoice failed', { invoiceId, workspaceId, error: err?.message });
-      return { success: false, message: err?.message || 'Invoice send failed' };
+      log.error('sendInvoice failed', { invoiceId, workspaceId, error: (err instanceof Error ? err.message : String(err)) });
+      return { success: false, message: (err instanceof Error ? err.message : String(err)) || 'Invoice send failed' };
     }
   },
 

@@ -106,7 +106,7 @@ export async function runComplianceMonitorWorkflow(): Promise<ComplianceSweepRes
           await recordNotification(exp, bucket.label);
           result.notified++;
         } catch (err: unknown) {
-          result.errors.push(`${exp.skillId}:${bucket.label}:${err?.message}`);
+          result.errors.push(`${exp.skillId}:${bucket.label}:${(err instanceof Error ? err.message : String(err))}`);
         }
       }
 
@@ -118,8 +118,8 @@ export async function runComplianceMonitorWorkflow(): Promise<ComplianceSweepRes
         { bucket: bucket.label, count: expirations.length },
       );
     } catch (err: unknown) {
-      result.errors.push(`bucket:${bucket.label}:${err?.message}`);
-      await logWorkflowStep(record, 'process', false, `${bucket.label} scan failed: ${err?.message}`);
+      result.errors.push(`bucket:${bucket.label}:${(err instanceof Error ? err.message : String(err))}`);
+      await logWorkflowStep(record, 'process', false, `${bucket.label} scan failed: ${(err instanceof Error ? err.message : String(err))}`);
     }
   }
 
@@ -191,7 +191,7 @@ async function findExpirationsInBucket(
     }));
   } catch (err: unknown) {
     // Column names vary across deployments — skill_name may be just `name`.
-    log.info('[compliance] expiration query failed (non-fatal):', err?.message);
+    log.info('[compliance] expiration query failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     return [];
   }
 }
@@ -252,7 +252,7 @@ async function notifyExpiration(
         idempotencyKey: `compliance-${exp.skillId}-${bucket.label}-${exp.employeeUserId}`,
       });
     } catch (err: unknown) {
-      log.warn('[compliance] in-app send failed:', err?.message);
+      log.warn('[compliance] in-app send failed:', (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -265,7 +265,7 @@ async function notifyExpiration(
         exp.workspaceId,
       );
     } catch (err: unknown) {
-      log.warn('[compliance] employee SMS failed:', err?.message);
+      log.warn('[compliance] employee SMS failed:', (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -307,7 +307,7 @@ async function notifyExpiration(
         );
       }
     } catch (err: unknown) {
-      log.warn('[compliance] manager fanout failed:', err?.message);
+      log.warn('[compliance] manager fanout failed:', (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -321,7 +321,7 @@ async function notifyExpiration(
         metadata: { employeeId: exp.employeeId, skillId: exp.skillId },
       } as unknown);
     } catch (err: unknown) {
-      log.warn('[compliance] expired event publish failed:', err?.message);
+      log.warn('[compliance] expired event publish failed:', (err instanceof Error ? err.message : String(err)));
     }
   }
 }
@@ -343,7 +343,7 @@ async function markEmployeeNonCompliant(exp: Expiration): Promise<void> {
       ],
     );
   } catch (err: unknown) {
-    log.info('[compliance] non_compliant flag skipped (column may not exist):', err?.message);
+    log.info('[compliance] non_compliant flag skipped (column may not exist):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -368,7 +368,7 @@ async function recordNotification(exp: Expiration, bucket: string): Promise<void
       actorType: 'trinity',
     } as unknown);
   } catch (err: unknown) {
-    log.warn('[compliance] notification record failed:', err?.message);
+    log.warn('[compliance] notification record failed:', (err instanceof Error ? err.message : String(err)));
   }
 }
 

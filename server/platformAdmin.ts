@@ -23,7 +23,7 @@ async function safeQuery<T>(fn: () => Promise<T>, label: string): Promise<T | un
   try {
     return await fn();
   } catch (err: unknown) {
-    log.warn(`[PlatformStats] Query failed (${label}):`, err?.message?.split('\n')[0] ?? String(err));
+    log.warn(`[PlatformStats] Query failed (${label}):`, (err instanceof Error ? err.message : String(err))?.split('\n')[0] ?? String(err));
     return undefined;
   }
 }

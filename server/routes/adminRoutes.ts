@@ -214,7 +214,7 @@ router.get('/identity/resolve', async (req: AuthenticatedRequest, res) => {
           );
           workspace = rows[0] || null;
         } catch (e: unknown) {
-          log.warn(`[identity/resolve] workspace enrich failed for ${m.orgId}: ${e?.message}`);
+          log.warn(`[identity/resolve] workspace enrich failed for ${m.orgId}: ${(e instanceof Error ? e.message : String(e))}`);
         }
       }
 
@@ -240,7 +240,7 @@ router.get('/identity/resolve', async (req: AuthenticatedRequest, res) => {
           pinSet = !!rows[0]?.client_pin_hash;
         }
       } catch (e: unknown) {
-        log.warn(`[identity/resolve] pin-status lookup failed for ${m.entityType} ${m.entityId}: ${e?.message}`);
+        log.warn(`[identity/resolve] pin-status lookup failed for ${m.entityType} ${m.entityId}: ${(e instanceof Error ? e.message : String(e))}`);
       }
 
       enriched.push({ ...m, workspace, pinSet });
@@ -299,7 +299,7 @@ router.post('/identity/rewrite', async (req: AuthenticatedRequest, res) => {
 
     res.json(result);
   } catch (error: unknown) {
-    const msg = error?.message || 'Failed to rewrite identity';
+    const msg = (error instanceof Error ? error.message : String(error)) || 'Failed to rewrite identity';
     log.error('Error rewriting identity code:', msg);
     if (msg.startsWith('IDENTITY_OVERRIDE_FORBIDDEN')) {
       return res.status(403).json({ error: 'FORBIDDEN', message: msg });

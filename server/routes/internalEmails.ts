@@ -332,7 +332,7 @@ router.get("/mailbox/auto-create", requireAuth, async (req: Request, res: Respon
         }).returning();
       } catch (insertError: unknown) {
         // Handle race condition - mailbox may have been created by another request
-        if (insertError?.code === '23505') {
+        if ((insertError as NodeJS.ErrnoException).code === '23505') {
           mailbox = await db.query.internalMailboxes.findFirst({
             where: and(
               eq(internalMailboxes.userId, user.id),

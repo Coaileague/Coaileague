@@ -293,7 +293,7 @@ employmentVerifyRouter.get(
 
           log.info(`[EmploymentVerify] Billed ${feeCents} cents to ${workspaceId} for ${refNum}`);
         } catch (billingErr: unknown) {
-          log.warn('[EmploymentVerify] Billing failed (non-blocking):', billingErr?.message);
+          log.warn('[EmploymentVerify] Billing failed (non-blocking):', (billingErr instanceof Error ? billingErr.message : String(billingErr)));
         }
       });
 
@@ -332,7 +332,7 @@ employmentVerifyRouter.get(
         employeeNumber: emp.employee_number,
       });
     } catch (err: unknown) {
-      log.error(`[EmploymentVerify] approve error: ${err?.message}`);
+      log.error(`[EmploymentVerify] approve error: ${(err instanceof Error ? err.message : String(err))}`);
       await logActionAudit({
         actionId: 'employment_verification.approve',
         workspaceId,
@@ -340,7 +340,7 @@ employmentVerifyRouter.get(
         entityType: 'employment_verification',
         entityId: refNum,
         success: false,
-        errorMessage: err?.message,
+        errorMessage: (err instanceof Error ? err.message : String(err)),
       });
       return res.status(500).json({ error: 'INTERNAL_ERROR' });
     }
@@ -429,7 +429,7 @@ employmentVerifyRouter.get(
         refNum,
       });
     } catch (err: unknown) {
-      log.error(`[EmploymentVerify] deny error: ${err?.message}`);
+      log.error(`[EmploymentVerify] deny error: ${(err instanceof Error ? err.message : String(err))}`);
       await logActionAudit({
         actionId: 'employment_verification.deny',
         workspaceId,
@@ -437,7 +437,7 @@ employmentVerifyRouter.get(
         entityType: 'employment_verification',
         entityId: refNum,
         success: false,
-        errorMessage: err?.message,
+        errorMessage: (err instanceof Error ? err.message : String(err)),
       });
       return res.status(500).json({ error: 'INTERNAL_ERROR' });
     }

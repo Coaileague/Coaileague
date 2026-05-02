@@ -347,7 +347,7 @@ export async function sendSMS(message: SMSMessage): Promise<SMSResult> { // infr
           twilioCostCents: 1, // Twilio SMS ~$0.0079/msg → 1 cent (ceil)
         });
       } catch (e: unknown) {
-        log.warn('[smsService] SMS metering error:', e?.message || String(e));
+        log.warn('[smsService] SMS metering error:', (e instanceof Error ? e.message : String(e)) || String(e));
       }
     }
 

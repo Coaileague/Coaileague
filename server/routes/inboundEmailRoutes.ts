@@ -630,7 +630,7 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
           });
           log.info(`[InboundEmail/root] Forwarded ${toEmail} to ${ROOT_EMAIL_FORWARD_TO}`);
         } catch (fwdErr: unknown) {
-          log.warn(`[InboundEmail/root] ${toEmail} forward failed: ${fwdErr?.message}`);
+          log.warn(`[InboundEmail/root] ${toEmail} forward failed: ${(fwdErr instanceof Error ? fwdErr.message : String(fwdErr))}`);
         }
       });
       return;
@@ -700,7 +700,7 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
                 skipUnsubscribeCheck: true,
               });
             } catch (fwdErr: unknown) {
-              log.warn(`[InboundEmail/root] Unrouted forward failed: ${fwdErr?.message}`);
+              log.warn(`[InboundEmail/root] Unrouted forward failed: ${(fwdErr instanceof Error ? fwdErr.message : String(fwdErr))}`);
             }
           });
           return;
@@ -846,7 +846,7 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
           });
           log.info(`[InboundEmail] Personal forward sent to ${forwardTo} for user ${targetUserId}`);
         } catch (fwdErr: unknown) {
-          log.warn('[InboundEmail] Personal forward failed (non-blocking):', fwdErr?.message);
+          log.warn('[InboundEmail] Personal forward failed (non-blocking):', (fwdErr instanceof Error ? fwdErr.message : String(fwdErr)));
         }
       });
     }
@@ -903,7 +903,7 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
           });
           log.info(`[InboundEmail/forward] Forwarded email to ${forwardTo} for workspace ${workspaceId}`);
         } catch (fwdErr: unknown) {
-          log.warn(`[InboundEmail/forward] Forward failed for workspace ${workspaceId}: ${fwdErr?.message}`);
+          log.warn(`[InboundEmail/forward] Forward failed for workspace ${workspaceId}: ${(fwdErr instanceof Error ? fwdErr.message : String(fwdErr))}`);
         }
       });
     }

@@ -468,7 +468,7 @@ router.post("/api/voice-command", requireAuth, async (req: AuthenticatedRequest,
             description: `${emp.firstName} called off via voice command${nextShift ? ` for shift: ${nextShift.title || 'shift'} starting ${new Date(nextShift.startTime!).toLocaleString()}` : ''}`,
             workspaceId: workspaceId!,
             metadata: { employeeId: emp.id, shiftId: nextShift?.id || null, method: 'voice_command' },
-          }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+          }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
           const shiftInfo = nextShift
             ? ` for your upcoming shift ${nextShift.title ? `"${nextShift.title}"` : ''} starting ${new Date(nextShift.startTime!).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
             : '';
@@ -532,7 +532,7 @@ router.post("/api/voice-command", requireAuth, async (req: AuthenticatedRequest,
             description: messageContent,
             workspaceId: workspaceId!,
             metadata: { employeeId: emp.id, employeeName: emp.firstName, message: messageContent, method: 'voice_command' },
-          }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+          }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
           parsed.executed = true;
           parsed.naturalResponse = `Message sent to your supervisor: "${messageContent}". They will receive it shortly.`;
         } else {
@@ -580,7 +580,7 @@ router.post("/api/voice-command", requireAuth, async (req: AuthenticatedRequest,
             description: `${employeeName} triggered a panic/backup alert via voice command.`,
             workspaceId,
             metadata: { employeeId, employeeName, method: 'voice_command', timestamp: new Date().toISOString() },
-          }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+          }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
         }
 
         parsed.executed = true;

@@ -54,13 +54,13 @@ export function scheduleNonBlocking(label: string, fn: () => Promise<unknown>): 
         // Capture the full Postgres error context if present, otherwise
         // fall back to the basic message + stack.
         log.warn(`[scheduleNonBlocking:${label}] task failed`, {
-          message: err?.message,
-          code: err?.code,
+          message: (err instanceof Error ? err.message : String(err)),
+          code: (err as NodeJS.ErrnoException).code,
           detail: err?.detail,
           column: err?.column,
           constraint: err?.constraint,
           table: err?.table,
-          stack: err?.stack?.split('\n').slice(0, 6).join(' | '),
+          stack: (err instanceof Error ? err.stack : undefined)?.split('\n').slice(0, 6).join(' | '),
         });
       });
   });

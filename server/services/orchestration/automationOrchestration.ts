@@ -397,7 +397,7 @@ class AutomationOrchestrationService {
 
       // DUPLICATE_ORCHESTRATION is a deduplication guard, not a real failure.
       // Silently return success so the RL system is not contaminated with false negatives.
-      if (typeof error?.message === 'string' && error instanceof Error ? error.message : String(error).startsWith('DUPLICATE_ORCHESTRATION')) {
+      if (typeof (error instanceof Error ? error.message : String(error)) === 'string' && error instanceof Error ? error.message : String(error).startsWith('DUPLICATE_ORCHESTRATION')) {
         this.activeAutomations.delete(orchestrationId);
         return {
           success: true,
@@ -407,7 +407,7 @@ class AutomationOrchestrationService {
         };
       }
 
-      log.error(`[AutomationOrchestration] ${params.automationName} FAILED (${durationMs}ms):`, error?.message ?? String(error), error?.stack ? `\n${error instanceof Error ? error.stack : undefined}` : '');
+      log.error(`[AutomationOrchestration] ${params.automationName} FAILED (${durationMs}ms):`, (error instanceof Error ? error.message : String(error)) ?? String(error), (error instanceof Error ? error.stack : undefined) ? `\n${error instanceof Error ? error.stack : undefined}` : '');
       const errorCode = this.categorizeError(error);
       const errorInfo = AUTOMATION_ERROR_CODES[errorCode] || AUTOMATION_ERROR_CODES['UNKNOWN'];
 

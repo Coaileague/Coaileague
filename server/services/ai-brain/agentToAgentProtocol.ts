@@ -305,7 +305,7 @@ class AgentToAgentProtocol {
         expiresAt: message.expiresAt,
       });
     } catch (persistErr : unknown) {
-      log.warn('[A2A] Persist message failed (non-fatal):', persistErr?.message);
+      log.warn('[A2A] Persist message failed (non-fatal):', (persistErr instanceof Error ? persistErr.message : String(persistErr)));
     }
 
     // Update sender stats
@@ -360,7 +360,7 @@ class AgentToAgentProtocol {
         .set({ status: status as unknown, processedAt: new Date() })
         .where(eq(a2aMessages.id, messageId));
     } catch (persistErr : unknown) {
-      log.warn('[A2A] Mark message persisted failed (non-fatal):', persistErr?.message);
+      log.warn('[A2A] Mark message persisted failed (non-fatal):', (persistErr instanceof Error ? persistErr.message : String(persistErr)));
     }
   }
 

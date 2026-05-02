@@ -82,7 +82,7 @@ async function streamForAuditor(req: Request, res: Response, mode: "inline" | "a
   try {
     buffer = await downloadFileFromObjectStorage(fileUrl);
   } catch (err: unknown) {
-    log.error(`[AuditorPublic] storage fetch failed for doc=${doc.id}:`, err?.message);
+    log.error(`[AuditorPublic] storage fetch failed for doc=${doc.id}:`, (err instanceof Error ? err.message : String(err)));
     return res.status(404).json({ error: "Document file not found" });
   }
 

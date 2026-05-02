@@ -323,7 +323,7 @@ class PanicAlertService {
       } catch (err: unknown) {
         log.warn(
           `[PanicAlert] SMS dispatch failed for ${recipient.firstName} ${recipient.lastName} (non-fatal):`,
-          err?.message,
+          (err instanceof Error ? err.message : String(err)),
         );
       }
     }

@@ -332,7 +332,7 @@ class DurableJobQueueService {
       try {
         await this.processNextBatch();
       } catch (error : unknown) {
-        log.warn('[DurableJobQueue] Processing loop error (will retry):', error?.message || 'unknown');
+        log.warn('[DurableJobQueue] Processing loop error (will retry):', (error instanceof Error ? error.message : String(error)) || 'unknown');
       } finally {
         this.isProcessing = false;
       }

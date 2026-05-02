@@ -234,7 +234,7 @@ class ApprovalResumeOrchestrator {
           approvedBy: userId,
           audience: 'manager',
         },
-      }).catch((err: unknown) => log.warn('[ApprovalResumeOrchestrator] Failed to publish approval_approved:', err.message));
+      }).catch((err: unknown) => log.warn('[ApprovalResumeOrchestrator] Failed to publish approval_approved:', (err instanceof Error ? err.message : String(err))));
 
       return { approved: true, approvedBy: userId, executedAt: now };
     } else {
@@ -310,7 +310,7 @@ class ApprovalResumeOrchestrator {
             approvalId,
             audience: 'manager',
           },
-        }).catch((err: unknown) => log.warn('[ApprovalResumeOrchestrator] Failed to publish job_resume_approved:', err.message));
+        }).catch((err: unknown) => log.warn('[ApprovalResumeOrchestrator] Failed to publish job_resume_approved:', (err instanceof Error ? err.message : String(err))));
       }
     }
   }
@@ -404,7 +404,7 @@ class ApprovalResumeOrchestrator {
         if (isDbCircuitOpen()) return;
       } catch { /* ignore */ }
       this.checkExpiredApprovals().catch(err => {
-        log.warn('[ApprovalResumeOrchestrator] Check cycle failed (will retry next interval):', err?.message || err);
+        log.warn('[ApprovalResumeOrchestrator] Check cycle failed (will retry next interval):', (err instanceof Error ? err.message : String(err)) || err);
       });
     }, 60000);
 

@@ -212,7 +212,7 @@ visitorManagementRouter.post('/checkin', requireAuth, async (req: AuthenticatedR
       await pool.query(
         `UPDATE visitor_pre_registrations SET status='checked_in', checked_in_log_id=$1, updated_at=NOW() WHERE id=$2`,
         [log.id, preRegistrationId]
-      ).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      ).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
     }
 
     // Alert if banned
@@ -228,7 +228,7 @@ visitorManagementRouter.post('/checkin', requireAuth, async (req: AuthenticatedR
           message: `${visitorName} is on the trespass registry. Notify supervisor immediately.`,
           severity: 'critical',
         },
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
     }
 
     platformEventBus.publish({
@@ -238,7 +238,7 @@ visitorManagementRouter.post('/checkin', requireAuth, async (req: AuthenticatedR
       title: `Visitor Checked In — ${visitorName}`,
       description: `${visitorName}${visitorCompany ? ` (${visitorCompany})` : ''} checked in at ${siteName}`,
       metadata: { logId: log.id, visitorName, siteName, isBanned, isFastTrack, visitorType },
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     res.status(201).json({ log, isBanned });
   } catch (err: unknown) {
@@ -272,7 +272,7 @@ visitorManagementRouter.post('/checkout/:id', requireAuth, async (req: Authentic
       await pool.query(
         `UPDATE visitor_pre_registrations SET status='completed', updated_at=NOW() WHERE id=$1`,
         [log.pre_registration_id]
-      ).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      ).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
     }
 
     platformEventBus.publish({
@@ -281,7 +281,7 @@ visitorManagementRouter.post('/checkout/:id', requireAuth, async (req: Authentic
       title: `Visitor Checked Out — ${log.visitor_name}`,
       description: `${log.visitor_name} checked out from ${log.site_name}`,
       metadata: { logId: log.id, visitorName: log.visitor_name, siteName: log.site_name },
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     res.json(log);
   } catch (err: unknown) {
@@ -328,7 +328,7 @@ visitorManagementRouter.get('/overstay', requireAuth, async (req: AuthenticatedR
             message: `${o.visitor_name} at ${o.site_name} has been on-site for ${Math.floor(o.elapsedMinutes / 60)}h ${o.elapsedMinutes % 60}m.`,
             severity: 'warning',
           },
-        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
         platformEventBus.publish({
           idempotencyKey: `notif:visitor:${o.id}:overstay_event`,
@@ -337,9 +337,9 @@ visitorManagementRouter.get('/overstay', requireAuth, async (req: AuthenticatedR
           title: `Visitor Overstay — ${o.visitor_name}`,
           description: `${o.visitor_name} is still on-site at ${o.site_name} after ${Math.floor(o.elapsedMinutes / 60)}h`,
           metadata: { logId: o.id, visitorName: o.visitor_name, siteName: o.site_name, elapsedMinutes: o.elapsedMinutes },
-        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
-        await pool.query(`UPDATE visitor_logs SET alert_sent=true WHERE id=$1`, [o.id]).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        await pool.query(`UPDATE visitor_logs SET alert_sent=true WHERE id=$1`, [o.id]).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
       }
     }
 
@@ -544,7 +544,7 @@ export function registerVisitorActions(): void {
 
     log.info('[VisitorMgmt] Trinity actions registered: visitor.active, visitor.overstay');
   }).catch((err: unknown) => {
-    log.warn('[VisitorMgmt] Trinity action registration failed (non-blocking):', err?.message);
+    log.warn('[VisitorMgmt] Trinity action registration failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
   });
 }
 
@@ -592,7 +592,7 @@ async function runOverstayScanner(workspaceIds?: string[]): Promise<void> {
             message: `${o.visitor_name} at ${o.site_name} has been on-site for ${hours}h ${mins}m${o.expected_departure ? ' — past expected departure' : ''}.`,
             severity: 'warning',
           },
-        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
         platformEventBus.publish({
           idempotencyKey: `notif:visitor:${o.id}:overstay_event`,
@@ -601,13 +601,13 @@ async function runOverstayScanner(workspaceIds?: string[]): Promise<void> {
           title: `Visitor Overstay — ${o.visitor_name}`,
           description: `${o.visitor_name} is still on-site at ${o.site_name} after ${hours}h ${mins}m`,
           metadata: { logId: o.id, visitorName: o.visitor_name, siteName: o.site_name, elapsedMinutes: elapsed },
-        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
-        await pool.query(`UPDATE visitor_logs SET alert_sent=true WHERE id=$1`, [o.id]).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        await pool.query(`UPDATE visitor_logs SET alert_sent=true WHERE id=$1`, [o.id]).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
       }
     }
   } catch (err: unknown) {
-    log.warn('[VisitorMgmt] Overstay scanner error (non-blocking):', err?.message);
+    log.warn('[VisitorMgmt] Overstay scanner error (non-blocking):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -620,7 +620,7 @@ export function startOverstayMonitor(): void {
   _overstayMonitorStarted = true;
   const INTERVAL_MS = 5 * 60 * 1_000; // 5 minutes
   setInterval(() => {
-    runOverstayScanner().catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    runOverstayScanner().catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
   }, INTERVAL_MS);
   log.info('[VisitorMgmt] Overstay monitor started — scanning every 5 minutes');
 }
@@ -667,6 +667,6 @@ export async function ensureVisitorTables(): Promise<void> {
     await pool.query(`CREATE INDEX IF NOT EXISTS visitor_pre_reg_arrival_idx ON visitor_pre_registrations(expected_arrival)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS visitor_logs_active_idx ON visitor_logs(workspace_id, checked_out_at)`);
   } catch (err: unknown) {
-    log.error('[VisitorMgmt] Table ensure failed (non-blocking):', err?.message);
+    log.error('[VisitorMgmt] Table ensure failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
   }
 }

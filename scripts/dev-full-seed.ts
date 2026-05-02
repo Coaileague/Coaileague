@@ -613,7 +613,7 @@ async function main() {
     console.log('   ⚠️  Token expires: revoke GitHub PAT after session');
 
   } catch (err : unknown) {
-    console.error('\n❌ Seed failed:', err?.message || err);
+    console.error('\n❌ Seed failed:', (err instanceof Error ? err.message : String(err)) || err);
     process.exit(1);
   } finally {
     await pool.end();

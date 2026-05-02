@@ -144,7 +144,7 @@ export async function tryClaimWebhookEvent(
     // Log loudly so operators can see when this happens.
     log.error(
       `[webhookIdempotency] claim probe failed for ${source}:${eventId} — failing open`,
-      { error: err?.message },
+      { error: (err instanceof Error ? err.message : String(err)) },
     );
     memoryCache.set(cacheKey, Date.now());
     return true;

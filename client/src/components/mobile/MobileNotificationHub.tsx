@@ -554,7 +554,7 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
     },
     onError: (error) => {
       // Only show error if it's a real failure (not 404 which means it was already deleted)
-      if (error?.status === 404) {
+      if ((error as Record<string, unknown>).status === 404) {
         // Already deleted - just refresh
         queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
         return;

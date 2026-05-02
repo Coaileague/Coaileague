@@ -52,7 +52,7 @@ async function ensureTable(): Promise<void> {
     `);
     bootstrapped = true;
   } catch (err: unknown) {
-    log.warn('[ShiftOffer] Table bootstrap failed (non-fatal):', err?.message);
+    log.warn('[ShiftOffer] Table bootstrap failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -101,7 +101,7 @@ export async function sendShiftOffers(params: ShiftOfferParams): Promise<{
         metadata: { channel: 'sms_outbound', reason: 'subscription_inactive' },
       });
     } catch (auditErr: unknown) {
-      log.warn('[ShiftOffer] Gate audit failed (non-fatal):', auditErr?.message);
+      log.warn('[ShiftOffer] Gate audit failed (non-fatal):', (auditErr instanceof Error ? auditErr.message : String(auditErr)));
     }
     return { offered: 0, errors: ['SUBSCRIPTION_INACTIVE'] };
   }
@@ -137,7 +137,7 @@ export async function sendShiftOffers(params: ShiftOfferParams): Promise<{
       }
     } catch (e: unknown) {
       // Schema variation between deployments — ignore silently and just use the params.
-      log.info('[ShiftOffer] Shift detail lookup skipped (schema variant):', e?.message);
+      log.info('[ShiftOffer] Shift detail lookup skipped (schema variant):', (e instanceof Error ? e.message : String(e)));
     }
 
     const officersRes = await pool.query(
@@ -281,7 +281,7 @@ export async function acceptShiftOffer(params: {
         [offer.id]
       );
     } catch (err: unknown) {
-      if (String(err?.code) === '23505') {
+      if (String((err as NodeJS.ErrnoException).code) === '23505') {
         // Another concurrent YES already marked an offer for this shift accepted.
         await pool.query(
           `UPDATE trinity_shift_offers
@@ -341,7 +341,7 @@ export async function acceptShiftOffer(params: {
   } catch (err: unknown) {
     // 23505 = unique_violation against trinity_shift_offers_one_accepted_per_shift.
     // Means two officers replied YES simultaneously; this one lost the race.
-    if (err?.code === '23505') {
+    if ((err as NodeJS.ErrnoException).code === '23505') {
       log.info('[ShiftOffer] Race loss on accept — another officer won the shift');
       return `Thanks for your reply — that shift was just filled by another officer. We'll keep you in mind for the next one!`;
     }

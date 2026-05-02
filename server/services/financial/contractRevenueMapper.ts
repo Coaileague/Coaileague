@@ -196,7 +196,7 @@ export async function mapContractToRevenue(
     log.error('[ContractRevenueMapper] mapContractToRevenue error', {
       contractId,
       workspaceId,
-      error: err?.message,
+      error: (err instanceof Error ? err.message : String(err)),
     });
     return null;
   }

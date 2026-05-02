@@ -72,7 +72,7 @@ export async function bootstrapGuestSessionTable(): Promise<void> {
         ON guest_session_log (session_id)
     `);
   } catch (err: unknown) {
-    log.warn('[GuestSession] Table bootstrap failed (non-fatal):', err?.message);
+    log.warn('[GuestSession] Table bootstrap failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -120,7 +120,7 @@ export async function recordGuestSessionUsage(params: {
       tokensRemaining: Math.max(0, cap - row.tokens_used),
     };
   } catch (err: unknown) {
-    log.warn('[GuestSession] recordGuestSessionUsage failed (non-fatal):', err?.message);
+    log.warn('[GuestSession] recordGuestSessionUsage failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     return { cappedOut: false, tokensRemaining: cap };
   }
 }

@@ -51,7 +51,7 @@ export function handleCareers(params: {
       say('Thank you. We\'ll be in touch soon.')
     );
   } catch (err: unknown) {
-    log.error('[careersExtension] Error:', err?.message);
+    log.error('[careersExtension] Error:', (err instanceof Error ? err.message : String(err)));
     return twiml(say('We encountered an error. Please try again or press 0 to return to the main menu.'));
   }
 }

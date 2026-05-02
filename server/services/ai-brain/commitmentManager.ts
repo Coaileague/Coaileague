@@ -68,7 +68,7 @@ class CommitmentManagerService {
         const backoffMs = Math.min(60000 * Math.pow(2, consecutiveFailures - 1), 300000);
         backoffUntil = Date.now() + backoffMs;
         if (consecutiveFailures <= 2) {
-          log.warn('[CommitmentManager] Lock cleanup failed (will retry):', error?.message || 'unknown');
+          log.warn('[CommitmentManager] Lock cleanup failed (will retry):', (error instanceof Error ? error.message : String(error)) || 'unknown');
         }
       }
     }, 60000).unref();

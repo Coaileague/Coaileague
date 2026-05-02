@@ -382,7 +382,7 @@ class SLAMonitoringService {
           severity: severity as unknown,
           audience: 'manager',
         },
-      }).catch((err: unknown) => log.warn('[SLAMonitoring] Failed to publish sla_breach:', err.message));
+      }).catch((err: unknown) => log.warn('[SLAMonitoring] Failed to publish sla_breach:', (err instanceof Error ? err.message : String(err))));
 
       log.info(
         `[SLAMonitoring] BREACH: ${serviceName} - ${breachType} ` +
@@ -676,7 +676,7 @@ class SLAMonitoringService {
       try {
         await this.generateReport();
       } catch (error : unknown) {
-        log.warn('[SLAMonitoring] Report generation failed (will retry):', error?.message || 'unknown');
+        log.warn('[SLAMonitoring] Report generation failed (will retry):', (error instanceof Error ? error.message : String(error)) || 'unknown');
       }
     }, 60 * 60 * 1000);
   }

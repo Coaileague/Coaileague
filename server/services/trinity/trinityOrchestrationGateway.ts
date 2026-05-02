@@ -144,8 +144,8 @@ class TrinityOrchestrationGateway {
         if (this.consecutiveFlushFailures <= 2) {
           // Detailed Postgres error logging — matches the inner catch.
           log.warn('[TrinityOrchestrationGateway] Flush error (outer catch):', {
-            message: err?.message,
-            code: err?.code,
+            message: (err instanceof Error ? err.message : String(err)),
+            code: (err as NodeJS.ErrnoException).code,
             detail: err?.detail,
             column: err?.column,
             constraint: err?.constraint,
@@ -284,7 +284,7 @@ class TrinityOrchestrationGateway {
             sourceRoute: r.endpoint || undefined,
           })));
         } catch (err: unknown) {
-          log.warn('[trinityOrchestrationGateway] Audit batch write failed (non-fatal):', err?.message ?? err);
+          log.warn('[trinityOrchestrationGateway] Audit batch write failed (non-fatal):', (err instanceof Error ? err.message : String(err)) ?? err);
         }
       }
     } catch (error: unknown) {
@@ -293,8 +293,8 @@ class TrinityOrchestrationGateway {
       // failed. The previous one-liner only logged .message which
       // hides the real cause.
       log.error('[TrinityOrchestrationGateway] Flush error:', {
-        message: error?.message,
-        code: error?.code,
+        message: (error instanceof Error ? error.message : String(error)),
+        code: (error as NodeJS.ErrnoException).code,
         detail: error?.detail,
         column: error?.column,
         constraint: error?.constraint,

@@ -203,7 +203,7 @@ export async function verifyEntityPin(params: PinVerifyParams): Promise<{
     const ok = await verifyPin(clean, hash);
     return { valid: ok, reason: ok ? 'ok' : 'wrong_pin' };
   } catch (err: unknown) {
-    log.warn(`[EntityPinService] Verify failed for ${entity} ${entityId}: ${err?.message}`);
+    log.warn(`[EntityPinService] Verify failed for ${entity} ${entityId}: ${(err instanceof Error ? err.message : String(err))}`);
     return { valid: false, reason: 'wrong_pin' };
   }
 }
@@ -252,7 +252,7 @@ export async function verifyIdentityAndPin(params: {
         name: rows[0].name,
       };
     } catch (err: unknown) {
-      log.warn('[EntityPinService] owner verify failed:', err?.message);
+      log.warn('[EntityPinService] owner verify failed:', (err instanceof Error ? err.message : String(err)));
       return { valid: false, reason: 'wrong_pin' };
     }
   }
@@ -278,7 +278,7 @@ export async function verifyIdentityAndPin(params: {
         name: rows[0].name,
       };
     } catch (err: unknown) {
-      log.warn('[EntityPinService] employee verify failed:', err?.message);
+      log.warn('[EntityPinService] employee verify failed:', (err instanceof Error ? err.message : String(err)));
       return { valid: false, reason: 'wrong_pin' };
     }
   }
@@ -304,7 +304,7 @@ export async function verifyIdentityAndPin(params: {
         name: rows[0].name,
       };
     } catch (err: unknown) {
-      log.warn('[EntityPinService] client verify failed:', err?.message);
+      log.warn('[EntityPinService] client verify failed:', (err instanceof Error ? err.message : String(err)));
       return { valid: false, reason: 'wrong_pin' };
     }
   }

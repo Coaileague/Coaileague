@@ -62,7 +62,7 @@ export function registerSkillBridgeActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `skills.list error: ${err?.message || String(err)}`,
+          message: `skills.list error: ${(err instanceof Error ? err.message : String(err)) || String(err)}`,
           executionTimeMs: Date.now() - start,
         };
       }
@@ -130,7 +130,7 @@ export function registerSkillBridgeActions(): void {
         return {
           success: false,
           actionId: request.actionId,
-          message: `skills.health error: ${err?.message || String(err)}`,
+          message: `skills.health error: ${(err instanceof Error ? err.message : String(err)) || String(err)}`,
           executionTimeMs: Date.now() - start,
         };
       }

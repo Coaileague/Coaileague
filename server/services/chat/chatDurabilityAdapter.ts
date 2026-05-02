@@ -63,7 +63,7 @@ async function initRedis(): Promise<boolean> {
     log.info('[ChatDurability] Redis connected — durable multi-replica mode active');
     return true;
   } catch (err: unknown) {
-    log.warn('[ChatDurability] Redis connection failed, falling back to in-memory:', err?.message);
+    log.warn('[ChatDurability] Redis connection failed, falling back to in-memory:', (err instanceof Error ? err.message : String(err)));
     redisAvailable = false;
     return false;
   }
@@ -96,7 +96,7 @@ export async function pushEvent(workspaceId: string, data: Record<string, unknow
       await redisClient.expire(key, EVENT_BUFFER_TTL_SEC * 2);
       return eventId;
     } catch (err: unknown) {
-      log.warn('[ChatDurability] Redis push failed, using memory:', err?.message);
+      log.warn('[ChatDurability] Redis push failed, using memory:', (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -165,7 +165,7 @@ export async function subscribeBroadcast(): Promise<void> {
     });
     log.info('[ChatDurability] Subscribed to chat:broadcast channel');
   } catch (err: unknown) {
-    log.warn('[ChatDurability] Subscribe failed:', err?.message);
+    log.warn('[ChatDurability] Subscribe failed:', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -207,7 +207,7 @@ export async function publishRoomEvent(
   try {
     await pubClient.publish('chat:broadcast', JSON.stringify({ workspaceId, data: event }));
   } catch (err: unknown) {
-    log.warn('[ChatDurability] Redis publish failed (non-fatal):', err?.message);
+    log.warn('[ChatDurability] Redis publish failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }
 

@@ -261,7 +261,7 @@ export class NotificationDeliveryService {
       }
     } catch (prefErr : unknown) {
       // Fail open — preference check error should never block delivery
-      log.warn('[NotificationDeliveryService] Preference check failed (fail open):', prefErr?.message);
+      log.warn('[NotificationDeliveryService] Preference check failed (fail open):', (prefErr instanceof Error ? prefErr.message : String(prefErr)));
     }
 
     const idempotencyKey = payload.idempotencyKey ??

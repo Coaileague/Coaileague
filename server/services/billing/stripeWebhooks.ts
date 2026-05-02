@@ -110,7 +110,7 @@ async function cleanupOldProcessedEvents(): Promise<void> {
     await db.delete(processedStripeEventsTable)
       .where(lt(processedStripeEventsTable.processedAt, thirtyDaysAgo));
   } catch (err: unknown) {
-    log.warn('[StripeWebhooks] Failed to cleanup old processed events (non-fatal):', err?.message);
+    log.warn('[StripeWebhooks] Failed to cleanup old processed events (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }
 setInterval(() => {
@@ -910,18 +910,18 @@ export class StripeWebhookService {
               const { financialProcessingFeeService } = await import('./financialProcessingFeeService');
               await financialProcessingFeeService.recordInvoiceFee({ workspaceId, referenceId: paidInvoice.id });
             } catch (err: unknown) {
-              log.warn('[Webhook] Fee ledger record failed (non-fatal):', err?.message);
+              log.warn('[Webhook] Fee ledger record failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
             }
             try {
               const { recordMiddlewareFeeCharge } = await import('../finance/middlewareFeeService');
               await recordMiddlewareFeeCharge(workspaceId, 'invoice_payment', feeResult.amountCents, paidInvoice.id);
             } catch (err: unknown) {
-              log.warn('[Webhook] Platform revenue record failed (non-fatal):', err?.message);
+              log.warn('[Webhook] Platform revenue record failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
             }
           }
         }
       } catch (feeErr: unknown) {
-        log.warn('Middleware fee charge failed on payment_intent.succeeded (non-fatal):', feeErr?.message);
+        log.warn('Middleware fee charge failed on payment_intent.succeeded (non-fatal):', (feeErr instanceof Error ? feeErr.message : String(feeErr)));
       }
 
       // Send payment receipt to client
@@ -1766,7 +1766,7 @@ export class StripeWebhookService {
     // WebSocket broadcast
     try {
       broadcastToWorkspace(workspaceId, { type: 'trial_ending_soon', daysRemaining, trialEnd: trialEndDate?.toISOString() });
-    } catch (wsErr: unknown) { log.warn('[StripeWebhooks] trial_ending_soon broadcast failed (non-blocking):', wsErr?.message); }
+    } catch (wsErr: unknown) { log.warn('[StripeWebhooks] trial_ending_soon broadcast failed (non-blocking):', (wsErr instanceof Error ? wsErr.message : String(wsErr))); }
 
     // Platform event for Trinity awareness
     platformEventBus.publish({
@@ -1825,7 +1825,7 @@ export class StripeWebhookService {
 
     try {
       broadcastToWorkspace(workspaceId, { type: 'subscription_suspended', status: 'suspended' });
-    } catch (wsErr: unknown) { log.warn('[StripeWebhooks] subscription_suspended broadcast failed (non-blocking):', wsErr?.message); }
+    } catch (wsErr: unknown) { log.warn('[StripeWebhooks] subscription_suspended broadcast failed (non-blocking):', (wsErr instanceof Error ? wsErr.message : String(wsErr))); }
 
     platformEventBus.publish({
       type: 'subscription_suspended',
@@ -1881,7 +1881,7 @@ export class StripeWebhookService {
 
     try {
       broadcastToWorkspace(workspaceId, { type: 'subscription_reactivated', status: 'active' });
-    } catch (wsErr: unknown) { log.warn('[StripeWebhooks] subscription_reactivated broadcast failed (non-blocking):', wsErr?.message); }
+    } catch (wsErr: unknown) { log.warn('[StripeWebhooks] subscription_reactivated broadcast failed (non-blocking):', (wsErr instanceof Error ? wsErr.message : String(wsErr))); }
 
     platformEventBus.publish({
       type: 'subscription_reactivated',
@@ -1914,7 +1914,7 @@ export class StripeWebhookService {
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
         workspaceId = subscription.metadata.workspaceId;
       } catch (stripeErr: unknown) {
-        log.warn('[StripeWebhooks] subscription.retrieve failed for upcoming invoice — cannot notify workspace:', { subscriptionId, error: stripeErr?.message });
+        log.warn('[StripeWebhooks] subscription.retrieve failed for upcoming invoice — cannot notify workspace:', { subscriptionId, error: (stripeErr instanceof Error ? stripeErr.message : String(stripeErr)) });
       }
     }
 

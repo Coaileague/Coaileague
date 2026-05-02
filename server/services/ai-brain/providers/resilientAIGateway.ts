@@ -494,7 +494,7 @@ class ResilientAIGateway {
             outputTokens,
             triggeredByUserId: request.userId,
           });
-        }).catch((err: unknown) => log.warn('[AIMeter] claude recordAiCall failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[AIMeter] claude recordAiCall failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
         log.info(`[BillingGate] Trinity specialist [${featureKey}] - ${totalTokens} tokens (${estimatedCredits} credits) billed to workspace: ${request.workspaceId}`);
       }
     }
@@ -594,7 +594,7 @@ class ResilientAIGateway {
       try {
         await this.performHealthCheck();
       } catch (error : unknown) {
-        log.warn('[Trinity:gateway] Health check failed (will retry):', error?.message || 'unknown');
+        log.warn('[Trinity:gateway] Health check failed (will retry):', (error instanceof Error ? error.message : String(error)) || 'unknown');
       }
     }, HEALTH_CHECK_INTERVAL_MS);
 

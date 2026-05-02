@@ -303,7 +303,7 @@ router.patch('/candidates/:id/decision', async (req: Request, res: Response) => 
       req.user.id,
     );
 
-    await generateComprehensiveScorecard(req.params.id, workspaceId).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    await generateComprehensiveScorecard(req.params.id, workspaceId).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
     res.json({ success: true, decision: parsed.data.decision });
   } catch (err) {
     log.error('[Recruitment] record decision error:', err);

@@ -137,7 +137,7 @@ registerLegacyBootstrap('search_infrastructure', async (pool) => {
       log.info(`[searchBootstrap] GIN index ${idx.name} created`);
     } catch (err: unknown) {
       // Non-fatal — a missing column or transient error should not prevent boot
-      log.warn(`[searchBootstrap] GIN index ${idx.name} skipped: ${err?.message}`);
+      log.warn(`[searchBootstrap] GIN index ${idx.name} skipped: ${(err instanceof Error ? err.message : String(err))}`);
     }
   }
 

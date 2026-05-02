@@ -71,7 +71,7 @@ router.post('/conversations/:conversationId/polls', requireAuth, async (req: Aut
     log.info(`[ChatPolls] Poll created: ${pollId} in ${conversationId}`);
     return res.status(201).json(poll);
   } catch (err: unknown) {
-    log.error('[ChatPolls] Create error:', err?.message);
+    log.error('[ChatPolls] Create error:', (err instanceof Error ? err.message : String(err)));
     return res.status(500).json({ error: 'Failed to create poll' });
   }
 });
@@ -91,7 +91,7 @@ router.get('/conversations/:conversationId/polls', requireAuth, async (req: Auth
     `);
     return res.json(result.rows ?? []);
   } catch (err: unknown) {
-    log.error('[ChatPolls] Failed to fetch polls:', err?.message);
+    log.error('[ChatPolls] Failed to fetch polls:', (err instanceof Error ? err.message : String(err)));
     return res.status(500).json({ error: 'Failed to fetch polls' });
   }
 });
@@ -121,7 +121,7 @@ router.post('/polls/:pollId/vote', requireAuth, async (req: AuthenticatedRequest
     if (!result.rows?.[0]) return res.status(404).json({ error: 'Poll not found or expired' });
     return res.json(result.rows[0]);
   } catch (err: unknown) {
-    log.error('[ChatPolls] Vote error:', err?.message);
+    log.error('[ChatPolls] Vote error:', (err instanceof Error ? err.message : String(err)));
     return res.status(500).json({ error: 'Failed to record vote' });
   }
 });
@@ -158,7 +158,7 @@ router.get('/tickets/:ticketId', requireAuth, async (req: AuthenticatedRequest, 
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
     return res.json(ticket);
   } catch (err: unknown) {
-    log.error('[ChatTickets] Fetch error:', err?.message);
+    log.error('[ChatTickets] Fetch error:', (err instanceof Error ? err.message : String(err)));
     return res.status(500).json({ error: 'Failed to fetch ticket' });
   }
 });

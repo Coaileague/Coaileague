@@ -17,7 +17,7 @@ function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Pro
         const data = await fn(req.params || {});
         return { success: true, data };
       } catch (err: unknown) {
-        return { success: false, error: err?.message || 'Unknown error' };
+        return { success: false, error: (err instanceof Error ? err.message : String(err)) || 'Unknown error' };
       }
     }
   };

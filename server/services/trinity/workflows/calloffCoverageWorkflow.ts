@@ -143,8 +143,8 @@ export async function executeCalloffCoverageWorkflow(
     }
     resolvedShiftId = shiftRow.id;
   } catch (err: unknown) {
-    await logWorkflowStep(record, 'fetch', false, err?.message);
-    errors.push(`fetch:${err?.message}`);
+    await logWorkflowStep(record, 'fetch', false, (err instanceof Error ? err.message : String(err)));
+    errors.push(`fetch:${(err instanceof Error ? err.message : String(err))}`);
   }
 
   // ── 3. VALIDATE ─────────────────────────────────────────────────────────────
@@ -201,11 +201,11 @@ export async function executeCalloffCoverageWorkflow(
       changesAfter: { status: 'calloff', reason: params.reason ?? null },
     });
   } catch (err: unknown) {
-    await logWorkflowStep(record, 'mutate', false, `shift update failed: ${err?.message}`);
-    errors.push(`mutate:${err?.message}`);
+    await logWorkflowStep(record, 'mutate', false, `shift update failed: ${(err instanceof Error ? err.message : String(err))}`);
+    errors.push(`mutate:${(err instanceof Error ? err.message : String(err))}`);
     await logWorkflowComplete(record, {
       success: false,
-      errorMessage: err?.message,
+      errorMessage: (err instanceof Error ? err.message : String(err)),
       summary: 'Failed to mark shift as calloff',
     });
     return {
@@ -237,7 +237,7 @@ export async function executeCalloffCoverageWorkflow(
       ],
     );
   } catch (err: unknown) {
-    log.info('[calloff] shift_calloffs insert skipped (non-fatal):', err?.message);
+    log.info('[calloff] shift_calloffs insert skipped (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 
   // ── 4/5 PROCESS+MUTATE: send replacement offers ────────────────────────────
@@ -264,8 +264,8 @@ export async function executeCalloffCoverageWorkflow(
       { offered: offersSent, errorCount: result.errors.length },
     );
   } catch (err: unknown) {
-    await logWorkflowStep(record, 'process', false, `sendShiftOffers error: ${err?.message}`);
-    errors.push(`process:${err?.message}`);
+    await logWorkflowStep(record, 'process', false, `sendShiftOffers error: ${(err instanceof Error ? err.message : String(err))}`);
+    errors.push(`process:${(err instanceof Error ? err.message : String(err))}`);
   }
 
   // ── 6. CONFIRM ──────────────────────────────────────────────────────────────
@@ -404,11 +404,11 @@ export async function scanStaleCalloffWorkflows(): Promise<{
           })
           .where(eq(auditLogs.id, row.id));
       } catch (err: unknown) {
-        log.warn('[calloff escalation] metadata update failed:', err?.message);
+        log.warn('[calloff escalation] metadata update failed:', (err instanceof Error ? err.message : String(err)));
       }
     }
   } catch (err: unknown) {
-    log.warn('[calloff escalation sweep] error:', err?.message);
+    log.warn('[calloff escalation sweep] error:', (err instanceof Error ? err.message : String(err)));
   }
 
   return { scanned, escalated };
@@ -477,7 +477,7 @@ async function loadShiftDisplayContext(
       };
     }
   } catch (err: unknown) {
-    log.info('[calloff] display context lookup skipped:', err?.message);
+    log.info('[calloff] display context lookup skipped:', (err instanceof Error ? err.message : String(err)));
   }
   return { location: 'assigned site', clientName: null };
 }
@@ -550,7 +550,7 @@ async function notifySupervisors(params: {
       ),
     );
   } catch (err: unknown) {
-    log.warn('[calloff] supervisor SMS alert failed (non-fatal):', err?.message);
+    log.warn('[calloff] supervisor SMS alert failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -574,7 +574,7 @@ async function publishCalloffEvent(params: {
       },
     } as unknown);
   } catch (err: unknown) {
-    log.warn('[calloff] event bus publish failed (non-fatal):', err?.message);
+    log.warn('[calloff] event bus publish failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -622,7 +622,7 @@ async function escalateToSupervisor(params: {
       metadata: body as unknown,
     } as unknown);
   } catch (err: unknown) {
-    log.warn('[calloff] escalation event publish failed:', err?.message);
+    log.warn('[calloff] escalation event publish failed:', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -639,7 +639,7 @@ async function fetchWorkspaceSupervisors(workspaceId: string): Promise<string[]>
     );
     return r.rows.map((row: unknown) => row.user_id).filter(Boolean);
   } catch (err: unknown) {
-    log.info('[calloff] supervisor lookup skipped:', err?.message);
+    log.info('[calloff] supervisor lookup skipped:', (err instanceof Error ? err.message : String(err)));
     return [];
   }
 }
@@ -678,7 +678,7 @@ async function fetchSupervisorContacts(workspaceId: string): Promise<Array<{ emp
         .map((row: unknown) => ({ employeeId: row.id as string, phone: row.phone as string }))
         .filter((row: unknown) => row.employeeId && row.phone);
     } catch (fallbackErr: unknown) {
-      log.info('[calloff] supervisor phone fallback skipped:', fallbackErr?.message);
+      log.info('[calloff] supervisor phone fallback skipped:', (fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)));
       return [];
     }
   }

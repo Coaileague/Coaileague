@@ -1010,7 +1010,7 @@ class TrinityAutomationToggleService {
         await checkpointer.stepCompleted(name, toSave ? toSave(result) : undefined);
         return result;
       } catch (err: unknown) {
-        await checkpointer.stepFailed(name, err?.message ?? String(err));
+        await checkpointer.stepFailed(name, (err instanceof Error ? err.message : String(err)) ?? String(err));
         throw err;
       }
     };

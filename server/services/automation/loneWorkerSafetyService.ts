@@ -246,7 +246,7 @@ class LoneWorkerSafetyService {
           },
         });
     } catch (error: unknown) {
-      log.error('Failed to persist welfare check', { checkId: check.id, error: error?.message });
+      log.error('Failed to persist welfare check', { checkId: check.id, error: (error instanceof Error ? error.message : String(error)) });
     }
   }
 
@@ -423,7 +423,7 @@ class LoneWorkerSafetyService {
         this.welfareChecks.set(checkId, reconstructed);
         return this.acknowledgeWelfareCheck(checkId, employeeId);
       } catch (err: unknown) {
-        log.error('DB lookup failed for welfare check', { checkId, error: err?.message });
+        log.error('DB lookup failed for welfare check', { checkId, error: (err instanceof Error ? err.message : String(err)) });
         return false;
       }
     }
@@ -609,7 +609,7 @@ class LoneWorkerSafetyService {
 
     // Persist resolution to DB (fire-and-forget, non-blocking)
     this.persistCheck(check).catch(err =>
-      log.error('Failed to persist resolve', { checkId, error: err?.message })
+      log.error('Failed to persist resolve', { checkId, error: (err instanceof Error ? err.message : String(err)) })
     );
 
     const sessionKey = this.findSessionKeyByEmployee(check.employeeId);
@@ -641,7 +641,7 @@ class LoneWorkerSafetyService {
       const check = session.activeWelfareCheck;
       check.resolved = true;
       this.persistCheck(check).catch(err =>
-        log.error('Failed to persist end-session resolve', { checkId: check.id, error: err?.message })
+        log.error('Failed to persist end-session resolve', { checkId: check.id, error: (err instanceof Error ? err.message : String(err)) })
       );
       this.welfareChecks.delete(check.id);
     }

@@ -676,7 +676,7 @@ router.post("/api/webhooks/resend", async (req, res) => {
           }
         }
         // Fire-and-forget rate check — logs CRITICAL alert if 24h bounce rate > threshold
-        checkDeliverabilityRates().catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        checkDeliverabilityRates().catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
         break;
       }
         
@@ -748,7 +748,7 @@ router.post("/api/webhooks/resend", async (req, res) => {
           }
         }
         // Fire-and-forget rate check — logs CRITICAL alert if 24h complaint rate > threshold
-        checkDeliverabilityRates().catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        checkDeliverabilityRates().catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
         break;
       }
         
@@ -888,7 +888,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
             });
             log.info(`[Resend Inbound] Forwarded root@ email to ${rootForwardTo}`);
           } catch (err: unknown) {
-            log.warn(`[Resend Inbound] root@ forward failed: ${err?.message}`);
+            log.warn(`[Resend Inbound] root@ forward failed: ${(err instanceof Error ? err.message : String(err))}`);
           }
         });
         return;
@@ -947,7 +947,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
           });
           log.info(`[Email→Ticket] Created ticket ${ticketNumber} from ${fromEmail} to ${platformAddr}`);
         } catch (ticketErr: unknown) {
-          log.error('[Email→Ticket] Failed to create support ticket (non-fatal):', ticketErr?.message);
+          log.error('[Email→Ticket] Failed to create support ticket (non-fatal):', (ticketErr instanceof Error ? ticketErr.message : String(ticketErr)));
         }
       }
 
@@ -1106,7 +1106,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
         );
         await handleEmploymentVerificationEmail(inboundEmail as unknown, slug, workspaceId);
       } catch (verifyErr: unknown) {
-        log.warn('[Resend Inbound] Employment verification handler failed (non-fatal):', verifyErr?.message);
+        log.warn('[Resend Inbound] Employment verification handler failed (non-fatal):', (verifyErr instanceof Error ? verifyErr.message : String(verifyErr)));
       }
       return res.status(200).json({ received: true, routed: 'employment_verification' });
     }

@@ -438,7 +438,7 @@ router.post('/', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest
           contractRate,
           category: client.category,
         },
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
     } catch (_publishErr) { log.warn('[ClientRoutes] Failed to publish client.created event — non-critical:', _publishErr instanceof Error ? _publishErr.message : String(_publishErr)); }
 
     res.status(201).json(filterClientForResponse(client, createFilterContext(req)));
@@ -659,7 +659,7 @@ router.post('/:id/deactivate', requireManagerOrPlatformStaff, async (req: Authen
         }
         log.info(`[ClientDeactivate] Trinity verdict: ${result.verdict} — ${result.headline}`);
       } catch (deliberationErr : unknown) {
-        log.warn('[ClientDeactivate] Deliberation failed (non-fatal):', deliberationErr?.message);
+        log.warn('[ClientDeactivate] Deliberation failed (non-fatal):', (deliberationErr instanceof Error ? deliberationErr.message : String(deliberationErr)));
       }
     }
 

@@ -30,7 +30,7 @@ export const trinityWebSocketService = {
     try {
       _broadcastFn(workspaceId, event);
     } catch (err: unknown) {
-      log.warn(`[TrinityWS] Broadcast failed: ${err?.message}`);
+      log.warn(`[TrinityWS] Broadcast failed: ${(err instanceof Error ? err.message : String(err))}`);
     }
   },
 

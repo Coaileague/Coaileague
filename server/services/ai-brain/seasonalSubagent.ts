@@ -233,7 +233,7 @@ export class SeasonalSubagent {
       try {
         await this.checkAndApplySeasonalTheme();
       } catch (error : unknown) {
-        log.warn('[SeasonalSubagent] Theme check failed (will retry):', error?.message || 'unknown');
+        log.warn('[SeasonalSubagent] Theme check failed (will retry):', (error instanceof Error ? error.message : String(error)) || 'unknown');
       }
     }, this.CHECK_INTERVAL_MS);
 

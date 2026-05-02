@@ -116,8 +116,8 @@ async function persistGapFinding(finding: GapFinding, detectedBy: string): Promi
     // constraint so the actual cause is visible in production logs.
     // Previous one-liner hid everything except error.toString().
     log.error('Error persisting gap finding:', {
-      message: error?.message,
-      code: error?.code,
+      message: (error instanceof Error ? error.message : String(error)),
+      code: (error as NodeJS.ErrnoException).code,
       detail: error?.detail,
       column: error?.column,
       constraint: error?.constraint,

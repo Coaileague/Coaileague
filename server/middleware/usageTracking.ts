@@ -69,7 +69,7 @@ export function withUsageTracking<T>(
       success = false;
       errorMessage = error instanceof Error ? error.message : String(error) || String(error);
       errorCode = (error as NodeJS.ErrnoException).code || error.statusCode?.toString();
-      responseStatusCode = error.statusCode || error.response?.status || 500;
+      responseStatusCode = (error as Record<string,unknown>).statusCode as number || (error as Record<string,unknown>).response && ((error as Record<string,unknown>).response as Record<string,unknown>)?.status as number || 500;
       throw error;
     } finally {
       const responseTimeMs = Date.now() - startTime;
@@ -166,7 +166,7 @@ export async function withBatchUsageTracking<T>(
     success = false;
     errorMessage = error instanceof Error ? error.message : String(error) || String(error);
     errorCode = (error as NodeJS.ErrnoException).code || error.statusCode?.toString();
-    responseStatusCode = error.statusCode || error.response?.status || 500;
+    responseStatusCode = (error as Record<string,unknown>).statusCode as number || (error as Record<string,unknown>).response && ((error as Record<string,unknown>).response as Record<string,unknown>)?.status as number || 500;
     throw error;
   } finally {
     const responseTimeMs = Date.now() - startTime;

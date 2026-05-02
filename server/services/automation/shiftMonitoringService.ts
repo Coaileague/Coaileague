@@ -94,7 +94,7 @@ class ShiftMonitoringService {
         await this.runMonitoringCycle();
       } catch (error: unknown) {
         this.cycleRunning = false; // G10 FIX: release lock if orchestration threw
-        log.warn('[ShiftMonitor] Monitoring cycle failed (will retry):', error?.message || 'unknown');
+        log.warn('[ShiftMonitor] Monitoring cycle failed (will retry):', (error instanceof Error ? error.message : String(error)) || 'unknown');
       }
     }, MONITORING_INTERVAL_MS);
 

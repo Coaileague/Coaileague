@@ -194,7 +194,7 @@ router.post('/api/internal/reset-password', async (req: Request, res: Response) 
         metadata: { source: 'internal_reset_endpoint', clientIp, targetSource },
       });
     } catch (auditErr: unknown) {
-      log.warn('[InternalReset] Audit log write failed (non-fatal):', auditErr?.message);
+      log.warn('[InternalReset] Audit log write failed (non-fatal):', (auditErr instanceof Error ? auditErr.message : String(auditErr)));
     }
 
     return res.json({
@@ -215,7 +215,7 @@ router.post('/api/internal/reset-password', async (req: Request, res: Response) 
     log.error('[InternalReset] Unexpected error:', err);
     return res.status(500).json({
       error: 'Reset failed',
-      message: err?.message || 'unknown',
+      message: (err instanceof Error ? err.message : String(err)) || 'unknown',
     });
   }
 });

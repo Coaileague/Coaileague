@@ -321,7 +321,7 @@ router.post('/api/webhooks/twilio/sms', validateTwilioSignature, async (req: Req
 
           log.info(`[TwilioSMS] Employee ${matchedEmpDecline.id} DECLINED offer ${offerNotif.relatedEntityId} via SMS`);
         } catch (err: unknown) {
-          log.warn('[TwilioSMS] Decline handler error:', err?.message);
+          log.warn('[TwilioSMS] Decline handler error:', (err instanceof Error ? err.message : String(err)));
         }
       });
       return;
@@ -343,7 +343,7 @@ router.post('/api/webhooks/twilio/sms', validateTwilioSignature, async (req: Req
           await sendSMS({ to: from, body: result.reply, workspaceId: result.workspaceId, type: 'system_alert' });
           log.info(`[TrinitySmsTriage] ${result.method} resolution for ${from} — resolved=${result.resolved}`);
         } catch (err: unknown) {
-          log.warn(`[TrinitySmsTriage] Auto-resolver error for ${from}:`, err?.message);
+          log.warn(`[TrinitySmsTriage] Auto-resolver error for ${from}:`, (err instanceof Error ? err.message : String(err)));
           // Fallback reply so caller isn't left hanging
           await sendSMS({
             to: from,
@@ -453,7 +453,7 @@ router.post('/api/webhooks/twilio/sms', validateTwilioSignature, async (req: Req
           method: 'sms',
           acceptedAt: new Date().toISOString(),
         },
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
     } else {
       await replySms(
         from,

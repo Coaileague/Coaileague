@@ -220,7 +220,7 @@ export async function ensureWorkspaceIndexes(): Promise<void> {
       installed++;
     } catch (err: unknown) {
       failed++;
-      log.warn(`[workspaceIndex] ${table}: ${err?.message}`);
+      log.warn(`[workspaceIndex] ${table}: ${(err instanceof Error ? err.message : String(err))}`);
     }
   }
 

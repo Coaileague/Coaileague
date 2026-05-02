@@ -640,7 +640,7 @@ class ContractPipelineService {
         });
         await NotificationDeliveryService.send({ type: 'document_requires_signature', workspaceId: contract.workspaceId || 'system', recipientUserId: contract.clientEmail, channel: 'email', body: { to: contract.clientEmail, subject: sigEmail.subject, html: sigEmail.html } });
       } catch (emailErr: unknown) {
-        log.error('[ContractPipeline] Failed to send signature email:', emailErr?.message);
+        log.error('[ContractPipeline] Failed to send signature email:', (emailErr instanceof Error ? emailErr.message : String(emailErr)));
       }
     }
 
@@ -652,7 +652,7 @@ class ContractPipelineService {
       description: `Proposal sent to ${contract.clientEmail} for review and signature`,
       workspaceId: contract.workspaceId,
       metadata: { contractId, clientEmail: contract.clientEmail, title: contract.title },
-    }).catch(err => log.warn('[ContractPipeline] contract_proposal_sent publish failed:', err?.message));
+    }).catch(err => log.warn('[ContractPipeline] contract_proposal_sent publish failed:', (err instanceof Error ? err.message : String(err))));
     
     return { contract: updated, accessToken: token, portalUrl };
   }
@@ -721,7 +721,7 @@ class ContractPipelineService {
       description: `${proposal.clientName} accepted the proposal — formal contract being generated`,
       workspaceId: proposal.workspaceId,
       metadata: { contractId, clientName: proposal.clientName, title: proposal.title },
-    }).catch(err => log.warn('[ContractPipeline] contract_proposal_accepted publish failed:', err?.message));
+    }).catch(err => log.warn('[ContractPipeline] contract_proposal_accepted publish failed:', (err instanceof Error ? err.message : String(err))));
     
     // Generate formal contract from proposal
     const [formalContract] = await db
@@ -793,7 +793,7 @@ class ContractPipelineService {
       description: `${contract.clientName} requested changes to the proposal`,
       workspaceId: contract.workspaceId,
       metadata: { contractId, clientName: contract.clientName, changesRequested },
-    }).catch(err => log.warn('[ContractPipeline] contract_changes_requested publish failed:', err?.message));
+    }).catch(err => log.warn('[ContractPipeline] contract_changes_requested publish failed:', (err instanceof Error ? err.message : String(err))));
     
     return updated;
   }
@@ -835,7 +835,7 @@ class ContractPipelineService {
       description: `${contract.clientName} declined the proposal: ${reason}`,
       workspaceId: contract.workspaceId,
       metadata: { contractId, clientName: contract.clientName, reason },
-    }).catch(err => log.warn('[ContractPipeline] contract_proposal_declined publish failed:', err?.message));
+    }).catch(err => log.warn('[ContractPipeline] contract_proposal_declined publish failed:', (err instanceof Error ? err.message : String(err))));
     
     return updated;
   }
@@ -1085,7 +1085,7 @@ class ContractPipelineService {
             recipientUserId: signer.signerEmail,
             channel: 'email',
             body: { to: signer.signerEmail, subject: execEmail.subject, html: execEmail.html },
-          }).catch((emailErr: unknown) => log.warn(`[ContractPipeline] Executed copy email failed for ${signer.signerEmail}: ${emailErr?.message}`));
+          }).catch((emailErr: unknown) => log.warn(`[ContractPipeline] Executed copy email failed for ${signer.signerEmail}: ${(emailErr instanceof Error ? emailErr.message : String(emailErr))}`));
         }
       } catch (emailErr: unknown) {
         log.warn(`[ContractPipeline] Failed to send executed copy emails: ${emailErr instanceof Error ? emailErr.message : String(emailErr)}`);
@@ -1148,7 +1148,7 @@ class ContractPipelineService {
             description: `Auto-generated from executed contract ${contract.title || contractId}`,
             workspaceId: contract.workspaceId,
             metadata: { invoiceId: invoice?.id, invoiceNumber, contractId, clientId: contract.clientId, amount: total },
-          }).catch((evErr: unknown) => log.warn(`[ContractPipeline] invoice_created event publish failed: ${evErr?.message}`));
+          }).catch((evErr: unknown) => log.warn(`[ContractPipeline] invoice_created event publish failed: ${(evErr instanceof Error ? evErr.message : String(evErr))}`));
 
           // Ensure the QB customer record exists so the sync run can create
           // the invoice on the QB side without a missing-customer error.
@@ -1169,7 +1169,7 @@ class ContractPipelineService {
               await quickbooksIntegration.syncContractToInvoice(contract.workspaceId, contractId, invoice.id);
               log.info(`[ContractPipeline] QB invoice sync completed for executed contract ${contractId}`);
             } catch (err: unknown) {
-              log.warn('[ContractPipeline] QB invoice sync failed (non-blocking):', err?.message);
+              log.warn('[ContractPipeline] QB invoice sync failed (non-blocking):', (err instanceof Error ? err.message : String(err)));
             }
           }, 0);
         } catch (invErr: unknown) {
@@ -1674,9 +1674,9 @@ export async function sendContractSigningReminders(): Promise<{ scanned: number;
         description: `Day-${ageDays} reminder emailed to ${contract.clientEmail}`,
         workspaceId: contract.workspaceId,
         metadata: { contractId: contract.id, ageDays },
-      }).catch(err => log.warn('[ContractReminder] event publish failed:', err?.message));
+      }).catch(err => log.warn('[ContractReminder] event publish failed:', (err instanceof Error ? err.message : String(err))));
     } catch (err: unknown) {
-      log.error(`[ContractReminder] Failed to send reminder for contract ${contract.id}:`, err?.message);
+      log.error(`[ContractReminder] Failed to send reminder for contract ${contract.id}:`, (err instanceof Error ? err.message : String(err)));
     }
   }
 

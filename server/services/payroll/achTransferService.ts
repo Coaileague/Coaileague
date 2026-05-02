@@ -219,10 +219,10 @@ export async function initiatePayrollAchTransfer(params: {
     if (pendingRecord?.id) {
       await db.update(plaidTransferAttempts).set({
         status: 'failed',
-        errorMessage: err?.message ?? String(err),
+        errorMessage: (err instanceof Error ? err.message : String(err)) ?? String(err),
       } as Record<string, unknown>).where(eq(plaidTransferAttempts.id, pendingRecord.id)).catch(() => null);
     }
-    log.warn('[ACH] Transfer initiation failed:', err?.message ?? err);
-    return { status: 'failed', reason: err?.message ?? String(err) };
+    log.warn('[ACH] Transfer initiation failed:', (err instanceof Error ? err.message : String(err)) ?? err);
+    return { status: 'failed', reason: (err instanceof Error ? err.message : String(err)) ?? String(err) };
   }
 }

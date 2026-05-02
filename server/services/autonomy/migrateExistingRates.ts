@@ -37,14 +37,14 @@ export async function migrateExistingRates(workspaceId: string): Promise<{ migra
             client.unarmed_bill_rate]);
         migrated++;
       } catch (err: unknown) {
-        log.warn(`[MigrateRates] Failed to migrate client ${client.id}: ${err?.message}`);
+        log.warn(`[MigrateRates] Failed to migrate client ${client.id}: ${(err instanceof Error ? err.message : String(err))}`);
         errors++;
       }
     }
 
     log.info(`[MigrateRates] Workspace ${workspaceId}: migrated=${migrated} skipped=${skipped} errors=${errors}`);
   } catch (err: unknown) {
-    log.error(`[MigrateRates] Fatal: ${err?.message}`);
+    log.error(`[MigrateRates] Fatal: ${(err instanceof Error ? err.message : String(err))}`);
     errors++;
   }
 

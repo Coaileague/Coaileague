@@ -315,7 +315,7 @@ export async function generateAndStorePdf(opts: GenerateOptions): Promise<string
     log.info(`PDF generated for submission ${submission.id} → ${gcsPath} (${pdfBuf.length} bytes)`);
     return gcsPath;
   } catch (err: unknown) {
-    log.error(`PDF generation failed for submission ${opts.submission.id}:`, err?.message);
+    log.error(`PDF generation failed for submission ${opts.submission.id}:`, (err instanceof Error ? err.message : String(err)));
     return null;
   }
 }

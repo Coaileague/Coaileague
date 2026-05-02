@@ -250,7 +250,7 @@ export async function stageBillingRun(
         entriesCount: generated.summary.entriesCount,
       });
     } catch (err: unknown) {
-      const reason = err?.message || 'Unknown error';
+      const reason = (err instanceof Error ? err.message : String(err)) || 'Unknown error';
       log.warn(`[FinStaging] Skipped client ${clientId}: ${reason}`);
       skipped.push({ clientId, clientName, reason });
     }
@@ -426,8 +426,8 @@ export async function finalizeFinancialBatch(
       runEntryIds.forEach(id => lockedTimeEntryIds.add(id));
       finalizedRuns.push({ payrollRunId: run.id, status: 'approved' });
     } catch (err: unknown) {
-      log.warn(`[FinStaging] Payroll run ${run.id} approve failed: ${err?.message}`);
-      finalizedRuns.push({ payrollRunId: run.id, status: `failed: ${err?.message ?? 'unknown'}` });
+      log.warn(`[FinStaging] Payroll run ${run.id} approve failed: ${(err instanceof Error ? err.message : String(err))}`);
+      finalizedRuns.push({ payrollRunId: run.id, status: `failed: ${(err instanceof Error ? err.message : String(err)) ?? 'unknown'}` });
     }
   }
 

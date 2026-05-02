@@ -1523,7 +1523,7 @@ export class PayrollAutomationEngine {
         },
       });
     } catch (auditErr: unknown) {
-      log.warn('[AI Payroll™] overtime_calculated audit log failed (non-fatal):', auditErr?.message);
+      log.warn('[AI Payroll™] overtime_calculated audit log failed (non-fatal):', (auditErr instanceof Error ? auditErr.message : String(auditErr)));
     }
 
     // Emit payroll completion event to Trinity for platform awareness
@@ -1642,7 +1642,7 @@ export class PayrollAutomationEngine {
         description: `Payroll run ${payrollRunId} approved by ${approverId}`,
         workspaceId: updated.workspaceId,
         metadata: { payrollRunId, approverId, periodStart: updated.periodStart, periodEnd: updated.periodEnd },
-      }).catch(err => log.warn('[AI Payroll] payroll_run_approved publish failed (non-blocking):', err?.message));
+      }).catch(err => log.warn('[AI Payroll] payroll_run_approved publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
     }
   }
   
@@ -1667,7 +1667,7 @@ export class PayrollAutomationEngine {
         description: `Payroll run ${payrollRunId} marked as paid — funds disbursed`,
         workspaceId: updated.workspaceId,
         metadata: { payrollRunId, periodStart: updated.periodStart, periodEnd: updated.periodEnd },
-      }).catch(err => log.warn('[AI Payroll] payroll_run_paid publish failed (non-blocking):', err?.message));
+      }).catch(err => log.warn('[AI Payroll] payroll_run_paid publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
     }
   }
 }
@@ -1759,7 +1759,7 @@ export async function voidPayrollRun(
       description: `Payroll run ${runId} voided by ${userId}: ${reason}`,
       workspaceId,
       metadata: { payrollRunId: runId, voidedBy: userId, reason },
-    }).catch(err => log.warn('[AI Payroll] payroll_run_voided publish failed (non-blocking):', err?.message));
+    }).catch(err => log.warn('[AI Payroll] payroll_run_voided publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     return { success: true };
   } catch (error) {
@@ -2334,7 +2334,7 @@ export async function executeInternalPayroll(
       },
     });
   } catch (pubErr: unknown) {
-    log.warn('[InternalPayroll] Event publish failed (non-critical):', pubErr?.message);
+    log.warn('[InternalPayroll] Event publish failed (non-critical):', (pubErr instanceof Error ? pubErr.message : String(pubErr)));
   }
 
   try {

@@ -61,7 +61,7 @@ export async function queueSMS(messages: QueuedMessage[]): Promise<{ queued: num
       );
       queued++;
     } catch (err: unknown) {
-      log.warn('[SMSQueue] Insert failed:', err?.message);
+      log.warn('[SMSQueue] Insert failed:', (err instanceof Error ? err.message : String(err)));
       failed++;
     }
   }
@@ -100,7 +100,7 @@ export async function processSMSOutbox(): Promise<void> {
         );
         rows = res.rows;
       } catch (err: unknown) {
-        log.warn('[SMSQueue] Claim batch error:', err?.message);
+        log.warn('[SMSQueue] Claim batch error:', (err instanceof Error ? err.message : String(err)));
         break;
       }
 
@@ -144,7 +144,7 @@ export async function processSMSOutbox(): Promise<void> {
                       failure_reason = $1,
                       send_after = NOW() + INTERVAL '5 minutes'
                 WHERE id = $2`,
-              [String(err?.message || 'unknown').slice(0, 200), row.id],
+              [String((err instanceof Error ? err.message : String(err)) || 'unknown').slice(0, 200), row.id],
             ).catch(() => {});
           }
         }),
@@ -159,6 +159,6 @@ export async function processSMSOutbox(): Promise<void> {
 
 function ensureWorkerRunning() {
   if (!workerRunning) {
-    processSMSOutbox().catch((err) => log.warn('[SMSQueue] Worker error:', err?.message));
+    processSMSOutbox().catch((err) => log.warn('[SMSQueue] Worker error:', (err instanceof Error ? err.message : String(err))));
   }
 }

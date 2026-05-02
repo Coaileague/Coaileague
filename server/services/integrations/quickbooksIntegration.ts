@@ -98,7 +98,7 @@ export class QuickBooksIntegration {
     } catch (error : unknown) {
       quickbooksRateLimiter.completeRequest(realmId, environment, false);
       
-      if (error.status === 429) {
+      if ((error as Record<string, unknown>).status === 429) {
         quickbooksRateLimiter.recordThrottle(realmId, environment);
         return {
           success: false,

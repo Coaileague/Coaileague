@@ -87,7 +87,7 @@ async function resolveManagementEmail(workspaceId: string, slug: string): Promis
     );
     if (rows[0]?.email) return rows[0].email as string;
   } catch (err: unknown) {
-    log.warn(`[EmploymentVerification] Management email lookup failed: ${err?.message}`);
+    log.warn(`[EmploymentVerification] Management email lookup failed: ${(err instanceof Error ? err.message : String(err))}`);
   }
   return `management@${slug}.coaileague.com`;
 }
@@ -135,7 +135,7 @@ Return ONLY a JSON object with these keys. No prose.`,
     if (!parsed.requester_email) parsed.requester_email = fromEmail;
     return parsed;
   } catch (err: unknown) {
-    log.warn(`[EmploymentVerification] Gemini parse failed (non-fatal): ${err?.message}`);
+    log.warn(`[EmploymentVerification] Gemini parse failed (non-fatal): ${(err instanceof Error ? err.message : String(err))}`);
     return {
       requester_email: fromEmail,
       has_authorization: /authorization|consent|signed/i.test(body || ''),
@@ -190,7 +190,7 @@ async function lookupEmployee(
       }
     }
   } catch (err: unknown) {
-    log.warn(`[EmploymentVerification] Employee lookup failed: ${err?.message}`);
+    log.warn(`[EmploymentVerification] Employee lookup failed: ${(err instanceof Error ? err.message : String(err))}`);
   }
   return null;
 }
@@ -256,7 +256,7 @@ export async function handleEmploymentVerificationEmail(
         ]
       );
     } catch (err: unknown) {
-      log.warn(`[EmploymentVerification] Ticket insert failed (non-fatal): ${err?.message}`);
+      log.warn(`[EmploymentVerification] Ticket insert failed (non-fatal): ${(err instanceof Error ? err.message : String(err))}`);
     }
 
     const approveUrl = `${APP_BASE_URL}/api/employment-verify/approve/${refNum}`;
@@ -297,7 +297,7 @@ export async function handleEmploymentVerificationEmail(
         skipUnsubscribeCheck: true,
       });
     } catch (err: unknown) {
-      log.warn(`[EmploymentVerification] Management alert send failed (non-fatal): ${err?.message}`);
+      log.warn(`[EmploymentVerification] Management alert send failed (non-fatal): ${(err instanceof Error ? err.message : String(err))}`);
     }
 
     // Auto-acknowledge to requester — transactional, does not need unsubscribe.
@@ -320,12 +320,12 @@ export async function handleEmploymentVerificationEmail(
           skipUnsubscribeCheck: true,
         });
       } catch (err: unknown) {
-        log.warn(`[EmploymentVerification] Requester ack send failed (non-fatal): ${err?.message}`);
+        log.warn(`[EmploymentVerification] Requester ack send failed (non-fatal): ${(err instanceof Error ? err.message : String(err))}`);
       }
     }
 
     log.info(`[EmploymentVerification] Ticket ${refNum} created for workspace ${workspaceId} (employee found: ${!!employee}, auth: ${!!parsed.has_authorization})`);
   } catch (err: unknown) {
-    log.error(`[EmploymentVerification] Workflow failed: ${err?.message}`);
+    log.error(`[EmploymentVerification] Workflow failed: ${(err instanceof Error ? err.message : String(err))}`);
   }
 }

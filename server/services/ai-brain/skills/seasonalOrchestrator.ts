@@ -46,7 +46,7 @@ export const seasonalOrchestrator = {
       log.info(`[SeasonalOrchestrator] Season: ${state.season} | Active: ${state.active}`);
       return { activated: state.active, season: state.season };
     } catch (err: unknown) {
-      log.debug(`[SeasonalOrchestrator] Run error: ${err?.message}`);
+      log.debug(`[SeasonalOrchestrator] Run error: ${(err instanceof Error ? err.message : String(err))}`);
       return { activated: false, season: state.season };
     }
   },

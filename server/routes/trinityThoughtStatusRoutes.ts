@@ -198,7 +198,7 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
 
     res.json(response);
   } catch (err: unknown) {
-    log.warn('[TrinityThoughtStatus] Failed to get thought status:', err?.message);
+    log.warn('[TrinityThoughtStatus] Failed to get thought status:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to fetch thought status' });
   }
 });

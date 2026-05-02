@@ -490,7 +490,7 @@ router.patch('/:id/status', requireAuth, async (req: AuthenticatedRequest, res) 
           } catch (colErr : unknown) {
             // Column may not exist in this workspace's schema snapshot;
             // fall back silently rather than block the status update.
-            log.warn('[DocRequest] i9_on_file update skipped (column may not exist):', colErr?.message);
+            log.warn('[DocRequest] i9_on_file update skipped (column may not exist):', (colErr instanceof Error ? colErr.message : String(colErr)));
           }
 
           try {
@@ -504,11 +504,11 @@ router.patch('/:id/status', requireAuth, async (req: AuthenticatedRequest, res) 
               metadata: { employeeId: request.employeeId, documentRequestId: id },
             });
           } catch (evErr : unknown) {
-            log.warn('[DocRequest] i9_submitted event publish failed:', evErr?.message);
+            log.warn('[DocRequest] i9_submitted event publish failed:', (evErr instanceof Error ? evErr.message : String(evErr)));
           }
         }
       } catch (i9Err : unknown) {
-        log.warn('[DocRequest] I-9 compliance hook failed (non-fatal):', i9Err?.message);
+        log.warn('[DocRequest] I-9 compliance hook failed (non-fatal):', (i9Err instanceof Error ? i9Err.message : String(i9Err)));
       }
     }
 

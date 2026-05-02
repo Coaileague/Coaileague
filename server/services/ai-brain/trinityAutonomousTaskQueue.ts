@@ -186,7 +186,7 @@ class TrinityAutonomousTaskQueue {
           }
         }
       } catch (err: unknown) {
-        lastError = err?.message || String(err);
+        lastError = (err instanceof Error ? err.message : String(err)) || String(err);
         lastFailureClass = this.classifyFailure(lastError);
         attemptRecord.failureClass = lastFailureClass;
         attemptRecord.errorMessage = lastError;

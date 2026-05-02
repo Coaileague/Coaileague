@@ -245,7 +245,7 @@ class AutomationGovernanceService {
       return defaultPolicy;
     } catch (error : unknown) {
       // Only log schema mismatch errors once to prevent log spam
-      const isSchemaError = error?.code === '42703'; // Column does not exist
+      const isSchemaError = (error as NodeJS.ErrnoException).code === '42703'; // Column does not exist
       if (!this.schemaErrorLogged && isSchemaError) {
         log.warn('[AutomationGovernance] Schema mismatch detected - using fallback policy. Run db:push to sync schema.');
         this.schemaErrorLogged = true;

@@ -566,7 +566,7 @@ class TrinityProactiveScannerService {
       openShiftsToday,
       alerts,
       escalations,
-    }).catch(e => log.error('[TrinityScanner] Briefing channel post failed:', e?.message));
+    }).catch(e => log.error('[TrinityScanner] Briefing channel post failed:', (e instanceof Error ? e.message : String(e))));
 
     return {
       workspaceId,

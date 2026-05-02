@@ -100,7 +100,7 @@ class SupportSessionService {
         }
         await this.loadActiveSessionsFromDB();
       } catch (err: unknown) {
-        log.warn('[SupportSession] Error loading sessions:', err?.message || err);
+        log.warn('[SupportSession] Error loading sessions:', (err instanceof Error ? err.message : String(err)) || err);
       }
     }, 120000);
   }

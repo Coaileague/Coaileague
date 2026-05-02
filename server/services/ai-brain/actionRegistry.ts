@@ -82,7 +82,7 @@ async function requireDeliberationConsensus(params: {
     // when the reasoning loop itself is unavailable.
     return {
       allowed: false,
-      reason: `Dual-AI gate unavailable: ${err?.message ?? 'unknown error'}`,
+      reason: `Dual-AI gate unavailable: ${(err instanceof Error ? err.message : String(err)) ?? 'unknown error'}`,
       deliberationId: 'unavailable',
     };
   }
@@ -142,7 +142,7 @@ function withAuditWrap(action: ActionHandler, entityType: string): ActionHandler
           userId: request.userId,
           entityType,
           success: false,
-          errorMessage: err?.message,
+          errorMessage: (err instanceof Error ? err.message : String(err)),
           payload: request.payload,
           durationMs: Date.now() - start,
         });
@@ -360,7 +360,7 @@ class AIBrainActionRegistry {
             entityType: 'service',
             entityId: serviceName ?? null,
             success: false,
-            errorMessage: err?.message,
+            errorMessage: (err instanceof Error ? err.message : String(err)),
             durationMs: Date.now() - start,
           });
           throw err;
@@ -430,7 +430,7 @@ class AIBrainActionRegistry {
             entityType: 'feature_toggle',
             entityId: request.payload?.featurePath ?? null,
             success: false,
-            errorMessage: err?.message,
+            errorMessage: (err instanceof Error ? err.message : String(err)),
             payload: request.payload,
             durationMs: Date.now() - start,
           });
@@ -503,7 +503,7 @@ class AIBrainActionRegistry {
             platformRole: request.platformRole,
             entityType: 'shift',
             success: false,
-            errorMessage: err?.message ?? 'Shift create failed',
+            errorMessage: (err instanceof Error ? err.message : String(err)) ?? 'Shift create failed',
             payload: request.payload,
             durationMs: Date.now() - start,
           });
@@ -952,7 +952,7 @@ class AIBrainActionRegistry {
             metadata: { shiftId, shiftTitle: current.title, triggeredBy: 'trinity_publish' },
           } as Record<string, unknown>);
         } catch (notifErr: unknown) {
-          log.warn('[ActionRegistry] Publish notification failed (non-fatal):', notifErr?.message);
+          log.warn('[ActionRegistry] Publish notification failed (non-fatal):', (notifErr instanceof Error ? notifErr.message : String(notifErr)));
         }
 
         // PAYLOAD CHAIN 3: Audit trail
@@ -1049,7 +1049,7 @@ class AIBrainActionRegistry {
               metadata: { count: published.length, triggeredBy: 'trinity_bulk_publish', shiftIds: published.map(s => s.id) },
             } as Record<string, unknown>);
           } catch (notifErr: unknown) {
-            log.warn('[ActionRegistry] Bulk publish notification failed (non-fatal):', notifErr?.message);
+            log.warn('[ActionRegistry] Bulk publish notification failed (non-fatal):', (notifErr instanceof Error ? notifErr.message : String(notifErr)));
           }
         }
 
@@ -1216,7 +1216,7 @@ class AIBrainActionRegistry {
           await logActionAudit({
             actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
             entityType: 'employee', entityId: request.payload?.employeeId ?? null,
-            success: false, errorMessage: err?.message, durationMs: Date.now() - start,
+            success: false, errorMessage: (err instanceof Error ? err.message : String(err)), durationMs: Date.now() - start,
           });
           throw err;
         }
@@ -1257,7 +1257,7 @@ class AIBrainActionRegistry {
           await logActionAudit({
             actionId: request.actionId, workspaceId: request.workspaceId, userId: request.userId,
             entityType: 'employee', entityId: request.payload?.employeeId ?? null,
-            success: false, errorMessage: err?.message, durationMs: Date.now() - start,
+            success: false, errorMessage: (err instanceof Error ? err.message : String(err)), durationMs: Date.now() - start,
           });
           throw err;
         }
@@ -2478,7 +2478,7 @@ class AIBrainActionRegistry {
             platformRole: request.platformRole,
             entityType: 'compliance_alert',
             success: false,
-            errorMessage: err?.message ?? String(err),
+            errorMessage: (err instanceof Error ? err.message : String(err)) ?? String(err),
             payload: { title, severity, relatedEntityId, relatedEntityType },
             durationMs: Date.now() - start,
           });
@@ -2610,11 +2610,11 @@ class AIBrainActionRegistry {
             entityType: 'invoice',
             entityId: invoiceId,
             success: false,
-            errorMessage: err?.message ?? String(err),
+            errorMessage: (err instanceof Error ? err.message : String(err)) ?? String(err),
             payload: { items },
             durationMs: Date.now() - start,
           });
-          return createResult(request.actionId, false, err?.message ?? 'Failed to append line items', null, start);
+          return createResult(request.actionId, false, (err instanceof Error ? err.message : String(err)) ?? 'Failed to append line items', null, start);
         }
       },
     };
@@ -2745,7 +2745,7 @@ class AIBrainActionRegistry {
                 metadata: { previousStatus: existing.status, reason },
               });
             } catch (err: unknown) {
-              log.warn('[billing.invoice_void] ledger write failed (non-fatal):', err?.message);
+              log.warn('[billing.invoice_void] ledger write failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
             }
           }
         }
@@ -2948,7 +2948,7 @@ class AIBrainActionRegistry {
             metadata: { paymentMethod, reference, paymentRecordId: paymentRow?.id },
           });
         } catch (err: unknown) {
-          log.warn('[billing.apply_payment] ledger write failed (non-fatal):', err?.message);
+          log.warn('[billing.apply_payment] ledger write failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
         }
 
         broadcastToWorkspace(workspaceId, {
@@ -4700,7 +4700,7 @@ class AIBrainActionRegistry {
           return createResult(
             request.actionId,
             false,
-            `Document generation failed: ${err?.message}`,
+            `Document generation failed: ${(err instanceof Error ? err.message : String(err))}`,
             null,
             start,
           );

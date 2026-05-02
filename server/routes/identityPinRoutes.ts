@@ -65,7 +65,7 @@ identityPinRouter.post('/pin/owner/set', requireAuth, async (req: AuthenticatedR
 
     return res.json({ success: true, message: 'Owner identification PIN saved' });
   } catch (err: unknown) {
-    const msg = err?.message || 'Failed to set owner PIN';
+    const msg = (err instanceof Error ? err.message : String(err)) || 'Failed to set owner PIN';
     if (msg.startsWith('INVALID_PIN')) return res.status(400).json({ error: 'INVALID_PIN', message: msg });
     if (msg.startsWith('PIN_TARGET_NOT_FOUND')) return res.status(404).json({ error: 'NOT_FOUND', message: msg });
     log.error('[OwnerPin] set failed:', msg);
@@ -93,7 +93,7 @@ identityPinRouter.delete('/pin/owner', requireAuth, async (req: AuthenticatedReq
 
     return res.json({ success: true, message: 'Owner PIN cleared' });
   } catch (err: unknown) {
-    log.error('[OwnerPin] clear failed:', err?.message);
+    log.error('[OwnerPin] clear failed:', (err instanceof Error ? err.message : String(err)));
     return res.status(500).json({ error: 'INTERNAL_ERROR' });
   }
 });
@@ -109,7 +109,7 @@ identityPinRouter.get('/pin/owner/status', requireAuth, async (req: Authenticate
     });
     return res.json(status);
   } catch (err: unknown) {
-    log.error('[OwnerPin] status failed:', err?.message);
+    log.error('[OwnerPin] status failed:', (err instanceof Error ? err.message : String(err)));
     return res.status(500).json({ error: 'INTERNAL_ERROR' });
   }
 });
@@ -141,7 +141,7 @@ identityPinRouter.post(
 
       return res.json({ success: true, message: 'Client PIN saved' });
     } catch (err: unknown) {
-      const msg = err?.message || 'Failed to set client PIN';
+      const msg = (err instanceof Error ? err.message : String(err)) || 'Failed to set client PIN';
       if (msg.startsWith('INVALID_PIN')) return res.status(400).json({ error: 'INVALID_PIN', message: msg });
       if (msg.startsWith('PIN_TARGET_NOT_FOUND')) return res.status(404).json({ error: 'NOT_FOUND', message: msg });
       log.error('[ClientPin] set failed:', msg);
@@ -171,7 +171,7 @@ identityPinRouter.delete(
 
       return res.json({ success: true, message: 'Client PIN cleared' });
     } catch (err: unknown) {
-      log.error('[ClientPin] clear failed:', err?.message);
+      log.error('[ClientPin] clear failed:', (err instanceof Error ? err.message : String(err)));
       return res.status(500).json({ error: 'INTERNAL_ERROR' });
     }
   },
@@ -194,7 +194,7 @@ identityPinRouter.get(
       });
       return res.json(status);
     } catch (err: unknown) {
-      log.error('[ClientPin] status failed:', err?.message);
+      log.error('[ClientPin] status failed:', (err instanceof Error ? err.message : String(err)));
       return res.status(500).json({ error: 'INTERNAL_ERROR' });
     }
   },
@@ -242,7 +242,7 @@ identityPinRouter.get('/pin/client/self/status', requireAuth, async (req: Authen
     });
     return res.json({ ...status, clientId: resolved.clientId });
   } catch (err: unknown) {
-    log.error('[ClientPin] self status failed:', err?.message);
+    log.error('[ClientPin] self status failed:', (err instanceof Error ? err.message : String(err)));
     return res.status(500).json({ error: 'INTERNAL_ERROR' });
   }
 });
@@ -265,7 +265,7 @@ identityPinRouter.post('/pin/client/self/set', requireAuth, async (req: Authenti
     });
     return res.json({ success: true, message: 'Client PIN saved' });
   } catch (err: unknown) {
-    const msg = err?.message || 'Failed to set client PIN';
+    const msg = (err instanceof Error ? err.message : String(err)) || 'Failed to set client PIN';
     if (msg.startsWith('INVALID_PIN')) return res.status(400).json({ error: 'INVALID_PIN', message: msg });
     if (msg.startsWith('PIN_TARGET_NOT_FOUND')) return res.status(404).json({ error: 'NOT_FOUND', message: msg });
     log.error('[ClientPin] self set failed:', msg);
@@ -289,7 +289,7 @@ identityPinRouter.delete('/pin/client/self', requireAuth, async (req: Authentica
     });
     return res.json({ success: true, message: 'Client PIN cleared' });
   } catch (err: unknown) {
-    log.error('[ClientPin] self clear failed:', err?.message);
+    log.error('[ClientPin] self clear failed:', (err instanceof Error ? err.message : String(err)));
     return res.status(500).json({ error: 'INTERNAL_ERROR' });
   }
 });
@@ -342,7 +342,7 @@ identityPinRouter.get('/pin/employee/self/status', requireAuth, async (req: Auth
       employeeNumber: resolved.employeeNumber,
     });
   } catch (err: unknown) {
-    log.error('[EmployeePin] self status failed:', err?.message);
+    log.error('[EmployeePin] self status failed:', (err instanceof Error ? err.message : String(err)));
     return res.status(500).json({ error: 'INTERNAL_ERROR' });
   }
 });
@@ -369,7 +369,7 @@ identityPinRouter.post('/pin/employee/self/set', requireAuth, async (req: Authen
       employeeNumber: resolved.employeeNumber,
     });
   } catch (err: unknown) {
-    const msg = err?.message || 'Failed to set employee PIN';
+    const msg = (err instanceof Error ? err.message : String(err)) || 'Failed to set employee PIN';
     if (msg.startsWith('INVALID_PIN')) return res.status(400).json({ error: 'INVALID_PIN', message: msg });
     if (msg.startsWith('PIN_TARGET_NOT_FOUND')) return res.status(404).json({ error: 'NOT_FOUND', message: msg });
     log.error('[EmployeePin] self set failed:', msg);
@@ -393,7 +393,7 @@ identityPinRouter.delete('/pin/employee/self', requireAuth, async (req: Authenti
     });
     return res.json({ success: true, message: 'Clock-in PIN cleared' });
   } catch (err: unknown) {
-    log.error('[EmployeePin] self clear failed:', err?.message);
+    log.error('[EmployeePin] self clear failed:', (err instanceof Error ? err.message : String(err)));
     return res.status(500).json({ error: 'INTERNAL_ERROR' });
   }
 });
@@ -424,7 +424,7 @@ identityPinRouter.post('/verify-with-pin', pinVerifyLimiter, async (req: Request
       name: result.name,
     });
   } catch (err: unknown) {
-    log.error('[IdentityPin] verify-with-pin failed:', err?.message);
+    log.error('[IdentityPin] verify-with-pin failed:', (err instanceof Error ? err.message : String(err)));
     return res.status(500).json({ valid: false, error: 'INTERNAL_ERROR' });
   }
 });

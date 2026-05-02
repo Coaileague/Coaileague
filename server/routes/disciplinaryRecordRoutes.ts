@@ -75,7 +75,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
         isTermination: parsed.data.recordType === 'termination',
       },
       visibility: 'supervisor',
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     res.status(201).json(record);
   } catch (err: unknown) {
@@ -260,7 +260,7 @@ router.post('/finalize', requireAuth, async (req: AuthenticatedRequest, res) => 
         });
       }
     } catch (err: unknown) {
-      log.warn('[Disciplinary] send-for-signature failed (non-fatal):', err?.message);
+      log.warn('[Disciplinary] send-for-signature failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     }
 
     // 4. Score deduction — fires off the main request so the manager gets
@@ -281,7 +281,7 @@ router.post('/finalize', requireAuth, async (req: AuthenticatedRequest, res) => 
           `[DisciplinaryScore] Deducted ${points}pts from ${subjectId} for ${documentType}`,
         );
       } catch (err: unknown) {
-        log.warn('[DisciplinaryScore] Deduction failed (non-fatal):', err?.message);
+        log.warn('[DisciplinaryScore] Deduction failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
     });
 
@@ -307,7 +307,7 @@ router.post('/finalize', requireAuth, async (req: AuthenticatedRequest, res) => 
           ],
         );
       } catch (err: unknown) {
-        log.warn('[Disciplinary] event-log insert failed (non-fatal):', err?.message);
+        log.warn('[Disciplinary] event-log insert failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
     });
 
@@ -329,7 +329,7 @@ router.post('/finalize', requireAuth, async (req: AuthenticatedRequest, res) => 
         generatedByTrinity: true,
       },
       visibility: 'supervisor',
-    }).catch((err: unknown) => log.warn('[EventBus] publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     res.json({
       success: true,

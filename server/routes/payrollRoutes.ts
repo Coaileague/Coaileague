@@ -294,11 +294,11 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
           return { proposal: locked, approvedProposal: approved };
         }));
       } catch (txErr: unknown) {
-        const status = txErr?.status || 500;
+        const status = (txErr as Record<string, unknown>).status || 500;
         if (status === 404) return res.status(404).json({ message: "Proposal not found" });
-        if (status === 409 && txErr?.message === 'ALREADY_PROCESSED') return res.status(409).json({ message: "Proposal was already processed by another user" });
+        if (status === 409 && (txErr instanceof Error ? txErr.message : String(txErr)) === 'ALREADY_PROCESSED') return res.status(409).json({ message: "Proposal was already processed by another user" });
         if (status === 403) return res.status(403).json({ message: "You cannot approve a payroll proposal that you created. A different authorised manager must approve it.", code: 'SELF_APPROVAL_FORBIDDEN' });
-        if (status === 409 && txErr?.message === 'PROPOSAL_EXPIRED') return res.status(409).json({ message: "This payroll proposal is more than 30 days old and can no longer be approved. Please create a new proposal with current data.", code: 'PROPOSAL_EXPIRED', ...txErr?.extra });
+        if (status === 409 && (txErr instanceof Error ? txErr.message : String(txErr)) === 'PROPOSAL_EXPIRED') return res.status(409).json({ message: "This payroll proposal is more than 30 days old and can no longer be approved. Please create a new proposal with current data.", code: 'PROPOSAL_EXPIRED', ...txErr?.extra });
         throw txErr;
       }
 
@@ -361,7 +361,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
           approvedBy: userId,
           source: 'proposal_approve',
         },
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
       // Notify managers about payroll approval
       const { universalNotificationEngine } = await import('../services/universalNotificationEngine');
@@ -682,7 +682,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
           periodEnd: periodEnd.toISOString(),
           createdBy: userId,
         },
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
 
       // FIX-2: Financial audit log for payroll run creation
@@ -842,7 +842,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
         changes: { before: { status: 'pending' }, after: { status: 'approved', approvedBy: userId } },
         isSensitiveData: true,
         complianceTag: 'soc2',
-      }).catch(err => log.error('[FinancialAudit] CRITICAL: SOC2 audit log write failed for payroll approval', { runId: id, workspaceId, error: err?.message }));
+      }).catch(err => log.error('[FinancialAudit] CRITICAL: SOC2 audit log write failed for payroll approval', { runId: id, workspaceId, error: (err instanceof Error ? err.message : String(err)) }));
 
       // FIX-2: Financial audit log for payroll approval
       await db.insert(billingAuditLog).values({
@@ -887,7 +887,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
         userId,
         metadata: { payrollRunId: run.id, approvedBy: userId, runPeriod: run.periodStart + ' – ' + run.periodEnd },
         visibility: 'manager',
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
       res.json({ ...updated, qbSync: qbSyncResult ? { synced: qbSyncResult.success, details: qbSyncResult.details } : undefined });
     } catch (error: unknown) {
@@ -1144,7 +1144,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
           employeeCount,
         },
         visibility: 'manager',
-      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+      }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
       // FIX-2: Financial audit log for payroll processing
       await db.insert(billingAuditLog).values({
@@ -1804,10 +1804,10 @@ router.post("/garnishments/:payrollEntryId", async (req: AuthenticatedRequest, r
           actionDescription: `Garnishment applied: ${garnishmentType} $${amount}. New net pay: $${newNetPay.toFixed(2)}`,
           isSensitiveData: true,
           complianceTag: 'soc2',
-        }).catch(err => log.error('[FinancialAudit] Garnishment audit log failed:', err?.message));
+        }).catch(err => log.error('[FinancialAudit] Garnishment audit log failed:', (err instanceof Error ? err.message : String(err))));
       }
     } catch (garnishNetPayErr: unknown) {
-      log.error('[Payroll] WARNING: Failed to recalculate netPay after garnishment add:', garnishNetPayErr?.message);
+      log.error('[Payroll] WARNING: Failed to recalculate netPay after garnishment add:', (garnishNetPayErr instanceof Error ? garnishNetPayErr.message : String(garnishNetPayErr)));
     }
 
     res.status(201).json({ success: true, data: garnishment });
@@ -2314,7 +2314,7 @@ router.post('/:runId/void', async (req: AuthenticatedRequest, res) => {
         reason,
         source: 'payroll_void',
       },
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     res.json({ success: true, message: 'Payroll run voided successfully' });
   } catch (error: unknown) {
@@ -2445,7 +2445,7 @@ router.post('/runs/:id/mark-paid', async (req: AuthenticatedRequest, res) => {
       userId,
       metadata: { payrollRunId: runId, disbursementMethod, confirmedBy: userId, paidAt: new Date().toISOString() },
       visibility: 'manager',
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     res.json({
       success: true,
@@ -2599,7 +2599,7 @@ router.post('/runs/:id/retry-failed-transfers', async (req: AuthenticatedRequest
           userId,
           metadata: { payrollRunId: runId, employeeId: empId, transferId: transfer.transferId, amount: netPay, isRetry: true },
           visibility: 'manager',
-        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+        }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
         results.push({ stubId: stub.id, employeeId: empId, status: 'retried', transferId: transfer.transferId });
       } catch (err: unknown) {
@@ -3282,7 +3282,7 @@ router.post('/employees/:employeeId/bank-accounts', async (req: AuthenticatedReq
       actionDescription: `Bank account (****${accountLast4}) added for employee ${employeeId}`,
       changes: { routing_last4: routingLast4, account_last4: accountLast4, accountType },
       isSensitiveData: true, complianceTag: 'soc2',
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     res.status(201).json({ success: true, bankAccount: maskBankAccount(created) });
   } catch (error: unknown) {
@@ -3343,7 +3343,7 @@ router.patch('/employees/:employeeId/bank-accounts/:accountId', async (req: Auth
       actionDescription: `Bank account (****${updated.accountNumberLast4}) updated for employee ${employeeId}`,
       changes: { updatedFields: Object.keys(updateFields) },
       isSensitiveData: true, complianceTag: 'soc2',
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     // Non-blocking: security alert to org owner + managers when bank info changes
     const changedSensitive = routingNumber || accountNumber;
@@ -3393,7 +3393,7 @@ router.delete('/employees/:employeeId/bank-accounts/:accountId', async (req: Aut
       actionDescription: `Bank account (****${deactivated.accountNumberLast4}) deactivated for employee ${employeeId}`,
       changes: { before: { isActive: true }, after: { isActive: false } },
       isSensitiveData: true, complianceTag: 'soc2',
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     res.json({ success: true, message: 'Bank account deactivated' });
   } catch (error: unknown) {
@@ -3504,7 +3504,7 @@ router.post('/period/close', requireAuth, requireManager, async (req: Authentica
       periodEnd,
     });
   } catch (err: unknown) {
-    log.error('[Payroll] Period close failed:', err?.message);
+    log.error('[Payroll] Period close failed:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to close period' });
   }
 });

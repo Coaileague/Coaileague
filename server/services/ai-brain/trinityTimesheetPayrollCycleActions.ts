@@ -26,7 +26,7 @@ function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Pro
         const data = await fn(req.payload || {});
         return { success: true, actionId, message: `${actionId} completed`, data, executionTimeMs: Date.now() - start };
       } catch (err: unknown) {
-        return { success: false, actionId, message: err?.message || 'Unknown error', executionTimeMs: Date.now() - start };
+        return { success: false, actionId, message: (err instanceof Error ? err.message : String(err)) || 'Unknown error', executionTimeMs: Date.now() - start };
       }
     }
   };

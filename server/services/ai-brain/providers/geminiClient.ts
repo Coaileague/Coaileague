@@ -2631,7 +2631,7 @@ export class UnifiedGeminiClient {
             outputTokens,
             triggeredByUserId: request.userId,
           });
-         }).catch((err: unknown) => log.warn('[AIMeter] recordAiCall failed (non-blocking):', err?.message));
+         }).catch((err: unknown) => log.warn('[AIMeter] recordAiCall failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
       }
 
       try {
@@ -2946,7 +2946,7 @@ export class UnifiedGeminiClient {
                 triggeredByUserId: request.userId,
                 trinityActionId: undefined,
               });
-             }).catch((err: unknown) => log.warn('[AIMeter] recordAiCall failed (non-blocking):', err?.message));
+             }).catch((err: unknown) => log.warn('[AIMeter] recordAiCall failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
           }
 
           return {
@@ -3274,7 +3274,7 @@ Guidelines:
             outputTokens: usage?.candidatesTokenCount ?? 0,
             triggeredByUserId: request.userId,
           });
-         }).catch((err: unknown) => log.warn('[AIMeter] recordAiCall failed (non-blocking):', err?.message));
+         }).catch((err: unknown) => log.warn('[AIMeter] recordAiCall failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
       }
 
       return {
@@ -3404,7 +3404,7 @@ Generate ONE thought for ${greeting}:`;
             inputTokens: usage?.promptTokenCount ?? 0,
             outputTokens: usage?.candidatesTokenCount ?? 0,
           });
-         }).catch((err: unknown) => log.warn('[AIMeter] recordAiCall failed (non-blocking):', err?.message));
+         }).catch((err: unknown) => log.warn('[AIMeter] recordAiCall failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
       }
 
       return text || null;
@@ -3459,7 +3459,7 @@ Generate ONE thought for ${greeting}:`;
             inputTokens: insightUsage?.promptTokenCount ?? 0,
             outputTokens: insightUsage?.candidatesTokenCount ?? 0,
           });
-         }).catch((err: unknown) => log.warn('[AIMeter] recordAiCall failed (non-blocking):', err?.message));
+         }).catch((err: unknown) => log.warn('[AIMeter] recordAiCall failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
       }
 
       return result.response.text().trim() || null;

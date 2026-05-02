@@ -757,7 +757,7 @@ automationRouter.post('/payroll/anchor-close', requireAuth, async (req: Authenti
       userId: req.user?.id,
       metadata: { source: 'ai_automation_anchor', count: result.payrolls?.length, requiresApproval: result.requiresApproval },
       visibility: 'manager',
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     return res.json({
       success: true,

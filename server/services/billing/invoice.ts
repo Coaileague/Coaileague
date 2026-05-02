@@ -1950,8 +1950,8 @@ export class InvoiceService {
         documentNumber: vaultResult.vault?.documentNumber,
       };
     } catch (error: unknown) {
-      log.error('[InvoiceService] Invoice PDF generation failed:', error?.message);
-      return { success: false, error: error?.message };
+      log.error('[InvoiceService] Invoice PDF generation failed:', (error instanceof Error ? error.message : String(error)));
+      return { success: false, error: (error instanceof Error ? error.message : String(error)) };
     }
   }
 }

@@ -161,11 +161,11 @@ async function backfillMissingIds(): Promise<{
         wsCount++;
       } catch (err: unknown) {
         failed++;
-        log.warn(`[IdentityBackfill] Workspace ${r.id} backfill failed: ${err?.message?.slice(0, 200)}`);
+        log.warn(`[IdentityBackfill] Workspace ${r.id} backfill failed: ${(err instanceof Error ? err.message : String(err))?.slice(0, 200)}`);
       }
     }
   } catch (err: unknown) {
-    log.error(`[IdentityBackfill] Workspace scan failed: ${err?.message}`);
+    log.error(`[IdentityBackfill] Workspace scan failed: ${(err instanceof Error ? err.message : String(err))}`);
   }
 
   // 2. Employees missing employee_number.
@@ -182,11 +182,11 @@ async function backfillMissingIds(): Promise<{
         empCount++;
       } catch (err: unknown) {
         failed++;
-        log.warn(`[IdentityBackfill] Employee ${r.id} backfill failed: ${err?.message?.slice(0, 200)}`);
+        log.warn(`[IdentityBackfill] Employee ${r.id} backfill failed: ${(err instanceof Error ? err.message : String(err))?.slice(0, 200)}`);
       }
     }
   } catch (err: unknown) {
-    log.error(`[IdentityBackfill] Employee scan failed: ${err?.message}`);
+    log.error(`[IdentityBackfill] Employee scan failed: ${(err instanceof Error ? err.message : String(err))}`);
   }
 
   // 3. Clients missing client_number.
@@ -203,11 +203,11 @@ async function backfillMissingIds(): Promise<{
         cliCount++;
       } catch (err: unknown) {
         failed++;
-        log.warn(`[IdentityBackfill] Client ${r.id} backfill failed: ${err?.message?.slice(0, 200)}`);
+        log.warn(`[IdentityBackfill] Client ${r.id} backfill failed: ${(err instanceof Error ? err.message : String(err))?.slice(0, 200)}`);
       }
     }
   } catch (err: unknown) {
-    log.error(`[IdentityBackfill] Client scan failed: ${err?.message}`);
+    log.error(`[IdentityBackfill] Client scan failed: ${(err instanceof Error ? err.message : String(err))}`);
   }
 
   return { workspaces: wsCount, employees: empCount, clients: cliCount, failed };
@@ -241,7 +241,7 @@ export async function ensureIdentityIntegrity(): Promise<void> {
     await ensurePinColumns();
   } catch (err: unknown) {
     failed++;
-    log.error(`[identityIntegrity] Failed to ensure PIN columns: ${err?.message}`);
+    log.error(`[identityIntegrity] Failed to ensure PIN columns: ${(err instanceof Error ? err.message : String(err))}`);
   }
 
   for (const idx of UNIQUE_INDEXES) {
@@ -254,7 +254,7 @@ export async function ensureIdentityIntegrity(): Promise<void> {
       // the backfill pass below may resolve it, but a manual review is
       // warranted because we cannot enforce uniqueness until the dup is gone.
       log.error(
-        `[identityIntegrity] Failed to install ${idx.name}: ${err?.message?.slice(0, 300)}`,
+        `[identityIntegrity] Failed to install ${idx.name}: ${(err instanceof Error ? err.message : String(err))?.slice(0, 300)}`,
       );
     }
   }
@@ -267,12 +267,12 @@ export async function ensureIdentityIntegrity(): Promise<void> {
         triggerOk++;
       } catch (err: unknown) {
         failed++;
-        log.error(`[identityIntegrity] Failed to install trigger ${t.name}: ${err?.message}`);
+        log.error(`[identityIntegrity] Failed to install trigger ${t.name}: ${(err instanceof Error ? err.message : String(err))}`);
       }
     }
   } catch (err: unknown) {
     failed++;
-    log.error(`[identityIntegrity] Failed to install trigger function: ${err?.message}`);
+    log.error(`[identityIntegrity] Failed to install trigger function: ${(err instanceof Error ? err.message : String(err))}`);
   }
 
   const back = await backfillMissingIds();

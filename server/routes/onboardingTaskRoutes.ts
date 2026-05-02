@@ -126,7 +126,7 @@ router.post('/employee/:employeeId/complete/:taskId', requireAuth, async (req: A
     return res.json({ success: true, message: 'Task marked as complete' });
   } catch (err: unknown) {
     // Handle missing unique constraint gracefully
-    if (err?.code === '42P10' || err?.message?.includes('ON CONFLICT')) {
+    if ((err as NodeJS.ErrnoException).code === '42P10' || (err instanceof Error ? err.message : String(err))?.includes('ON CONFLICT')) {
       // No unique constraint — use upsert via select+insert/update
       try {
         const workspaceId = req.workspaceId;

@@ -120,7 +120,7 @@ export async function verifyCaller(fromPhone: string): Promise<CallerVerificatio
       orgId: row.org_id,
     };
   } catch (err: unknown) {
-    log.warn('[CallerVerify] lookup failed:', err?.message);
+    log.warn('[CallerVerify] lookup failed:', (err instanceof Error ? err.message : String(err)));
     return { verified: false, reason: 'lookup_error' };
   }
 }

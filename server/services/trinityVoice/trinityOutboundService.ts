@@ -53,7 +53,7 @@ export async function makeOutboundCall(params: OutboundCallParams): Promise<{
         },
       });
     } catch (auditErr: unknown) {
-      log.warn('[TrinityOutbound] Gate audit failed (non-fatal):', auditErr?.message);
+      log.warn('[TrinityOutbound] Gate audit failed (non-fatal):', (auditErr instanceof Error ? auditErr.message : String(auditErr)));
     }
     return { success: false, error: 'SUBSCRIPTION_INACTIVE' };
   }

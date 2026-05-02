@@ -964,7 +964,7 @@ async function initializeCriticalServices() {
 
       log.info('[DevAccounts] Test accounts ready — owner@acme-security.test / admin123 | root@coaileague.com / admin123');
     } catch (err: unknown) {
-      log.error('[DevAccounts] Failed to ensure dev accounts:', err?.message);
+      log.error('[DevAccounts] Failed to ensure dev accounts:', (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -1811,7 +1811,7 @@ process.on('SIGHUP', () => gracefulShutdown('SIGHUP'));
 process.on('uncaughtException', (err: unknown) => {
   const errMsg = err instanceof Error ? err.message : String(err);
   const errStack = err instanceof Error ? (err instanceof Error ? err.stack : undefined || '').split('\n').slice(0,5).join(' | ') : '';
-  log.error(`Uncaught exception: ${errMsg} | code=${err?.code || 'none'} | ${errStack.slice(0,200)}`);
+  log.error(`Uncaught exception: ${errMsg} | code=${(err as NodeJS.ErrnoException).code || 'none'} | ${errStack.slice(0,200)}`);
   
   if (err instanceof Error ? err.message : String(err)?.includes('Cannot set property message') && 
       err instanceof Error ? err.message : String(err)?.includes('ErrorEvent')) {
@@ -2141,7 +2141,7 @@ self.addEventListener('activate', async () => {
             await pool.query(
               `UPDATE governance_approvals SET status = 'failed', updated_at = NOW() WHERE id = $1`, [id],
             ).catch(() => {});
-            log.error('[ApprovalExecute] Failed:', execErr?.message);
+            log.error('[ApprovalExecute] Failed:', (execErr instanceof Error ? execErr.message : String(execErr)));
           }
         });
 
@@ -2399,7 +2399,7 @@ self.addEventListener('activate', async () => {
       // dist/public/ doesn't exist — Vite build didn't run or failed.
       // Register a fallback that serves a proper page instead of raw JSON.
       log.error('[Startup] serveStatic failed — dist/public/ not found. Vite build may have failed.', {
-        error: staticErr?.message,
+        error: (staticErr instanceof Error ? staticErr.message : String(staticErr)),
       });
       // Fallback: serve a bootstrap page for all non-API routes
       app.use('*', (req: unknown, res: unknown) => {
@@ -2673,10 +2673,10 @@ self.addEventListener('activate', async () => {
           await authPool.query('CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions (user_id)');
           log.info('[Startup] Auth tables verified: auth_tokens, auth_sessions');
         } catch (authTableErr: unknown) {
-          log.warn('[Startup] Auth table create (non-fatal):', authTableErr?.message?.slice(0, 80));
+          log.warn('[Startup] Auth table create (non-fatal):', (authTableErr instanceof Error ? authTableErr.message : String(authTableErr))?.slice(0, 80));
         }
         } catch (tableErr: unknown) {
-          log.warn('[Startup] Missing table auto-create (non-fatal):', tableErr?.message?.slice(0, 80));
+          log.warn('[Startup] Missing table auto-create (non-fatal):', (tableErr instanceof Error ? tableErr.message : String(tableErr))?.slice(0, 80));
         }
         // Reset demo account locks in non-production (dev/staging Railway environments)
         const { resetDemoAccountLocks } = await import('./services/productionSeed');

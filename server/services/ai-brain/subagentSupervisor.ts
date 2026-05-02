@@ -2059,7 +2059,7 @@ class SubagentSupervisor {
         await this.refreshSubagentCache();
         log.info(`[SubagentSupervisor] Seeded and cached ${this.subagentCache.size} subagents`);
       } catch (error : unknown) {
-        log.warn('[SubagentSupervisor] Deferred init failed (non-fatal):', error?.message || 'unknown');
+        log.warn('[SubagentSupervisor] Deferred init failed (non-fatal):', (error instanceof Error ? error.message : String(error)) || 'unknown');
       }
     }, 60000);
   }
@@ -2083,7 +2083,7 @@ class SubagentSupervisor {
         consecutiveFailures = 0;
       } catch (error : unknown) {
         consecutiveFailures++;
-        log.warn(`[SubagentSupervisor] Skipping subagent ${subagent.name} (failure ${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}):`, error?.message);
+        log.warn(`[SubagentSupervisor] Skipping subagent ${subagent.name} (failure ${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}):`, (error instanceof Error ? error.message : String(error)));
       }
     }
   }
@@ -3598,7 +3598,7 @@ class SubagentSupervisor {
     startTime: number,
     diagnostics?: DiagnosticResult
   ): Promise<SubagentExecutionResult> {
-    const errorMessage = error?.message || error || 'Unknown error';
+    const errorMessage = (error instanceof Error ? error.message : String(error)) || error || 'Unknown error';
     
     await db.update(subagentTelemetry)
       .set({

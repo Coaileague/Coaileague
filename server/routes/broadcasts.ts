@@ -220,7 +220,7 @@ router.post('/', requireAuth, requireRole(['org_owner', 'co_owner', 'manager', '
           }
         }
       } catch (smsErr : unknown) {
-        log.warn('[BroadcastRoutes] SMS dispatch failed (non-fatal):', smsErr?.message);
+        log.warn('[BroadcastRoutes] SMS dispatch failed (non-fatal):', (smsErr instanceof Error ? smsErr.message : String(smsErr)));
       }
     }
 

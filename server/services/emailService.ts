@@ -993,7 +993,7 @@ export class EmailService {
           return { success: true, resendId: sendResult.data?.data?.id };
         }
 
-        const errorMessage = sendResult.error?.message || 'Unknown error';
+        const errorMessage = sendResult.error || 'Unknown error';
         await this.updateEmailEvent(eventId, 'failed', undefined, errorMessage);
         this.addToRetryQueue(eventId, to, subject, html, emailType, workspaceId, userId, 0);
         log.error(`[EmailService] Email failed (will retry): ${emailType} to ${to}`, errorMessage);

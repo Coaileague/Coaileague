@@ -334,7 +334,7 @@ async function handleShiftOfferAcceptance(
         ]);
       }
     } catch (nErr: unknown) {
-      log.warn('[SMS] Supervisor notification failed (non-fatal):', nErr?.message);
+      log.warn('[SMS] Supervisor notification failed (non-fatal):', (nErr instanceof Error ? nErr.message : String(nErr)));
     }
 
     // Trigger Stage C — InboundOpportunityAgent auto-staffing pipeline for any
@@ -344,7 +344,7 @@ async function handleShiftOfferAcceptance(
       await inboundOpportunityAgent.triggerAutoStaffing(identity.workspaceId);
       log.info(`[SMS] Stage C triggered for workspace ${identity.workspaceId}`);
     } catch (stageErr: unknown) {
-      log.warn('[SMS] Stage C trigger failed (non-fatal):', stageErr?.message);
+      log.warn('[SMS] Stage C trigger failed (non-fatal):', (stageErr instanceof Error ? stageErr.message : String(stageErr)));
     }
 
     log.info(`[SMS] ${identity.firstName} accepted shift ${row.staged_shift_id}`);
@@ -369,7 +369,7 @@ async function handleShiftOfferAcceptance(
       employeeId: identity.employeeId,
     };
   } catch (err: unknown) {
-    log.error('[SMS] Shift acceptance error:', err?.message);
+    log.error('[SMS] Shift acceptance error:', (err instanceof Error ? err.message : String(err)));
     return {
       resolved: true,
       reply: t(
@@ -466,7 +466,7 @@ async function handleManagerApproval(
         }
       }
     } catch (nErr: unknown) {
-      log.warn('[SMS] Employee notification failed (non-fatal):', nErr?.message);
+      log.warn('[SMS] Employee notification failed (non-fatal):', (nErr instanceof Error ? nErr.message : String(nErr)));
     }
 
     log.info(`[SMS] Manager ${identity.firstName} ${newStatus} request ${req.id}`);
@@ -489,7 +489,7 @@ async function handleManagerApproval(
       employeeId: identity.employeeId,
     };
   } catch (err: unknown) {
-    log.error('[SMS] Approval workflow error:', err?.message);
+    log.error('[SMS] Approval workflow error:', (err instanceof Error ? err.message : String(err)));
     return {
       resolved: true,
       reply: t(
@@ -589,7 +589,7 @@ async function logInboundResolution(params: {
       ]
     );
   } catch (logErr: unknown) {
-    log.warn('[SmsAutoResolver] Audit log failed (non-fatal):', logErr?.message);
+    log.warn('[SmsAutoResolver] Audit log failed (non-fatal):', (logErr instanceof Error ? logErr.message : String(logErr)));
   }
 }
 
@@ -812,7 +812,7 @@ async function resolveInboundSmsInner(params: {
       };
     }
   } catch (cmdErr: unknown) {
-    log.warn('[SmsAutoResolver] Officer command routing non-fatal error:', cmdErr?.message);
+    log.warn('[SmsAutoResolver] Officer command routing non-fatal error:', (cmdErr instanceof Error ? cmdErr.message : String(cmdErr)));
   }
 
   // FAQ lookup first
@@ -873,7 +873,7 @@ async function resolveInboundSmsInner(params: {
         log.warn(`[SmsAutoResolver] Token hard cap exhausted for workspace ${identity.workspaceId} — falling through to ticket`);
       }
     } catch (capErr: unknown) {
-      log.warn('[SmsAutoResolver] Token cap check failed (non-fatal):', capErr?.message);
+      log.warn('[SmsAutoResolver] Token cap check failed (non-fatal):', (capErr instanceof Error ? capErr.message : String(capErr)));
     }
   }
 
@@ -901,7 +901,7 @@ async function resolveInboundSmsInner(params: {
         twilioCostCents: 0,
       });
     } catch (e: unknown) {
-      log.warn('[SmsAutoResolver] SMS metering failed (non-fatal):', e?.message);
+      log.warn('[SmsAutoResolver] SMS metering failed (non-fatal):', (e instanceof Error ? e.message : String(e)));
     }
 
     return {

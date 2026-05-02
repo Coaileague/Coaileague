@@ -134,7 +134,7 @@ async function processEquipmentAssignment(req: import("express").Request, res: i
       workspaceId, userId: userId || 'system', featureKey: 'equipment_checkout',
       featureName: 'Equipment Checkout', description: `Equipment item ${validated.equipmentItemId} checked out`,
       amountOverride: 1, relatedEntityType: 'equipment_assignment', relatedEntityId: assignment.id,
-    }).catch((err: Error) => { log.error('[Equipment] Checkout credit deduction failed (non-blocking):', err.message); });
+    }).catch((err: Error) => { log.error('[Equipment] Checkout credit deduction failed (non-blocking):', (err instanceof Error ? err.message : String(err))); });
 
     res.status(201).json(assignment);
   } catch (error: unknown) {
@@ -210,7 +210,7 @@ async function processEquipmentReturn(
       workspaceId, userId: userId || 'system', featureKey: 'equipment_return',
       featureName: 'Equipment Return', description: `Equipment item ${assignment.equipment_item_id} returned`,
       amountOverride: 1, relatedEntityType: 'equipment_assignment', relatedEntityId: assignment.id,
-    }).catch((err: Error) => { log.error('[Equipment] Return credit deduction failed (non-blocking):', err.message); });
+    }).catch((err: Error) => { log.error('[Equipment] Return credit deduction failed (non-blocking):', (err instanceof Error ? err.message : String(err))); });
 
     return assignment;
   } catch (err) {
@@ -848,7 +848,7 @@ router.post("/:itemId/report-lost", async (req, res) => {
     await client.query('COMMIT');
     res.json({ success: true, assignmentId, deductionAmount });
   } catch (error: unknown) {
-    await client.query('ROLLBACK').catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    await client.query('ROLLBACK').catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
     log.error("Error reporting lost equipment by item:", error);
     res.status(500).json({ error: "Failed to report lost equipment" });
   } finally {

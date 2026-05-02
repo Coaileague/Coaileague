@@ -185,7 +185,7 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
     log.info(`[Credentials] Created "${name}" for employee ${targetEmployeeId}`);
     res.status(201).json({ success: true, credential: created });
   } catch (err: unknown) {
-    log.error("[Credentials] POST failed:", err?.message);
+    log.error("[Credentials] POST failed:", (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) || "Failed to create credential" });
   }
 });
@@ -213,7 +213,7 @@ router.patch("/:id", async (req: AuthenticatedRequest, res) => {
     if (!updated) return res.status(404).json({ error: "Credential not found" });
     res.json({ success: true, credential: updated });
   } catch (err: unknown) {
-    log.error("[Credentials] PATCH failed:", err?.message);
+    log.error("[Credentials] PATCH failed:", (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) || "Failed to update credential" });
   }
 });
@@ -232,7 +232,7 @@ router.delete("/:id", async (req: AuthenticatedRequest, res) => {
     if (!deleted) return res.status(404).json({ error: "Credential not found" });
     res.json({ success: true });
   } catch (err: unknown) {
-    log.error("[Credentials] DELETE failed:", err?.message);
+    log.error("[Credentials] DELETE failed:", (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) || "Failed to remove credential" });
   }
 });

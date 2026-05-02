@@ -237,7 +237,7 @@ router.get("/my-score", requireAuth, async (req: AuthenticatedRequest, res) => {
     const score = await computeComplianceScore(workspaceId);
     res.json(score);
   } catch (err: unknown) {
-    log.error("[Compliance my-score] Error:", err?.message);
+    log.error("[Compliance my-score] Error:", (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: "Failed to compute score" });
   }
 });

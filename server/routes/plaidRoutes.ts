@@ -60,7 +60,7 @@ router.get('/status', requireAuth, requireOwner, async (req, res) => {
       orgBankName,
     });
   } catch (error : unknown) {
-    log.error('[Plaid] Status error:', error?.message || error);
+    log.error('[Plaid] Status error:', (error instanceof Error ? error.message : String(error)) || error);
     res.status(500).json({ error: 'Failed to fetch Plaid status' });
   }
 });
@@ -141,7 +141,7 @@ router.post('/exchange/org', requireAuth, requireOwner, async (req, res) => {
       description: `${details.institutionName} (...${details.mask}) connected as payroll ACH funding source via Plaid`,
       workspaceId,
       metadata: { itemId, mask: details.mask, institutionName: details.institutionName, connectedBy: userId },
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     res.json({
       success: true,
@@ -188,7 +188,7 @@ router.delete('/org-bank', requireAuth, requireOwner, async (req, res) => {
       description: `${prior?.plaidInstitutionName || 'Bank'} (...${prior?.plaidAccountLast4 || '????'}) disconnected — ACH payroll disbursement suspended until reconnected`,
       workspaceId,
       metadata: { disconnectedBy: userId, priorInstitution: prior?.plaidInstitutionName, priorMask: prior?.plaidAccountLast4 },
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     res.json({ success: true });
   } catch (err: unknown) {
@@ -331,7 +331,7 @@ router.post('/exchange/employee/:employeeId', requireAuth, async (req, res) => {
       description: `${details.institutionName} (...${details.mask}) linked for employee ${employeeId} — ACH payroll ready`,
       workspaceId,
       metadata: { employeeId, itemId, mask: details.mask, institutionName: details.institutionName, linkedBy: userId },
-    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', err?.message));
+    }).catch((err: unknown) => log.warn('[EventBus] Publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
     res.json({
       success: true,

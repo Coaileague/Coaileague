@@ -186,7 +186,7 @@ class ChatServerHealthManager {
       try {
         await this.runDiagnostics();
       } catch (error : unknown) {
-        log.warn('[ChatServerSubagent] Diagnostics failed (will retry):', error?.message || 'unknown');
+        log.warn('[ChatServerSubagent] Diagnostics failed (will retry):', (error instanceof Error ? error.message : String(error)) || 'unknown');
       }
     }, 60000);
   }

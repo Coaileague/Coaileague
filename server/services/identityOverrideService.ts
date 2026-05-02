@@ -144,7 +144,7 @@ export async function rewriteUniversalId(
       await client.query('ROLLBACK');
     } catch (_) { /* best effort */ }
     log.error(
-      `[identityOverride] Rewrite failed for ${entity} ${entityId}: ${err?.message}`,
+      `[identityOverride] Rewrite failed for ${entity} ${entityId}: ${(err instanceof Error ? err.message : String(err))}`,
     );
 
     await logActionAudit({
@@ -155,7 +155,7 @@ export async function rewriteUniversalId(
       entityType: spec.auditEntityType,
       entityId,
       success: false,
-      errorMessage: err?.message,
+      errorMessage: (err instanceof Error ? err.message : String(err)),
       payload: { entity, oldCode, newCode, reason },
       durationMs: Date.now() - start,
     });

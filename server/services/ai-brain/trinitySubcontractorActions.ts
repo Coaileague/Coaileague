@@ -37,7 +37,7 @@ function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Pro
         return { 
           success: false, 
           actionId,
-          message: err?.message || 'Unknown error',
+          message: (err instanceof Error ? err.message : String(err)) || 'Unknown error',
           executionTimeMs: 0
         };
       }
@@ -60,7 +60,7 @@ async function notifySubcontractor(workspaceId: string, subcontractorId: string,
     });
     log.info(`[TrinitySubcontractor] Notified ${sub.companyName} (${sub.pocEmail}): ${title}`);
   } catch (err: unknown) {
-    log.warn(`[TrinitySubcontractor] Failed to notify subcontractor ${sub.companyName}: ${err?.message}`);
+    log.warn(`[TrinitySubcontractor] Failed to notify subcontractor ${sub.companyName}: ${(err instanceof Error ? err.message : String(err))}`);
   }
 }
 

@@ -39,7 +39,7 @@ export async function runStartupRecovery(): Promise<void> {
       log.warn(`[Recovery] Cleared ${stale.length} stale payroll lock(s)`);
     }
   } catch (err: unknown) {
-    log.warn('[Recovery] Stale payroll lock cleanup failed (non-fatal):', err?.message);
+    log.warn('[Recovery] Stale payroll lock cleanup failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 
   // 2. Mark interrupted goal executions
@@ -56,7 +56,7 @@ export async function runStartupRecovery(): Promise<void> {
       log.warn(`[Recovery] Marked ${interrupted.length} goal execution(s) as interrupted`);
     }
   } catch (err: unknown) {
-    log.warn('[Recovery] Goal interruption marker failed (non-fatal):', err?.message);
+    log.warn('[Recovery] Goal interruption marker failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 
   // 3. Mark interrupted supervisor handoffs
@@ -69,7 +69,7 @@ export async function runStartupRecovery(): Promise<void> {
       log.warn(`[Recovery] Marked ${interrupted.length} supervisor handoff(s) as interrupted`);
     }
   } catch (err: unknown) {
-    log.warn('[Recovery] Handoff interruption marker failed (non-fatal):', err?.message);
+    log.warn('[Recovery] Handoff interruption marker failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 
   log.info('[Recovery] Startup recovery complete');

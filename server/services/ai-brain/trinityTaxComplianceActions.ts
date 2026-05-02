@@ -31,7 +31,7 @@ function mkTaxAction(actionId: string, fn: (params: Record<string, unknown>) => 
         const data = await fn(req.payload || {});
         return { success: true, data };
       } catch (err: unknown) {
-        return { success: false, error: err?.message || 'Unknown error' };
+        return { success: false, error: (err instanceof Error ? err.message : String(err)) || 'Unknown error' };
       }
     }
   };

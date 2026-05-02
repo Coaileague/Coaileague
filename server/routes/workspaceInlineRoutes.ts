@@ -1908,8 +1908,8 @@ router.post('/branding/logo', requireAuth, logoUpload.single('logo'), async (req
 
     res.json({ logoUrl: publicUrl });
   } catch (error: unknown) {
-    log.error('Logo upload error:', error?.message);
-    res.status(500).json({ message: error?.message || 'Failed to upload logo' });
+    log.error('Logo upload error:', (error instanceof Error ? error.message : String(error)));
+    res.status(500).json({ message: (error instanceof Error ? error.message : String(error)) || 'Failed to upload logo' });
   }
 });
 
@@ -1927,7 +1927,7 @@ router.get('/storage-usage', requireAuth, async (req: AuthenticatedRequest, res)
     const usage = await getStorageUsage(workspaceId);
     res.json(usage);
   } catch (err: unknown) {
-    log.error('[StorageUsage] GET /storage-usage failed:', err?.message);
+    log.error('[StorageUsage] GET /storage-usage failed:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ message: 'Failed to retrieve storage usage' });
   }
 });

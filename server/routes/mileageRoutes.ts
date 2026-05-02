@@ -73,7 +73,7 @@ router.post("/", requireAuth, async (req: AuthenticatedRequest, res) => {
     const log = await storage.createMileageLog(validated);
     return res.status(201).json(log);
   } catch (err: unknown) {
-    if (err?.name === "ZodError") return res.status(400).json({ message: "Validation failed", errors: (err as Error).errors });
+    if ((err instanceof Error ? err.name : "Error") === "ZodError") return res.status(400).json({ message: "Validation failed", errors: (err as Error).errors });
     log.error("[mileage POST /]", err);
     return res.status(500).json({ message: "Failed to create mileage log" });
   }

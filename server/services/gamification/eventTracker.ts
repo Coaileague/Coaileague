@@ -29,6 +29,6 @@ export async function trackEvent(event: TrackedEvent): Promise<void> {
       default: log.debug(`[EventTracker] No points for event: ${eventType}`);
     }
   } catch (err: unknown) {
-    log.warn(`[EventTracker] Failed to track ${eventType} for ${employeeId}: ${err?.message}`);
+    log.warn(`[EventTracker] Failed to track ${eventType} for ${employeeId}: ${(err instanceof Error ? err.message : String(err))}`);
   }
 }

@@ -65,6 +65,6 @@ export const googleCalendar = {
       });
       const data: Record<string, unknown> = await resp.json();
       return data.id ?? null;
-    } catch (err: unknown) { log.warn(`[GoogleCalendar] Create event failed: ${err?.message}`); return null; }
+    } catch (err: unknown) { log.warn(`[GoogleCalendar] Create event failed: ${(err instanceof Error ? err.message : String(err))}`); return null; }
   },
 };

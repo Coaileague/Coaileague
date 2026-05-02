@@ -74,7 +74,7 @@ async function writeThalamicSignal(params: {
       signalPayload: params.signalPayload,
     });
   } catch (err: unknown) {
-    log.warn(`[TrinityEvents] thalamic_log insert failed (${params.signalType}): ${err?.message}`);
+    log.warn(`[TrinityEvents] thalamic_log insert failed (${params.signalType}): ${(err instanceof Error ? err.message : String(err))}`);
   }
 }
 
@@ -145,7 +145,7 @@ async function onPayrollProcessed(event: PlatformEvent): Promise<void> {
       }
     }
   } catch (err: unknown) {
-    log.error('[TrinityEvents] onPayrollProcessed failed (non-crashing):', err?.message);
+    log.error('[TrinityEvents] onPayrollProcessed failed (non-crashing):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -184,7 +184,7 @@ async function onIncidentCreated(event: PlatformEvent): Promise<void> {
       }
     }
   } catch (err: unknown) {
-    log.error('[TrinityEvents] onIncidentCreated failed (non-crashing):', err?.message);
+    log.error('[TrinityEvents] onIncidentCreated failed (non-crashing):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -213,7 +213,7 @@ async function onGPSViolation(event: PlatformEvent): Promise<void> {
       }
     }
   } catch (err: unknown) {
-    log.error('[TrinityEvents] onGPSViolation failed (non-crashing):', err?.message);
+    log.error('[TrinityEvents] onGPSViolation failed (non-crashing):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -234,7 +234,7 @@ async function onShiftReminder(event: PlatformEvent): Promise<void> {
       await NotificationDeliveryService.send({ type: 'schedule_notification', workspaceId: workspaceId || 'system', recipientUserId: employeeId, channel: 'sms', body: { to: employee.phone, body: `Reminder: Your shift at ${siteName || 'assigned location'} starts at ${startTime}. Clock in on time!` } });
     }
   } catch (err: unknown) {
-    log.error('[TrinityEvents] onShiftReminder failed (non-crashing):', err?.message);
+    log.error('[TrinityEvents] onShiftReminder failed (non-crashing):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -255,7 +255,7 @@ async function onCertificationExpiring(event: PlatformEvent): Promise<void> {
       await NotificationDeliveryService.send({ type: 'certification_alert', workspaceId: workspaceId || 'system', recipientUserId: employeeId, channel: 'sms', body: { to: employee.phone, body: `Your ${certName} certification expires in ${daysUntilExpiry} days. Renew ASAP to stay compliant.` } });
     }
   } catch (err: unknown) {
-    log.error('[TrinityEvents] onCertificationExpiring failed (non-crashing):', err?.message);
+    log.error('[TrinityEvents] onCertificationExpiring failed (non-crashing):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -280,7 +280,7 @@ async function onComplianceChecked(event: PlatformEvent): Promise<void> {
         }
       }
     } catch (err: unknown) {
-      log.error('[TrinityEvents] onComplianceChecked failed (non-crashing):', err?.message);
+      log.error('[TrinityEvents] onComplianceChecked failed (non-crashing):', (err instanceof Error ? err.message : String(err)));
     }
   }
 }
@@ -576,7 +576,7 @@ async function onWorkspaceCreated(event: PlatformEvent): Promise<void> {
       log.info(`[TrinityEvents] System email mailboxes provisioned for workspace: ${workspaceId} (slug: ${computedSlug})`);
     }
   } catch (emailErr: unknown) {
-    log.warn(`[TrinityEvents] Email provisioning failed for workspace ${workspaceId} (non-fatal):`, emailErr?.message);
+    log.warn(`[TrinityEvents] Email provisioning failed for workspace ${workspaceId} (non-fatal):`, (emailErr instanceof Error ? emailErr.message : String(emailErr)));
   }
 
   // Reserve personal email address for workspace owner and send Trinity welcome
@@ -598,7 +598,7 @@ async function onWorkspaceCreated(event: PlatformEvent): Promise<void> {
             );
             log.info(`[TrinityEvents] Reserved personal email for workspace owner: ${ownerId} (${owner.firstName}.${owner.lastName}@${computedSlug}.coaileague.com)`);
           } catch (ownerEmailErr: unknown) {
-            log.warn(`[TrinityEvents] Owner email reservation failed (non-fatal):`, ownerEmailErr?.message);
+            log.warn(`[TrinityEvents] Owner email reservation failed (non-fatal):`, (ownerEmailErr instanceof Error ? ownerEmailErr.message : String(ownerEmailErr)));
           }
         }
 
@@ -618,7 +618,7 @@ async function onWorkspaceCreated(event: PlatformEvent): Promise<void> {
       }
     }
   } catch (welcomeErr: unknown) {
-    log.warn(`[TrinityEvents] Trinity welcome email failed for workspace ${workspaceId} (non-fatal):`, welcomeErr?.message);
+    log.warn(`[TrinityEvents] Trinity welcome email failed for workspace ${workspaceId} (non-fatal):`, (welcomeErr instanceof Error ? welcomeErr.message : String(welcomeErr)));
   }
 }
 
@@ -1798,7 +1798,7 @@ export function initializeTrinityEventSubscriptions(): void {
           createdAt: new Date(),
         }).catch(() => null);
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] subscription_created handler failed:', err?.message);
+        log.warn('[TrinityEvents] subscription_created handler failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -1836,7 +1836,7 @@ export function initializeTrinityEventSubscriptions(): void {
           createdAt: new Date(),
         }).catch(() => null);
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] client_created handler failed:', err?.message);
+        log.warn('[TrinityEvents] client_created handler failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -1873,7 +1873,7 @@ export function initializeTrinityEventSubscriptions(): void {
           createdAt: new Date(),
         }).catch(() => null);
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] member_joined handler failed:', err?.message);
+        log.warn('[TrinityEvents] member_joined handler failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -2570,7 +2570,7 @@ export function initializeTrinityEventSubscriptions(): void {
           }).catch(() => null);
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] sop_updated_acknowledgment_required handler failed:', err?.message);
+        log.warn('[TrinityEvents] sop_updated_acknowledgment_required handler failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -2635,7 +2635,7 @@ export function initializeTrinityEventSubscriptions(): void {
           }
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] disciplinary activation handler failed:', err?.message);
+        log.warn('[TrinityEvents] disciplinary activation handler failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -2662,7 +2662,7 @@ export function initializeTrinityEventSubscriptions(): void {
           }).catch(() => null);
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] proposal_won handler failed:', err?.message);
+        log.warn('[TrinityEvents] proposal_won handler failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -2688,7 +2688,7 @@ export function initializeTrinityEventSubscriptions(): void {
           }).catch(() => null);
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] proposal_lost handler failed:', err?.message);
+        log.warn('[TrinityEvents] proposal_lost handler failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -2713,7 +2713,7 @@ export function initializeTrinityEventSubscriptions(): void {
           }).catch(() => null);
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] bid_submitted handler failed:', err?.message);
+        log.warn('[TrinityEvents] bid_submitted handler failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -2740,7 +2740,7 @@ export function initializeTrinityEventSubscriptions(): void {
         }
         log.info(`[TrinityEvents] contract_proposal_sent — workspace=${workspaceId} contract=${metadata?.contractId}`);
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] contract_proposal_sent handler failed:', err?.message);
+        log.warn('[TrinityEvents] contract_proposal_sent handler failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -2787,7 +2787,7 @@ export function initializeTrinityEventSubscriptions(): void {
           }).catch(() => null);
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] contract_proposal_accepted handler failed:', err?.message);
+        log.warn('[TrinityEvents] contract_proposal_accepted handler failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -2811,7 +2811,7 @@ export function initializeTrinityEventSubscriptions(): void {
           }).catch(() => null);
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] dar_verified handler failed:', err?.message);
+        log.warn('[TrinityEvents] dar_verified handler failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -2835,7 +2835,7 @@ export function initializeTrinityEventSubscriptions(): void {
           }).catch(() => null);
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] dar_sent_to_client handler failed:', err?.message);
+        log.warn('[TrinityEvents] dar_sent_to_client handler failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -2860,7 +2860,7 @@ export function initializeTrinityEventSubscriptions(): void {
           }).catch(() => null);
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] rms_case_opened handler failed:', err?.message);
+        log.warn('[TrinityEvents] rms_case_opened handler failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -2884,7 +2884,7 @@ export function initializeTrinityEventSubscriptions(): void {
           }).catch(() => null);
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] rms_case_closed handler failed:', err?.message);
+        log.warn('[TrinityEvents] rms_case_closed handler failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -2911,7 +2911,7 @@ export function initializeTrinityEventSubscriptions(): void {
           }).catch(() => null);
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] incident_supervisor_signed handler failed:', err?.message);
+        log.warn('[TrinityEvents] incident_supervisor_signed handler failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -2938,7 +2938,7 @@ export function initializeTrinityEventSubscriptions(): void {
           }).catch(() => null);
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] bolo_created handler failed:', err?.message);
+        log.warn('[TrinityEvents] bolo_created handler failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -2964,7 +2964,7 @@ export function initializeTrinityEventSubscriptions(): void {
           }).catch(() => null);
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] evidence_created handler failed:', err?.message);
+        log.warn('[TrinityEvents] evidence_created handler failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -2989,7 +2989,7 @@ export function initializeTrinityEventSubscriptions(): void {
           }).catch(() => null);
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] visitor_checked_in handler failed:', err?.message);
+        log.warn('[TrinityEvents] visitor_checked_in handler failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3005,7 +3005,7 @@ export function initializeTrinityEventSubscriptions(): void {
           broadcastToWorkspace(workspaceId, { type: 'broadcast_list_updated', action: 'created', broadcastId: event.metadata?.broadcastId });
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] broadcast.created push failed:', err?.message);
+        log.warn('[TrinityEvents] broadcast.created push failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3020,7 +3020,7 @@ export function initializeTrinityEventSubscriptions(): void {
           broadcastToWorkspace(workspaceId, { type: 'broadcast_list_updated', action: 'updated', broadcastId: event.metadata?.broadcastId });
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] broadcast.updated push failed:', err?.message);
+        log.warn('[TrinityEvents] broadcast.updated push failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3035,7 +3035,7 @@ export function initializeTrinityEventSubscriptions(): void {
           broadcastToWorkspace(workspaceId, { type: 'broadcast_list_updated', action: 'deleted', broadcastId: event.metadata?.broadcastId });
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] broadcast.deleted push failed:', err?.message);
+        log.warn('[TrinityEvents] broadcast.deleted push failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3049,7 +3049,7 @@ export function initializeTrinityEventSubscriptions(): void {
         if (!workspaceId) return;
         log.warn(`[TrinityEvents] [CONSCIENCE] SRA enforcement action logged — workspace: ${workspaceId}, severity: ${metadata?.severity}, finding: ${metadata?.findingId}`);
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] sra_enforcement_action handler failed:', err?.message);
+        log.warn('[TrinityEvents] sra_enforcement_action handler failed:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3081,7 +3081,7 @@ export function initializeTrinityEventSubscriptions(): void {
         });
         log.info(`[TrinityEvents] contract_executed win logged for workspace ${workspaceId}: ${payload?.title}`);
       } catch (err: unknown) {
-        log.warn(`[TrinityEvents] contract_executed thalamic_log insert failed: ${err?.message}`);
+        log.warn(`[TrinityEvents] contract_executed thalamic_log insert failed: ${(err instanceof Error ? err.message : String(err))}`);
       }
     },
   });
@@ -3285,7 +3285,7 @@ export function initializeTrinityEventSubscriptions(): void {
           signalPayload: { employeeId, missedCount, level, requiresImmediateResponse },
         });
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] lone_worker_missed_checkin handler error:', err?.message);
+        log.warn('[TrinityEvents] lone_worker_missed_checkin handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3298,7 +3298,7 @@ export function initializeTrinityEventSubscriptions(): void {
         if (!workspaceId) return;
         log.info(`[TrinityEvents] lone_worker_session_started: employee=${metadata?.employeeId} session=${metadata?.sessionId} ws=${workspaceId}`);
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] lone_worker_session_started handler error:', err?.message);
+        log.warn('[TrinityEvents] lone_worker_session_started handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3311,7 +3311,7 @@ export function initializeTrinityEventSubscriptions(): void {
         if (!workspaceId) return;
         log.info(`[TrinityEvents] lone_worker_session_ended: ws=${workspaceId} duration=${metadata?.durationMinutes}min`);
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] lone_worker_session_ended handler error:', err?.message);
+        log.warn('[TrinityEvents] lone_worker_session_ended handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3348,7 +3348,7 @@ export function initializeTrinityEventSubscriptions(): void {
           signalPayload: { alertId, resolvedBy },
         });
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] panic_alert_resolved handler error:', err?.message);
+        log.warn('[TrinityEvents] panic_alert_resolved handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3388,7 +3388,7 @@ export function initializeTrinityEventSubscriptions(): void {
           signalPayload: { employeeId, certificationType: (metadata as Record<string,unknown>)?.certificationType, expiredAt: new Date().toISOString() },
         });
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] compliance_cert_expired handler error:', err?.message);
+        log.warn('[TrinityEvents] compliance_cert_expired handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3418,7 +3418,7 @@ export function initializeTrinityEventSubscriptions(): void {
           });
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] training_expired handler error:', err?.message);
+        log.warn('[TrinityEvents] training_expired handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3445,7 +3445,7 @@ export function initializeTrinityEventSubscriptions(): void {
           });
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] training_expiring handler error:', err?.message);
+        log.warn('[TrinityEvents] training_expiring handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3475,7 +3475,7 @@ export function initializeTrinityEventSubscriptions(): void {
           });
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] compliance_onboarding_overdue handler error:', err?.message);
+        log.warn('[TrinityEvents] compliance_onboarding_overdue handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3515,7 +3515,7 @@ export function initializeTrinityEventSubscriptions(): void {
           signalPayload: { shiftId, siteName, escalatedAt: new Date().toISOString() },
         });
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] shift_calloff_escalated handler error:', err?.message);
+        log.warn('[TrinityEvents] shift_calloff_escalated handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3544,7 +3544,7 @@ export function initializeTrinityEventSubscriptions(): void {
           idempotencyKey: `request_approved-${shiftId}-${emp.userId}`
         });
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] shift_swap_approved handler error:', err?.message);
+        log.warn('[TrinityEvents] shift_swap_approved handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3573,7 +3573,7 @@ export function initializeTrinityEventSubscriptions(): void {
           idempotencyKey: `request_denied-${shiftId}-${emp.userId}`
         });
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] shift_swap_denied handler error:', err?.message);
+        log.warn('[TrinityEvents] shift_swap_denied handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3610,7 +3610,7 @@ export function initializeTrinityEventSubscriptions(): void {
           signalPayload: { canceledAt: new Date().toISOString() },
         });
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] subscription_canceled handler error:', err?.message);
+        log.warn('[TrinityEvents] subscription_canceled handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3648,7 +3648,7 @@ export function initializeTrinityEventSubscriptions(): void {
           signalPayload: { invoiceId, clientName, amount, daysOverdue },
         });
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] invoice_overdue_escalated handler error:', err?.message);
+        log.warn('[TrinityEvents] invoice_overdue_escalated handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3676,7 +3676,7 @@ export function initializeTrinityEventSubscriptions(): void {
           });
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] trial_ending_soon handler error:', err?.message);
+        log.warn('[TrinityEvents] trial_ending_soon handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3703,7 +3703,7 @@ export function initializeTrinityEventSubscriptions(): void {
           });
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] plaid_bank_connected handler error:', err?.message);
+        log.warn('[TrinityEvents] plaid_bank_connected handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3735,7 +3735,7 @@ export function initializeTrinityEventSubscriptions(): void {
           });
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] contract_renewal_due handler error:', err?.message);
+        log.warn('[TrinityEvents] contract_renewal_due handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3765,7 +3765,7 @@ export function initializeTrinityEventSubscriptions(): void {
           });
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] dar_submitted handler error:', err?.message);
+        log.warn('[TrinityEvents] dar_submitted handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -3796,7 +3796,7 @@ export function initializeTrinityEventSubscriptions(): void {
           });
         }
       } catch (err: unknown) {
-        log.warn('[TrinityEvents] incident_created (notify) handler error:', err?.message);
+        log.warn('[TrinityEvents] incident_created (notify) handler error:', (err instanceof Error ? err.message : String(err)));
       }
     },
   });

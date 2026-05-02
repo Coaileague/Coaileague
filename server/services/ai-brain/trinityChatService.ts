@@ -555,7 +555,7 @@ class TrinityChatService {
           });
         }
       } catch (err: unknown) {
-        log.warn('[TrinityChatService] PFC org state lookup failed (non-fatal):', err?.message);
+        log.warn('[TrinityChatService] PFC org state lookup failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
     }
 
@@ -590,10 +590,10 @@ class TrinityChatService {
           });
           // Persist to emotional memory for long-term pattern learning (non-blocking).
           trinityLimbicSystem.storeEmotionalMemory(userId, 'ticket', emotionalSignal, workspaceId)
-            .catch((err) => log.warn('[Limbic] Emotional memory persist failed (non-fatal):', err?.message ?? err));
+            .catch((err) => log.warn('[Limbic] Emotional memory persist failed (non-fatal):', (err instanceof Error ? err.message : String(err)) ?? err));
         }
       } catch (err: unknown) {
-        log.warn('[TrinityChatService] Limbic detection failed (non-fatal):', err?.message);
+        log.warn('[TrinityChatService] Limbic detection failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
     }
 
@@ -645,7 +645,7 @@ class TrinityChatService {
         ]);
       } catch (auditErr: unknown) {
         // Non-fatal — audit failure must never block the support agent
-        log.warn('[TrinityChat] Support mode audit write failed:', auditErr?.message);
+        log.warn('[TrinityChat] Support mode audit write failed:', (auditErr instanceof Error ? auditErr.message : String(auditErr)));
       }
     }
 
@@ -660,7 +660,7 @@ class TrinityChatService {
         dataClassification: 'internal',
       });
     } catch (err: unknown) {
-      log.warn('[TrinityChatService] Privacy check failed, defaulting to allow:', err?.message);
+      log.warn('[TrinityChatService] Privacy check failed, defaulting to allow:', (err instanceof Error ? err.message : String(err)));
     }
 
     if (!privacyCheck.allowed) {
@@ -712,9 +712,9 @@ class TrinityChatService {
         session = await this.getOrCreateSession(userId, workspaceId, mode);
       }
     } catch (sessionError: unknown) {
-      log.error('[TrinityChatService] Session operation failed:', sessionError?.message || sessionError);
-      log.error('[TrinityChatService] Session error stack:', sessionError?.stack);
-      throw new Error('Failed to create or retrieve conversation session: ' + (sessionError?.message || 'Unknown error'));
+      log.error('[TrinityChatService] Session operation failed:', (sessionError instanceof Error ? sessionError.message : String(sessionError)) || sessionError);
+      log.error('[TrinityChatService] Session error stack:', (sessionError instanceof Error ? sessionError.stack : undefined));
+      throw new Error('Failed to create or retrieve conversation session: ' + ((sessionError instanceof Error ? sessionError.message : String(sessionError)) || 'Unknown error'));
     }
 
     if (!session) {
@@ -794,7 +794,7 @@ class TrinityChatService {
     try {
       systemPrompt = this.buildSystemPrompt(mode, workspaceContext, buddySettings, userName, recentInsights, memoryProfile, supportHistory, workspaceId, isSupportMode, isManagerLevel, isSupervisorLevel, workspaceRole);
     } catch (err: unknown) {
-      log.warn('[TrinityChatService] System prompt build failed, using fallback:', err?.message);
+      log.warn('[TrinityChatService] System prompt build failed, using fallback:', (err instanceof Error ? err.message : String(err)));
       systemPrompt = 'You are Trinity, an AI co-pilot for CoAIleague. Be helpful and concise.';
     }
 
@@ -894,7 +894,7 @@ class TrinityChatService {
           systemPrompt += `\n\nLIVE OPERATIONS STATUS:\n${liveStatus.join('\n')}`;
         }
       } catch (err: unknown) {
-        log.warn('[TrinityChatService] Live ops status enrichment failed (non-fatal):', err?.message);
+        log.warn('[TrinityChatService] Live ops status enrichment failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
     }
 
@@ -904,7 +904,7 @@ class TrinityChatService {
         const personalCtx = await this.getOfficerPersonalContext(userId, workspaceId);
         if (personalCtx) systemPrompt += `\n\n${personalCtx}`;
       } catch (err: unknown) {
-        log.warn('[TrinityChatService] Officer personal context fetch failed (non-fatal):', err?.message);
+        log.warn('[TrinityChatService] Officer personal context fetch failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
 
       // === SUBTEXT DETECTION — cross-reference stated vs behavioral ===
@@ -963,7 +963,7 @@ class TrinityChatService {
           systemPrompt += `\n\n${selfAwareBlock}`;
         }
       } catch (err: unknown) {
-        log.warn('[TrinityChatService] Self-model injection failed (non-fatal):', err?.message);
+        log.warn('[TrinityChatService] Self-model injection failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
       // CONNECTOME SELF-MODEL — workspace-specific live state from trinity_self_awareness table
       // Provides Trinity with calibrated confidence, active knowledge facts, and connectome health
@@ -974,7 +974,7 @@ class TrinityChatService {
           systemPrompt += `\n\n${connectomeSelfModel}`;
         }
       } catch (err: unknown) {
-        log.warn('[TrinityChatService] Connectome self-model injection failed (non-fatal):', err?.message);
+        log.warn('[TrinityChatService] Connectome self-model injection failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
     }
 
@@ -1109,7 +1109,7 @@ DO NOT:
           }
         }
       } catch (err: unknown) {
-        log.warn('[TrinityChatService] Social graph lookup failed (non-fatal):', err?.message);
+        log.warn('[TrinityChatService] Social graph lookup failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
     }
 
@@ -1208,7 +1208,7 @@ DO NOT:
       }
     } catch (eqErr: unknown) {
       // EQ analysis is non-fatal — never block a response
-      log.warn('[EQ Engine] Signal analysis failed (non-fatal):', eqErr?.message);
+      log.warn('[EQ Engine] Signal analysis failed (non-fatal):', (eqErr instanceof Error ? eqErr.message : String(eqErr)));
     }
 
     // === PERSONA ANCHOR — Tone consistency guard ===
@@ -1281,7 +1281,7 @@ DO NOT:
         systemPrompt += `\n\n${trinityWorkforceProtocol.buildWorkerTypePromptInjection('employee')}`;
         systemPrompt += `\n\n${trinityWorkforceProtocol.buildWorkerTypePromptInjection('contractor')}`;
       } catch (err: unknown) {
-        log.warn('[TrinityChatService] State-aware context injection failed (non-fatal):', err?.message);
+        log.warn('[TrinityChatService] State-aware context injection failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
     }
 
@@ -1305,13 +1305,13 @@ DO NOT:
           }
         }
       } catch (err: unknown) {
-        log.warn('[TrinityChatService] Autonomous task queue injection failed (non-fatal):', err?.message);
+        log.warn('[TrinityChatService] Autonomous task queue injection failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
     }
 
     // Record user turn (non-fatal — history recording must not block chat)
     await this.recordTurn(session.id, 'user', message).catch((err: unknown) => {
-      log.warn('[TrinityChatService] Failed to record user turn (non-fatal):', err?.message);
+      log.warn('[TrinityChatService] Failed to record user turn (non-fatal):', (err instanceof Error ? err.message : String(err)));
     });
 
     const thoughtCtx = { workspaceId, sessionId: session.id, userId, triggeredBy: 'user_chat' };
@@ -1324,7 +1324,7 @@ DO NOT:
         thoughtCtx
       );
     } catch (err: unknown) {
-      log.warn('[TrinityChatService] Thought perception failed (non-fatal):', err?.message);
+      log.warn('[TrinityChatService] Thought perception failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     }
 
     const hasActions = /\b(do|create|schedule|generate|send|activate|deactivate|clock|update|delete|assign|move|transfer|set|enable|disable|run|execute|process|approve|reject)\b/i.test(message);
@@ -1347,7 +1347,7 @@ DO NOT:
         { ...thoughtCtx, parentThoughtId: perceptionResult?.thoughtId }
       );
     } catch (err: unknown) {
-      log.warn('[TrinityChatService] Thought deliberation failed (non-fatal):', err?.message);
+      log.warn('[TrinityChatService] Thought deliberation failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     }
 
     const chosenApproach = isStrategic
@@ -1365,7 +1365,7 @@ DO NOT:
         { ...thoughtCtx, parentThoughtId: perceptionResult?.thoughtId }
       );
     } catch (err: unknown) {
-      log.warn('[TrinityChatService] Thought decision failed (non-fatal):', err?.message);
+      log.warn('[TrinityChatService] Thought decision failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     }
 
     // === DELIBERATION LOOP — PREFRONTAL CORTEX AUTO-TRIGGER ===
@@ -1446,7 +1446,7 @@ DO NOT:
           systemPrompt += `\n\nEXECUTIVE FUNCTION PRE-PLAN:\nThe following multi-step execution plan was generated by checking real workspace state. Present this plan to the user, explain each step's current status, and ask for confirmation before executing any financial or irreversible steps. Do NOT execute any steps without explicit user confirmation.\n\n${executivePlanResponse}`;
           log.info(`[ExecutivePlanner] Plan injected: ${plan.steps.length} steps, readiness=${plan.overallReadiness}, confidence=${plan.confidence}`);
         } catch (planErr: unknown) {
-          log.warn('[ExecutivePlanner] Plan generation failed (non-fatal):', planErr?.message);
+          log.warn('[ExecutivePlanner] Plan generation failed (non-fatal):', (planErr instanceof Error ? planErr.message : String(planErr)));
         }
       }
     }
@@ -1538,7 +1538,7 @@ Do NOT skip steps — decompose fully before concluding.`;
           }
         }
       } catch (err: unknown) {
-        log.warn('[TrinityChatService] Morning brief failed (non-fatal):', err?.message);
+        log.warn('[TrinityChatService] Morning brief failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
     }
 
@@ -1586,7 +1586,7 @@ Do NOT skip steps — decompose fully before concluding.`;
             finalResponseText = corrected.text;
           }
         } catch (regenErr: unknown) {
-          log.warn('[PersonaAnchor] Drift regeneration failed (keeping original):', regenErr?.message);
+          log.warn('[PersonaAnchor] Drift regeneration failed (keeping original):', (regenErr instanceof Error ? regenErr.message : String(regenErr)));
         }
       }
     } catch {
@@ -1604,7 +1604,7 @@ Do NOT skip steps — decompose fully before concluding.`;
 
     // Record assistant turn (non-fatal — must not block returning the AI response)
     await this.recordTurn(session.id, 'assistant', aiResponse.text, undefined, aiResponse.toolCalls).catch((err: unknown) => {
-      log.warn('[TrinityChatService] Failed to record assistant turn (non-fatal):', err?.message);
+      log.warn('[TrinityChatService] Failed to record assistant turn (non-fatal):', (err instanceof Error ? err.message : String(err)));
     });
 
     await this.updateSessionActivity(session.id).catch((err) => log.warn('[trinityChatService] Fire-and-forget failed:', err));
@@ -1702,7 +1702,7 @@ Do NOT skip steps — decompose fully before concluding.`;
     try {
       tierInfo = await getWorkspaceTierAllowance(workspaceId, userId);
     } catch (err: unknown) {
-      log.warn('[TrinityChatService] Tier lookup failed (non-fatal):', err?.message);
+      log.warn('[TrinityChatService] Tier lookup failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     }
     let balanceRemaining = 0;
     let actualCreditsUsed = 2; // TOKEN_COSTS['trinity_chat'] = 2 (flat rate via geminiClient universal enforcement)
@@ -1713,7 +1713,7 @@ Do NOT skip steps — decompose fully before concluding.`;
     try {
       balanceRemaining = await tokenManager.getBalance(workspaceId);
     } catch (err: unknown) {
-      log.warn('[TrinityChatService] Balance lookup failed (non-fatal):', err?.message);
+      log.warn('[TrinityChatService] Balance lookup failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     }
     log.info(`[TrinityChatService] Credits handled by geminiClient universal enforcer. Tier: ${tierInfo.tier}. Balance: ${balanceRemaining}/${tierInfo.monthlyAllowance}`);
 
@@ -1807,7 +1807,7 @@ Do NOT skip steps — decompose fully before concluding.`;
         };
       }
     } catch (dispatchErr: unknown) {
-      log.warn('[TrinityChat] Dispatcher non-fatal error:', dispatchErr?.message);
+      log.warn('[TrinityChat] Dispatcher non-fatal error:', (dispatchErr instanceof Error ? dispatchErr.message : String(dispatchErr)));
     }
 
     // PUBLIC SAFETY BOUNDARY — Trinity does not call 911, dispatch responders,
@@ -1890,8 +1890,8 @@ Do NOT skip steps — decompose fully before concluding.`;
       log.info('[TrinityChatService] Created session:', session?.id);
       return (session as TrinityConversationSession) || null;
     } catch (error: unknown) {
-      log.error('[TrinityChatService] Session creation error:', error?.message || error);
-      log.error('[TrinityChatService] Session creation stack:', error?.stack);
+      log.error('[TrinityChatService] Session creation error:', (error instanceof Error ? error.message : String(error)) || error);
+      log.error('[TrinityChatService] Session creation stack:', (error instanceof Error ? error.stack : undefined));
       return null;
     }
   }
@@ -2475,7 +2475,7 @@ Do NOT skip steps — decompose fully before concluding.`;
           alerts.push('[INFO] Financial Intelligence: All site margins and contract health scores tracking within acceptable ranges. No proactive alerts.');
         }
       } catch (fiErr: unknown) {
-        log.warn('[TrinityChatService] Financial intelligence alerts failed (non-fatal):', fiErr?.message);
+        log.warn('[TrinityChatService] Financial intelligence alerts failed (non-fatal):', (fiErr instanceof Error ? fiErr.message : String(fiErr)));
       }
 
     } catch (err: unknown) {
@@ -3310,7 +3310,7 @@ If no significant insight, respond with:
       }
       return matches;
     } catch (err: unknown) {
-      log.warn('[TrinityChatService] Employee resolution failed (non-fatal):', err?.message);
+      log.warn('[TrinityChatService] Employee resolution failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       return [];
     }
   }
@@ -3421,7 +3421,7 @@ If no significant insight, respond with:
       const greeting = `Good morning, ${userName}. Overnight I noticed:\n${lines.map((l, i) => `${i + 1}. ${l}`).join('\n')}`;
       return greeting;
     } catch (err: unknown) {
-      log.warn('[TrinityChatService] Morning brief build failed:', err?.message);
+      log.warn('[TrinityChatService] Morning brief build failed:', (err instanceof Error ? err.message : String(err)));
       return null;
     }
   }

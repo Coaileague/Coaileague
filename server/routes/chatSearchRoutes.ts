@@ -76,7 +76,7 @@ router.get('/search', requireAuth, async (req: AuthenticatedRequest, res) => {
       `);
       return res.json({ query: q, results: fallback.rows ?? [], count: fallback.rows?.length ?? 0 });
     } catch (fallbackErr: unknown) {
-      log.error('[ChatSearch] Search error:', fallbackErr?.message);
+      log.error('[ChatSearch] Search error:', (fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)));
       return res.json({ query: q, results: [], count: 0 });
     }
   }

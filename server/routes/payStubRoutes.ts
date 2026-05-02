@@ -128,7 +128,7 @@ router.get('/pay-stubs/:id/pdf', requireAuth, attachWorkspaceId, async (req: Req
           writeHardenedPdfHeaders(res, { filename, size: buffer.length });
           return res.send(buffer);
         } catch (err: unknown) {
-          log.warn(`[PayStubs] storage fetch failed for stub=${stub.id}, falling back to regenerate: ${err?.message}`);
+          log.warn(`[PayStubs] storage fetch failed for stub=${stub.id}, falling back to regenerate: ${(err instanceof Error ? err.message : String(err))}`);
           // fall through to regenerate
         }
       } else {

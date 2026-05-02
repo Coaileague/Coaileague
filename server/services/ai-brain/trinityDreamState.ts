@@ -115,7 +115,7 @@ class TrinityDreamState {
         .returning({ id: cronRunLog.id });
       cronLogId = cronStart?.id ?? null;
     } catch (logErr: unknown) {
-      log.warn('[DreamState] cron_run_log insert failed (non-fatal):', logErr?.message);
+      log.warn('[DreamState] cron_run_log insert failed (non-fatal):', (logErr instanceof Error ? logErr.message : String(logErr)));
     }
 
     try {
@@ -172,7 +172,7 @@ class TrinityDreamState {
             cronLogId,
           ]);
         } catch (logErr: unknown) {
-          log.warn('[DreamState] cron_run_log update failed (non-fatal):', logErr?.message);
+          log.warn('[DreamState] cron_run_log update failed (non-fatal):', (logErr instanceof Error ? logErr.message : String(logErr)));
         }
       }
 
@@ -191,7 +191,7 @@ class TrinityDreamState {
               completedAt: sql`now()`,
               durationMs: Date.now() - started.getTime(),
               status: 'failed',
-              errorMessage: err?.message,
+              errorMessage: (err instanceof Error ? err.message : String(err)),
             })
             .where(eq(cronRunLog.id, cronLogId));
         } catch {}
@@ -268,7 +268,7 @@ class TrinityDreamState {
         log.info(`[DreamState] Regulatory review alert: ${summary}`);
       }
     } catch (regErr: unknown) {
-      log.warn(`[DreamState] Regulatory scan failed (non-fatal): ${regErr?.message}`);
+      log.warn(`[DreamState] Regulatory scan failed (non-fatal): ${(regErr instanceof Error ? regErr.message : String(regErr))}`);
     }
 
     // === PHASE B: Financial Intelligence Update (Dream State) ===
@@ -280,7 +280,7 @@ class TrinityDreamState {
       await trinityFinancialIntelligenceEngine.generateLaborCostForecast(workspaceId);
       log.info(`[DreamState] Financial intelligence scores updated for workspace ${workspaceId}`);
     } catch (finErr: unknown) {
-      log.warn(`[DreamState] Financial intelligence update failed (non-fatal): ${finErr?.message}`);
+      log.warn(`[DreamState] Financial intelligence update failed (non-fatal): ${(finErr instanceof Error ? finErr.message : String(finErr))}`);
     }
 
     // === PHASE C: Autonomous Task Queue — Nightly Scan ===
@@ -292,7 +292,7 @@ class TrinityDreamState {
         log.info(`[DreamState] Autonomous queue: ${newTasks.length} new task(s) identified for workspace ${workspaceId}`);
       }
     } catch (atqErr: unknown) {
-      log.warn(`[DreamState] Autonomous task scan failed (non-fatal): ${atqErr?.message}`);
+      log.warn(`[DreamState] Autonomous task scan failed (non-fatal): ${(atqErr instanceof Error ? atqErr.message : String(atqErr))}`);
     }
 
     // === PHASE D: Milestone Scan — Trinity Culture & Performance Engine ===
@@ -313,7 +313,7 @@ class TrinityDreamState {
         await trinityRecognitionEngine.nominateOfficerOfMonth(workspaceId).catch(() => null);
       }
     } catch (msErr: unknown) {
-      log.warn(`[DreamState] Milestone scan failed (non-fatal): ${msErr?.message}`);
+      log.warn(`[DreamState] Milestone scan failed (non-fatal): ${(msErr instanceof Error ? msErr.message : String(msErr))}`);
     }
 
     // === PHASE E: Performance Recalculation — Weekly ===
@@ -345,7 +345,7 @@ class TrinityDreamState {
       await trinityRecognitionEngine.checkFTOEligibility(workspaceId).catch(() => null);
       log.info(`[DreamState] Performance recalculation complete for workspace ${workspaceId}`);
     } catch (perfErr: unknown) {
-      log.warn(`[DreamState] Performance recalculation failed (non-fatal): ${perfErr?.message}`);
+      log.warn(`[DreamState] Performance recalculation failed (non-fatal): ${(perfErr instanceof Error ? perfErr.message : String(perfErr))}`);
     }
 
     // === PHASE F: Disciplinary Pattern Scan — Weekly ===
@@ -361,7 +361,7 @@ class TrinityDreamState {
         log.info(`[DreamState] Disciplinary scan: ${patterns.length} pattern(s) flagged in workspace ${workspaceId}`);
       }
     } catch (discErr: unknown) {
-      log.warn(`[DreamState] Disciplinary scan failed (non-fatal): ${discErr?.message}`);
+      log.warn(`[DreamState] Disciplinary scan failed (non-fatal): ${(discErr instanceof Error ? discErr.message : String(discErr))}`);
     }
 
     // === PHASE G: Cognitive Load Assessment ===
@@ -374,7 +374,7 @@ class TrinityDreamState {
       isOverloaded = cogState.loadStatus === 'overloaded';
       log.info(`[DreamState] Cognitive load: ${cogState.loadStatus} (${cogState.currentLoadScore}/100)`);
     } catch (clErr: unknown) {
-      log.warn(`[DreamState] Cognitive load monitor failed (non-fatal): ${clErr?.message}`);
+      log.warn(`[DreamState] Cognitive load monitor failed (non-fatal): ${(clErr instanceof Error ? clErr.message : String(clErr))}`);
     }
 
     // === PHASE H: Temporal Arc Updates — 15% of cycle ===
@@ -384,7 +384,7 @@ class TrinityDreamState {
       await trinityTemporalConsciousnessEngine.scanWorkspace(workspaceId);
       log.info(`[DreamState] Temporal arc update complete for workspace ${workspaceId}`);
     } catch (tacErr: unknown) {
-      log.warn(`[DreamState] Temporal arc update failed (non-fatal): ${tacErr?.message}`);
+      log.warn(`[DreamState] Temporal arc update failed (non-fatal): ${(tacErr instanceof Error ? tacErr.message : String(tacErr))}`);
     }
 
     // === PHASE I: Curiosity Engine — 20% of cycle ===
@@ -399,7 +399,7 @@ class TrinityDreamState {
           log.info(`[DreamState] Curiosity engine: ${answered.length} finding(s) discovered in workspace ${workspaceId}`);
         }
       } catch (ceErr: unknown) {
-        log.warn(`[DreamState] Curiosity engine failed (non-fatal): ${ceErr?.message}`);
+        log.warn(`[DreamState] Curiosity engine failed (non-fatal): ${(ceErr instanceof Error ? ceErr.message : String(ceErr))}`);
       }
     }
 
@@ -412,7 +412,7 @@ class TrinityDreamState {
         log.info(`[DreamState] Counterfactual engine: ${simCount} simulation(s) run for workspace ${workspaceId}`);
       }
     } catch (cfErr: unknown) {
-      log.warn(`[DreamState] Counterfactual engine failed (non-fatal): ${cfErr?.message}`);
+      log.warn(`[DreamState] Counterfactual engine failed (non-fatal): ${(cfErr instanceof Error ? cfErr.message : String(cfErr))}`);
     }
 
     // === PHASE K: Social Graph Recalculation — 10% of cycle ===
@@ -425,7 +425,7 @@ class TrinityDreamState {
         log.info(`[DreamState] Social graph: ${high.length} high-severity insight(s) surfaced for workspace ${workspaceId}`);
       }
     } catch (sgErr: unknown) {
-      log.warn(`[DreamState] Social graph failed (non-fatal): ${sgErr?.message}`);
+      log.warn(`[DreamState] Social graph failed (non-fatal): ${(sgErr instanceof Error ? sgErr.message : String(sgErr))}`);
     }
 
     // === PHASE L: Incubation Engine — 10% of cycle ===
@@ -439,7 +439,7 @@ class TrinityDreamState {
           log.info(`[DreamState] Incubation engine: ${breakthroughs.length} BREAKTHROUGH(s) in workspace ${workspaceId}`);
         }
       } catch (inErr: unknown) {
-        log.warn(`[DreamState] Incubation engine failed (non-fatal): ${inErr?.message}`);
+        log.warn(`[DreamState] Incubation engine failed (non-fatal): ${(inErr instanceof Error ? inErr.message : String(inErr))}`);
       }
     }
 
@@ -450,7 +450,7 @@ class TrinityDreamState {
       await trinityNarrativeIdentityEngine.initializeForWorkspace(workspaceId);
       await trinityNarrativeIdentityEngine.writeMonthlyChapter(workspaceId);
     } catch (naErr: unknown) {
-      log.warn(`[DreamState] Narrative identity failed (non-fatal): ${naErr?.message}`);
+      log.warn(`[DreamState] Narrative identity failed (non-fatal): ${(naErr instanceof Error ? naErr.message : String(naErr))}`);
     }
 
     const cycleEnd = new Date();

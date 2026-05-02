@@ -36,7 +36,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
     });
     res.status(201).json(pipeline);
   } catch (err: unknown) {
-    log.error('Failed to create pipeline:', err?.message);
+    log.error('Failed to create pipeline:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to create pipeline' });
   }
 });
@@ -61,7 +61,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     );
     res.json(result.rows);
   } catch (err: unknown) {
-    log.error('Failed to list pipelines:', err?.message);
+    log.error('Failed to list pipelines:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to list pipelines' });
   }
 });
@@ -78,7 +78,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
     const progress = await employeeOnboardingPipeline.getProgress(req.params.id);
     res.json({ ...pipeline, progress });
   } catch (err: unknown) {
-    log.error('Failed to get pipeline:', err?.message);
+    log.error('Failed to get pipeline:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to get pipeline' });
   }
 });
@@ -100,7 +100,7 @@ router.get('/public/:id', async (req: Request, res: Response) => {
       createdAt: pipeline.created_at,
     });
   } catch (err: unknown) {
-    log.error('Failed to get public pipeline:', err?.message);
+    log.error('Failed to get public pipeline:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to get pipeline' });
   }
 });
@@ -122,7 +122,7 @@ router.patch('/:id/steps/:stepId/complete', requireAuth, async (req: Request, re
     );
     res.json(updated);
   } catch (err: unknown) {
-    log.error('Failed to complete step:', err?.message);
+    log.error('Failed to complete step:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to complete step' });
   }
 });
@@ -142,7 +142,7 @@ router.post('/public/:id/steps/:stepId/complete', async (req: Request, res: Resp
     const progress = await employeeOnboardingPipeline.getProgress(req.params.id);
     res.json({ pipeline: updated, progress });
   } catch (err: unknown) {
-    log.error('Failed to complete step (public):', err?.message);
+    log.error('Failed to complete step (public):', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to complete step' });
   }
 });
@@ -161,7 +161,7 @@ router.get('/by-employee/:employeeId', requireAuth, async (req: Request, res: Re
     const progress = await employeeOnboardingPipeline.getProgress(pipeline.id);
     res.json({ ...pipeline, progress });
   } catch (err: unknown) {
-    log.error('Failed to get employee pipeline:', err?.message);
+    log.error('Failed to get employee pipeline:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to get pipeline' });
   }
 });
@@ -182,7 +182,7 @@ router.post('/:id/activate', requireAuth, async (req: Request, res: Response) =>
     await employeeOnboardingPipeline.activateEmployee(pipeline.entity_id, pipeline.workspace_id);
     res.json({ success: true, message: 'Employee activated successfully' });
   } catch (err: unknown) {
-    log.error('Failed to activate employee:', err?.message);
+    log.error('Failed to activate employee:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to activate employee' });
   }
 });

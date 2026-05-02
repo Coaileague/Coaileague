@@ -199,7 +199,7 @@ class ErrorTrackingService {
       try {
         await this.checkAlertRules();
       } catch (error : unknown) {
-        log.warn('[ErrorTracking] Alert check cycle failed (will retry next interval):', error?.message || error);
+        log.warn('[ErrorTracking] Alert check cycle failed (will retry next interval):', (error instanceof Error ? error.message : String(error)) || error);
       }
     }, 60000);
     
@@ -219,7 +219,7 @@ class ErrorTrackingService {
   }): Promise<string> {
     const severity = params.severity || 'error';
     const source = params.source || 'backend';
-    const stack = params.error?.stack;
+    const stack = params.stack;
     const context: ErrorContext = {
       environment: process.env.NODE_ENV || 'development',
       ...params.context,

@@ -127,8 +127,8 @@ export async function runTaxDeadlineMonitor(): Promise<TaxDeadlineSweepResult> {
           });
           result.notified += 1;
         } catch (err: unknown) {
-          log.warn('[taxDeadlineMonitor] notification failed', { workspaceId: ws.id, err: err?.message });
-          result.errors.push(`${ws.id}:${dl.formType}:${err?.message}`);
+          log.warn('[taxDeadlineMonitor] notification failed', { workspaceId: ws.id, err: (err instanceof Error ? err.message : String(err)) });
+          result.errors.push(`${ws.id}:${dl.formType}:${(err instanceof Error ? err.message : String(err))}`);
         }
 
         // Urgent channels — SMS to owner (look up owner's employee record)
@@ -154,7 +154,7 @@ export async function runTaxDeadlineMonitor(): Promise<TaxDeadlineSweepResult> {
               );
             }
           } catch (err: unknown) {
-            log.warn('[taxDeadlineMonitor] SMS failed', { workspaceId: ws.id, err: err?.message });
+            log.warn('[taxDeadlineMonitor] SMS failed', { workspaceId: ws.id, err: (err instanceof Error ? err.message : String(err)) });
           }
         }
       }
@@ -178,11 +178,11 @@ export async function runTaxDeadlineMonitor(): Promise<TaxDeadlineSweepResult> {
     });
     return result;
   } catch (err: unknown) {
-    log.error('[taxDeadlineMonitor] sweep failed', { err: err?.message });
-    result.errors.push(err?.message || String(err));
+    log.error('[taxDeadlineMonitor] sweep failed', { err: (err instanceof Error ? err.message : String(err)) });
+    result.errors.push((err instanceof Error ? err.message : String(err)) || String(err));
     await logWorkflowComplete(record, {
       success: false,
-      errorMessage: err?.message || String(err),
+      errorMessage: (err instanceof Error ? err.message : String(err)) || String(err),
       result: {
         scanned: result.scanned,
         notified: result.notified,

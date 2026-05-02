@@ -71,7 +71,7 @@ export async function runShiftReminderSweep(): Promise<ShiftReminderSweepResult>
         });
         result.fourHourSent++;
       } catch (err: unknown) {
-        result.errors.push(`4h:${s.shiftId}:${err?.message}`);
+        result.errors.push(`4h:${s.shiftId}:${(err instanceof Error ? err.message : String(err))}`);
       }
     }
 
@@ -86,11 +86,11 @@ export async function runShiftReminderSweep(): Promise<ShiftReminderSweepResult>
         });
         result.oneHourSent++;
       } catch (err: unknown) {
-        result.errors.push(`1h:${s.shiftId}:${err?.message}`);
+        result.errors.push(`1h:${s.shiftId}:${(err instanceof Error ? err.message : String(err))}`);
       }
     }
   } catch (err: unknown) {
-    result.errors.push(`scan:${err?.message}`);
+    result.errors.push(`scan:${(err instanceof Error ? err.message : String(err))}`);
   }
 
   return result;
@@ -207,7 +207,7 @@ async function sendReminder(params: {
         })
         .where(eq(auditLogs.id, record.id));
     } catch (err: unknown) {
-      log.warn('[shift-reminder] audit tag update failed:', err?.message);
+      log.warn('[shift-reminder] audit tag update failed:', (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -241,7 +241,7 @@ async function sendReminder(params: {
         idempotencyKey: `shift-reminder-${params.shiftId}-${params.bucket}`,
       });
     } catch (err: unknown) {
-      log.warn('[shift-reminder] in-app delivery failed:', err?.message);
+      log.warn('[shift-reminder] in-app delivery failed:', (err instanceof Error ? err.message : String(err)));
     }
   }
 

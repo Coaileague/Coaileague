@@ -347,7 +347,7 @@ class FeatureGateService {
         }
       } catch (usageErr : unknown) {
         // Usage check failure is non-fatal — allow the request, log the error
-        log.warn('[FeatureGate] Usage check failed (non-fatal):', usageErr?.message);
+        log.warn('[FeatureGate] Usage check failed (non-fatal):', (usageErr instanceof Error ? usageErr.message : String(usageErr)));
       }
     }
 
@@ -408,7 +408,7 @@ class FeatureGateService {
       });
     } catch (trackErr : unknown) {
       // Non-fatal — usage tracking failure must never deny service
-      log.warn('[FeatureGate] Usage recording failed (non-fatal):', trackErr?.message);
+      log.warn('[FeatureGate] Usage recording failed (non-fatal):', (trackErr instanceof Error ? trackErr.message : String(trackErr)));
     }
 
     return { success: true, creditsUsed: 0 };

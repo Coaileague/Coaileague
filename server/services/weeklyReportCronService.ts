@@ -125,7 +125,7 @@ export async function runSundayWeeklyReports(): Promise<void> {
 
           success++;
         } catch (err: unknown) {
-          log.error(`[WeeklyReportCron] Failed for workspace ${workspaceId}:`, err?.message);
+          log.error(`[WeeklyReportCron] Failed for workspace ${workspaceId}:`, (err instanceof Error ? err.message : String(err)));
           failed++;
         }
       }

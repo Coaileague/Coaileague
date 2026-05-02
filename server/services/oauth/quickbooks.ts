@@ -608,7 +608,7 @@ export class QuickBooksOAuthService {
         }
         await this.cleanupExpiredStates();
       } catch (err: unknown) {
-        log.warn('[QuickBooks OAuth] Startup cleanup error:', err?.message || err);
+        log.warn('[QuickBooks OAuth] Startup cleanup error:', (err instanceof Error ? err.message : String(err)) || err);
       }
     }, 120000);
     

@@ -55,7 +55,7 @@ export async function appendWorkingMemory(opts: {
       expiresAt,
     });
   } catch (err: unknown) {
-    log.warn('[WorkingMemory] Append failed (non-fatal):', err?.message);
+    log.warn('[WorkingMemory] Append failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -79,7 +79,7 @@ export async function getTodayWorkingMemory(workspaceId: string): Promise<string
 
     return `TODAY'S OPERATIONAL LOG (last ${entries.length} events):\n${lines.join('\n')}`;
   } catch (err: unknown) {
-    log.warn('[WorkingMemory] Read failed (non-fatal):', err?.message);
+    log.warn('[WorkingMemory] Read failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     return '';
   }
 }
@@ -118,7 +118,7 @@ export async function storeEpisodicMemory(opts: {
 
     log.info(`[EpisodicMemory] Stored for ${opts.entityType}:${opts.entityId} in ws:${opts.workspaceId}`);
   } catch (err: unknown) {
-    log.warn('[EpisodicMemory] Store failed (non-fatal):', err?.message);
+    log.warn('[EpisodicMemory] Store failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -156,7 +156,7 @@ export async function getRelevantMemories(opts: {
 
     return `MEMORY OF PAST INTERACTIONS (most relevant):\n${formatted.join('\n')}`;
   } catch (err: unknown) {
-    log.warn('[EpisodicMemory] Retrieval failed (non-fatal):', err?.message);
+    log.warn('[EpisodicMemory] Retrieval failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     return '';
   }
 }
@@ -188,7 +188,7 @@ export async function buildTrinityMemoryContext(opts: {
 
     return parts.join('\n\n');
   } catch (err: unknown) {
-    log.warn('[MemoryContext] Build failed (non-fatal):', err?.message);
+    log.warn('[MemoryContext] Build failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     return '';
   }
 }
@@ -219,7 +219,7 @@ export async function recordDeliberation(opts: {
 
     return record.id;
   } catch (err: unknown) {
-    log.warn('[Deliberation] Log failed (non-fatal):', err?.message);
+    log.warn('[Deliberation] Log failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
     return '';
   }
 }
@@ -265,6 +265,6 @@ export async function compressOldMemories(workspaceId: string): Promise<void> {
 
     log.info(`[MemoryCompressor] Compressed ${old.length} memories for ws:${workspaceId}`);
   } catch (err: unknown) {
-    log.warn('[MemoryCompressor] Compression failed (non-fatal):', err?.message);
+    log.warn('[MemoryCompressor] Compression failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }

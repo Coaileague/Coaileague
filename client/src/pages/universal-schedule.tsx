@@ -473,7 +473,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/active-operations', workspaceId] });
     },
     onError: (error: unknown) => {
-      const isCredits = error?.status === 402 || error?.message?.includes('Insufficient credits');
+      const isCredits = (error as Record<string, unknown>).status === 402 || (error instanceof Error ? error.message : String(error))?.includes('Insufficient credits');
       toast({
         variant: 'destructive',
         title: isCredits ? 'Insufficient Credits' : 'Scheduling Session Failed',
@@ -620,7 +620,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       });
     },
     onError: (error: unknown) => {
-      const isCredits = error?.status === 402 || error?.message?.includes('Insufficient credits');
+      const isCredits = (error as Record<string, unknown>).status === 402 || (error instanceof Error ? error.message : String(error))?.includes('Insufficient credits');
       toast({
         variant: 'destructive',
         title: isCredits ? 'Insufficient Credits' : 'Failed to generate schedule',
@@ -1162,7 +1162,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       });
     },
     onError: (error: unknown) => {
-      const isCredits = error?.status === 402 || error?.message?.includes('Insufficient credits');
+      const isCredits = (error as Record<string, unknown>).status === 402 || (error instanceof Error ? error.message : String(error))?.includes('Insufficient credits');
       toast({
         variant: 'destructive',
         title: isCredits ? 'Monthly Token Limit Reached' : 'AI fill failed',
@@ -1256,7 +1256,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       }
     },
     onError: (error: unknown) => {
-      const isCredits = error?.status === 402 || error?.message?.includes('Insufficient credits');
+      const isCredits = (error as Record<string, unknown>).status === 402 || (error instanceof Error ? error.message : String(error))?.includes('Insufficient credits');
       toast({
         variant: 'destructive',
         title: isCredits ? 'Monthly Token Limit Reached' : 'AI auto-fill failed',

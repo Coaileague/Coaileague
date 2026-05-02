@@ -552,7 +552,7 @@ class TrinityNotificationBridge {
         );
       }
       } catch (error : unknown) {
-        log.warn('[TrinityNotificationBridge] Batch processing failed (will retry):', error?.message || 'unknown');
+        log.warn('[TrinityNotificationBridge] Batch processing failed (will retry):', (error instanceof Error ? error.message : String(error)) || 'unknown');
       }
     }, 30 * 1000);
   }
@@ -653,7 +653,7 @@ class TrinityNotificationBridge {
       try {
         await this.runWatchdogCheck();
       } catch (error : unknown) {
-        log.warn('[TrinityNotificationWatchdog] Check failed (will retry):', error?.message || 'unknown');
+        log.warn('[TrinityNotificationWatchdog] Check failed (will retry):', (error instanceof Error ? error.message : String(error)) || 'unknown');
       }
     }, 2 * 60 * 1000);
 

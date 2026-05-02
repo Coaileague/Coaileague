@@ -463,7 +463,7 @@ class DocumentSigningService {
           html: confirmEmail.html,
           emailType: 'document_signature_confirmation',
           workspaceId: doc.workspaceId,
-        }).catch((e: unknown) => log.warn(`[DocumentSigning] Confirmation email failed: ${e.message}`));
+        }).catch((e: unknown) => log.warn(`[DocumentSigning] Confirmation email failed: ${(e instanceof Error ? e.message : String(e))}`));
       }
 
       if (doc?.uploadedBy) {
@@ -652,7 +652,7 @@ class DocumentSigningService {
             html: email.html,
             emailType: 'document_fully_executed',
             workspaceId: doc.workspaceId,
-          }).catch(e => log.warn(`[DocumentSigning] Final copy email failed for \${sig.signerEmail}: \${e.message}`));
+          }).catch(e => log.warn(`[DocumentSigning] Final copy email failed for \${sig.signerEmail}: \${(e instanceof Error ? e.message : String(e))}`));
         }
       }
     } catch (err: unknown) {

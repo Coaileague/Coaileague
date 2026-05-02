@@ -830,7 +830,7 @@ class HelpAIOrchestrator {
       db.update(helpaiSessions)
         .set({ queuePosition: entry.position, updatedAt: new Date() })
         .where(eq(helpaiSessions.id, sessionId))
-        .catch(err => log.warn(`[HelpAI] Queue position update failed for session ${sessionId}:`, err?.message));
+        .catch(err => log.warn(`[HelpAI] Queue position update failed for session ${sessionId}:`, (err instanceof Error ? err.message : String(err))));
     }
   }
 

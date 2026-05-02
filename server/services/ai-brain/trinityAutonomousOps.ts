@@ -507,7 +507,7 @@ class TrinityAutonomousOps {
       try {
         await this.runHealthScan();
       } catch (error: unknown) {
-        log.warn('[TrinityAutonomousOps] Health scan failed (will retry):', error?.message || 'unknown');
+        log.warn('[TrinityAutonomousOps] Health scan failed (will retry):', (error instanceof Error ? error.message : String(error)) || 'unknown');
       }
     }, this.HEALTH_SCAN_INTERVAL);
   }
@@ -738,7 +738,7 @@ class TrinityAutonomousOps {
       try {
         await this.runMaintenanceCycle();
       } catch (error: unknown) {
-        log.warn('[TrinityAutonomousOps] Maintenance cycle failed (will retry):', error?.message || 'unknown');
+        log.warn('[TrinityAutonomousOps] Maintenance cycle failed (will retry):', (error instanceof Error ? error.message : String(error)) || 'unknown');
       }
     }, this.MAINTENANCE_INTERVAL);
   }
@@ -932,7 +932,7 @@ class TrinityAutonomousOps {
           reportInsightsLearned += patterns.filter(p => p.patternType === 'report_insight').length;
           conversationLearningsFound += patterns.filter(p => p.patternType === 'conversation_learning').length;
         } catch (err: unknown) {
-          log.warn(`[TrinityAutonomousOps] Org learning failed for workspace ${ws.id}:`, err?.message);
+          log.warn(`[TrinityAutonomousOps] Org learning failed for workspace ${ws.id}:`, (err instanceof Error ? err.message : String(err)));
         }
       }
 
@@ -984,7 +984,7 @@ class TrinityAutonomousOps {
           const decayed = trinityOrgIntelligenceService.applyPatternDecay(ws.id);
           totalDecayed += decayed;
         } catch (err: unknown) {
-          log.warn(`[TrinityAutonomousOps] Pattern decay failed for workspace ${ws.id}:`, err?.message);
+          log.warn(`[TrinityAutonomousOps] Pattern decay failed for workspace ${ws.id}:`, (err instanceof Error ? err.message : String(err)));
         }
       }
 
@@ -1028,7 +1028,7 @@ class TrinityAutonomousOps {
           const suggestions = trinityOrgIntelligenceService.generateImprovementSuggestions(ws.id);
           totalSuggestions += suggestions.length;
         } catch (err: unknown) {
-          log.warn(`[TrinityAutonomousOps] Proactive suggestions failed for workspace ${ws.id}:`, err?.message);
+          log.warn(`[TrinityAutonomousOps] Proactive suggestions failed for workspace ${ws.id}:`, (err instanceof Error ? err.message : String(err)));
         }
       }
 

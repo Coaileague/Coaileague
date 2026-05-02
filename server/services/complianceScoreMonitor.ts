@@ -45,7 +45,7 @@ async function ensureTable(): Promise<void> {
     `);
     bootstrapped = true;
   } catch (err: unknown) {
-    log.warn('[complianceScoreMonitor] bootstrap failed (non-fatal):', err?.message);
+    log.warn('[complianceScoreMonitor] bootstrap failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -144,13 +144,13 @@ async function notifyOwners(
         });
         delivered++;
       } catch (err: unknown) {
-        log.warn(`[complianceScoreMonitor] NDS send failed for ${userId}:`, err?.message);
+        log.warn(`[complianceScoreMonitor] NDS send failed for ${userId}:`, (err instanceof Error ? err.message : String(err)));
       }
     }
     log.info(`[complianceScoreMonitor] Alerted ${delivered}/${ownerRows.rowCount} owners for ${workspaceId}`);
     return delivered > 0;
   } catch (err: unknown) {
-    log.warn('[complianceScoreMonitor] notifyOwners failed:', err?.message);
+    log.warn('[complianceScoreMonitor] notifyOwners failed:', (err instanceof Error ? err.message : String(err)));
     return false;
   }
 }

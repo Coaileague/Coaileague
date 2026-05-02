@@ -174,8 +174,8 @@ auditSuiteRouter.post(
       });
       res.json({ ok: true, artifact: result });
     } catch (err: unknown) {
-      log.error('[AuditSuite] visual upload error:', err?.message);
-      res.status(500).json({ ok: false, error: err?.message });
+      log.error('[AuditSuite] visual upload error:', (err instanceof Error ? err.message : String(err)));
+      res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
     }
   },
 );
@@ -198,7 +198,7 @@ auditSuiteRouter.get(
       const artifacts = await listArtifactsForWorkspace(workspaceId, auditId as string | undefined);
       res.json({ ok: true, artifacts });
     } catch (err: unknown) {
-      res.status(500).json({ ok: false, error: err?.message });
+      res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
     }
   },
 );
@@ -217,7 +217,7 @@ auditSuiteRouter.get(
       const summary = await getArtifactSummary(workspaceId);
       res.json({ ok: true, summary });
     } catch (err: unknown) {
-      res.status(500).json({ ok: false, error: err?.message });
+      res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
     }
   },
 );
@@ -249,8 +249,8 @@ auditSuiteRouter.post(
       });
       res.json({ ok: true, ...result });
     } catch (err: unknown) {
-      log.error('[AuditSuite] submit-paperwork error:', err?.message);
-      res.status(500).json({ ok: false, error: err?.message });
+      log.error('[AuditSuite] submit-paperwork error:', (err instanceof Error ? err.message : String(err)));
+      res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
     }
   },
 );
@@ -268,7 +268,7 @@ auditSuiteRouter.get(
       const unlocked = await isAuditSafeUnlocked(auditId, workspaceId);
       res.json({ ok: true, unlocked });
     } catch (err: unknown) {
-      res.status(500).json({ ok: false, error: err?.message });
+      res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
     }
   },
 );
@@ -286,7 +286,7 @@ auditSuiteRouter.get(
       const log_ = await getAccessLog(auditId, workspaceId);
       res.json({ ok: true, accessLog: log_ });
     } catch (err: unknown) {
-      res.status(500).json({ ok: false, error: err?.message });
+      res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
     }
   },
 );
@@ -313,8 +313,8 @@ auditSuiteRouter.post(
       });
       res.json({ ok: true, ...result });
     } catch (err: unknown) {
-      log.error('[AuditSuite] generate-packet error:', err?.message);
-      res.status(500).json({ ok: false, error: err?.message });
+      log.error('[AuditSuite] generate-packet error:', (err instanceof Error ? err.message : String(err)));
+      res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
     }
   },
 );
@@ -331,7 +331,7 @@ auditSuiteRouter.get(
       const drafts = await getDraftsForAudit(auditId, workspaceId);
       res.json({ ok: true, drafts });
     } catch (err: unknown) {
-      res.status(500).json({ ok: false, error: err?.message });
+      res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
     }
   },
 );
@@ -349,7 +349,7 @@ auditSuiteRouter.post(
       const result = await approveAndSendDraft(draftId, workspaceId, getUserOrAuditorId(req));
       res.json({ ok: true, message: 'Audit packet approved and released to auditor.', ...result });
     } catch (err: unknown) {
-      res.status(500).json({ ok: false, error: err?.message });
+      res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
     }
   },
 );
@@ -375,8 +375,8 @@ auditSuiteRouter.post(
       });
       res.json({ ok: true, message: 'Draft rejected. Trinity has generated a revised packet.', newDraft });
     } catch (err: unknown) {
-      log.error('[AuditSuite] reject-draft error:', err?.message);
-      res.status(500).json({ ok: false, error: err?.message });
+      log.error('[AuditSuite] reject-draft error:', (err instanceof Error ? err.message : String(err)));
+      res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
     }
   },
 );
@@ -430,14 +430,14 @@ auditSuiteRouter.post(
             setByAuditorId: auditorId,
           });
         } catch (err: unknown) {
-          log.warn('[AuditSuite] Cure period start failed (non-fatal):', err?.message);
+          log.warn('[AuditSuite] Cure period start failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
         }
       }
 
       res.json({ ok: true, ...result });
     } catch (err: unknown) {
-      log.error('[AuditSuite] verdict error:', err?.message);
-      res.status(500).json({ ok: false, error: err?.message });
+      log.error('[AuditSuite] verdict error:', (err instanceof Error ? err.message : String(err)));
+      res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
     }
   },
 );
@@ -454,7 +454,7 @@ auditSuiteRouter.get(
       const citation = await getCitationForAudit(auditId, workspaceId);
       res.json({ ok: true, citation });
     } catch (err: unknown) {
-      res.status(500).json({ ok: false, error: err?.message });
+      res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
     }
   },
 );
@@ -480,8 +480,8 @@ auditSuiteRouter.post(
       });
       res.json({ ok: true, ...result });
     } catch (err: unknown) {
-      log.error('[AuditSuite] payment-proof error:', err?.message);
-      res.status(500).json({ ok: false, error: err?.message });
+      log.error('[AuditSuite] payment-proof error:', (err instanceof Error ? err.message : String(err)));
+      res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
     }
   },
 );
@@ -500,7 +500,7 @@ auditSuiteRouter.get(
       const ledger = await getAuditHistoricalLedger(workspaceId);
       res.json({ ok: true, ledger });
     } catch (err: unknown) {
-      res.status(500).json({ ok: false, error: err?.message });
+      res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
     }
   },
 );
@@ -521,7 +521,7 @@ auditSuiteRouter.get(
       const status = await getCureStatus(auditId, workspaceId);
       res.json({ ok: true, cureStatus: status });
     } catch (err: unknown) {
-      res.status(500).json({ ok: false, error: err?.message });
+      res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
     }
   },
 );
@@ -548,8 +548,8 @@ auditSuiteRouter.post(
       });
       res.json({ ok: true, ...result });
     } catch (err: unknown) {
-      log.error('[AuditSuite] upload-corrections error:', err?.message);
-      res.status(500).json({ ok: false, error: err?.message });
+      log.error('[AuditSuite] upload-corrections error:', (err instanceof Error ? err.message : String(err)));
+      res.status(500).json({ ok: false, error: (err instanceof Error ? err.message : String(err)) });
     }
   },
 );

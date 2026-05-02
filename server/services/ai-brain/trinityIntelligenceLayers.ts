@@ -59,7 +59,7 @@ function mkLayer(layer: string, actionId: string, fn: (params: Record<string, un
         const data = await fn(req.params || {});
         return { success: true, actionId, data };
       } catch (err: unknown) {
-        return { success: false, actionId, error: err?.message || 'Unknown error' };
+        return { success: false, actionId, error: (err instanceof Error ? err.message : String(err)) || 'Unknown error' };
       }
     },
   };

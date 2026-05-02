@@ -346,7 +346,7 @@ export async function sendDailyDigest(employeeId: string): Promise<{ success: bo
     }
 
     if (!emailResult.success) {
-      return { success: false, error: emailResult.error?.message || 'Email send failed' };
+      return { success: false, error: emailResult.error || 'Email send failed' };
     }
 
     log.info(`[DailyDigest] Sent digest to ${digestData.employee.email}`);

@@ -403,16 +403,16 @@ export async function runMonthlyRecognitionForWorkspace(
           metadata: { scheduleId: schedule.id, invoiceId: schedule.invoiceId, period: periodDate, method: 'accrual' },
         });
       } catch (err: unknown) {
-        log.warn('[RevenueRecognitionService] Ledger write failed', { error: err?.message, scheduleId: schedule.id });
+        log.warn('[RevenueRecognitionService] Ledger write failed', { error: (err instanceof Error ? err.message : String(err)), scheduleId: schedule.id });
       }
 
       result.schedulesProcessed++;
       result.amountRecognized += recognizeAmount;
     } catch (err: unknown) {
-      result.errors.push(`Schedule ${schedule.id}: ${err?.message}`);
+      result.errors.push(`Schedule ${schedule.id}: ${(err instanceof Error ? err.message : String(err))}`);
       log.error('[RevenueRecognitionService] Error processing schedule', {
         scheduleId: schedule.id,
-        error: err?.message,
+        error: (err instanceof Error ? err.message : String(err)),
       });
     }
   }
@@ -484,7 +484,7 @@ export async function runMonthlyRecognitionAllWorkspaces(
       const result = await runMonthlyRecognitionForWorkspace(ws.id, targetYear, targetMonth);
       results.push(result);
     } catch (err: unknown) {
-      log.error('[RevenueRecognitionService] Workspace job failed', { workspaceId: ws.id, error: err?.message });
+      log.error('[RevenueRecognitionService] Workspace job failed', { workspaceId: ws.id, error: (err instanceof Error ? err.message : String(err)) });
       results.push({
         workspaceId: ws.id,
         year: targetYear,
@@ -493,7 +493,7 @@ export async function runMonthlyRecognitionAllWorkspaces(
         schedulesProcessed: 0,
         amountRecognized: 0,
         deferredEntriesUpdated: 0,
-        errors: [err?.message ?? 'Unknown error'],
+        errors: [(err instanceof Error ? err.message : String(err)) ?? 'Unknown error'],
       });
     }
   }

@@ -1227,7 +1227,7 @@ class ShiftRoomBotOrchestrator {
             params.conversationId
           );
         } catch (err: unknown) {
-          log.error(`[ShiftRoomBot] Failed to send manager escalation for medical emergency in workspace ${params.workspaceId}: ${err?.message}`);
+          log.error(`[ShiftRoomBot] Failed to send manager escalation for medical emergency in workspace ${params.workspaceId}: ${(err instanceof Error ? err.message : String(err))}`);
         }
       })();
 

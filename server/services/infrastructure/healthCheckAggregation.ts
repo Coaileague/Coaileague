@@ -387,7 +387,7 @@ class HealthCheckAggregationService {
         createdAt: new Date()
       });
     } catch (error : unknown) {
-      log.warn('[HealthCheck] Failed to log unhealthy service (will retry):', error?.message || 'unknown');
+      log.warn('[HealthCheck] Failed to log unhealthy service (will retry):', (error instanceof Error ? error.message : String(error)) || 'unknown');
     }
   }
 

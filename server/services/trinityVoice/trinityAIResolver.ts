@@ -138,7 +138,7 @@ async function tryGemini(issue: string, workspaceId: string, language?: string, 
 
     return { ...parsed, modelUsed: 'gemini', responseTimeMs: 0 };
   } catch (e: unknown) {
-    log.warn('[TrinityAIResolver] Gemini failed:', e?.message);
+    log.warn('[TrinityAIResolver] Gemini failed:', (e instanceof Error ? e.message : String(e)));
     return null;
   }
 }
@@ -183,7 +183,7 @@ async function tryClaude(issue: string, workspaceId: string, tier: string, langu
     if (!parsed) return null;
     return { ...parsed, modelUsed: 'claude', responseTimeMs: 0 };
   } catch (e: unknown) {
-    log.warn('[TrinityAIResolver] Claude failed:', e?.message);
+    log.warn('[TrinityAIResolver] Claude failed:', (e instanceof Error ? e.message : String(e)));
     return null;
   }
 }
@@ -228,7 +228,7 @@ async function tryOpenAI(issue: string, workspaceId: string, tier: string, langu
     if (!parsed) return null;
     return { ...parsed, modelUsed: 'openai', responseTimeMs: 0 };
   } catch (e: unknown) {
-    log.warn('[TrinityAIResolver] OpenAI failed:', e?.message);
+    log.warn('[TrinityAIResolver] OpenAI failed:', (e instanceof Error ? e.message : String(e)));
     return null;
   }
 }
@@ -273,7 +273,7 @@ export async function resolveWithTrinityBrain(params: {
         },
       });
     } catch (auditErr: unknown) {
-      log.warn('[TrinityAIResolver] Gate audit failed (non-fatal):', auditErr?.message);
+      log.warn('[TrinityAIResolver] Gate audit failed (non-fatal):', (auditErr instanceof Error ? auditErr.message : String(auditErr)));
     }
     // Return canResolve:false with empty answer so callers fall through to
     // their own escalation path (ticket creation, voicemail, etc.) instead

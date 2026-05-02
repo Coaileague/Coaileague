@@ -143,13 +143,13 @@ export async function executeInvoiceLifecycleWorkflow(
 
     await logWorkflowStep(record, 'fetch', true, 'entry + client + finance settings loaded');
   } catch (err: unknown) {
-    await logWorkflowStep(record, 'fetch', false, err?.message);
+    await logWorkflowStep(record, 'fetch', false, (err instanceof Error ? err.message : String(err)));
     await logWorkflowComplete(record, {
       success: false,
-      errorMessage: err?.message,
+      errorMessage: (err instanceof Error ? err.message : String(err)),
       summary: 'Fetch failed',
     });
-    return buildSkip(record.id, `fetch:${err?.message}`);
+    return buildSkip(record.id, `fetch:${(err instanceof Error ? err.message : String(err))}`);
   }
 
   // ── VALIDATE ──
@@ -206,7 +206,7 @@ export async function executeInvoiceLifecycleWorkflow(
     );
   } catch (err: unknown) {
     // No approved entries for the day is a benign no-op — every other error is a failure.
-    const msg = err?.message ?? String(err);
+    const msg = (err instanceof Error ? err.message : String(err)) ?? String(err);
     const benign = /no approved time entries/i.test(msg);
     await logWorkflowStep(record, 'mutate', !benign && false, msg);
     await logWorkflowComplete(record, {
@@ -245,7 +245,7 @@ export async function executeInvoiceLifecycleWorkflow(
         emailed ? `invoice emailed to ${clientRow.email ?? 'client'}` : sendResult?.message,
       );
     } catch (err: unknown) {
-      await logWorkflowStep(record, 'notify', false, `email failed: ${err?.message}`);
+      await logWorkflowStep(record, 'notify', false, `email failed: ${(err instanceof Error ? err.message : String(err))}`);
     }
   } else {
     await logWorkflowStep(record, 'notify', true, 'auto-send disabled — awaiting manual send');
@@ -355,7 +355,7 @@ export async function sweepStuckInvoiceLifecycleEntries(): Promise<InvoiceLifecy
         else result.failed++;
       } catch (err: unknown) {
         result.failed++;
-        log.warn(`[invoice-lifecycle-sweep] Retry failed for entry ${entry.id}: ${err?.message}`);
+        log.warn(`[invoice-lifecycle-sweep] Retry failed for entry ${entry.id}: ${(err instanceof Error ? err.message : String(err))}`);
       }
     }
 
@@ -363,7 +363,7 @@ export async function sweepStuckInvoiceLifecycleEntries(): Promise<InvoiceLifecy
       log.info('[invoice-lifecycle-sweep] complete', result);
     }
   } catch (err: unknown) {
-    log.error('[invoice-lifecycle-sweep] catastrophic failure:', err?.message);
+    log.error('[invoice-lifecycle-sweep] catastrophic failure:', (err instanceof Error ? err.message : String(err)));
   }
 
   return result;

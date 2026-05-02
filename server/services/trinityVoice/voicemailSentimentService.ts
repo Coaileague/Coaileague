@@ -117,7 +117,7 @@ export async function classifyAndPersist(params: {
       );
     }
   } catch (err: unknown) {
-    log.warn('[VoicemailSentiment] persist failed (non-fatal):', err?.message);
+    log.warn('[VoicemailSentiment] persist failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
   }
   return result;
 }

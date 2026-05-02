@@ -89,7 +89,7 @@ async function requireNdaAccepted(req: AuthenticatedRequest, res: Response, next
     }
     next();
   } catch (err: unknown) {
-    log.warn('[AuditorRoutes] NDA gate check failed:', err?.message);
+    log.warn('[AuditorRoutes] NDA gate check failed:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ ok: false, error: 'NDA gate failed' });
   }
 }

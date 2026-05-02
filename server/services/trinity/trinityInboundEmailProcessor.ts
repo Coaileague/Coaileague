@@ -122,7 +122,7 @@ async function handleCommandEmail(
           skipUnsubscribeCheck: true,
         });
       } catch (err: unknown) {
-        log.warn('[EmailProcessor] Command reply send failed (non-fatal):', err?.message);
+        log.warn('[EmailProcessor] Command reply send failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
     });
 
@@ -133,7 +133,7 @@ async function handleCommandEmail(
       message: result.appendToResponse,
     };
   } catch (err: unknown) {
-    log.warn('[EmailProcessor] Command dispatch failed:', err?.message);
+    log.warn('[EmailProcessor] Command dispatch failed:', (err instanceof Error ? err.message : String(err)));
     return { dispatched: false, queued: false };
   }
 }
@@ -1215,7 +1215,7 @@ async function processStaffing(
         });
         log.info(`[processStaffing] Auto-fill triggered for workspace ${workspaceId} — ${openCount} open shifts`);
       } catch (err: unknown) {
-        log.warn('[processStaffing] Auto-fill trigger failed (non-fatal):', err?.message);
+        log.warn('[processStaffing] Auto-fill trigger failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
       }
     });
 
@@ -1235,7 +1235,7 @@ No action needed on your part.`,
         idempotencyKey: `staffing-email-${logId}`,
       } as unknown);
     } catch (notifErr: unknown) {
-      log.warn('[processStaffing] Notification failed (non-fatal):', notifErr?.message);
+      log.warn('[processStaffing] Notification failed (non-fatal):', (notifErr instanceof Error ? notifErr.message : String(notifErr)));
     }
 
     return {
@@ -1243,8 +1243,8 @@ No action needed on your part.`,
       actionTaken: `staffing.auto_fill.triggered.${openCount}_open_shifts`,
     };
   } catch (err: unknown) {
-    log.error('[processStaffing] Unexpected error:', err?.message);
-    return { needsReview: true, reviewReason: `processStaffing error: ${err?.message}` };
+    log.error('[processStaffing] Unexpected error:', (err instanceof Error ? err.message : String(err)));
+    return { needsReview: true, reviewReason: `processStaffing error: ${(err instanceof Error ? err.message : String(err))}` };
   }
 }
 

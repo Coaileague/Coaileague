@@ -457,7 +457,7 @@ class CircuitBreakerService {
             stats: circuit.stats,
           },
           metadata: { source: 'CircuitBreaker', severity: 'critical' },
-        }).catch((err: unknown) => log.warn('[CircuitBreaker] Failed to publish circuit_breaker_opened:', err.message));
+        }).catch((err: unknown) => log.warn('[CircuitBreaker] Failed to publish circuit_breaker_opened:', (err instanceof Error ? err.message : String(err))));
       } catch (error) {
         log.error('[CircuitBreaker] Failed to log state transition:', error);
       }

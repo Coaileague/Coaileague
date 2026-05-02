@@ -54,7 +54,7 @@ export const complianceService = {
       log.info('Compliance alert created', { workspaceId, title, severity });
       return alert;
     } catch (err: unknown) {
-      log.error('createAlert failed', { workspaceId, title, error: err?.message });
+      log.error('createAlert failed', { workspaceId, title, error: (err instanceof Error ? err.message : String(err)) });
       throw err;
     }
   },

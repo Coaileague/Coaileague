@@ -22,7 +22,7 @@ Respond ONLY with JSON: {"valid": true/false, "issues": ["issue1"], "confidence"
       const clean = response.replace(/```json|```/g, '').trim();
       return JSON.parse(clean);
     } catch (err: unknown) {
-      log.warn(`[ClaudeVerification] Verification failed: ${err?.message}`);
+      log.warn(`[ClaudeVerification] Verification failed: ${(err instanceof Error ? err.message : String(err))}`);
       // Default to trusting the output on verification failure (non-critical path)
       return { valid: true, issues: [], confidence: 0.5 };
     }

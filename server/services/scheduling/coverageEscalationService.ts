@@ -117,7 +117,7 @@ class CoverageEscalationService {
               siteName = shiftRow?.title ?? null;
             }
           } catch (siteErr : unknown) {
-            log.warn(`[CoverageEscalation] Site lookup failed for coverage ${row.id}: ${siteErr?.message}`);
+            log.warn(`[CoverageEscalation] Site lookup failed for coverage ${row.id}: ${(siteErr instanceof Error ? siteErr.message : String(siteErr))}`);
           }
 
           // Mark escalated FIRST so a publish failure doesn't cause repeat alerts
@@ -148,7 +148,7 @@ class CoverageEscalationService {
 
           escalated++;
         } catch (rowErr : unknown) {
-          log.error(`[CoverageEscalation] Failed to escalate coverage ${row.id}:`, rowErr?.message);
+          log.error(`[CoverageEscalation] Failed to escalate coverage ${row.id}:`, (rowErr instanceof Error ? rowErr.message : String(rowErr)));
         }
       }
 

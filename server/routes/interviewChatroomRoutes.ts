@@ -49,7 +49,7 @@ router.post('/chatrooms', requireAuth, async (req: Request, res: Response) => {
     log.info(`Chatroom created id=${chatroom.id} candidate=${candidateId}`);
     res.status(201).json(chatroom);
   } catch (err: unknown) {
-    log.error('Failed to create chatroom:', err?.message);
+    log.error('Failed to create chatroom:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to create chatroom' });
   }
 });
@@ -70,7 +70,7 @@ router.post('/chatrooms/:id/start', requireAuth, async (req: Request, res: Respo
     await interviewChatOrchestrator.startInterview(req.params.id);
     res.json({ success: true, message: 'Interview started' });
   } catch (err: unknown) {
-    log.error('Failed to start interview:', err?.message);
+    log.error('Failed to start interview:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to start interview' });
   }
 });
@@ -96,7 +96,7 @@ router.get('/chatrooms', requireAuth, async (req: Request, res: Response) => {
     );
     res.json(result.rows);
   } catch (err: unknown) {
-    log.error('Failed to list chatrooms:', err?.message);
+    log.error('Failed to list chatrooms:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to list chatrooms' });
   }
 });
@@ -114,7 +114,7 @@ router.get('/chatrooms/:id', requireAuth, async (req: Request, res: Response) =>
     const messages = await interviewChatOrchestrator.getMessages(req.params.id, true);
     res.json({ ...room, messages });
   } catch (err: unknown) {
-    log.error('Failed to get chatroom:', err?.message);
+    log.error('Failed to get chatroom:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to get chatroom' });
   }
 });
@@ -138,7 +138,7 @@ router.patch('/chatrooms/:id/decision', requireAuth, async (req: Request, res: R
     );
     res.json({ success: true });
   } catch (err: unknown) {
-    log.error('Failed to record decision:', err?.message);
+    log.error('Failed to record decision:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to record decision' });
   }
 });
@@ -170,7 +170,7 @@ router.get('/room/:token', async (req: Request, res: Response) => {
       completedAt: room.completed_at,
     });
   } catch (err: unknown) {
-    log.error('Failed to load interview room:', err?.message);
+    log.error('Failed to load interview room:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to load interview room' });
   }
 });
@@ -207,7 +207,7 @@ router.post('/room/:token/message', async (req: Request, res: Response) => {
 
     res.json({ success: true, message: msg });
   } catch (err: unknown) {
-    log.error('Failed to send interview message:', err?.message);
+    log.error('Failed to send interview message:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to send message' });
   }
 });
@@ -221,7 +221,7 @@ router.get('/room/:token/messages', async (req: Request, res: Response) => {
     const messages = await interviewChatOrchestrator.getMessages(room.id, false);
     res.json({ messages, status: room.status });
   } catch (err: unknown) {
-    log.error('Failed to poll messages:', err?.message);
+    log.error('Failed to poll messages:', (err instanceof Error ? err.message : String(err)));
     res.status(500).json({ error: 'Failed to get messages' });
   }
 });
