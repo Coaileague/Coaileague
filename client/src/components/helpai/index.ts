@@ -1,1 +1,1 @@
-export { HelpAIIntegrationPanel } from './helpai-integration-panel';
+export { HelpAIIntegrationPanel } from './helpai-integration-panel.tsx';

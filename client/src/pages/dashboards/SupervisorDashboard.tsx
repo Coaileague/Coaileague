@@ -36,14 +36,12 @@ export default function SupervisorDashboard() {
   const { data: clockStatus, isLoading: clockLoading, isError: clockIsError, error: clockError, refetch: refetchClockStatus } = useQuery<{ isClockedIn: boolean; activeTimeEntry?: unknown }>({
     queryKey: ["/api/time-entries/status"],
     enabled: true,
-    staleTime: 30_000,
     staleTime: 30000,
   });
 
   const { data: shiftsRes, isLoading: shiftsLoading, isError: shiftsIsError, error: shiftsError, refetch: refetchShifts } = useQuery<any[] | { data: unknown[] }>({
     queryKey: ["/api/shifts"],
     enabled: true,
-    staleTime: 30_000,
     staleTime: 30000,
   });
 

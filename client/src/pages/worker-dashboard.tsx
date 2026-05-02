@@ -759,21 +759,18 @@ function WorkerDashboardInner() {
     queryKey: ["/api/time-entries/status"],
     enabled: true,
     staleTime: 30_000,
-    staleTime: 30_000,
     gcTime: 5 * 60_000,
     refetchInterval: 30000,
   });
   const { data: todayShifts, isLoading: shiftsLoading, isError: todayShiftsIsError, error: todayShiftsError, refetch: refetchTodayShifts } = useQuery<TodayShift[]>({
     queryKey: ["/api/shifts/today"],
     enabled: true,
-    staleTime: 30_000,
     staleTime: 2 * 60_000,
     gcTime: 10 * 60_000,
   });
   const { data: upcomingShifts, isError: upcomingShiftsIsError, error: upcomingShiftsError, refetch: refetchUpcomingShifts } = useQuery<UpcomingShift[]>({
     queryKey: ["/api/shifts/upcoming"],
     enabled: true,
-    staleTime: 30_000,
     staleTime: 5 * 60_000,
     gcTime: 15 * 60_000,
   });
@@ -785,7 +782,6 @@ function WorkerDashboardInner() {
   const { data: notificationsData, isError: notificationsIsError, error: notificationsError, refetch: refetchNotifications } = useQuery<{ notifications?: Notification[]; items?: Notification[] } | Notification[]>({
     queryKey: ["/api/notifications"],
     enabled: true,
-    staleTime: 30_000,
     staleTime: 60_000,
     gcTime: 5 * 60_000,
   });

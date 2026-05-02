@@ -54,7 +54,6 @@ export default function OrgManagerDashboard() {
   const { data: employeesRes, isError: employeesIsError, error: employeesError, refetch: refetchEmployees } = useQuery<{ data: unknown[] }>({
     queryKey: ["/api/employees"],
     enabled: true,
-    staleTime: 30_000,
     staleTime: 60000,
   });
   const isDashboardError =
