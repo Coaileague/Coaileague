@@ -26,7 +26,7 @@ const STATUS_BADGE: Record<string, string> = {
   inactive:  "bg-muted text-muted-foreground",
 };
 
-function Section({ title, icon: Icon, children }: { title: string; icon: string | React.ReactNode; children: React.ReactNode }) {
+function Section({ title, icon: Icon, children }: { title: string; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
   return (
     <div>
       <h3 className="text-sm font-semibold flex items-center gap-2 mb-3 text-muted-foreground uppercase tracking-wide">
@@ -37,8 +37,6 @@ function Section({ title, icon: Icon, children }: { title: string; icon: string 
     </div>
   );
 }
-
-const Icon = ({ name: _name, className }: { name: string; className?: string }) => <span className={className}>●</span>;
 
 export default function SupportConsoleWorkspacePage() {
   const [, setLocation] = useLocation();

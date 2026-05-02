@@ -1,6 +1,6 @@
 # COAILEAGUE — MASTER AGENT HANDOFF
 # ONE FILE — update in place.
-# Last updated: 2026-05-02 — Claude (workspace + sub-tenant + workflow page audit pass)
+# Last updated: 2026-05-02 — Claude (support role + support org pass)
 
 ---
 
@@ -10,6 +10,72 @@
 origin/development → 5c8f43b2  (🟢 GREEN — build clean, Railway auto-deploying)
 TS debt: 8,566 → 2124 combined (-75.2% from baseline)
 ```
+
+---
+
+## 2026-05-02 — support role / support org audit pass
+Branch: `claude/fix-workspace-pages-ZyETl`
+Scope: support-role-protected pages (admin/support-console*, support-queue,
+support-bug-dashboard, support-chatrooms, support-ai-console, support-command-console,
+HelpDesk, my-tickets, admin-ticket-reviews, admin-helpai, role-management,
+end-user-controls), CRUD + fetch/post/query wiring, support roles cross-check.
+esbuild parse exit=0 across all 19 audited support pages.
+
+### Canonical support roles (frozen — used by `requireSupportRole` everywhere)
+`root_admin`, `deputy_admin`, `sysop`, `support_manager`, `support_agent`
+(`Bot` is added only in `trinityNotificationRoutes.ts` for Trinity-originated calls.)
+`AALV_SUPPORT_ROLES` in `aiRoutes.ts` and `SUPPORT_ROLES` in
+`endUserControlRoutes.ts` and `trinityNotificationRoutes.ts` and
+`chat-rooms.ts` (lines 2046, 2183) all reference the same five roles —
+verified consistent.
+
+### Fixed
+| Where | Issue | Fix |
+|---|---|---|
+| `pages/admin/support-console.tsx` | `useState<null>(null)` for `selectedTicket` and `selectedWorkspace`; access to `.id`, `.ticket_number`, `.subject`, `.workspace_id`, `.workspaceId`, `.entity_type`, etc. on a `null`-typed value | Added `SupportTicket` and `SupportWorkspaceRef` interfaces, retyped both states + the search-results `.map(r: SupportWorkspaceRef, i: number)` callback |
+| `pages/admin/support-console.tsx` | Stray module-scoped `const Icon = ({ name, className }: any) => …` (dead — local destructure `icon: Icon` already provides the component inside the dashboard) | Deleted |
+| `pages/admin/support-console-workspace.tsx` | Same dead `const Icon = … : any` at module scope; also `Section` had `icon: string \| React.ReactNode` instead of a component type, breaking `<Icon className=… />` rendering | Removed dead `Icon`; retyped `Section` `icon` as `React.ComponentType<{ className?: string }>` |
+| `components/motd-dialog.tsx` | `iconMap: Record<string, unknown>` made `<IconComponent />` unrenderable | Imported `LucideIcon` and retyped to `Record<string, LucideIcon>` |
+| `components/motd-dialog.tsx` | `MotdMessage` interface was private — HelpDesk had no shared type | Exported `MotdMessage` |
+| `pages/HelpDesk.tsx` | `useState<null>(null)` for `motdData`, then `.id` and `.requiresAcknowledgment` accessed; `useQuery<{ motd: unknown, … }>` left motd untyped | Imported `MotdMessage` from the dialog, retyped both the state and the query response |
+
+### Verified routed + reachable (support surface)
+`/support`, `/my-tickets`, `/support/queue`, `/support/bugs`,
+`/support/chatrooms`, `/support/ai-console`, `/support/assisted-onboarding`,
+`/admin/support-console`, `/admin/support-console/tickets`,
+`/admin/support-console/workspace`, `/role-management`, `/end-user-controls`,
+`/chat/:roomId` (HelpDesk), `/helpdesk`, `/admin/ticket-reviews`,
+`/admin/helpai`. Legacy redirects intact: `/support/console`,
+`/trinity/command-center`, `/helpai-orchestration` → `/support/ai-console`.
+
+### Verified support CRUD endpoints (server, all `requireSupportRole`-gated)
+- `endUserControlRoutes.ts`: `GET /workspaces`, `GET /workspace/:id`,
+  `POST /suspend`, `POST /unsuspend`, `POST /toggle-ai-brain`,
+  `PATCH /access-config`, `POST /freeze-user`, `POST /unfreeze-user`,
+  `POST /suspend-employee`, `POST /reactivate-employee`
+- `trinityNotificationRoutes.ts`: `POST /whats-new`, `POST /support-escalation`,
+  `POST /insight`, `GET /metrics`, `GET /watchdog-status`, `POST /batch-send`
+- `support-command-console.ts`: `GET /test-broadcast`, `POST /force-whats-new`,
+  `POST /force-notification`, `POST /force-sync`, `POST /broadcast-message`,
+  `POST /maintenance-mode`
+- `adminPermissionRoutes.ts`: `PATCH/DELETE /workspaces/:wsId/matrix`,
+  `PATCH /workspaces/:wsId/users/:userId/role` (`requireSupportManager`)
+- `aiRoutes.ts` AALV: 4 endpoints gated to `AALV_SUPPORT_ROLES`
+
+All endpoints checked have a routed UI consumer except the
+`support-command-console.ts` set (see orphan note below).
+
+### Orphans flagged (NOT fixed — needs product call)
+- `pages/support-command-console.tsx` (1559 lines) — orphan: not lazy-imported
+  in `App.tsx`, no router entry. `support-ai-console.tsx` appears to be its
+  canonical replacement (legacy redirects `/support/console` and
+  `/trinity/command-center` both point to `/support/ai-console`). Decide
+  to (a) route at `/support/command-console`, or (b) delete the page +
+  the unconsumed `supportCommandRouter` endpoints.
+
+### Out-of-scope but observed
+- `pages/support-command-console.tsx:1404` `MobileToolsPanel({…}: any)` —
+  one big destructured prop bag still typed `any`. Listed in TS-DEBT bucket.
 
 ---
 

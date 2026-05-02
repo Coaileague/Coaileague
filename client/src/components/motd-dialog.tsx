@@ -12,14 +12,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import {
-  Bell, AlertCircle, Info, Sparkles, Zap, Heart, Star, CheckCircle
+  Bell, AlertCircle, Info, Sparkles, Zap, Heart, Star, CheckCircle,
+  type LucideIcon
 } from "lucide-react";
 
 import { useState } from "react";
 
 const PLATFORM_NAME = (import.meta.env.VITE_PLATFORM_NAME as string) || "CoAIleague";
 
-interface MotdMessage {
+export interface MotdMessage {
   id: string;
   title: string;
   content: string;
@@ -37,7 +38,7 @@ interface MotdDialogProps {
 }
 
 // Icon mapping
-const iconMap: Record<string, unknown> = {
+const iconMap: Record<string, LucideIcon> = {
   bell: Bell,
   alert: AlertCircle,
   info: Info,

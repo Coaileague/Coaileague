@@ -31,10 +31,40 @@ const STATUS_COLORS: Record<string, string> = {
   closed: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
 };
 
+interface SupportTicket {
+  id: string;
+  ticket_number?: string;
+  subject?: string;
+  status?: string;
+  priority?: string;
+  category?: string;
+  description?: string;
+  workspace_id?: string;
+  assigned_to?: string;
+  assignedTo?: string;
+  assigned_to_trinity?: boolean;
+  trinity_attempted?: boolean;
+  trinity_transcript?: string;
+  escalation_reason?: string;
+  created_at?: string;
+}
+
+interface SupportWorkspaceRef {
+  id?: string;
+  workspaceId?: string;
+  name?: string;
+  workspace_name?: string;
+  workspaceName?: string;
+  entity_type?: string;
+  display_name?: string;
+  workspace_id?: string;
+  deep_link?: string;
+}
+
 function SupportDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTicket, setSelectedTicket] = useState<null>(null);
-  const [selectedWorkspace, setSelectedWorkspace] = useState<null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<SupportWorkspaceRef | null>(null);
   const [actionDialog, setActionDialog] = useState<{ open: boolean; workspaceId?: string }>({ open: false });
   const [actionForm, setActionForm] = useState({ actionType: "", targetEntityType: "user", targetEntityId: "", reason: "" });
   const { toast } = useToast();
@@ -231,7 +261,7 @@ function SupportDashboard() {
               </div>
               {searchResults && searchResults.length > 0 && (
                 <div className="divide-y border rounded-md">
-                  {searchResults.map((r: unknown, i) => (
+                  {searchResults.map((r: SupportWorkspaceRef, i: number) => (
                     <div
                       key={`${r.entity_type}-${r.id}-${i}`}
                       className="flex items-center gap-3 p-3 hover-elevate cursor-pointer"
@@ -627,8 +657,6 @@ function WorkspaceDeepDive({ workspaceId, data, isLoading, onExecuteAction }: {
     </div>
   );
 }
-
-const Icon = ({ name: _name, className }: { name: string; className?: string }) => <span className={className}>●</span>;
 
 export default function SupportConsolePage() {
   return <SupportDashboard />;
