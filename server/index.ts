@@ -32,6 +32,7 @@ import { monitoringService } from "./monitoring";
 import { CACHING } from './config/platformConfig';
 import { DOMAINS } from '@shared/platformConfig';
 import { startAutonomousScheduler } from "./services/autonomousScheduler";
+import { startScoringScheduler } from "./services/scoring/scoringScheduler";
 import { ensureRequiredTables } from "./services/dbMigrationService";
 import { stopDecemberHolidayCron } from "./services/holidayService";
 import { runLegacyBootstraps } from "./services/legacyBootstrapRegistry";
@@ -2752,6 +2753,17 @@ self.addEventListener('activate', async () => {
       log.info('Autonomous scheduler started successfully');
     } catch (error) {
       log.error('CRITICAL: Failed to start autonomous scheduler', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
+    }
+
+    // Cross-tenant scoring jobs: nightly officer recompute, monthly tenant
+    // snapshot, monthly Officer of the Month / yearly Officer of the Year.
+    try {
+      startScoringScheduler();
+      log.info('Scoring scheduler started successfully');
+    } catch (error) {
+      log.error('Failed to start scoring scheduler (non-fatal)', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
     
     // PHASE 6: Initialize Trinity event subscriptions

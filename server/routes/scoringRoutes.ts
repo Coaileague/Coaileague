@@ -32,6 +32,11 @@ import { getClosingScoresForOfficer } from '../services/scoring/closingScoreServ
 import { computeTenantScore, snapshotTenantScore } from '../services/scoring/tenantScoreService';
 import { recommendMoveUps } from '../services/scoring/moveUpRecommender';
 import { getCurrentHonorRoll, selectHonorRollPick } from '../services/scoring/honorRollService';
+import {
+  linkOfficerToGlobal,
+  setPublicRecognitionConsent,
+  verifyVeteranStatus,
+} from '../services/scoring/officerLinkageService';
 import { createLogger } from '../lib/logger';
 import { registerLegacyBootstrap } from '../services/legacyBootstrapRegistry';
 import { platformActionHub, type ActionRequest, type ActionResult } from '../services/helpai/platformActionHub';
@@ -298,6 +303,106 @@ router.get('/api/scoring/tenant', requireAuth, async (req, res) => {
   } catch (err) {
     log.error('[scoring] /tenant failed:', err);
     res.status(500).json({ error: 'Failed to load tenant score' });
+  }
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// /api/scoring/officer/link — find-or-create globalOfficer for current officer
+// Called by onboarding and HR backfill. Owner+ only because it touches SSN.
+// ────────────────────────────────────────────────────────────────────────────
+
+const linkSchema = z.object({
+  employeeId: z.string().min(1),
+  rawSSN: z.string().min(9),
+  legalFirstName: z.string().min(1),
+  legalLastName: z.string().min(1),
+  dateOfBirth: z.string().optional(),
+});
+
+router.post('/api/scoring/officer/link', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const workspaceId = req.workspaceId;
+    if (!userId || !workspaceId) return res.status(400).json({ error: 'Missing context' });
+
+    const role = await getWorkspaceRole(userId, workspaceId);
+    if (!role || !OWNER_ROLES.has(role)) {
+      return res.status(403).json({ error: 'Owner role required (handles SSN)' });
+    }
+
+    const parsed = linkSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0]?.message });
+
+    const result = await linkOfficerToGlobal({
+      employeeId: parsed.data.employeeId,
+      workspaceId,
+      rawSSN: parsed.data.rawSSN,
+      legalFirstName: parsed.data.legalFirstName,
+      legalLastName: parsed.data.legalLastName,
+      dateOfBirth: parsed.data.dateOfBirth ?? null,
+    });
+    // Don't return the fingerprint to the client.
+    res.json({ globalOfficerId: result.globalOfficerId, isNew: result.isNew });
+  } catch (err) {
+    log.error('[scoring] /officer/link failed:', err);
+    res.status(500).json({ error: (err as Error).message ?? 'Failed to link officer' });
+  }
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// /api/scoring/officer/consent — public-recognition opt in/out
+// Self-service: officer can toggle their own consent.
+// ────────────────────────────────────────────────────────────────────────────
+
+router.post('/api/scoring/officer/consent', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const workspaceId = req.workspaceId;
+    if (!userId || !workspaceId) return res.status(400).json({ error: 'Missing context' });
+
+    const consent = req.body?.consent === true;
+    const emp = await getMyEmployee(userId, workspaceId);
+    if (!emp) return res.status(404).json({ error: 'No employee record' });
+    const globalOfficerId = (emp as Record<string, unknown>).globalOfficerId as string | undefined;
+    if (!globalOfficerId) return res.status(400).json({ error: 'Officer not yet linked' });
+
+    await setPublicRecognitionConsent({ globalOfficerId, consent });
+    res.json({ consent });
+  } catch (err) {
+    log.error('[scoring] /officer/consent failed:', err);
+    res.status(500).json({ error: 'Failed to update consent' });
+  }
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// /api/scoring/officer/veteran/verify — DD-214 review approval
+// Manager+ only. Document must already be approved in employeeDocuments.
+// ────────────────────────────────────────────────────────────────────────────
+
+const veteranVerifySchema = z.object({
+  globalOfficerId: z.string().min(1),
+  documentId: z.string().min(1),
+});
+
+router.post('/api/scoring/officer/veteran/verify', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const workspaceId = req.workspaceId;
+    if (!userId || !workspaceId) return res.status(400).json({ error: 'Missing context' });
+
+    const role = await getWorkspaceRole(userId, workspaceId);
+    if (!role || !MANAGER_ROLES.has(role)) {
+      return res.status(403).json({ error: 'Manager role required' });
+    }
+
+    const parsed = veteranVerifySchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0]?.message });
+
+    const result = await verifyVeteranStatus(parsed.data);
+    res.json(result);
+  } catch (err) {
+    log.error('[scoring] /officer/veteran/verify failed:', err);
+    res.status(400).json({ error: (err as Error).message ?? 'Failed to verify' });
   }
 });
 

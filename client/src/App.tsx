@@ -438,6 +438,7 @@ const CandidateProfilePage = lazy(() => import("@/pages/candidate-profile"));
 const OnboardingTasksPage = lazy(() => import("@/pages/onboarding-tasks"));
 const PublicJobBoard = lazy(() => import("@/pages/public-job-board"));
 const HonorRoll = lazy(() => import("@/pages/honor-roll"));
+const TenantScoreDashboard = lazy(() => import("@/pages/tenant-score-dashboard"));
 const TrainingCompliancePage = lazy(() => import("@/pages/training-compliance"));
 const SubcontractorManagementPage = lazy(() => import("@/pages/subcontractor-management"));
 const ClientSatisfactionPage = lazy(() => import("@/pages/client-satisfaction"));
@@ -1050,6 +1051,11 @@ function AppContent() {
                     <ErrorBoundary><OwnerAnalytics /></ErrorBoundary>
                   </OwnerRoute>
                 </Route>
+                <Route path="/tenant-score">
+                  <OwnerRoute>
+                    <ErrorBoundary><Suspense fallback={<PageLoader />}><TenantScoreDashboard /></Suspense></ErrorBoundary>
+                  </OwnerRoute>
+                </Route>
 
                 <Route path="/ai-usage">
                   <OwnerRoute>
@@ -1640,6 +1646,11 @@ function AppContent() {
                 <Route path="/owner-analytics">
                   <OwnerRoute>
                     <ErrorBoundary><OwnerAnalytics /></ErrorBoundary>
+                  </OwnerRoute>
+                </Route>
+                <Route path="/tenant-score">
+                  <OwnerRoute>
+                    <ErrorBoundary><Suspense fallback={<PageLoader />}><TenantScoreDashboard /></Suspense></ErrorBoundary>
                   </OwnerRoute>
                 </Route>
 
