@@ -11,7 +11,7 @@ import { Router, Response, NextFunction } from 'express';
 import { eq, or, ilike, and, sql, desc } from 'drizzle-orm';
 import { db } from '../db';
 import { workspaces, users, employees, clients, systemAuditLogs } from '@shared/schema';
-import { type AuthenticatedRequest } from '../rbac';
+import { getUserPlatformRole, type AuthenticatedRequest } from '../rbac';
 import { createLogger } from '../lib/logger';
 import { z } from 'zod';
 const log = createLogger('EndUserControlRoutes');
@@ -21,10 +21,16 @@ export const endUserControlRouter = Router();
 
 const SUPPORT_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
 
-function requireSupportRole(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  const userRole = req.platformRole || 'none';
-  if (!SUPPORT_ROLES.includes(userRole)) {
-    return res.status(403).json({ 
+async function requireSupportRole(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  // requireAuth runs upstream but does not populate req.platformRole; resolve
+  // it here so the role gate works regardless of mount order.
+  let userRole = req.platformRole;
+  if (!userRole && req.user?.id) {
+    userRole = await getUserPlatformRole(req.user.id);
+    req.platformRole = userRole;
+  }
+  if (!userRole || !SUPPORT_ROLES.includes(userRole)) {
+    return res.status(403).json({
       error: 'Support staff access required',
       requiredRoles: SUPPORT_ROLES,
     });

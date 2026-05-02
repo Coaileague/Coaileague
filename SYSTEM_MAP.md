@@ -365,13 +365,13 @@ registerRoutes(app):
 | Route File | Mounts At | Purpose |
 |---|---|---|
 | supportActionRoutes.ts | /api | Support actions registry + execute |
-| support-command-console.ts | /api/support/command | Trinity command console (test-broadcast, force-whats-new, force-notification, broadcast-message, maintenance-mode, force-sync) — all `requireSupportRole` |
+| support-command-console.ts | /api/support/command (gated upstream by `requireAuth` + inner `requireSupportRole`) | Trinity command console (test-broadcast, force-whats-new, force-notification, broadcast-message, maintenance-mode, force-sync) |
 | support-chat.ts | /api/support/chat | Support chat (incl. guest ticket intake) |
 | ticketSearchRoutes.ts | /api/tickets | Ticket search |
 | supportRoutes.ts (29 ep) | /api/support | Support CRUD |
 | helpdeskRoutes.ts (31 ep) | /api/helpdesk | Helpdesk mgmt + MOTD |
 | endUserControlRoutes.ts | /api/end-user-controls | Suspend/unsuspend/freeze workspaces + end users (`requireSupportRole`) |
-| trinityNotificationRoutes.ts | /api/trinity-notifications | What's-new, support-escalation, insight, batch-send (`requireSupportRole`) |
+| trinityNotificationRoutes.ts | /api/trinity/notifications (gated by upstream `requireAuth`) | live-patch (admin), whats-new, support-escalation, insight, maintenance-alert, metrics, watchdog-status, batch-send |
 | adminPermissionRoutes.ts | /api/admin/permissions | Permission matrix mutations (`requireSupportManager`) |
 | service-control.ts | /api/platform/services | Per-workspace service suspend (platform staff) |
 | financialAdminRoutes.ts | /api/financial-admin | Financial admin |
@@ -394,10 +394,29 @@ registerRoutes(app):
 | `pages/admin-ticket-reviews.tsx` | `/admin/ticket-reviews` | `/api/helpdesk/reviews` |
 | `pages/admin-helpai.tsx` | `/admin/helpai` | `/api/admin/helpai/*` |
 | `pages/role-management.tsx` | `/role-management` | `/api/employees`, role-label hooks |
-| `pages/end-user-controls.tsx` | `/end-user-controls` | `/api/end-user-controls/*` (suspend, freeze, toggle-ai-brain, access-config, freeze/unfreeze user, suspend/reactivate employee) |
-| `pages/admin/support-console.tsx` | `/admin/support-console` | `/api/support/escalated`, `/api/support/priority-queue`, `/api/admin/search`, `/api/support/actions/registry`, `/api/support/actions/execute`, `/api/admin/workspaces/:id/details` |
+| `pages/end-user-controls.tsx` | `/end-user-controls` | `/api/admin/end-users/*` (suspend, unsuspend, toggle-ai-brain, access-config, freeze-user, unfreeze-user, suspend-employee, reactivate-employee) — server router mounted at `/api/admin/end-users` (not `/api/end-user-controls`) |
+| `pages/admin/support-console.tsx` | `/admin/support-console` | `/api/support/escalated`, `/api/support/priority-queue`, `/api/admin/search` (case-derived `status`), `/api/support/actions/registry`, `/api/support/actions/execute`, `/api/admin/workspaces/:id/details` |
 | `pages/admin/support-console-tickets.tsx` | `/admin/support-console/tickets` | `/api/support/escalated` |
 | `pages/admin/support-console-workspace.tsx` | `/admin/support-console/workspace?id=…` | `/api/admin/workspaces/:id/details`, `/api/trinity/org-state/:id`, `/api/support/actions/registry`, `/api/support/actions/execute` |
+
+**Mount-time wrappers (server/routes/domains/support.ts):**
+```
+app.use("/api/platform/services", serviceControlRouter);
+app.use(supportActionRouter);                          // own gates
+app.use("/api/support/command", requireAuth, …);       // requireSupportRole inside resolves platformRole
+app.use("/api/support/chat", supportChatRouter);
+app.use("/api/tickets", ticketSearchRouter);
+app.use("/api/support", supportRouter);
+app.use("/api/helpdesk", helpdeskRouter);
+app.use(financialAdminRouter);
+app.use("/api/helpai", helpAITriageRouter);
+app.use("/api/admin", adminWorkspaceDetailsRouter);
+app.use("/api/trinity", trinityOrgStateRouter);
+app.use("/api/trinity/notifications", requireAuth, trinityNotificationRouter);
+```
+The `endUserControlRouter` is mounted by the AUTH domain (auth.ts) at
+`/api/admin/end-users` with upstream `requireAuth`; its inner
+`requireSupportRole` is the role gate.
 
 **Orphan / dead-code candidates flagged this pass:**
 - `pages/support-command-console.tsx` (1559 lines) — exports `SupportCommandConsole`, no router entry, no consumer. The legacy redirect `/support/console → /support/ai-console` and `/trinity/command-center → /support/ai-console` indicates `support-ai-console.tsx` is the canonical replacement. Decide: route it at `/support/command-console` or delete.

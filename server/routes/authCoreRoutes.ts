@@ -82,7 +82,7 @@ import {
   resetPassword,
   validatePassword,
   verifyEmailToken,
-  requireAuth,
+  verifyPassword,
 } from "../auth";
 import { checkWorkspacePaymentStatus, hasPlatformWideAccess, getUserPlatformRole , type AuthenticatedRequest} from "../rbac";
 import { emailService } from "../services/emailService";
@@ -277,6 +277,17 @@ function isMfaMandatory(role: string): boolean {
   const mandatoryRoles = ['root_admin', 'deputy_admin', 'sysop', 'support_manager'];
   return mandatoryRoles.includes(role);
 }
+
+// Canonical support / platform-staff roles — kept in sync with
+// `requirePlatformStaff` in server/rbac.ts and `SUPPORT_ROLES` in
+// endUserControlRoutes.ts / trinityNotificationRoutes.ts.
+const SUPPORT_PLATFORM_ROLES = new Set<string>([
+  'root_admin',
+  'deputy_admin',
+  'sysop',
+  'support_manager',
+  'support_agent',
+]);
 
 async function generateAndSendSupportOtp(userId: string): Promise<{success: boolean; message?: string}> {
   // PLANNED: OTP via Resend (email) + Twilio (SMS) — see server/services/notifications/otpService.ts
