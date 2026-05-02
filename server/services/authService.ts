@@ -81,7 +81,7 @@ export class AuthService {
       const existing = await db
         .select({ id: users.id })
         .from(users)
-        .where(eq(users.email, normalizedEmail))
+        .where(sql`lower(${users.email}) = ${normalizedEmail}`)
         .limit(1);
 
       if (existing.length > 0) {
@@ -141,7 +141,7 @@ export class AuthService {
       const [user] = await db
         .select()
         .from(users)
-        .where(eq(users.email, normalizedEmail))
+        .where(sql`lower(${users.email}) = ${normalizedEmail}`)
         .limit(1);
 
       if (!user) {
@@ -320,7 +320,7 @@ export class AuthService {
       const [user] = await db
         .select({ id: users.id, email: users.email })
         .from(users)
-        .where(eq(users.email, normalizedEmail))
+        .where(sql`lower(${users.email}) = ${normalizedEmail}`)
         .limit(1);
 
       if (!user) {
@@ -435,7 +435,7 @@ export class AuthService {
       const [user] = await db
         .select({ id: users.id, email: users.email, firstName: users.firstName })
         .from(users)
-        .where(eq(users.email, normalizedEmail))
+        .where(sql`lower(${users.email}) = ${normalizedEmail}`)
         .limit(1);
 
       if (!user) {
@@ -597,7 +597,7 @@ export class AuthService {
       const [user] = await db
         .select({ id: users.id, email: users.email, emailVerified: users.emailVerified })
         .from(users)
-        .where(eq(users.email, normalizedEmail))
+        .where(sql`lower(${users.email}) = ${normalizedEmail}`)
         .limit(1);
 
       if (!user) {
@@ -766,11 +766,11 @@ export class AuthService {
       // Normalise
       const normalised = newEmail.trim().toLowerCase();
 
-      // Reject if already in use by another user
+      // Reject if already in use by another user (case-insensitive)
       const [conflict] = await db
         .select({ id: users.id })
         .from(users)
-        .where(eq(users.email, normalised))
+        .where(sql`lower(${users.email}) = ${normalised}`)
         .limit(1);
       if (conflict && conflict.id !== userId) {
         return { success: false, error: 'That email address is already in use by another account.' };
