@@ -784,7 +784,7 @@ class TrinityAutonomousSchedulerService {
   /**
    * Analyze historical patterns for learning
    */
-  private analyzePatterns(historicalShifts: unknown[]): any {
+  private analyzePatterns(historicalShifts: unknown[]): unknown {
     const patterns: Record<string, unknown> = {
       dayOfWeek: new Map<number, number>(),
       hourOfDay: new Map<number, number>(),

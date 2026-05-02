@@ -135,7 +135,7 @@ const DEFAULT_NEVER_THROTTLE_ACTIONS = [
   'emergency_dispatch',
 ];
 
-function configAny(): any {
+function configAny(): unknown {
   return BILLING;
 }
 
@@ -144,7 +144,7 @@ export function normalizeBillingTier(tier: string | null | undefined): BillingTi
   return TIER_ALIASES[normalized] || 'free';
 }
 
-export function getBillingTierConfig(tier: string | null | undefined): any {
+export function getBillingTierConfig(tier: string | null | undefined): unknown {
   const key = normalizeBillingTier(tier);
   const tiers = configAny().PLATFORM_TIERS || configAny().tiers || {};
   if (key === 'trial') return tiers.trial || tiers.free_trial || tiers.free;

@@ -95,7 +95,7 @@ interface StreamSubscription {
 }
 
 // Utility to sanitize any value for XSS prevention (deep recursive)
-function sanitizeValue(value: unknown): any {
+function sanitizeValue(value: unknown): unknown {
   if (value === null || value === undefined) {
     return value;
   }

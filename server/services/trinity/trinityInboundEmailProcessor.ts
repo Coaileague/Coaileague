@@ -1570,7 +1570,7 @@ export async function reprocessInboundEmail(logId: string): Promise<ProcessingRe
     toEmail: entry.toEmail,
     subject: entry.subject || undefined,
     bodyText: entry.bodyFull || undefined,
-    attachments: (entry.attachmentMeta as any[]) || [],
+    attachments: (entry.attachmentMeta as unknown[]) || [],
     rawPayload: entry.rawPayload as Record<string, unknown> || {},
   };
 

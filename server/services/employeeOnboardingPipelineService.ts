@@ -86,7 +86,7 @@ export class EmployeeOnboardingPipelineService {
     const pipeline = await this.getPipeline(pipelineId);
     if (!pipeline) throw new Error('Pipeline not found');
 
-    const steps = pipeline.steps as any[];
+    const steps = pipeline.steps as unknown[];
     const stepIdx = steps.findIndex((s: unknown) => s.id === stepId);
     if (stepIdx === -1) throw new Error(`Step ${stepId} not found in pipeline`);
 
@@ -204,7 +204,7 @@ export class EmployeeOnboardingPipelineService {
     const pipeline = await this.getPipeline(pipelineId);
     if (!pipeline) throw new Error('Pipeline not found');
 
-    const steps = pipeline.steps as any[];
+    const steps = pipeline.steps as unknown[];
     const completed = steps.filter((s: unknown) => s.status === 'completed').length;
     const percent = Math.round((completed / steps.length) * 100);
 

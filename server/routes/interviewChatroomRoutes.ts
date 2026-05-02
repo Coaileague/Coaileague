@@ -160,7 +160,7 @@ router.get('/room/:token', async (req: Request, res: Response) => {
       roomType: room.room_type,
       trinityActive: room.trinity_active,
       currentQuestionIndex: room.current_question_index,
-      totalQuestions: (room.questions_asked as any[]).length,
+      totalQuestions: (room.questions_asked as unknown[]).length,
       overallScore: room.overall_score,
       trinityRecommendation: room.trinity_recommendation,
       candidateName: candidate?.full_name || 'Candidate',

@@ -417,7 +417,7 @@ Return JSON:
     }
   }
 
-  private extractJSON(text: string): any {
+  private extractJSON(text: string): unknown {
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       try {

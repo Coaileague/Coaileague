@@ -49,7 +49,7 @@ export class AuditLogger {
    * Sort object keys deterministically for hash generation
    * Ensures consistent hashing regardless of property order
    */
-  private sortObjectKeys(obj: unknown): any {
+  private sortObjectKeys(obj: unknown): unknown {
     if (obj === null || typeof obj !== 'object') {
       return obj;
     }

@@ -287,7 +287,7 @@ router.get("/layout", requireAuth, async (req: Request, res: Response) => {
       .limit(1);
 
     const widgets = saved
-      ? (saved.layoutConfig as any[])
+      ? (saved.layoutConfig as unknown[])
       : DEFAULT_WIDGETS;
 
     res.json({ widgets });

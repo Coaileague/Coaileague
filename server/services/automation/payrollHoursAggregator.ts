@@ -116,7 +116,7 @@ export async function aggregatePayrollHours(params: {
   const workspaceDefaultPayRate = workspace.defaultHourlyRate;
   
   // Holiday calendar and timezone for timezone-aware holiday detection
-  const holidayCalendar = workspace.holidayCalendar as any[] || [];
+  const holidayCalendar = workspace.holidayCalendar as unknown[] || [];
   const workspaceTimezone = workspace.timezone || "America/New_York";
   const overtimeMultiplier = parseFloat(workspace.overtimePayMultiplier || "1.50");
   const defaultHolidayMultiplier = parseFloat(workspace.holidayPayMultiplier || "2.00");

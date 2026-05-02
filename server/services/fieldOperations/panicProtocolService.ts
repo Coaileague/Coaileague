@@ -399,7 +399,7 @@ function buildEmergencySummary(
   resolvedAt: Date,
   notes?: string
 ): EmergencySummary {
-  const attempts = (event.smsAttempts as any[]) ?? [];
+  const attempts = (event.smsAttempts as unknown[]) ?? [];
   return {
     eventId: event.id,
     activationTime: event.panicActivatedAt.toISOString(),

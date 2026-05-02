@@ -678,7 +678,7 @@ Respond with JSON:
     });
   }
 
-  private getNestedValue(obj: unknown, path: string): any {
+  private getNestedValue(obj: unknown, path: string): unknown {
     return path.split('.').reduce((current, key) => current?.[key], obj);
   }
 

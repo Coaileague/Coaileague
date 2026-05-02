@@ -87,7 +87,7 @@ router.get("/export", requireAuth, requireManager, async (req: AuthenticatedRequ
       [...params, maxRows]
     );
 
-    const logRows = logs as unknown as any[];
+    const logRows = logs as unknown as unknown[];
 
     if (String(format).toLowerCase() === 'json') {
       return res.json({ success: true, count: logRows.length, logs: logRows });

@@ -423,7 +423,7 @@ async function test6_helpAI(): Promise<void> {
 
   // 6-C: Manual HelpAI interaction test
   manual("6-C", "HelpAI shift request test",
-    "Log in as any test officer (test1@example.com / Statewide2024!).\n" +
+    "Log in as unknown test officer (test1@example.com / Statewide2024!).\n" +
     "     In HelpAI: type 'I need a shift tomorrow'\n" +
     "     Expected: list of available shifts returned.\n" +
     "     Then: 'I'll take the 6am-2pm shift at Downtown HQ'\n" +

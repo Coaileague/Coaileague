@@ -129,7 +129,7 @@ class IdentityReconcilerAgent {
         ambiguous.push({
           entityType: 'customer',
           internalId: customerId,
-          candidates: review.candidateMatches as any[] || [],
+          candidates: review.candidateMatches as unknown[] || [],
         });
       } else if (!mapping) {
         missing.push({ entityType: 'customer', internalId: customerId });
@@ -166,7 +166,7 @@ class IdentityReconcilerAgent {
         ambiguous.push({
           entityType: 'item',
           internalId: itemId,
-          candidates: review.candidateMatches as any[] || [],
+          candidates: review.candidateMatches as unknown[] || [],
         });
       } else if (!mapping) {
         missing.push({ entityType: 'item', internalId: itemId });
@@ -472,7 +472,7 @@ class BillingStateManagerAgent {
       };
     }
 
-    const stateHistory = (lifecycle.stateHistory as any[]) || [];
+    const stateHistory = (lifecycle.stateHistory as unknown[]) || [];
     stateHistory.push({
       from: currentState,
       to: newState,

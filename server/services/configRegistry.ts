@@ -77,7 +77,7 @@ class ConfigRegistry {
   /**
    * Get current config (from cache)
    */
-  getConfig(scope: string): any {
+  getConfig(scope: string): unknown {
     if (scope !== 'featureToggles') {
       throw new Error(`Unsupported config scope: ${scope}`);
     }

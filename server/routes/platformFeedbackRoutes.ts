@@ -333,7 +333,7 @@ router.get('/analytics', requirePlatformStaff, async (req, res) => {
       .where(eq(pulseSurveyResponses.surveyTemplateId, survey.id))
       .orderBy(desc(pulseSurveyResponses.submittedAt));
 
-    const questions = (survey.questions as any[]) || [];
+    const questions = (survey.questions as unknown[]) || [];
 
     // Aggregate answers per question
     const questionStats: Record<string, {
@@ -361,7 +361,7 @@ router.get('/analytics', requirePlatformStaff, async (req, res) => {
     let ratingTotals: Record<string, { sum: number; count: number }> = {};
 
     for (const resp of responses) {
-      const answers = (resp.responses as any[]) || [];
+      const answers = (resp.responses as unknown[]) || [];
       const ws = resp.workspaceId || 'unknown';
       byWorkspace[ws] = (byWorkspace[ws] || 0) + 1;
 

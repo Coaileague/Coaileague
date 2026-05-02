@@ -9,7 +9,7 @@
  * 5. http://localhost:5000  (dev fallback only)
  *
  * This means all 29 places that call getAppBaseUrl() will produce
- * correct production URLs as long as any one of the above is set.
+ * correct production URLs as long as unknown one of the above is set.
  */
 export function getAppBaseUrl(): string {
   if (process.env.APP_BASE_URL) {

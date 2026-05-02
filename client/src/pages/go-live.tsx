@@ -206,7 +206,7 @@ function CsvImportPanel({
             <div>
               <p className="text-xs font-medium text-destructive mb-1">Validation errors:</p>
               <div className="text-xs bg-muted rounded p-2 space-y-1 max-h-32 overflow-auto">
-                {(previewResult.errors as any[]).slice(0, 10).map((e: unknown, i: number) => (
+                {(previewResult.errors as unknown[]).slice(0, 10).map((e: unknown, i: number) => (
                   <div key={i}>Row {e.line}: {e.errors?.join(", ")}</div>
                 ))}
               </div>

@@ -718,7 +718,7 @@ Return JSON array of indices in order of relevance (most relevant first):
   // UTILITY
   // ============================================================================
 
-  private extractJSON(text: string): any {
+  private extractJSON(text: string): unknown {
     const match = text.match(/\{[\s\S]*\}/);
     if (match) {
       try {

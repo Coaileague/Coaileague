@@ -354,6 +354,6 @@ export function buildApiUrl(
 /**
  * Get endpoint group by category
  */
-export function getEndpointGroup(category: string): any {
+export function getEndpointGroup(category: string): unknown {
   return (API_ENDPOINTS as unknown)[category] || null;
 }

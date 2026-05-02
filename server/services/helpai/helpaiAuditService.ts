@@ -340,7 +340,7 @@ export class HelpaiAuditService {
   /**
    * Sort object keys recursively for consistent hashing
    */
-  private sortObjectKeys(obj: unknown): any {
+  private sortObjectKeys(obj: unknown): unknown {
     if (obj === null || typeof obj !== 'object') {
       return obj;
     }

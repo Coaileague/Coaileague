@@ -8,7 +8,7 @@ import type { Response } from 'express';
  * Never use (req as unknown) on request objects — permanently retired.
  *
  * Architecture Canon (replit.md): AuthenticatedRequest is the required type
- * for every authenticated route handler. req as any on request objects is
+ * for every authenticated route handler. req as unknown on request objects is
  * permanently retired.
  */
 export type { AuthenticatedRequest } from '../rbac';

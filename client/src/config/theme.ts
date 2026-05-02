@@ -255,7 +255,7 @@ export const THEME = {
  * Helper function to get nested theme values
  * Usage: getThemeValue('pages.login.input.height')
  */
-export function getThemeValue(path: string): any {
+export function getThemeValue(path: string): unknown {
   return path.split('.').reduce((obj, key) => obj?.[key], THEME);
 }
 

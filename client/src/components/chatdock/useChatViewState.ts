@@ -12,6 +12,7 @@
  * the dock body keeps using `setShowInfo(true)` / `setReplyingTo({...})`
  * exactly as before.  No callsite changes required.
  */
+import React from 'react';
 import { useReducer, useCallback, type Dispatch, type SetStateAction } from "react";
 
 export interface ReplyContext { id: string; senderName: string; message: string }

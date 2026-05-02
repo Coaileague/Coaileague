@@ -662,7 +662,7 @@ class AvailabilityService {
       shiftsPerDay?: number;
       shiftDurationHours?: number;
     }
-  ): any {
+  ): unknown {
     const schedule: (string | number | boolean | null)[] = [];
     const shiftsPerDay = options.shiftsPerDay || 2;
     

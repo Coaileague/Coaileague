@@ -653,7 +653,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
   const [dragOverCell, setDragOverCell] = useState<{ day: number; hour: number } | null>(null);
   const [draggedShift, setDraggedShift] = useState<Shift | null>(null);
   
-  const handleDragStart = (event: any) => {
+  const handleDragStart = (event: Event) => {
     const data = event.active.data.current;
     if (data?.type === 'inline-shift') {
       setDraggedShiftId(data.shift.id);

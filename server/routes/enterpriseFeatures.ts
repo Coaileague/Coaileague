@@ -436,7 +436,7 @@ enterpriseRouter.get('/account-manager', async (req: AuthenticatedRequest, res: 
     // Account managers stored as JSONB array in workspaces.featureStatesBlob.accountManagers
     const [ws] = await db.select({ blob: workspaces.featureStatesBlob }).from(workspaces).where(eq(workspaces.id, wsId)).limit(1);
     const featureStates = ((ws?.blob || {}) as Record<string, unknown>);
-    const managers = (featureStates.accountManagers || []) as any[];
+    const managers = (featureStates.accountManagers || []) as unknown[];
     // Enrich with user data if managerUserId present
     const enriched = await Promise.all(managers.filter(m => m.status === 'active').map(async (m: unknown) => {
       if (m.managerUserId) {
@@ -458,7 +458,7 @@ enterpriseRouter.post('/account-manager', async (req: AuthenticatedRequest, res:
     if (!wsId) return;
     const [ws] = await db.select({ blob: workspaces.featureStatesBlob }).from(workspaces).where(eq(workspaces.id, wsId)).limit(1);
     const featureStates = ((ws?.blob || {}) as Record<string, unknown>);
-    const managers = (featureStates.accountManagers || []) as any[];
+    const managers = (featureStates.accountManagers || []) as unknown[];
     const newManager = {
       id: `am-${randomUUID()}`,
       workspaceId: wsId,

@@ -255,7 +255,7 @@ export default function EmployeeEngagement() {
 }
 
 // Pulse Survey Form Component
-function PulseSurveyForm({ survey, onSubmit, isSubmitting }: any) {
+function PulseSurveyForm({ survey, onSubmit, isSubmitting }: { survey: Record<string, unknown>; onSubmit: (data: Record<string, unknown>) => void; isSubmitting: boolean }) {
   const [responses, setResponses] = useState<Record<string, unknown>>({});
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -302,7 +302,7 @@ function PulseSurveyForm({ survey, onSubmit, isSubmitting }: any) {
 }
 
 // Employer Rating Form Component
-function EmployerRatingForm({ onSubmit, isSubmitting }: any) {
+function EmployerRatingForm({ onSubmit, isSubmitting }: { onSubmit: (data: Record<string, unknown>) => void; isSubmitting: boolean }) {
   const [formData, setFormData] = useState({
     ratingType: 'organization',
     managementQuality: 3,
@@ -405,7 +405,7 @@ function EmployerRatingForm({ onSubmit, isSubmitting }: any) {
 }
 
 // Suggestion Form Component
-function SuggestionForm({ onSubmit, isSubmitting }: any) {
+function SuggestionForm({ onSubmit, isSubmitting }: { onSubmit: (data: Record<string, unknown>) => void; isSubmitting: boolean }) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',

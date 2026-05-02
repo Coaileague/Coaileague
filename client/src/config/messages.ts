@@ -161,6 +161,6 @@ export function getMessage(path: string, vars?: Record<string, unknown>): string
 /**
  * Get all messages for a category
  */
-export function getMessages(category: string): any {
+export function getMessages(category: string): unknown {
   return (MESSAGES as unknown)[category] || null;
 }

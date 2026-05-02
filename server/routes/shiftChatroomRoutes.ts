@@ -282,7 +282,7 @@ async function fetchDAR(darId: string, workspaceId: string) {
 async function appendAccessLog(darId: string, userId: string, action: string) {
   try {
     const [dar] = await db.select({ accessLog: darReports.accessLog }).from(darReports).where(eq(darReports.id, darId)).limit(1);
-    const existing = (dar?.accessLog as any[]) || [];
+    const existing = (dar?.accessLog as unknown[]) || [];
     const newEntry = { accessedBy: userId, accessedAt: new Date().toISOString(), action };
     await db.update(darReports)
       .set({ accessLog: [...existing, newEntry] } as Record<string, unknown>)
@@ -296,7 +296,7 @@ router.get('/dar/:darId/access-log', async (req: AuthenticatedRequest, res) => {
     const workspaceId = req.workspaceId;
     const dar = await fetchDAR(req.params.darId, workspaceId);
     if (!dar) return res.status(404).json({ message: 'DAR not found' });
-    res.json({ accessLog: (dar.accessLog as any[]) || [], legalHold: dar.legalHold });
+    res.json({ accessLog: (dar.accessLog as unknown[]) || [], legalHold: dar.legalHold });
   } catch (err: unknown) {
     res.status(500).json({ message: sanitizeError(err) || 'Failed to fetch access log' });
   }
@@ -467,7 +467,7 @@ router.post('/dar/:darId/legal-hold', async (req: AuthenticatedRequest, res) => 
             legalHoldSetAt: new Date(),
             isAuditProtected: true,
             updatedAt: new Date(),
-          } as any
+          } as unknown
         : {
             legalHold: false,
             legalHoldReason: null,

@@ -107,7 +107,7 @@ export async function aggregateBillableHours(params: {
   const workspaceDefaultRate = workspace.defaultBillableRate;
   
   // Holiday calendar and timezone for timezone-aware holiday detection
-  const holidayCalendar = workspace.holidayCalendar as any[] || [];
+  const holidayCalendar = workspace.holidayCalendar as unknown[] || [];
   const workspaceTimezone = workspace.timezone || "America/New_York";
 
   // Find all approved, unbilled time entries in period

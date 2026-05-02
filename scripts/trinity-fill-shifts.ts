@@ -63,8 +63,8 @@ async function main() {
 
     try {
       const result = await scheduleSmartAI({
-        openShifts: batchShifts as any[],
-        availableEmployees: availableEmployees as any[],
+        openShifts: batchShifts as unknown[],
+        availableEmployees: availableEmployees as unknown[],
         workspaceId: WORKSPACE_ID,
         userId: 'dev-owner-001',
         constraints: {

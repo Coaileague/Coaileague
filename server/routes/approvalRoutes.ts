@@ -35,7 +35,7 @@ router.get("/", async (req, res) => {
     
     const scopeValue = isAdmin ? 'admin' : (isManager && scope === 'manager') ? 'manager' : (scope as string || 'employee');
     
-    const decisionFilter = decision ? (decision as string).split(',') as any : undefined;
+    const decisionFilter = decision ? (decision as string).split(',') as unknown : undefined;
     
     const approvals = await approvalRequestService.getApprovalRequests(user.id, workspaceId, {
       decision: decisionFilter,

@@ -310,7 +310,7 @@ export class QuickBooksIntegration {
     return { success: errors.length === 0, synced, errors };
   }
   
-  private mapInvoiceToQuickBooks(invoice: unknown): any {
+  private mapInvoiceToQuickBooks(invoice: unknown): unknown {
     return {
       Line: [{
         Amount: parseFloat(invoice.total),
@@ -425,7 +425,7 @@ export class QuickBooksIntegration {
     return { success: errors.length === 0, synced, errors };
   }
 
-  private mapTimeEntryToQuickBooks(entry: unknown): any {
+  private mapTimeEntryToQuickBooks(entry: unknown): unknown {
     return {
       NameOf: 'Employee',
       EmployeeRef: { value: entry.employeeQbId },

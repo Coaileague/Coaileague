@@ -180,7 +180,7 @@ Return structured payroll report.`,
  * Get AI configuration for a feature
  * Usage: getAIConfig('scheduling')
  */
-export function getAIConfig(feature: string): any {
+export function getAIConfig(feature: string): unknown {
   const config = (AI_CONFIG as unknown)[feature];
   return config ? { ...AI_CONFIG.global, ...config } : AI_CONFIG.global;
 }

@@ -3432,7 +3432,7 @@ voiceRouter.post('/verify-employee-id-channel', twilioSignatureMiddleware, async
 
 // ─── MANAGEMENT API ───────────────────────────────────────────────────────────
 // All management routes require authentication and a professional+ plan.
-// Using a sub-router with router.use() avoids per-route `as any` casts.
+// Using a sub-router with router.use() avoids per-route `as unknown` casts.
 
 const mgmtRouter = Router();
 mgmtRouter.use(requireAuth);

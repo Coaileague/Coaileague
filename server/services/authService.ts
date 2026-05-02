@@ -162,7 +162,7 @@ export class AuthService {
 
       if (!user.passwordHash) {
         // Legacy `authProvider === "replit_legacy"` accounts are now
-        // handled by the same code path as any other OAuth-only account:
+        // handled by the same code path as unknown other OAuth-only account:
         // they must set a password via the forgot-password flow.
         return { success: false, error: "Password not set", code: "NO_PASSWORD" };
       }

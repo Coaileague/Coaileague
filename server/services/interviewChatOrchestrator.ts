@@ -46,7 +46,7 @@ export class InterviewChatOrchestrator {
     if (!room) throw new Error('Chatroom not found');
 
     const candidate = await this.getCandidate(room.candidate_id);
-    const questions = room.questions_asked as any[];
+    const questions = room.questions_asked as unknown[];
 
     await pool.query(
       `UPDATE interview_chatrooms
@@ -80,12 +80,12 @@ Status: Awaiting first response.`);
     const room = await this.getChatroom(chatroomId);
     if (!room || room.status !== 'active') return;
 
-    const questions = room.questions_asked as any[];
+    const questions = room.questions_asked as unknown[];
     const idx = room.current_question_index || 0;
     const currentQ = questions[idx];
 
     if (!currentQ) {
-      await this.completeInterview(chatroomId, room.responses_received as any[]);
+      await this.completeInterview(chatroomId, room.responses_received as unknown[]);
       return;
     }
 
@@ -93,7 +93,7 @@ Status: Awaiting first response.`);
     const score = await this.scoreResponse(responseText, currentQ);
 
     const responses = [
-      ...(room.responses_received as any[]),
+      ...(room.responses_received as unknown[]),
       {
         questionId: currentQ.id,
         questionText: currentQ.question_text,

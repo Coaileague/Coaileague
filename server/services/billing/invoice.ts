@@ -1889,7 +1889,7 @@ export class InvoiceService {
 
       // Line items
       doc.fontSize(9).font('Helvetica').fillColor('#374151');
-      for (const item of lineItems as any[]) {
+      for (const item of lineItems as unknown[]) {
         const lineY = doc.y;
         const qty    = Number(item.quantity || 1);
         const rate   = Number(item.unitPrice || item.rate || 0);

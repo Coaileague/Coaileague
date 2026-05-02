@@ -80,7 +80,7 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: Authenti
       const isAdmin = ['root_admin', 'deputy_admin', 'sysop'].includes(platformRole);
       const isSupport = ['support_manager', 'support_agent'].includes(platformRole);
       
-      const statusFilter = status ? (status as string).split(',') as any : undefined;
+      const statusFilter = status ? (status as string).split(',') as unknown : undefined;
       const priorityFilter = priority as string | undefined;
       
       const scopeValue = (isAdmin || isSupport) ? 'admin' : (scope === 'manager' ? 'manager' : 'employee');

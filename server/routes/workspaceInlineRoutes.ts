@@ -49,7 +49,7 @@ function sanitizeLogoFilename(original: string): string {
 
 const router = Router();
 
-function redactSensitiveWorkspaceFields(workspace: unknown, platformRole?: string): any {
+function redactSensitiveWorkspaceFields(workspace: unknown, platformRole?: string): unknown {
     if (platformRole === 'root_admin') {
       return workspace;
     }

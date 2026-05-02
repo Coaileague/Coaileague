@@ -799,7 +799,7 @@ router.post('/:id/deactivate', requireManagerOrPlatformStaff, async (req: Authen
       const { sql: drizzleSql } = await import('drizzle-orm');
       const [qbRow] = await dbInner.execute(drizzleSql`
         SELECT quickbooks_realm_id FROM workspaces WHERE id = ${workspaceId} LIMIT 1
-      `) as any[];
+      `) as unknown[];
       if (qbRow?.quickbooks_realm_id) {
         import('../services/partners/quickbooksSyncService')
           .then(({ quickbooksSyncService }) => quickbooksSyncService.syncWorkspace(workspaceId!))

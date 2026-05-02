@@ -3,7 +3,7 @@ import { spsOnboardingRoutes } from '../../server/routes/spsOnboardingRoutes';
 
 function listRoutes(router: any): Array<{ method: string; path: string }> {
   return (router?.stack || [])
-    .filter((layer: any) => layer.route)
+    .filter((layer: unknown) => layer.route)
     .flatMap((layer: any) =>
       Object.keys(layer.route.methods).map((method) => ({
         method: method.toUpperCase(),

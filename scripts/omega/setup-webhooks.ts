@@ -77,7 +77,7 @@ async function setupStripeWebhook(secretKey: string, label: string): Promise<voi
     } else {
       const endpoint = await stripe.webhookEndpoints.create({
         url: endpointUrl,
-        enabled_events: STRIPE_EVENTS as unknown as any[],
+        enabled_events: STRIPE_EVENTS as unknown as unknown[],
         description: `CoAIleague ${label} webhook`,
       });
       check(`STRIPE:${label}`, true, `Registered — id: ${endpoint.id}`, 'Copy signing secret to env');

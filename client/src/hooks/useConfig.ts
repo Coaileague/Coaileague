@@ -107,7 +107,7 @@ export function useMessage(path: string, vars?: Record<string, unknown>): string
  * Get default value by path
  * Usage: const pageSize = useDefault('pagination.pageSize')
  */
-export function useDefault(path: string): any {
+export function useDefault(path: string): unknown {
   return useMemo(() => configManager.getDefault(path), [path]);
 }
 

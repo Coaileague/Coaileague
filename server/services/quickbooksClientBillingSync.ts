@@ -138,7 +138,7 @@ export async function syncInvoiceToQuickBooks(invoiceId: string): Promise<SyncRe
       return { success: false, error: `Lazy sync failed: ${lazySyncResult.error}`, retryable: true };
     }
   }
-  const lineItems = (invoice.lineItems as any[]) || [];
+  const lineItems = (invoice.lineItems as unknown[]) || [];
   
   const qbInvoice: QuickBooksInvoice = {
     CustomerRef: { value: qbCustomerId },

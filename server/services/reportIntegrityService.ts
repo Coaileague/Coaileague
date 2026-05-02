@@ -95,7 +95,7 @@ export async function stampReportHash(params: HashStampParams): Promise<{
   const now = new Date();
 
   // Append to version history — existing history is preserved
-  const history = (report.versionHistory as any[]) ?? [];
+  const history = (report.versionHistory as unknown[]) ?? [];
   if (report.contentHash) {
     history.push({
       version: report.version ?? 1,
@@ -246,6 +246,6 @@ export async function getVersionHistory(reportId: string, workspaceId: string) {
   return {
     currentVersion: report.version ?? 1,
     currentHash: report.contentHash ?? null,
-    history: (report.versionHistory as any[]) ?? [],
+    history: (report.versionHistory as unknown[]) ?? [],
   };
 }

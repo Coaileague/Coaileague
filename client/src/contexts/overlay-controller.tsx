@@ -222,7 +222,7 @@ export function OverlayControllerProvider({ children }: { children: ReactNode })
           )}
           subMessage={activeOverlay.submessage}
           variant="fullscreen"
-          status={activeOverlay.status as any || "loading"}
+          status={activeOverlay.status as unknown || "loading"}
           progress={activeOverlay.progress}
         />
       ) : null}

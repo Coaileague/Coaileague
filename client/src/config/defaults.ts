@@ -102,7 +102,7 @@ export const DEFAULTS = {
 /**
  * Get default value by path
  */
-export function getDefault(path: string): any {
+export function getDefault(path: string): unknown {
   const parts = path.split(".");
   let current: unknown = DEFAULTS;
   
@@ -117,6 +117,6 @@ export function getDefault(path: string): any {
 /**
  * Get all defaults for a category
  */
-export function getDefaults(category: string): any {
+export function getDefaults(category: string): unknown {
   return (DEFAULTS as unknown)[category] || null;
 }

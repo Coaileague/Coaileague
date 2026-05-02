@@ -838,7 +838,7 @@ class TrinityOrgIntelligenceService {
         }
 
         if (turn.toolCalls && Array.isArray(turn.toolCalls)) {
-          for (const tc of turn.toolCalls as any[]) {
+          for (const tc of turn.toolCalls as unknown[]) {
             toolUsageCount++;
             const toolName = tc.name || tc.function?.name || 'unknown';
             toolsUsed[toolName] = (toolsUsed[toolName] || 0) + 1;

@@ -305,7 +305,7 @@ function DocumentStatusList({ statuses }: { statuses: DocumentRequirementStatus[
                         Required
                       </Badge>
                     )}
-                    <Badge variant={STATUS_CONFIG[doc.status]?.color as any || "outline"}>
+                    <Badge variant={STATUS_CONFIG[doc.status]?.color as unknown || "outline"}>
                       {STATUS_CONFIG[doc.status]?.label || doc.status}
                     </Badge>
                   </div>

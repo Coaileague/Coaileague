@@ -221,12 +221,12 @@ ${req.expectedExports?.map(exp => `
 /**
  * TODO: Implement ${exp}
  */
-export function ${exp}(...args: unknown[]): any {
+export function ${exp}(...args: unknown[]): unknown {
   log.warn('[STUB] ${exp} is not yet implemented');
   return null;
 }
 `).join('\n') || `
-export function stubFunction(...args: unknown[]): any {
+export function stubFunction(...args: unknown[]): unknown {
   log.warn('[STUB] Function not yet implemented');
   return null;
 }

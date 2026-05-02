@@ -1014,7 +1014,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
 
     const isRoutableEmail = toAddrs.some(addr => {
       const domain = addr.split('@')[1] || '';
-      // Only subdomain format: any local part at {slug}.coaileague.com
+      // Only subdomain format: string local part at {slug}.coaileague.com
       return domain.endsWith('.coaileague.com') && domain !== 'coaileague.com';
     });
 

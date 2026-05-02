@@ -1203,7 +1203,7 @@ class PlatformActionHub {
           WHERE cu.workspace_id = $1 AND cu.current_status = 'available'
           ORDER BY cu.last_ping_at DESC NULLS LAST LIMIT 10
         `, [workspaceId]).catch(() => []);
-        const availableUnitsArr = availableUnits as any[];
+        const availableUnitsArr = availableUnits as unknown[];
 
         if (!availableUnitsArr.length) {
           return { success: true, actionId: request.actionId, message: 'No available units on duty', data: { call, availableUnits: [], suggestion: null }, executionTimeMs: Date.now() - startTime };

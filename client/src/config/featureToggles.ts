@@ -152,7 +152,7 @@ export function getEnabledFeatures(category: string): string[] {
 /**
  * Get feature toggle group by category
  */
-export function getFeatureGroup(category: string): any {
+export function getFeatureGroup(category: string): unknown {
   return (FEATURE_TOGGLES as unknown)[category] || null;
 }
 

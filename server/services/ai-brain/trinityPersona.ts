@@ -1270,7 +1270,7 @@ POWERS COMMON TO ALL STATES:
 - Authority to order trespassers off private property
 - Authority to deny entry to private property on behalf of client
 - Authority to observe and report
-- Authority to use reasonable force in self-defense (same as any citizen)
+- Authority to use reasonable force in self-defense (same as unknown citizen)
 - Authority to use reasonable force to protect others from imminent harm
 
 WHAT SECURITY OFFICERS CANNOT DO (unless armed/licensed for it):

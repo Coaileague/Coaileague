@@ -3246,7 +3246,7 @@ export default function Settings() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Select...</SelectItem>
-                    {businessCategories?.map((category: any) => (
+                    {businessCategories?.map((category: Record<string, unknown>) => (
                       <SelectItem key={category.value} value={category.value}>
                         <div className="flex flex-col">
                           <span className="font-medium">{category.label}</span>
@@ -3801,7 +3801,7 @@ export default function Settings() {
                     Recent Invitations
                   </p>
                   <div className="space-y-1.5">
-                    {workspaceInvites.slice(0, 8).map((inv: any) => (
+                    {workspaceInvites.slice(0, 8).map((inv: Record<string, unknown>) => (
                       <div key={inv.id} className="flex items-center justify-between py-1.5 px-2 rounded-md bg-muted/50 text-xs" data-testid={`invite-row-${inv.id}`}>
                         <span className="text-foreground font-medium truncate max-w-[200px]">{inv.inviteeEmail || 'Unknown'}</span>
                         <div className="flex items-center gap-2 shrink-0">
@@ -4064,7 +4064,7 @@ export default function Settings() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="">Select...</SelectItem>
-                        {reminderOptions?.timingOptions?.map((option: any) => (
+                        {reminderOptions?.timingOptions?.map((option: Record<string, unknown>) => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>
@@ -4486,7 +4486,7 @@ export default function Settings() {
                         </Badge>
                       </div>
                       <div className="space-y-2">
-                        {section.checks.map((check: any) => (
+                        {section.checks.map((check: Record<string, unknown>) => (
                           <div key={check.id} className="flex items-start gap-3 p-2 rounded-md bg-muted/30" data-testid={`readiness-check-${check.id}`}>
                             {check.ok ? (
                               <CircleCheck className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
@@ -5205,7 +5205,7 @@ export default function Settings() {
                         <span className="text-xs text-muted-foreground">Federal minimum standards</span>
                       </div>
                     </SelectItem>
-                    {laborLawRules.filter((rule: any) => rule.jurisdiction !== 'US-FEDERAL').map((rule: any) => (
+                    {laborLawRules.filter((rule: unknown) => rule.jurisdiction !== 'US-FEDERAL').map((rule: Record<string, unknown>) => (
                       <SelectItem key={rule.jurisdiction} value={rule.jurisdiction}>
                         <div className="flex flex-col">
                           <span className="font-medium">{rule.jurisdictionName}</span>

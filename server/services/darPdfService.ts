@@ -1147,7 +1147,7 @@ export async function generateShiftTransparencyPdf(darId: string, workspaceId: s
         [dar.shift_id, workspaceId]
       );
       const seenMessageIds = new Set(photos.map(p => p.messageId).filter(Boolean));
-      for (const r of posRows as any[]) {
+      for (const r of posRows as unknown[]) {
         // De-dupe: if we already have this photo via a chatroom message, skip it.
         if (r.message_id && seenMessageIds.has(r.message_id)) continue;
         photos.push({

@@ -3,7 +3,7 @@
  * 
  * Drizzle's Shift type only includes columns from the shifts table.
  * These types extend it with fields that come from JOINs and computed values,
- * eliminating the need for `as any` throughout the scheduling routes.
+ * eliminating the need for `as unknown` throughout the scheduling routes.
  */
 import type { InferSelectModel } from 'drizzle-orm';
 import { shifts } from '../schema/domains/scheduling';

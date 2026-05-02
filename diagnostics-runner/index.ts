@@ -50,7 +50,7 @@ function interpolateWorkflows(workflows: unknown[]): unknown[] {
   
   return workflows.map(workflow => ({
     ...workflow,
-    steps: workflow.steps.map((step: any) => ({
+    steps: workflow.steps.map((step: Record<string, unknown>) => ({
       ...step,
       url: step.url ? interpolate(step.url) : step.url,
       value: step.value ? interpolate(step.value) : step.value

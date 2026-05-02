@@ -807,7 +807,7 @@ Focus on: pending approvals that need attention, unsubmitted drafts reminders, r
         recommendations = [
           pendingLogs.length > 0 ? { type: 'action', priority: 'high', title: `${pendingLogs.length} Mileage Logs Pending Approval`, description: `${pendingLogs.length} submitted logs are awaiting manager approval totalling $${pendingLogs.reduce((s, l) => s + l.reimbursement, 0).toFixed(2)}.`, affectedEmployees: [...new Set(pendingLogs.map(l => l.employee))], estimatedImpact: `$${pendingLogs.reduce((s, l) => s + l.reimbursement, 0).toFixed(2)}` } : null,
           unsubmittedLogs.length > 0 ? { type: 'alert', priority: 'medium', title: `${unsubmittedLogs.length} Unsubmitted Draft Logs`, description: `${unsubmittedLogs.length} mileage logs are saved as drafts and have not been submitted for reimbursement.`, affectedEmployees: [...new Set(unsubmittedLogs.map(l => l.employee))], estimatedImpact: `$${unsubmittedLogs.reduce((s, l) => s + l.reimbursement, 0).toFixed(2)}` } : null,
-        ].filter(Boolean) as any[];
+        ].filter(Boolean) as unknown[];
         aiSummary = { totalMiles, totalReimbursement, pendingApproval: pendingLogs.length, flaggedAnomalies: 0, rateCompliant: (logSummary[0]?.ratePerMile || 0.67) >= IRS_RATE };
       }
 

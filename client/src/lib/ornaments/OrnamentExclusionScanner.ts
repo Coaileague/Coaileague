@@ -2,4 +2,4 @@
 export type ExclusionZone = any;
 export type SafeOrnamentSlot = any;
 export const ornamentExclusionScanner = (..._args: unknown[]): any => {};
-export function useOrnamentExclusionZones(..._args: unknown[]): any { return {}; }
+export function useOrnamentExclusionZones(..._args: unknown[]): unknown { return {}; }

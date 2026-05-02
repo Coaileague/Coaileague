@@ -455,7 +455,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
     }
   };
   
-  const [claimingShiftId, setClaimingShiftId] = React.useState<string | null>(null);
+  const [claimingShiftId, setClaimingShiftId] = useState<string | null>(null);
   const handleClaimShift = async (shift: Shift) => {
     if (!currentEmployee?.id) {
       toast({ title: "Unable to claim shift", description: "Please wait for your profile to load", variant: "destructive" });

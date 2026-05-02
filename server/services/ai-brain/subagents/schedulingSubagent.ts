@@ -1238,7 +1238,7 @@ ${openShifts.map(s => {
     openShifts: unknown[],
     employees: EmployeeBusinessMetrics[],
     clients: ClientBusinessMetrics[]
-  ): any {
+  ): unknown {
     log.info('[SchedulingSubagent] Generating fallback strategic schedule');
 
     const schedule: StrategicAssignment[] = [];

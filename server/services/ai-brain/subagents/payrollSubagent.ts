@@ -597,7 +597,7 @@ class PayrollSubagentService {
               AND created_at >= ${calendarYearStart}
             GROUP BY employee_id`
       );
-      for (const r of ytdSSRows as any[]) {
+      for (const r of ytdSSRows as unknown[]) {
         ytdSSByEmployee.set(r.employee_id as string, parseFloat(r.ytd_ss as string) || 0);
       }
     }

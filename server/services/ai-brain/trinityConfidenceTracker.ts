@@ -338,7 +338,7 @@ class TrinityConfidenceTracker {
       let totalToolCalls = 0;
       let successfulToolCalls = 0;
       for (const turn of turns) {
-        const results = turn.toolResults as any[] || [];
+        const results = turn.toolResults as unknown[] || [];
         totalToolCalls += results.length;
         successfulToolCalls += results.filter((r: unknown) => r.success).length;
       }

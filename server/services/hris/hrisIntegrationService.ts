@@ -891,7 +891,7 @@ class HRISIntegrationService {
     return result;
   }
 
-  private getNestedValue(obj: unknown, path: string): any {
+  private getNestedValue(obj: unknown, path: string): unknown {
     const parts = path.split('.');
     let current = obj;
 
@@ -909,7 +909,7 @@ class HRISIntegrationService {
     return current;
   }
 
-  private transformValue(value: unknown, transform?: string): any {
+  private transformValue(value: unknown, transform?: string): unknown {
     if (!transform || transform === 'none') return value;
 
     switch (transform) {

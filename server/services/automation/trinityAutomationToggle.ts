@@ -1428,7 +1428,7 @@ class TrinityAutomationToggleService {
       throw new Error(`Payload can only be revised for pending or paused automations (current status: ${request.status})`);
     }
 
-    const existingHistory = (request.revisionHistory as any[] | null) || [];
+    const existingHistory = (request.revisionHistory as unknown[] | null) || [];
     const newHistoryEntry = {
       revisedBy,
       revisedAt: new Date().toISOString(),

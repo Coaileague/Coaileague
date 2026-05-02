@@ -964,7 +964,7 @@ class FastModeService {
     return displayNames[agentId] || agentId;
   }
   
-  private aggregateResults(results: Array<{ agentId: string; result: unknown; success: boolean }>): any {
+  private aggregateResults(results: Array<{ agentId: string; result: unknown; success: boolean }>): unknown {
     if (results.length === 0) return null;
     if (results.length === 1) return results[0].result;
     

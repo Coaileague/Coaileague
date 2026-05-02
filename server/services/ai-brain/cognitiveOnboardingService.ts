@@ -771,7 +771,7 @@ Return JSON with:
     return schemas[dataType] || '{}';
   }
 
-  private applyMapping(record: unknown, mapping: Record<string, string>): any {
+  private applyMapping(record: unknown, mapping: Record<string, string>): Record<string, unknown> {
     const result: Record<string, unknown> = {};
     for (const [source, target] of Object.entries(mapping)) {
       if (record[source] !== undefined) {
@@ -783,7 +783,7 @@ Return JSON with:
     return result;
   }
 
-  private defaultMapping(record: unknown, dataType: DataSyncType): any {
+  private defaultMapping(record: unknown, dataType: DataSyncType): Record<string, unknown> {
     // Basic field name normalization
     const normalized: Record<string, unknown> = { externalId: record.Id || record.id };
     
@@ -795,7 +795,7 @@ Return JSON with:
     return normalized;
   }
 
-  private extractJSON(text: string): any {
+  private extractJSON(text: string): unknown {
     const match = text.match(/\{[\s\S]*\}/);
     if (match) {
       try {

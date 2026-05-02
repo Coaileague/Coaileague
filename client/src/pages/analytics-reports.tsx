@@ -436,7 +436,7 @@ function PayrollReport({ startDate, endDate }: { startDate: Date; endDate: Date 
     );
   }
 
-  const report = data as unknown as { data: unknown[]; total: number; filters: any };
+  const report = data as unknown as { data: unknown[]; total: number; filters: Record<string, unknown> };
 
   return (
     <Card>
@@ -514,7 +514,7 @@ function ClientSummaryReport({ startDate, endDate }: { startDate: Date; endDate:
     );
   }
 
-  const report = data as unknown as { data: unknown[]; total: number; filters: any };
+  const report = data as unknown as { data: unknown[]; total: number; filters: Record<string, unknown> };
 
   return (
     <Card>
@@ -594,7 +594,7 @@ function EmployeeActivityReport({ startDate, endDate }: { startDate: Date; endDa
     );
   }
 
-  const report = data as unknown as { data: unknown[]; total: number; filters: any };
+  const report = data as unknown as { data: unknown[]; total: number; filters: Record<string, unknown> };
 
   return (
     <Card>

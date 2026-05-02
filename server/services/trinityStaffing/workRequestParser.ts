@@ -183,7 +183,7 @@ class WorkRequestParserService {
   /**
    * Extract basic details using regex patterns
    */
-  private extractBasicDetails(subject: string, body: string): any {
+  private extractBasicDetails(subject: string, body: string): unknown {
     return {
       subject,
       bodyLength: body.length,

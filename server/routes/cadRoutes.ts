@@ -126,7 +126,7 @@ cadRouter.get("/stats", requireAuth, ensureWorkspaceAccess, async (req: Authenti
       q(`SELECT COUNT(*) FROM geofence_departure_log WHERE workspace_id=$1 AND returned_at IS NULL`, [workspaceId]),
     ]);
     const statusMap: Record<string, number> = {};
-    for (const row of byStatus as any[]) { statusMap[row.current_status] = parseInt(row.count); }
+    for (const row of byStatus as unknown[]) { statusMap[row.current_status] = parseInt(row.count); }
     res.json({
       activeCalls: Number(active[0]?.count || 0),
       callsToday: Number(today[0]?.count || 0),

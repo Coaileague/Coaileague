@@ -235,7 +235,7 @@ export class EmployeeBehaviorScoringService {
     
     // Learn time preference
     if (data?.shiftTime) {
-      const currentTimeRanges = (current.preferredTimeRanges as any[]) || [];
+      const currentTimeRanges = (current.preferredTimeRanges as unknown[]) || [];
       updates.preferredTimeRanges = [...currentTimeRanges, data.shiftTime].slice(-10);
     }
     
@@ -582,7 +582,7 @@ export class EmployeeBehaviorScoringService {
     // Time preference match (if we have start time)
     if (criteria.startTime) {
       totalChecks++;
-      const preferredTimeRanges = (score.preferredTimeRanges as any[]) || [];
+      const preferredTimeRanges = (score.preferredTimeRanges as unknown[]) || [];
       const shiftHour = parseInt(criteria.startTime.split(':')[0]);
       
       // Check if employee has worked similar times before

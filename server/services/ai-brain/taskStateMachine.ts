@@ -539,7 +539,7 @@ class TaskStateMachine {
 
       if (!task) return false;
 
-      const reflections = (task.reflections as any[]) || [];
+      const reflections = (task.reflections as unknown[]) || [];
       reflections.push(reflection);
 
       await db.update(aiBrainTasks)

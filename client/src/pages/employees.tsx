@@ -166,14 +166,14 @@ function getRoleDot(workspaceRole: string | null | undefined, isArmed: boolean |
     handleEditEmployee: (e: Employee) => void;
     setSelectedEmployee: (e: Employee | null) => void;
     setIsInviteDialogOpen: (o: boolean) => void;
-    user: any;
+    user: Record<string, unknown>;
     setApprovalPayRate: (r: string) => void;
     setIsApprovalDialogOpen: (o: boolean) => void;
     handleDeleteEmployee: (e: Employee) => void;
     managerMap: Record<string, string>;
     isAnyMutationPending: boolean;
-    inviteMutation: any;
-    approveMutation: any;
+    inviteMutation: { mutate: (data: unknown) => void; isPending: boolean };
+    approveMutation: { mutate: (data: unknown) => void; isPending: boolean };
     deleteMutation: any;
     isSelected: boolean;
     onToggleSelect: (id: string) => void;
