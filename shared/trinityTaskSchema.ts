@@ -293,30 +293,57 @@ export function fromSubagentContext(ctx: {
 /**
  * Convert from AgentExecutionContext (parity layer) to TrinityTask
  */
+interface ExecutedAgentStep {
+  stepId?: string;
+  action: string;
+  input?: Record<string, unknown>;
+  success: boolean;
+  output?: unknown;
+  error?: string;
+  timestamp?: Date;
+  verified?: boolean;
+  verificationResult?: TrinityTaskStep['verificationResult'];
+}
+
+interface PendingAgentStep {
+  stepId?: string;
+  action: string;
+  description?: string;
+  parameters?: Record<string, unknown>;
+  dependsOn?: string[];
+  riskLevel?: 'low' | 'medium' | 'high' | 'critical';
+  maxRetries?: number;
+}
+
+interface AgentExecutionPlan {
+  planId?: string;
+  framework?: 'chain_of_thought' | 'react' | 'tree_of_thought' | 'decomposition';
+}
+
 export function fromAgentExecutionContext(ctx: {
   executionId: string;
   workspaceId: string;
   userId: string;
   goal: string;
-  plan?: unknown;
+  plan?: AgentExecutionPlan;
   overallConfidence: number;
   currentStep: number;
-  executedSteps: unknown[];
-  pendingSteps: unknown[];
+  executedSteps: ExecutedAgentStep[];
+  pendingSteps: PendingAgentStep[];
   reflectionCycles: number;
   relevantFiles: string[];
   relevantComponents: string[];
 }): Partial<TrinityTask> {
   const steps: TrinityTaskStep[] = [
-    ...ctx.executedSteps.map((s, i) => ({
+    ...ctx.executedSteps.map((s, i): TrinityTaskStep => ({
       stepId: s.stepId || `step-${i}`,
       order: i,
       action: s.action,
       description: s.action,
       parameters: s.input || {},
       dependsOn: [],
-      status: s.success ? 'completed' : 'failed' as const,
-      riskLevel: 'low' as const,
+      status: s.success ? 'completed' : 'failed',
+      riskLevel: 'low',
       toolCalls: [],
       output: s.output,
       error: s.error,
@@ -327,15 +354,15 @@ export function fromAgentExecutionContext(ctx: {
       verified: s.verified || false,
       verificationResult: s.verificationResult,
     })),
-    ...ctx.pendingSteps.map((s, i) => ({
+    ...ctx.pendingSteps.map((s, i): TrinityTaskStep => ({
       stepId: s.stepId || `pending-${i}`,
       order: ctx.executedSteps.length + i,
       action: s.action,
       description: s.description || s.action,
       parameters: s.parameters || {},
       dependsOn: s.dependsOn || [],
-      status: 'pending' as const,
-      riskLevel: (s.riskLevel || 'low') as 'low' | 'medium' | 'high' | 'critical',
+      status: 'pending',
+      riskLevel: s.riskLevel || 'low',
       toolCalls: [],
       retryCount: 0,
       maxRetries: s.maxRetries || 3,

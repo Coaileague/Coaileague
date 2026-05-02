@@ -14,8 +14,11 @@ type ShiftBase = InferSelectModel<typeof shifts>;
 /**
  * Shift with fields from JOINs and computed values.
  * Used when querying shifts with associated employee, client, and site data.
+ *
+ * `isManuallyLocked` is omitted from the base then re-declared as optional
+ * because JOINed query projections may not always include it.
  */
-export interface ShiftWithJoins extends ShiftBase {
+export interface ShiftWithJoins extends Omit<ShiftBase, 'isManuallyLocked'> {
   // Employee JOIN fields
   employeeName?: string | null;
   employeeFirstName?: string | null;
@@ -41,7 +44,7 @@ export interface ShiftWithJoins extends ShiftBase {
   userId?: string | null;
   metadata?: Record<string, unknown> | null;
   reason?: string | null;
-  isManuallyLocked?: boolean;
+  isManuallyLocked?: boolean | null;
 }
 
 /**
