@@ -15,11 +15,14 @@ import financialAdminRouter from "../financialAdminRoutes";
 import helpAITriageRouter from "../helpAITriageRoutes";
 import adminWorkspaceDetailsRouter from "../adminWorkspaceDetailsRoutes";
 import trinityOrgStateRouter from "../trinityOrgStateRoutes";
+import { trinityNotificationRouter } from "../trinityNotificationRoutes";
 
 export function mountSupportRoutes(app: Express): void {
   app.use("/api/platform/services", serviceControlRouter);
   app.use(supportActionRouter);
-  app.use("/api/support/command", supportCommandRouter);
+  // requireAuth gates the support-only command console; the inner
+  // requireSupportRole then resolves platformRole and enforces role.
+  app.use("/api/support/command", requireAuth, supportCommandRouter);
   app.use("/api/support/chat", supportChatRouter);
   app.use("/api/tickets", ticketSearchRouter);
   app.use("/api/support", supportRouter);
@@ -32,4 +35,7 @@ export function mountSupportRoutes(app: Express): void {
   app.use("/api/admin", adminWorkspaceDetailsRouter);
   // PFC: Trinity org survival state API
   app.use("/api/trinity", trinityOrgStateRouter);
+  // Trinity notifications (whats-new push, support escalation, batch send)
+  // gated by requireSupportRole inside; requireAuth required upstream.
+  app.use("/api/trinity/notifications", requireAuth, trinityNotificationRouter);
 }

@@ -9,7 +9,7 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router, Response, NextFunction } from 'express';
 import { eq } from 'drizzle-orm';
-import { type AuthenticatedRequest } from '../rbac';
+import { getUserPlatformRole, type AuthenticatedRequest } from '../rbac';
 import { platformEventBus, publishPlatformUpdate } from '../services/platformEventBus';
 import { addUpdate } from '../services/whatsNewService';
 import { db } from '../db';
@@ -22,10 +22,14 @@ export const supportCommandRouter = Router();
 
 const SUPPORT_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'Bot'];
 
-function requireSupportRole(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  const userRole = req.platformRole || 'none';
-  if (!SUPPORT_ROLES.includes(userRole)) {
-    return res.status(403).json({ 
+async function requireSupportRole(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  let userRole = req.platformRole;
+  if (!userRole && req.user?.id) {
+    userRole = await getUserPlatformRole(req.user.id);
+    req.platformRole = userRole;
+  }
+  if (!userRole || !SUPPORT_ROLES.includes(userRole)) {
+    return res.status(403).json({
       error: 'Support staff access required',
       requiredRoles: SUPPORT_ROLES,
     });

@@ -2654,7 +2654,7 @@ export function startAutonomousScheduler() {
   // table indefinitely and blocked automation that was waiting on
   // them. Workflow audit 2026-04-08 flagged this as "approval workflows
   // / expireOldApprovals never called by cron" — this is the fix.
-  registerJobInfo('Approval Expiry Sweep', (SCHEDULER_CONFIG as Record<string, Record<string, unknown>>).approvalExpiry.schedule, (SCHEDUL as unknown)(ER_CONFIG.approvalExpiry.description as unknown), (SCHEDULER_CONFIG as Record<string, Record<string, unknown>>).approvalExpiry.enabled);
+  registerJobInfo('Approval Expiry Sweep', SCHEDULER_CONFIG.approvalExpiry.schedule, SCHEDULER_CONFIG.approvalExpiry.description, SCHEDULER_CONFIG.approvalExpiry.enabled);
   if (SCHEDULER_CONFIG.approvalExpiry.enabled) {
     cron.schedule(SCHEDULER_CONFIG.approvalExpiry.schedule, () => {
       trackJobExecution('Approval Expiry Sweep', async () => {

@@ -2915,9 +2915,9 @@ class PlatformActionHub {
   /**
    * Check if user role is authorized for action using role hierarchy
    */
-  private isAuthorized(userRole: string, requiredRoles: string[]): boolean {
-    // Empty requiredRoles means the action is open to any authenticated caller.
-    if (requiredRoles.length === 0) return true;
+  private isAuthorized(userRole: string, requiredRoles: string[] | undefined): boolean {
+    // Empty / unset requiredRoles means the action is open to any authenticated caller.
+    if (!requiredRoles || requiredRoles.length === 0) return true;
 
     // Canonical role hierarchy — all roles must exist in workspaceRoleEnum or platformRoleEnum.
     // Levels are additive: higher number = more privilege.

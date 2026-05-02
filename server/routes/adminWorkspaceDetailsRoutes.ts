@@ -166,7 +166,18 @@ router.get('/search', requirePlatformStaff, async (req: Request, res: Response) 
       `, [search]),
 
       pool.query(`
-        SELECT id, 'workspace' as entity_type, name as display_name, status, id as workspace_id, name as workspace_name
+        SELECT
+          id,
+          'workspace' as entity_type,
+          name as display_name,
+          CASE
+            WHEN is_deactivated THEN 'deactivated'
+            WHEN is_suspended THEN 'suspended'
+            WHEN is_frozen THEN 'frozen'
+            ELSE COALESCE(subscription_status, 'active')
+          END as status,
+          id as workspace_id,
+          name as workspace_name
         FROM workspaces
         WHERE name ILIKE $1
         LIMIT 5
