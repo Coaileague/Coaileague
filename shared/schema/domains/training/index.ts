@@ -4,6 +4,7 @@
 // Tables: training_modules, training_sections, training_questions,
 //         training_attempts, training_certificates, training_interventions,
 //         training_sessions, training_attendance, training_providers
+import { trainingDifficultyEnum } from '../../enums';
 
 import { pgTable, varchar, text, integer, boolean, timestamp, jsonb, decimal, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
@@ -220,3 +221,147 @@ export const trainingAttendance = pgTable('training_attendance', {
 export const insertTrainingAttendanceSchema = createInsertSchema(trainingAttendance).omit({ id: true, createdAt: true });
 export type InsertTrainingAttendance = z.infer<typeof insertTrainingAttendanceSchema>;
 export type TrainingAttendance = typeof trainingAttendance.$inferSelect;
+
+
+export const trainingScenarios = pgTable("training_scenarios", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  
+  name: varchar("name").notNull(),
+  description: text("description"),
+  difficulty: trainingDifficultyEnum("difficulty").notNull(),
+  
+  // Scenario configuration
+  totalShifts: integer("total_shifts").notNull().default(50),
+  constraintComplexity: integer("constraint_complexity").default(1), // 1-10 scale
+  employeeVariety: integer("employee_variety").default(5), // Number of varied employee types
+  clientVariety: integer("client_variety").default(3), // Number of varied client types
+  
+  // Constraint toggles
+  hasAvailabilityConflicts: boolean("has_availability_conflicts").default(false),
+  hasCertificationRequirements: boolean("has_certification_requirements").default(false),
+  hasClientPreferences: boolean("has_client_preferences").default(false),
+  hasClientExclusions: boolean("has_client_exclusions").default(false),
+  hasTravelPayConstraints: boolean("has_travel_pay_constraints").default(false),
+  hasOvertimeRisks: boolean("has_overtime_risks").default(false),
+  hasLowScoreEmployees: boolean("has_low_score_employees").default(false),
+  
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+})
+
+
+export const trainingRuns = pgTable("training_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  scenarioId: varchar("scenario_id"),
+  
+  difficulty: trainingDifficultyEnum("difficulty").notNull(),
+  status: varchar("status").default("pending"), // pending, running, completed, failed
+  
+  // Metrics
+  totalShifts: integer("total_shifts").default(0),
+  assignedShifts: integer("assigned_shifts").default(0),
+  failedShifts: integer("failed_shifts").default(0),
+  averageConfidence: decimal("average_confidence", { precision: 5, scale: 4 }),
+  totalCreditsUsed: decimal("total_credits_used", { precision: 10, scale: 2 }),
+  
+  // Trinity metacognition tracking
+  confidenceStart: decimal("confidence_start", { precision: 5, scale: 4 }),
+  confidenceEnd: decimal("confidence_end", { precision: 5, scale: 4 }),
+  confidenceDelta: decimal("confidence_delta", { precision: 5, scale: 4 }),
+  thoughtLog: jsonb("thought_log").$type<string[]>(), // Trinity's reasoning steps
+  lessonsLearned: jsonb("lessons_learned").$type<string[]>(), // What Trinity learned
+  
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+})
+
+
+export const trainingCourses = pgTable("training_courses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+
+  // Course details
+  title: varchar("title").notNull(),
+  description: text("description"),
+  category: varchar("category"), // 'compliance', 'technical', 'leadership', 'soft_skills', 'safety'
+
+  // Content
+  courseType: varchar("course_type").notNull(), // 'online', 'in_person', 'hybrid', 'self_paced'
+  duration: integer("duration"), // Minutes
+  contentUrl: varchar("content_url"), // Link to course materials
+  videoUrl: varchar("video_url"),
+
+  // Requirements
+  isRequired: boolean("is_required").default(false),
+  expiresAfterDays: integer("expires_after_days"), // Requires renewal (e.g., 365 for annual training)
+  passingScore: integer("passing_score"), // Minimum % to pass
+
+  // Access
+  requiresApproval: boolean("requires_approval").default(false),
+  maxEnrollments: integer("max_enrollments"),
+
+  // Instructor
+  instructorId: varchar("instructor_id"),
+  instructorName: varchar("instructor_name"),
+
+  // Status
+  isActive: boolean("is_active").default(true),
+  publishedAt: timestamp("published_at"),
+
+  createdBy: varchar("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+
+  durationHours: decimal("duration_hours"),
+  content: jsonb("content"),
+  scenarioData: jsonb("scenario_data").default('{}'),
+})
+
+
+export const trainingEnrollments = pgTable("training_enrollments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull(),
+  employeeId: varchar("employee_id").notNull(),
+  workspaceId: varchar("workspace_id"),
+
+  // Enrollment details
+  enrolledAt: timestamp("enrolled_at").defaultNow(),
+  enrolledBy: varchar("enrolled_by"), // Manager or self
+
+  // Progress
+  status: varchar("status").default('enrolled'), // 'enrolled', 'in_progress', 'completed', 'failed', 'expired'
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  expiresAt: timestamp("expires_at"),
+
+  // Assessment
+  assessmentScore: integer("assessment_score"), // Percentage
+  attempts: integer("attempts").default(0),
+  maxAttempts: integer("max_attempts").default(3),
+
+  // Certification
+  certificateUrl: varchar("certificate_url"),
+  certificateIssuedAt: timestamp("certificate_issued_at"),
+
+  // Feedback
+  rating: integer("rating"), // 1-5 stars
+  feedback: text("feedback"),
+
+  updatedAt: timestamp("updated_at").defaultNow(),
+
+  progressPercentage: integer("progress_percentage").default(0),
+  score: decimal("score"),
+  enrollmentType: varchar("enrollment_type"),
+  attemptData: jsonb("attempt_data").default('{}'),
+  certificationData: jsonb("certification_data").default('{}'),
+}, (table) => ({
+  employeeIdx: index("training_enrollments_employee_idx").on(table.employeeId),
+  statusIdx: index("training_enrollments_status_idx").on(table.status),
+  expiresIdx: index("training_enrollments_expires_idx").on(table.expiresAt),
+  workspaceIdx: index("training_enrollments_workspace_idx").on(table.workspaceId),
+}))
