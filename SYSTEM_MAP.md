@@ -710,6 +710,10 @@ Server entry:        server/index.ts → dist/index.js (38MB)
 
 ## TypeScript Debt Status
 
+**Two metrics — don't conflate.**
+
+`: any` literal count (the historical project metric — text-grep based):
+
 | Category | Baseline | Current | Status |
 |---|---|---|---|
 | Total combined any | 8,566 | 2,199 | 74.3% eliminated |
@@ -719,6 +723,24 @@ Server entry:        server/index.ts → dist/index.js (38MB)
 | middleware as any | 183 | 0 | ✅ |
 | @ts-expect-error | 142 | 0 | ✅ |
 | esbuild errors | — | 0 | ✅ |
+
+`tsc --strict` errors (the actual compile-time check via `npm run check`):
+
+| Scope | Errors | Notes |
+|---|---|---|
+| `npm run check` (canonical, includes client + server + shared) | 24,153 | accepted baseline — bulk is TS18046 unknown propagation |
+| `tsc -p tsconfig.server.json` (server + shared only) | 19,803 | down 3 from 19,806 after 2026-05-02 audit |
+| `node build.mjs` (esbuild server bundler) | 0 | runtime canonical — what production actually runs |
+
+**2026-05-02 backend-routes-audit pass landed:**
+- Fixed `verifyPassword is not defined` — login was crashing in production (TS2304 caught at runtime).
+- Fixed `verifyMfaToken`, `validatePendingMfaToken`, `SUPPORT_PLATFORM_ROLES` undefined references in authCoreRoutes.ts.
+- Cleaned 20 dead `Insert<X>` type aliases in shared/schema.ts referencing nonexistent zod schemas.
+- Re-typed `fromAgentExecutionContext` in shared/trinityTaskSchema.ts (25 errors → 0).
+- Fixed `ShiftWithJoins` extension via `Omit` (1 error → 0).
+- Fixed vite.config.ts invalid `moduleDirectories` resolve option.
+
+The strict `tsc` baseline is documented honestly; canonical runtime compile (esbuild) and runtime smoke test (login + new onboarding routes) both PASS.
 
 **Top remaining debt files (production):**
 - settings.tsx: 62 (complex settings form with dynamic shapes)

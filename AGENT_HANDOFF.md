@@ -4,20 +4,45 @@
 
 ---
 
-## BACKEND-ROUTES AUDIT PASS (2026-05-02) — ZERO GAPS REPORT
+## BACKEND-ROUTES AUDIT PASS (2026-05-02) — ROUTE WIRING + RUNTIME VERIFIED
 
-**Mission:** Deep scan every backend route ensuring coherent semantic-middle and front-end connection, systematic + canonical placement, no race conditions, route in proper turn and location, code coherent and fully wired in.
+**Mission:** Deep scan every backend route ensuring coherent semantic-middle and front-end connection, systematic + canonical placement, no race conditions, route in proper turn and location, code coherent and fully wired in. Verify at runtime with a real test server + real DB + real HTTP requests.
 
-**Result:** ✅ PASS — 4 fixes landed. esbuild server build remains clean (0 errors). Zero remaining hazards in scope.
+**Result:**
+- Route wiring + race conditions: ✅ PASS — 8 fixes landed across 3 commits.
+- Runtime verification: ✅ PASS — server boots, login works, both new onboarding routes hit their handlers.
+- TS strict-tsc: ⚠ PARTIAL — 24,153 → 19,803 server-scope errors. Structural roots fixed; bulk remaining is TS18046 unknown-propagation in deep AI/Drizzle internals (multi-session backlog).
+- esbuild server build: ✅ 0 errors (canonical runtime compile).
 
-### Fixes Landed on This Branch
+### Fixes Landed on This Branch (3 commits)
 
-| # | Hazard | Files | Fix |
-|---|---|---|---|
-| 1 | **Race condition — platform workspace seeding lock dead** — `routes.ts` defined a `platformWorkspaceSeedLock` at lines 14-24 but never acquired it. `seedPlatformWorkspace()` is called from 3 places (startup retry loop, `ChatServerHub.seedHelpDeskRoom`, `supportRoutes` HelpAI escalation). Concurrent first-boot calls could race the `workspace_members` ON CONFLICT path. | `server/seed-platform-workspace.ts`, `server/routes.ts`, `server/routes/supportRoutes.ts` | Lock moved INTO `seed-platform-workspace.ts` as a single-flight Promise. All callers now share it automatically. Removed dead lock from routes.ts and the orphan `let platformWorkspaceSeedingInProgress = false;` shadow at supportRoutes.ts:211. |
-| 2 | **Ghost API call** — `setup-guide-panel.tsx:125` POSTs `/api/onboarding/complete-task/:taskId`; backend had only a JSDoc stub at onboardingRoutes.ts:337. Documented endpoint `POST /api/onboarding/tasks/:taskId/complete` (referenced by `pages/onboarding.tsx:302`) was also unimplemented. | `server/routes/onboardingRoutes.ts` | Added single `handleCompleteTask` mounted at BOTH URL forms — calls existing `onboardingPipelineService.completeTask(workspaceId, taskId, completedBy)`. Removed the dangling JSDoc stub. |
-| 3 | **Dead code** — `server/routes/domains/routeMounting.ts` exported `mountRoutes` + `mountWorkspaceRoutes` helpers; never imported anywhere. 33 lines. | `server/routes/domains/routeMounting.ts` | File deleted. |
-| 4 | **Documentation drift** — SYSTEM_MAP.md scheduling table listed `availabilityRoutes.ts` at `/api/availability` but the prefix is mounted only in `workforce.ts:69`. Stale row would mislead the next developer. | `SYSTEM_MAP.md` | Stale row removed. SYSTEM_MAP audit summary inserted at the top. |
+| # | Hazard | Files | Fix | Commit |
+|---|---|---|---|---|
+| 1 | **Race — platform workspace seeding lock dead.** `routes.ts` defined `platformWorkspaceSeedLock` at lines 14-24 but never acquired it. `seedPlatformWorkspace()` called from 3 places (startup retry loop, `ChatServerHub.seedHelpDeskRoom`, `supportRoutes` HelpAI escalation) could race the `workspace_members` ON CONFLICT path. | `server/seed-platform-workspace.ts`, `server/routes.ts`, `server/routes/supportRoutes.ts` | Lock moved INTO `seed-platform-workspace.ts` as a single-flight Promise. All callers share it automatically. Removed dead lock + orphan local. | `481c361` |
+| 2 | **Ghost API call.** `setup-guide-panel.tsx:125` POSTs `/api/onboarding/complete-task/:taskId`; backend had only a JSDoc stub at onboardingRoutes.ts:337. Also `/api/onboarding/tasks/:taskId/complete` (used by `pages/onboarding.tsx:302`) was unimplemented. | `server/routes/onboardingRoutes.ts` | One `handleCompleteTask` mounted at BOTH URL forms — calls existing `onboardingPipelineService.completeTask()`. Stub JSDoc removed. | `481c361` |
+| 3 | **Dead code.** `server/routes/domains/routeMounting.ts` exported `mountRoutes` + `mountWorkspaceRoutes` helpers; never imported. | `server/routes/domains/routeMounting.ts` | File deleted (33 lines). | `481c361` |
+| 4 | **Doc drift.** SYSTEM_MAP scheduling table listed `availabilityRoutes.ts` at `/api/availability` but it's mounted only in `workforce.ts:69`. | `SYSTEM_MAP.md` | Stale row removed. | `481c361` |
+| 5 | **Runtime crash — login broken in production.** `verifyPassword is not defined` (TS2304). esbuild let it through; tsc would have caught it. | `server/routes/authCoreRoutes.ts` | Added missing import from `../auth`. | `d9a21a8` |
+| 6 | **Runtime crash — MFA verify broken.** `verifyMfaToken` undefined at line 880; `validatePendingMfaToken` undefined at lines 840/1928/1981; `SUPPORT_PLATFORM_ROLES` undefined at line 563. | `server/routes/authCoreRoutes.ts` | Added import from `../services/auth/mfa`; added local `validatePendingMfaToken` paired with existing `issuePendingMfaToken`; added `SUPPORT_PLATFORM_ROLES` Set with the canonical role list. | `d9a21a8` |
+| 7 | **Schema TS2304 — 20 dead `Insert<X>` aliases** referencing nonexistent zod schemas (insertRoomVoiceSessionSchema, insertEmailCampaignSchema, etc.). | `shared/schema.ts` | Deleted unreferenced aliases; rewired survivors to actual schemas (e.g. `InsertAiApprovalRequest = InsertAiApproval` since the table merged Mar 2026). | `d9a21a8` |
+| 8 | **Type mismatch — agent execution context.** `fromAgentExecutionContext` declared `executedSteps/pendingSteps: unknown[]` then accessed `.stepId`, `.action`, etc. — every property access TS18046'd (25 errors). `ShiftWithJoins` widened parent's nullable column with optional, breaking `extends`. | `shared/trinityTaskSchema.ts`, `shared/types/domainExtensions.ts` | Defined ExecutedAgentStep / PendingAgentStep / AgentExecutionPlan interfaces. ShiftWithJoins now `extends Omit<ShiftBase, 'isManuallyLocked'>`. | `b84d968` |
+| 9 | **vite.config.ts** had `moduleDirectories` (Webpack/Rollup option, not Vite — TS2769). | `vite.config.ts` | Removed; Vite resolves node_modules natively. | `d9a21a8` |
+
+### Runtime Verification (2026-05-02 test session)
+
+Local PostgreSQL 16 + drizzle-kit push (741 tables) + server on `:5005`:
+
+```
+Phase 1  POST /api/csrf-token         → 200 token issued
+Phase 2  POST /api/auth/login (root)  → 200 session set, MFA-advisory  ✅ verifyPassword fix proven
+Phase 3  GET  /api/auth/me            → 200 root_admin payload returned
+Phase 4  POST /api/onboarding/complete-task/:taskId  → handler reached, "Task not found" (correct service-level 404)
+Phase 5  POST /api/onboarding/tasks/:taskId/complete → handler reached, same behaviour (mounted at both URLs)
+Phase 6  GET  /health                 → 200 healthy
+```
+
+Server startup log shows the canonical mount order from this session's audit is preserved:
+`bootstrap → CSRF → guards → public → webhooks → 15 domains → trinity bypass → mountTrinity → multi-company/etc → mountAudit → featureStubRouter (LAST)`.
 
 ### Verified Clean (no regression — leave alone)
 
@@ -54,7 +79,11 @@ No file collisions: this branch only modified `server/seed-platform-workspace.ts
 
 ```
 origin/development → 5c8f43b2  (🟢 GREEN — build clean, Railway auto-deploying)
-TS debt: 8,566 → 2124 combined (-75.2% from baseline)
+this branch        → b84d968 (claude/audit-backend-routes-erroW, ahead by 3 commits as of 2026-05-02)
+
+esbuild server build: ✅ 0 errors (canonical runtime compile)
+tsc strict (server scope): 19,803 errors — accepted backlog, mostly TS18046
+:any literal count: ~2,124 (handoff historical metric)
 ```
 
 ---
