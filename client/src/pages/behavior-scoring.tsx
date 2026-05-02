@@ -43,6 +43,7 @@ interface BehaviorScore {
 
 function ScoreBar({ label, value, icon: Icon, color }: { label: string; value: number; icon: typeof Activity; color: string }) {
   const pct = Math.round(value * 100);
+
   return (
     <div className="flex items-center gap-3" data-testid={`score-bar-${label.toLowerCase().replace(/\s+/g, '-')}`}>
       <Icon className={`h-4 w-4 shrink-0 ${color}`} />
@@ -132,11 +133,11 @@ function SummaryCards({ scores }: { scores: BehaviorScore[] }) {
 }
 
 export default function BehaviorScoringPage() {
-  const { data: scores, isLoading } = useQuery<BehaviorScore[]>({
+  const { data: scores, isLoading} = useQuery<BehaviorScore[]>({
     queryKey: ['/api/engagement/behavior-scores'],
   });
 
-  const { data: topPerformers, isLoading: topLoading } = useQuery<BehaviorScore[]>({
+  const { data: topPerformers, isLoading: topLoading} = useQuery<BehaviorScore[]>({
     queryKey: ['/api/engagement/behavior-scores/top'],
   });
 

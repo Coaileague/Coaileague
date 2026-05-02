@@ -12,6 +12,7 @@ import {
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 function QueueLoadingState({ label }: { label: string }) {
+
   return (
     <div className="text-center py-8 text-muted-foreground space-y-2">
       <Clock className="h-8 w-8 mx-auto opacity-50 animate-pulse" />
@@ -25,23 +26,23 @@ export default function ManagerDashboard() {
   const { user } = useAuth();
 
   // Fetch all pending approvals
-  const { data: pendingTimeOff, isLoading: loadingTimeOff } = useQuery<any[]>({
+  const { data: pendingTimeOff, isLoading: loadingTimeOff} = useQuery<any[]>({
     queryKey: ['/api/time-off-requests/pending'],
   });
 
-  const { data: pendingTimesheetEdits, isLoading: loadingTimesheetEdits } = useQuery<any[]>({
+  const { data: pendingTimesheetEdits, isLoading: loadingTimesheetEdits} = useQuery<any[]>({
     queryKey: ['/api/timesheet-edit-requests/pending'],
   });
 
-  const { data: pendingShifts, isLoading: loadingShifts } = useQuery<any[]>({
+  const { data: pendingShifts, isLoading: loadingShifts} = useQuery<any[]>({
     queryKey: ['/api/shift-actions/pending'],
   });
 
-  const { data: pendingExpenses, isLoading: loadingExpenses } = useQuery<any[]>({
+  const { data: pendingExpenses, isLoading: loadingExpenses} = useQuery<any[]>({
     queryKey: ['/api/expenses/pending-approval'],
   });
 
-  const { data: expiringI9, isLoading: loadingI9 } = useQuery<any[]>({
+  const { data: expiringI9, isLoading: loadingI9} = useQuery<any[]>({
     queryKey: ['/api/i9-records/expiring'],
   });
 

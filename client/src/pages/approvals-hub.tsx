@@ -64,15 +64,15 @@ const APPROVAL_CATEGORIES: ApprovalCategory[] = [
 export default function ApprovalsHub() {
   const [, setLocation] = useLocation();
 
-  const { data: timesheetPending, isLoading: isLoadingTimesheets } = useQuery<any[]>({
+  const { data: timesheetPending, isLoading: isLoadingTimesheets} = useQuery<any[]>({
     queryKey: ['/api/timesheets/pending-count'],
   });
 
-  const { data: workflowPending, isLoading: isLoadingWorkflows } = useQuery<any[]>({
+  const { data: workflowPending, isLoading: isLoadingWorkflows} = useQuery<any[]>({
     queryKey: ['/api/scheduleos/proposals'],
   });
 
-  const { data: expensePending, isLoading: isLoadingExpenses } = useQuery<any[]>({
+  const { data: expensePending, isLoading: isLoadingExpenses} = useQuery<any[]>({
     queryKey: ['/api/expenses/pending-approval'],
   });
 

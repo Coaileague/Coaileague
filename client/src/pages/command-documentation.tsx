@@ -121,6 +121,8 @@ function CommandCard({ cmd, expanded, onToggle }: {
   const catConfig = CATEGORY_CONFIG[cmd.category] || CATEGORY_CONFIG.system;
   const Icon = catConfig.icon;
 
+  if (isError) return <div className="p-4 text-destructive text-sm">Failed to load data. Please refresh.</div>;
+
   return (
     <Card 
       className={`transition-all ${cmd.locked ? 'opacity-70' : ''} hover-elevate cursor-pointer`}
@@ -246,7 +248,7 @@ export default function CommandDocumentationPage() {
   const [expandedCmd, setExpandedCmd] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('all');
 
-  const { data, isLoading } = useQuery<CommandsResponse>({
+  const { data, isLoading, isError, error } = useQuery<CommandsResponse>({
     queryKey: ['/api/commands'],
   });
 

@@ -25,12 +25,12 @@ interface HealthSummary {
 }
 
 export default function StatusPage() {
-  const { data: maintenanceStatus, refetch: refetchMaintenance } = useQuery<MaintenanceStatus>({
+  const { data: maintenanceStatus, refetch: refetchMaintenance} = useQuery<MaintenanceStatus>({
     queryKey: ["/api/maintenance/status"],
     refetchInterval: 15000,
   });
 
-  const { data: healthStatus } = useQuery<HealthSummary>({
+  const { data: healthStatus} = useQuery<HealthSummary>({
     queryKey: ["/api/health/summary"],
     refetchInterval: 30000,
   });

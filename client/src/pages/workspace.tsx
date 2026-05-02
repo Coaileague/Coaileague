@@ -24,7 +24,7 @@ export default function Workspace() {
   const { user, isLoading } = useAuth();
 
   // ✅ SECURE: Fetch features from backend (server-side validation)
-  const { data: featuresData, isLoading: featuresLoading } = useQuery<{
+  const { data: featuresData, isLoading: featuresLoading} = useQuery<{
     features: WorkspaceFeature[];
     platformRole: string;
     workspaceRole: string | null;
@@ -34,7 +34,7 @@ export default function Workspace() {
   });
 
   // Fetch workspace stats
-  const { data: stats } = useQuery<{
+  const { data: stats} = useQuery<{
     totalEmployees: number;
     totalClients: number;
     activeShifts: number;
@@ -59,7 +59,6 @@ export default function Workspace() {
       </div>
     );
   }
-
   if (!user) {
     return null;
   }

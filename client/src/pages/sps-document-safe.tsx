@@ -137,6 +137,8 @@ function workerLabel(type: string) {
 }
 
 function DocDot({ present, label }: { present: boolean; label: string }) {
+  if (isError) return <div className="p-4 text-destructive text-sm">Failed to load data. Please refresh.</div>;
+
   return (
     <span
       title={label}
@@ -148,7 +150,7 @@ function DocDot({ present, label }: { present: boolean; label: string }) {
 // ── Company Tab ────────────────────────────────────────────────────────────────
 
 function CompanyTab() {
-  const { data, isLoading } = useQuery<{ success: boolean; data: Record<string, unknown> }>({
+  const { data, isLoading, isError, error } = useQuery<{ success: boolean; data: Record<string, unknown> }>({
     queryKey: ["/api/sps/company-docs"],
   });
   const [contractFilter, setContractFilter] = useState("all");
@@ -298,7 +300,7 @@ function StaffTab() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery<{ success: boolean; data: StaffPacket[] }>({
+  const { data, isLoading, isError, error } = useQuery<{ success: boolean; data: StaffPacket[] }>({
     queryKey: ["/api/sps/staff-packets"],
   });
 
@@ -637,7 +639,7 @@ function StaffTab() {
 function ReportsTab() {
   const [clientFilter, setClientFilter] = useState("all");
 
-  const { data, isLoading } = useQuery<{
+  const { data, isLoading, isError, error } = useQuery<{
     success: boolean;
     data: { reports: unknown[]; clients: string[] };
   }>({
@@ -728,7 +730,7 @@ function AuditorTab() {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery<{ success: boolean; data: StaffPacket[] }>({
+  const { data, isLoading, isError, error } = useQuery<{ success: boolean; data: StaffPacket[] }>({
     queryKey: ["/api/sps/staff-packets"],
   });
 

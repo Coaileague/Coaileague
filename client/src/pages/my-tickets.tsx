@@ -38,7 +38,7 @@ export default function MyTickets() {
   const [, setLocation] = useLocation();
   const isMobile = useIsMobile();
 
-  const { data: ticketsData, isLoading, refetch } = useQuery<{ tickets: SupportTicket[] }>({
+  const { data: ticketsData, isLoading, refetch, isError, error } = useQuery<{ tickets: SupportTicket[] }>({
     queryKey: ['/api/support/chat/my-tickets'],
     enabled: !!user,
   });
@@ -232,6 +232,7 @@ function TicketList({
     );
   }
 
+  if (isError) return <div className="p-4 text-destructive text-sm">Failed to load data. Please refresh.</div>;
   if (!tickets.length) {
     return (
       <Card>

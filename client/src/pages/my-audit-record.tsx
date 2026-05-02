@@ -38,7 +38,7 @@ interface AuditData {
 
 export default function MyAuditRecord() {
   // Fetch employee's audit data
-  const { data: auditData, isLoading } = useQuery<AuditData>({
+  const { data: auditData, isLoading, isError, error } = useQuery<AuditData>({
     queryKey: ['/api/employee/audit-record'],
   });
 
@@ -63,6 +63,8 @@ export default function MyAuditRecord() {
       </CanvasHubPage>
     );
   }
+
+  if (isError) return <div className="p-4 text-destructive text-sm">Failed to load data. Please refresh.</div>;
 
   return (
     <CanvasHubPage config={pageConfig}>

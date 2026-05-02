@@ -101,13 +101,15 @@ function formatMonth(ym: string): string {
 export default function TurnoverAnalytics() {
   const [periodMonths, setPeriodMonths] = useState("12");
 
-  const { data, isLoading } = useQuery<TurnoverData>({
+  const { data, isLoading, isError, error } = useQuery<TurnoverData>({
     queryKey: ["/api/analytics/turnover", periodMonths],
   });
 
   const maxTerminations = data?.monthlyTrend
     ? Math.max(...(data?.monthlyTrend ?? []).map((m) => m.terminations), 1)
     : 1;
+
+  if (isError) return <div className="p-4 text-destructive text-sm">Failed to load data. Please refresh.</div>;
 
   return (
     <CanvasHubPage config={pageConfig}>

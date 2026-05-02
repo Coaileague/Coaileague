@@ -7,15 +7,15 @@ import { format, differenceInDays } from "date-fns";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
 export default function I9CompliancePage() {
-  const { data: allRecords = [], isLoading: allLoading } = useQuery<any[]>({
+  const { data: allRecords = [], isLoading: allLoading} = useQuery<any[]>({
     queryKey: ['/api/i9-records'],
   });
 
-  const { data: expiring30 = [], isLoading: expiring30Loading } = useQuery<any[]>({
+  const { data: expiring30 = [], isLoading: expiring30Loading} = useQuery<any[]>({
     queryKey: ['/api/i9-records/expiring?days=30'],
   });
 
-  const { data: expiring7 = [], isLoading: expiring7Loading } = useQuery<any[]>({
+  const { data: expiring7 = [], isLoading: expiring7Loading} = useQuery<any[]>({
     queryKey: ['/api/i9-records/expiring?days=7'],
   });
 

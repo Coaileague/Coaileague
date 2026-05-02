@@ -74,12 +74,14 @@ function formatDollars(cents?: number) {
 }
 
 function TranscriptModal({ call }: { call: CallSession }) {
-  const { data, isLoading } = useQuery<TranscriptData>({
+  const { data, isLoading, isError, error } = useQuery<TranscriptData>({
     queryKey: ["/api/voice/calls", call.id, "transcript"],
     queryFn: () =>
       fetch(`/api/voice/calls/${call.id}/transcript`, { credentials: "include" }).then(r => r.json()),
     enabled: true,
   });
+
+  if (isError) return <div className="p-4 text-destructive text-sm">Failed to load data. Please refresh.</div>;
 
   return (
     <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -183,7 +185,7 @@ export default function VoiceCallsPage() {
   const [search, setSearch] = useState("");
   const [selectedCall, setSelectedCall] = useState<CallSession | null>(null);
 
-  const { data, isLoading } = useQuery<{ calls: CallSession[]; total: number }>({
+  const { data, isLoading, isError, error } = useQuery<{ calls: CallSession[]; total: number }>({
     queryKey: ["/api/voice/calls"],
   });
 

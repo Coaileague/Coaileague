@@ -62,6 +62,8 @@ function StatCard({
   color?: string;
   testId?: string;
 }) {
+  if (isError) return <div className="p-4 text-destructive text-sm">Failed to load data. Please refresh.</div>;
+
   return (
     <Card>
       <CardHeader className="p-3 sm:px-6 sm:pt-6 pb-1 sm:pb-2">
@@ -79,7 +81,7 @@ function StatCard({
 }
 
 function ACCDashboardPanel({ workspaceId }: { workspaceId: string }) {
-  const { data, isLoading } = useQuery<{ success: boolean; stats: Record<string, unknown> }>({
+  const { data, isLoading, isError, error } = useQuery<{ success: boolean; stats: Record<string, unknown> }>({
     queryKey: ["/api/trinity/acc/stats"],
     enabled: !!workspaceId,
   });
@@ -239,7 +241,7 @@ function ACCDashboardPanel({ workspaceId }: { workspaceId: string }) {
 }
 
 function ThalamicDashboardPanel({ workspaceId }: { workspaceId: string }) {
-  const { data, isLoading } = useQuery<{ success: boolean; stats: Record<string, unknown> }>({
+  const { data, isLoading, isError, error } = useQuery<{ success: boolean; stats: Record<string, unknown> }>({
     queryKey: ["/api/trinity/thalamic/stats"],
     enabled: !!workspaceId,
   });
@@ -412,7 +414,7 @@ export default function AIBrainDashboard() {
   const [extractedData, setExtractedData] = useState<null>(null);
   const [entityType, setEntityType] = useState<"employee" | "client" | "vendor" | "invoice">("employee");
 
-  const { data: user } = useQuery<User>({
+  const { data: user, isError, error } = useQuery<User>({
     queryKey: ["/api/user"],
     queryFn: async () => {
       const response = await secureFetch("/api/user");

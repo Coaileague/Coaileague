@@ -81,22 +81,22 @@ export default function SituationBoard() {
   const bus = useWebSocketBus();
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { data: summary, isLoading: summaryLoading } = useQuery<SituationSummary>({
+  const { data: summary, isLoading: summaryLoading} = useQuery<SituationSummary>({
     queryKey: ["/api/situation", "summary"],
     // Cache invalidated by WebSocket push — no polling needed
   });
 
-  const { data: guards, isLoading: guardsLoading } = useQuery<GuardStatus[]>({
+  const { data: guards, isLoading: guardsLoading} = useQuery<GuardStatus[]>({
     queryKey: ["/api/situation", "guards"],
     // Cache invalidated by WebSocket push — no polling needed
   });
 
-  const { data: incidents, isLoading: incidentsLoading } = useQuery<ActiveIncident[]>({
+  const { data: incidents, isLoading: incidentsLoading} = useQuery<ActiveIncident[]>({
     queryKey: ["/api/situation", "incidents"],
     // Cache invalidated by WebSocket push — no polling needed
   });
 
-  const { data: openShifts, isLoading: shiftsLoading } = useQuery<OpenShift[]>({
+  const { data: openShifts, isLoading: shiftsLoading} = useQuery<OpenShift[]>({
     queryKey: ["/api/situation", "open-shifts"],
     // Cache invalidated by WebSocket push — no polling needed
   });
