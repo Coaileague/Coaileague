@@ -258,6 +258,7 @@ import {
   employeeInvitations,
   invoicePayments,
   payrollDeductions,
+  aiInsights,
 } from '@shared/schema';
 import type { PaginatedResponse, ClientWithInvoiceCount, WorkspaceRole } from "@shared/types";
 import type { ClientsQueryParams } from "@shared/validation/pagination";
