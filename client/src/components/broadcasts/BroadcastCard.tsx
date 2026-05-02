@@ -193,7 +193,6 @@ export function BroadcastCard({ broadcast, recipient, onDismiss }: BroadcastCard
                       disabled={acknowledge.isPending}
                     >
                       <CheckCircle className="h-4 w-4 mr-1" />
-                      // @ts-ignore — TS migration: fix in refactoring sprint
                       {(broadcast as Record<string, unknown>).actionConfig?.buttonLabel || 'I Acknowledge'}
                     </Button>
                   )}
@@ -224,7 +223,6 @@ export function BroadcastCard({ broadcast, recipient, onDismiss }: BroadcastCard
                       }}
                     >
                       <ExternalLink className="h-4 w-4 mr-1" />
-                      // @ts-ignore — TS migration: fix in refactoring sprint
                       {(broadcast as Record<string, unknown>).actionConfig?.label || 'Learn More'}
                     </Button>
                   )}

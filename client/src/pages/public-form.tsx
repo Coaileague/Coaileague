@@ -160,7 +160,7 @@ export default function PublicFormPage() {
       setSubmitted(true);
       setSuccessMessage(result.message || formData.successMessage);
     } catch (err: unknown) {
-      setError(err.message || "Failed to submit form. Please try again.");
+      setError((err instanceof Error ? err.message : String(err)) || "Failed to submit form. Please try again.");
     } finally {
       setSubmitting(false);
     }

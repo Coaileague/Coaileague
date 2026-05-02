@@ -87,7 +87,7 @@ export function TrinityKnowledgePanel() {
       const res = await apiRequest(`/api/platform/knowledge/static/${moduleKey}`);
       setSelectedModule(res.module);
     } catch (err: unknown) {
-      toast({ title: "Failed to load module", description: err.message, variant: "destructive" });
+      toast({ title: "Failed to load module", description: (err instanceof Error ? err.message : String(err)), variant: "destructive" });
     }
   };
 

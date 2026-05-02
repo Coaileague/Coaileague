@@ -25,7 +25,7 @@ import { auditLogs } from '@shared/schema/domains/audit';
 // Phase 83: Log prompt injection detection events to security audit log (async, non-blocking)
 function logInjectionAttempt(opts: { workspaceId?: string; userId?: string; ipAddress?: string; original: string; sanitized: string }): void {
   if (opts.original === opts.sanitized) return; // No injection detected
-  db.insert(auditLogs).values({
+  void db.insert(auditLogs).values({
     workspaceId: opts.workspaceId,
     userId: opts.userId,
     action: 'security_prompt_injection_detected',

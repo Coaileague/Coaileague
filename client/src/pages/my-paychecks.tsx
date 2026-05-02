@@ -70,15 +70,18 @@ export default function MyPaychecks() {
   const [payoutMethod, setPayoutMethod] = useState("direct_deposit");
 
   const { data: paychecks = [], isLoading, refetch } = useQuery<Paycheck[]>({
+    enabled: true,
     queryKey: ['/api/payroll/my-paychecks'],
   });
 
   const { data: taxFormsData, isLoading: taxFormsLoading } = useQuery<{ forms: TaxForm[]; employeeId?: string; employeeName?: string }>({
+    enabled: true,
     queryKey: ['/api/payroll/my-tax-forms'],
   });
   const taxForms = taxFormsData?.forms ?? [];
 
   const { data: payrollInfo, isLoading: payrollInfoLoading } = useQuery<PayrollInfo>({
+    enabled: true,
     queryKey: ['/api/payroll/my-payroll-info'],
   });
 

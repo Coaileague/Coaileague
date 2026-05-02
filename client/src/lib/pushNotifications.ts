@@ -144,6 +144,6 @@ export async function sendTestPush(): Promise<{ success: boolean; message: strin
     const res = await apiRequest("POST", "/api/push/test", {});
     return await res.json();
   } catch (err: unknown) {
-    return { success: false, message: err.message || "Failed to send test" };
+    return { success: false, message: (err instanceof Error ? err.message : String(err)) || "Failed to send test" };
   }
 }

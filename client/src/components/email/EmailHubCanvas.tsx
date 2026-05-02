@@ -2595,7 +2595,7 @@ function ComposeCanvas({
         toast({ title: `Attached ${data.attachments.length} file${data.attachments.length === 1 ? '' : 's'}` });
       }
     } catch (err: unknown) {
-      toast({ title: 'Attachment upload failed', description: err?.message || 'Unknown error', variant: 'destructive' });
+      toast({ title: 'Attachment upload failed', description: (err as Error)?.message || 'Unknown error', variant: 'destructive' });
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

@@ -138,7 +138,7 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
         timestamp: new Date(),
       });
     } catch (err: unknown) {
-      console.error('[VoiceCommand] transcription error:', err.message);
+      console.error('[VoiceCommand] transcription error:', (err instanceof Error ? err.message : String(err)));
       setInterimTranscript('');
       handleError('network_error', 'Transcription failed. Please try again.');
     }
@@ -210,7 +210,7 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
       }, maxDuration);
 
     } catch (err: unknown) {
-      console.error('[VoiceCommand] start error:', err.message);
+      console.error('[VoiceCommand] start error:', (err instanceof Error ? err.message : String(err)));
       if (err.name === 'NotAllowedError') {
         handleError('permission_denied', 'Microphone permission denied.');
       } else {

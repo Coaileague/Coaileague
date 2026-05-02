@@ -119,6 +119,7 @@ export function useWorkflowProposals() {
   
   // Fetch payroll proposals
   const payrollQuery = useQuery<PayrollProposal[]>({
+    enabled: true,
     queryKey: ['/api/payroll/proposals'],
   });
 

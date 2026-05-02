@@ -4401,7 +4401,7 @@ export default function Settings() {
                     setMfaSetupData(data);
                     setMfaSetupOpen(true);
                   } catch (error: unknown) {
-                    toast({ title: "Error", description: error.message || "Failed to start 2FA setup", variant: "destructive" });
+                    toast({ title: "Error", description: (error instanceof Error ? error.message : String(error)) || "Failed to start 2FA setup", variant: "destructive" });
                   }
                 }}
                 data-testid="button-setup-2fa"
@@ -5486,7 +5486,7 @@ function CalendarIntegrationCard() {
     } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to import calendar",
+        description: (error instanceof Error ? error.message : String(error)) || "Failed to import calendar",
         variant: "destructive",
       });
     } finally {

@@ -71,7 +71,7 @@ export default function InterviewChatroomPage() {
       const data = await res.json();
       setRoom(data);
     } catch (err: unknown) {
-      setError(err.message || "Interview room not found or has expired.");
+      setError((err instanceof Error ? err.message : String(err)) || "Interview room not found or has expired.");
     } finally {
       setLoading(false);
     }

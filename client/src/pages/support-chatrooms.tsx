@@ -116,7 +116,7 @@ export default function SupportChatrooms() {
     } catch (error : unknown) {
       toast({
         title: 'Failed to Join',
-        description: error.message || 'Could not join chatroom. Please try again.',
+        description: (error instanceof Error ? error.message : String(error)) || 'Could not join chatroom. Please try again.',
         variant: 'destructive',
       });
     }

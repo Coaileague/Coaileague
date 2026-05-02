@@ -92,7 +92,7 @@ function PaymentForm({
         onSuccess();
       }
     } catch (err: unknown) {
-      onError(err.message || 'An unexpected error occurred');
+      onError((err instanceof Error ? err.message : String(err)) || 'An unexpected error occurred');
     } finally {
       setIsProcessing(false);
     }

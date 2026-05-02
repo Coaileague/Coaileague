@@ -651,6 +651,7 @@ function EmployeeTaxDocuments() {
       isActive: boolean;
     }>;
   }>({
+    enabled: true,
     queryKey: ['/api/payroll/my-tax-forms'],
   });
 

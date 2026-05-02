@@ -213,11 +213,11 @@ export function MobileVoiceCommandOverlay({
       console.error('[VoiceOverlay] Submit error:', error);
       setSubmissionState('error');
       onModeChange?.('ERROR');
-      setErrorMessage(error.message || 'Failed to submit command');
+      setErrorMessage((error instanceof Error ? error.message : String(error)) || 'Failed to submit command');
       
       toast({
         title: 'Submission Failed',
-        description: error.message || 'Failed to submit voice command',
+        description: (error instanceof Error ? error.message : String(error)) || 'Failed to submit voice command',
         variant: 'destructive',
       });
     }

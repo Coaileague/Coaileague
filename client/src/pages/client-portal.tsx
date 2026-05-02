@@ -475,7 +475,7 @@ function StripePaymentForm({
         onError("Payment status unclear. Please check your email for confirmation.");
       }
     } catch (err: unknown) {
-      onError(err.message || "Unexpected error during payment.");
+      onError((err instanceof Error ? err.message : String(err)) || "Unexpected error during payment.");
     } finally {
       setConfirming(false);
     }
@@ -545,7 +545,7 @@ function InvoicePaymentModal({ invoice, accessToken, onClose, onPaid }: InvoiceP
         setStep("ready");
       } catch (err: unknown) {
         if (cancelled) return;
-        setErrorMsg(err.message || "Could not start payment session.");
+        setErrorMsg((err instanceof Error ? err.message : String(err)) || "Could not start payment session.");
         setStep("error");
       }
     })();
@@ -661,7 +661,8 @@ export default function ClientPortal() {
   const [pinInput, setPinInput] = useState("");
   const [pinInputConfirm, setPinInputConfirm] = useState("");
 
-  const { data: invoices = [] } = useQuery<Invoice[]>({ queryKey: ["/api/invoices"] });
+  const { data: invoices = [] } = useQuery<Invoice[]>({ enabled: true,
+    queryKey: ["/api/invoices"] });
   const { data: clients = [] } = useClientLookup();
   const currentClient = clients.find(c => c.email === user?.email);
 
@@ -1157,7 +1158,6 @@ export default function ClientPortal() {
                             <TableCell>{statusBadge(inv.status || "")}</TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1.5">
-                                // @ts-ignore — TS migration: fix in refactoring sprint
                                 <Button size="sm" variant="outline" onClick={() => downloadPdf((inv as Record<string,unknown>).id)} data-testid={`button-pdf-${(inv as Record<string,unknown>).id}`}>
                                   <Download className="h-3.5 w-3.5 mr-1" /> PDF
                                 </Button>
@@ -1203,7 +1203,6 @@ export default function ClientPortal() {
                       <div className="flex items-center gap-2">
                         <p className="font-bold text-green-600">${Number(inv.total || 0).toFixed(2)}</p>
                         <Badge className="bg-green-500/10 text-green-600 border-0"><CheckCircle2 className="h-3 w-3 mr-1" />Paid</Badge>
-                        // @ts-ignore — TS migration: fix in refactoring sprint
                         <Button size="sm" variant="outline" onClick={() => downloadPdf((inv as Record<string,unknown>).id)} data-testid={`button-pdf-paid-${(inv as Record<string,unknown>).id}`}>
                           <Download className="h-3.5 w-3.5" />
                         </Button>

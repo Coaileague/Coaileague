@@ -174,7 +174,7 @@ export default function Help() {
       setChatState(data.queuePosition > 0 ? "queued" : "active");
       addMessage("bot", `Hello! I'm HelpAI. I've opened ticket ${data.ticketNumber} for you. How can I help?`);
     } catch (err: unknown) {
-      toast({ title: "Could not start chat", description: err.message, variant: "destructive" });
+      toast({ title: "Could not start chat", description: (err instanceof Error ? err.message : String(err)), variant: "destructive" });
       setChatState("idle");
     }
   }, [chatState, currentUser, addMessage, toast]);
@@ -222,7 +222,7 @@ export default function Help() {
       addMessage("system", "Escalating to a human agent...");
       setChatState("queued");
     } catch (err: unknown) {
-      toast({ title: "Escalation failed", description: err.message, variant: "destructive" });
+      toast({ title: "Escalation failed", description: (err instanceof Error ? err.message : String(err)), variant: "destructive" });
     }
   }, [session, addMessage, toast]);
 

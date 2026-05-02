@@ -59,7 +59,7 @@ export default function SettingsDataPrivacyPage(): JSX.Element {
       toast({ title: "Export complete", description: "Download started." });
       setConfirmOpen(false);
     } catch (err: unknown) {
-      toast({ title: "Export failed", description: err?.message || "Try again.", variant: "destructive" });
+      toast({ title: "Export failed", description: (err as Error)?.message || "Try again.", variant: "destructive" });
     } finally {
       setPending(false);
     }

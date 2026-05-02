@@ -165,7 +165,7 @@ export function usePushNotifications(options: PushNotificationOptions = {}) {
       console.error("Push subscription error:", error);
       toast({
         title: "Subscription Failed",
-        description: error.message || "Could not subscribe to push notifications.",
+        description: (error instanceof Error ? error.message : String(error)) || "Could not subscribe to push notifications.",
         variant: "destructive",
       });
     }

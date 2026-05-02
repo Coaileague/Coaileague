@@ -401,7 +401,7 @@ export default function ClientCommunications() {
         toast({ title: "Draft generated", description: "No draft text returned.", variant: "destructive" });
       }
     } catch (e: unknown) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      toast({ title: "Error", description: (e instanceof Error ? e.message : String(e)), variant: "destructive" });
     } finally {
       setTrinityLoading(false);
     }

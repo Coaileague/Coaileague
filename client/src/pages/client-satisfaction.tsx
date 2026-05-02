@@ -81,7 +81,8 @@ export default function ClientSatisfactionPage() {
   const { data: dashboard, isLoading: loadingDash } = useQuery<Dashboard>({
     queryKey: ["/api/client-satisfaction/dashboard"],
   });
-  const { data: rawClients } = useQuery<Client[] | any>({ queryKey: ["/api/clients/lookup"] });
+  const { data: rawClients } = useQuery<Client[] | any>({ enabled: true,
+    queryKey: ["/api/clients/lookup"] });
   const clients: Client[] = Array.isArray(rawClients) ? rawClients : [];
   const { data: trend } = useQuery<{
     records: SatisfactionRecord[];

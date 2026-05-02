@@ -1310,7 +1310,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  }
  throw new Error('No upload data returned');
  } catch (err: unknown) {
- toast({ title: "Upload failed", description: err.message || "Could not upload file", variant: "destructive" });
+ toast({ title: "Upload failed", description: (err instanceof Error ? err.message : String(err)) || "Could not upload file", variant: "destructive" });
  return null;
  } finally {
  setIsUploading(false);

@@ -341,7 +341,8 @@ function TemplateForm({ onSubmit }: { onSubmit: (data) => void }) {
 }
 
 function SendSurveyDialog({ templateId, onSend }: { templateId: string, onSend: (data) => void }) {
-  const { data: clients } = useQuery<any[]>({ queryKey: ["/api/clients"] });
+  const { data: clients } = useQuery<any[]>({ enabled: true,
+    queryKey: ["/api/clients"] });
   const [selectedClient, setSelectedClient] = useState("");
 
   return (

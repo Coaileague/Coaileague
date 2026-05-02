@@ -233,7 +233,7 @@ export function CalendarSyncDialog({ open, onOpenChange, employeeId }: CalendarS
     } catch (error : unknown) {
       toast({
         title: 'Export failed',
-        description: error.message,
+        description: (error instanceof Error ? error.message : String(error)),
         variant: 'destructive',
       });
     }

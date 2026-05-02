@@ -97,7 +97,7 @@ export default function WhiteLabelBranding() {
       queryClient.invalidateQueries({ queryKey: ["/api/workspace/current"] });
       toast({ title: "Logo Uploaded", description: "Your logo is live on the dashboard header." });
     } catch (err: unknown) {
-      toast({ title: "Upload Failed", description: err.message || "Could not upload logo", variant: "destructive" });
+      toast({ title: "Upload Failed", description: (err instanceof Error ? err.message : String(err)) || "Could not upload logo", variant: "destructive" });
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";

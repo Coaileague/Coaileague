@@ -154,7 +154,7 @@ export default function SRAReportBuilder() {
       );
       setPdfSuccess(true);
     } catch (err: unknown) {
-      setPdfError(err.message || "Failed to generate PDF.");
+      setPdfError((err instanceof Error ? err.message : String(err)) || "Failed to generate PDF.");
     } finally {
       setIsGeneratingPdf(false);
     }

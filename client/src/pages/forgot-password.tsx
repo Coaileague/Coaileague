@@ -74,7 +74,7 @@ export default function ForgotPassword() {
     } catch (error : unknown) {
       toast({
         title: "Error",
-        description: error.message || "Something went wrong. Please try again.",
+        description: (error instanceof Error ? error.message : String(error)) || "Something went wrong. Please try again.",
         variant: "destructive",
       });
     } finally {

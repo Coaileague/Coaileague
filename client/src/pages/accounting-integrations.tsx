@@ -160,7 +160,7 @@ export default function AccountingIntegrations() {
     } catch (err: unknown) {
       toast({
         title: 'Submission Failed',
-        description: err?.message || 'Could not submit your connection request. Please try again.',
+        description: (err as Error)?.message || 'Could not submit your connection request. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -197,7 +197,7 @@ export default function AccountingIntegrations() {
     } catch (err: unknown) {
       toast({
         title: 'Request Failed',
-        description: err?.message || 'Could not submit your integration request. Please try again.',
+        description: (err as Error)?.message || 'Could not submit your integration request. Please try again.',
         variant: 'destructive',
       });
     } finally {

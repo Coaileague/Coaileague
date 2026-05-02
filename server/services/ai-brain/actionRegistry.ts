@@ -158,20 +158,21 @@ function withAuditWrap(action: ActionHandler, entityType: string): ActionHandler
 
 class AIBrainActionRegistry {
   private initialized = false;
+  /** Resolves when all async action modules finish registering. */
+  public ready: Promise<void>;
 
-  async initialize(): Promise<void> {
-    if (this.initialized) return;
+  constructor() {
+    // Run synchronous registrations immediately so getAction() works right after import().
+    // This is critical for test isolation — tests do `await import(actionRegistry)`
+    // and then call getAction() without awaiting initialize().
+    this._registerSync();
+    // Kick off async module imports in the background. Server startup awaits this.ready.
+    this.ready = this._registerAsync().catch((e: unknown) => {
+      log.warn('[AI Brain Action Registry] Async registration failed (non-fatal):', e);
+    });
+  }
 
-    // Fix: check if it's already being initialized to prevent duplicate calls from module load + server/index.ts
-    if ((global as NodeJS.Global & Record<string, unknown>)._aiBrainActionRegistryInitializing) {
-      log.info('[AI Brain Action Registry] Initialization already in progress, skipping duplicate call');
-      return;
-    }
-    (global as NodeJS.Global & Record<string, unknown>)._aiBrainActionRegistryInitializing = true;
-
-    log.info('[AI Brain Action Registry] Initializing action registry...');
-
-    // Register all action categories
+  private _registerSync(): void {
     this.registerServiceActions();
     this.registerFeatureActions();
     this.registerSchedulingActions();
@@ -180,7 +181,7 @@ class AIBrainActionRegistry {
     this.registerClientActions();
     this.registerTimeTrackingActions();
     this.registerNotificationActions();
-    this.registerDirectActions(); // NEW: Direct autonomous actions
+    this.registerDirectActions();
     this.registerBulkOperationActions();
     this.registerIntegrationActions();
     this.registerOnboardingActions();
@@ -188,12 +189,30 @@ class AIBrainActionRegistry {
     this.registerContractPipelineActions();
     this.registerMemoryOptimizationActions();
     this.registerBillingSettingsActions();
-    this.registerInvoiceActions();
+    this.registerInvoiceActions();    // registers billing.invoice_create + billing.invoice_add_line_items
     this.registerFinancialStagingActions();
     registerTrainingSessionActions();
     this.registerDisciplinaryActions();
+  }
 
-    // Register async action modules inline so they're complete before initialize() resolves
+  async initialize(): Promise<void> {
+    if (this.initialized) return;
+    await this.ready; // wait for async modules already kicked off in constructor
+    this.initialized = true;
+  }
+
+  private async _registerAsync(): Promise<void> {
+    if ((global as NodeJS.Global & Record<string, unknown>)._aiBrainActionRegistryInitializing) {
+      return;
+    }
+    (global as NodeJS.Global & Record<string, unknown>)._aiBrainActionRegistryInitializing = true;
+
+    log.info('[AI Brain Action Registry] Registering async action modules...');
+
+    // Register all action categories — sync ones already done in constructor
+    // (keeping the async calls below)
+
+    // Async action modules
     registerAutonomousSchedulingBrainActions();
     const { registerFinanceOrchestratorActions } = await import('./trinityFinanceOrchestrator');
     registerFinanceOrchestratorActions();

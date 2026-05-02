@@ -102,7 +102,6 @@ export default function DeveloperPortal() {
         <div className="flex gap-4">
           <Badge variant="outline" className="h-9 px-4 flex gap-2">
             <Activity className="w-4 h-4 text-green-500" />
-            // @ts-ignore — TS migration: fix in refactoring sprint
             System Status: {(status as Record<string,unknown>)?.status || 'checking...'}
           </Badge>
           <Button 

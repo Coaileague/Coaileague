@@ -84,7 +84,7 @@ export default function CustomRegister() {
     } catch (error : unknown) {
       toast({
         title: "Registration failed",
-        description: error.message || "Please try again",
+        description: (error instanceof Error ? error.message : String(error)) || "Please try again",
         variant: "destructive",
       });
     } finally {

@@ -38,7 +38,7 @@ async function auditShiftMutation(params: {
   why: string;
   changes?: Record<string, unknown>;
 }): Promise<void> {
-  db.insert(auditLogs).values({
+  void db.insert(auditLogs).values({
     workspaceId: params.workspaceId,
     userId: params.userId || 'system',
     userEmail: params.userEmail || 'system',
@@ -3211,7 +3211,7 @@ router.post("/offers/:offerId/accept", requireAuth, async (req: AuthenticatedReq
     }
 
     // Trinity audit — Who/What/Where/When/Why
-    db.insert(auditLogs).values({
+    void db.insert(auditLogs).values({
       workspaceId,
       userId,
       userEmail: req.user?.email || userId,

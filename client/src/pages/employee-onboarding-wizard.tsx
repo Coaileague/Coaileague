@@ -293,7 +293,7 @@ function PayrollStep({
       });
       handler.open();
     } catch (err: unknown) {
-      toast({ title: 'Bank connection unavailable', description: err?.message || 'Please enter your bank details manually.', variant: 'destructive' });
+      toast({ title: 'Bank connection unavailable', description: (err as Error)?.message || 'Please enter your bank details manually.', variant: 'destructive' });
     } finally {
       setIsLoadingPlaid(false);
     }

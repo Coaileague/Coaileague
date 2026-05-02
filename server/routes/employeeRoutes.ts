@@ -663,7 +663,7 @@ router.patch('/:id', async (req: AuthenticatedRequest, res) => {
       // M12: Persist a durable audit trail for role/position changes.
       // Event-bus-only logging is ephemeral — DB audit row survives restarts and supports forensics.
       if (roleChanged || titleChanged) {
-        db.insert(systemAuditLogs).values({
+        void db.insert(systemAuditLogs).values({
           workspaceId,
           userId,
           action: 'employee.role_changed',

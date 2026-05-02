@@ -303,7 +303,7 @@ export default function QuickBooksImportPage() {
       console.error('Failed to reset migration:', error);
       toast({
         title: 'Reset Failed',
-        description: error.message || 'Failed to reset migration. Please try again.',
+        description: (error instanceof Error ? error.message : String(error)) || 'Failed to reset migration. Please try again.',
         variant: 'destructive',
       });
     }
@@ -597,7 +597,7 @@ export default function QuickBooksImportPage() {
     } catch (error : unknown) {
       toast({
         title: 'Discovery Failed',
-        description: error.message || 'Failed to fetch QuickBooks data',
+        description: (error instanceof Error ? error.message : String(error)) || 'Failed to fetch QuickBooks data',
         variant: 'destructive',
       });
     }
@@ -706,7 +706,7 @@ export default function QuickBooksImportPage() {
         }
         
         // Handle migration lock (409 conflict)
-        if (error.status === 409 || error.message?.includes('Migration already in progress')) {
+        if (error.status === 409 || (error instanceof Error ? error.message : String(error))?.includes('Migration already in progress')) {
           setShowPushModal(false);
           return { migrationLocked: true, error };
         }
@@ -854,7 +854,7 @@ export default function QuickBooksImportPage() {
     } catch (error : unknown) {
       toast({
         title: 'Pre-flight Test Failed',
-        description: error.message || 'Failed to run pre-flight tests',
+        description: (error instanceof Error ? error.message : String(error)) || 'Failed to run pre-flight tests',
         variant: 'destructive',
       });
       setPreflightTests(initialTests.map(t => ({ ...t, status: 'failed' as const, error: 'Connection error' })));

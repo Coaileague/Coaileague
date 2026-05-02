@@ -71,7 +71,7 @@ export function GuardTourScanner({
       await onScan(code);
       setStatus({ ok: true, text: `Checkpoint ${code.slice(0, 12)} logged.` });
     } catch (err: unknown) {
-      setStatus({ ok: false, text: err?.message || "Scan rejected. Try again or enter code manually." });
+      setStatus({ ok: false, text: (err as Error)?.message || "Scan rejected. Try again or enter code manually." });
     } finally {
       setSubmitting(false);
       // Debounce — ignore the same code if it re-detects within 2s.
@@ -120,7 +120,7 @@ export function GuardTourScanner({
         text:
           err?.name === "NotAllowedError"
             ? "Camera permission denied. Enable camera access in settings or enter the code manually."
-            : err?.message || "Could not start camera.",
+            : (err as Error)?.message || "Could not start camera.",
       });
       stop();
     }

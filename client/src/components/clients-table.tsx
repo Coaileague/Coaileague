@@ -537,7 +537,7 @@ export function ClientsTable({ workspaceId }: ClientsTableProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
       queryClient.invalidateQueries({ queryKey: ['/api/clients/lookup'] });
     } catch (error : unknown) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: (error instanceof Error ? error.message : String(error)), variant: "destructive" });
     }
   };
 

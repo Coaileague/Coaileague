@@ -472,7 +472,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
       setDetailSheetOpen(false);
       toast({ title: "Shift claimed", description: "This shift is now yours." });
     } catch (error : unknown) {
-      toast({ title: "Failed to claim shift", description: error?.message || "Please try again", variant: "destructive" });
+      toast({ title: "Failed to claim shift", description: (error as Error)?.message || "Please try again", variant: "destructive" });
     } finally {
       setClaimingShiftId(null);
     }
@@ -493,7 +493,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
     } catch (error : unknown) {
       toast({
         title: 'Failed to accept shift',
-        description: error?.message || 'Please try again',
+        description: (error as Error)?.message || 'Please try again',
         variant: 'destructive',
       });
     }
@@ -509,7 +509,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
     } catch (error : unknown) {
       toast({
         title: 'Failed to decline shift',
-        description: error?.message || 'Please try again',
+        description: (error as Error)?.message || 'Please try again',
         variant: 'destructive',
       });
     }

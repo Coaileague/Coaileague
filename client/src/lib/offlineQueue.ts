@@ -190,7 +190,7 @@ export async function fetchWithOfflineFallback(
     });
     return { queued: false, response };
   } catch (error : unknown) {
-    if (!navigator.onLine || error?.message?.includes('Failed to fetch') || error?.message?.includes('NetworkError') || error?.name === 'TypeError') {
+    if (!navigator.onLine || (error as Error)?.message?.includes('Failed to fetch') || (error as Error)?.message?.includes('NetworkError') || error?.name === 'TypeError') {
       await queueRequest(url, method, body, type);
       return { queued: true };
     }
