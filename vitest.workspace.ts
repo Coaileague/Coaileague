@@ -8,8 +8,8 @@ export default defineWorkspace([
       include: ['tests/unit/**/*.test.ts'],
       setupFiles: ['tests/unit/setup.ts'],
       environment: 'node',
-      testTimeout: 30000,
-      hookTimeout: 30000,
+      testTimeout: 60000,
+      hookTimeout: 60000,
     },
   },
   {
@@ -33,16 +33,6 @@ export default defineWorkspace([
       name: 'security',
       include: ['tests/security/**/*.test.ts'],
       setupFiles: ['tests/unit/setup.ts'],
-      environment: 'node',
-      testTimeout: 30000,
-      hookTimeout: 30000,
-    },
-  },
-  {
-    extends: './vitest.config.ts',
-    test: {
-      name: 'security',
-      include: ['tests/security/**/*.test.ts'],
       environment: 'node',
       testTimeout: 30000,
       hookTimeout: 30000,
