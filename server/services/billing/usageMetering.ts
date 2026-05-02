@@ -326,7 +326,7 @@ export class UsageMeteringService {
     // Aggregate metrics
     const metrics: UsageMetrics = {
       totalEvents: events.length,
-      totalCost: 0,
+      totalCost: '0',
       totalUsage: 0,
       byFeature: {},
       byDay: [],
@@ -343,7 +343,7 @@ export class UsageMeteringService {
 
       // By feature
       if (!metrics.byFeature[event.featureKey]) {
-        metrics.byFeature[event.featureKey] = { events: 0, cost: 0, usage: 0 };
+        metrics.byFeature[event.featureKey] = { events: 0, cost: '0', usage: 0 };
       }
       metrics.byFeature[event.featureKey].events++;
       metrics.byFeature[event.featureKey].cost += cost;
@@ -352,7 +352,7 @@ export class UsageMeteringService {
       // By day
       const day = event.createdAt!.toISOString().split('T')[0];
       if (!dayMap.has(day)) {
-        dayMap.set(day, { events: 0, cost: 0, usage: 0 });
+        dayMap.set(day, { events: 0, cost: '0', usage: 0 });
       }
       const dayData = dayMap.get(day)!;
       dayData.events++;

@@ -81,7 +81,7 @@ function messageFromLog(log: unknown): TrinityActivity | null {
     id: log.id || String(Date.now()),
     message,
     type,
-    navigateTo: type === "flagged" ? "/compliance" : undefined,
+    navigateTo: type === "flagged" ? "/compliance" : null,
   };
 }
 

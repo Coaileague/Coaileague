@@ -179,7 +179,7 @@ export default function DocumentVault() {
   });
 
   const { data: listData, isLoading: listLoading, isError: listError, refetch } = useQuery<VaultListResponse>({
-    queryKey: ["/api/document-vault", { search: searchTerm || undefined, category: categoryFilter === "all" ? undefined : categoryFilter, limit: PAGE_SIZE, offset }],
+    queryKey: ["/api/document-vault", { search: searchTerm || null, category: categoryFilter === "all" ? undefined : categoryFilter, limit: PAGE_SIZE, offset }],
   });
 
   const { data: shiftReportsData, isLoading: reportsLoading, isError: reportsError, refetch: refetchReports } = useQuery<ShiftReportsResponse>({

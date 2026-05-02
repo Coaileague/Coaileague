@@ -441,7 +441,7 @@ export default function EmployeeFileCabinet() {
   const pageConfig: CanvasPageConfig = {
     id: "employee-file-cabinet",
     title: "Employee File Cabinet",
-    subtitle: employee ? `${employee.firstName} ${employee.lastName} - ${employee.email}` : undefined,
+    subtitle: employee ? `${employee.firstName} ${employee.lastName} - ${employee.email}` : null,
     category: "operations",
     headerActions: actionButton,
   };

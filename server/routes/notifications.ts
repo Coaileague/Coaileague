@@ -335,13 +335,13 @@ router.post("/api/notifications/clear-all", requireAuth, async (req: Authenticat
     let alertsAcknowledged = 0;
 
     try {
-      deletedNotifications = await storage.deleteAllNotificationsForUser(userId, workspaceId || undefined);
+      deletedNotifications = await storage.deleteAllNotificationsForUser(userId, workspaceId || null);
     } catch (err) {
       log.error("[Clear All] deleteAllNotificationsForUser failed:", err);
     }
 
     try {
-      platformUpdatesMarked = await storage.markAllPlatformUpdatesAsViewed(userId, workspaceId || undefined);
+      platformUpdatesMarked = await storage.markAllPlatformUpdatesAsViewed(userId, workspaceId || null);
     } catch (err) {
       log.error("[Clear All] markAllPlatformUpdatesAsViewed failed:", err);
     }
@@ -492,7 +492,7 @@ router.post("/api/notifications/clear-tab/:tab", requireAuth, async (req: Authen
       if (tab === 'updates') {
         cleared.platformUpdates = await storage.markAllPlatformUpdatesAsViewed(userId);
       } else if (tab === 'notifications') {
-        cleared.notifications = await storage.markAllNotificationsAsRead(userId, workspaceId || undefined);
+        cleared.notifications = await storage.markAllNotificationsAsRead(userId, workspaceId || null);
       } else if (tab === 'maintenance' || tab === 'system') {
         // Acknowledge all maintenance alerts (System tab)
         const { aiNotificationService } = await import("../services/aiNotificationService");
@@ -726,7 +726,7 @@ router.get('/api/notifications/unread-counts', requireAuth, async (req: Authenti
       const workspaceId = workspace?.id || member?.workspaceId;
       
       const notificationCount = workspaceId ? await storage.getUnreadNotificationCount(userId, workspaceId) : 0;
-      const platformUpdatesCount = await storage.getUnreadPlatformUpdatesCount(userId, workspaceId || undefined);
+      const platformUpdatesCount = await storage.getUnreadPlatformUpdatesCount(userId, workspaceId || null);
       
       res.json({
         notifications: notificationCount,
@@ -820,7 +820,7 @@ router.post('/api/notifications/:id/mark-read', requireAuth, async (req: Authent
       if (notification) {
         // Get updated counts
         const notificationCount = workspaceId ? await storage.getUnreadNotificationCount(userId, workspaceId) : 0;
-        const platformUpdatesCount = await storage.getUnreadPlatformUpdatesCount(userId, workspaceId || undefined);
+        const platformUpdatesCount = await storage.getUnreadPlatformUpdatesCount(userId, workspaceId || null);
         
         res.json({ 
           success: true, 
@@ -852,7 +852,7 @@ router.post('/api/platform-updates/:id/mark-viewed', requireAuth, async (req: Au
       await storage.markPlatformUpdateAsViewed(userId, updateId);
       
       const notificationCount = workspaceId ? await storage.getUnreadNotificationCount(userId, workspaceId) : 0;
-      const platformUpdatesCount = await storage.getUnreadPlatformUpdatesCount(userId, workspaceId || undefined);
+      const platformUpdatesCount = await storage.getUnreadPlatformUpdatesCount(userId, workspaceId || null);
       
       res.json({ 
         success: true, 
@@ -879,7 +879,7 @@ router.post('/api/notifications/sync-counts', requireAuth, async (req: Authentic
       const workspaceRole = req.workspaceRole || 'staff';
       
       const notificationCount = workspaceId ? await storage.getUnreadNotificationCount(userId, workspaceId) : 0;
-      const platformUpdatesCount = await storage.getUnreadPlatformUpdatesCount(userId, workspaceId || undefined);
+      const platformUpdatesCount = await storage.getUnreadPlatformUpdatesCount(userId, workspaceId || null);
       
       res.json({ 
         success: true, 

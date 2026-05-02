@@ -505,7 +505,7 @@ class ErrorTrackingService {
       return {
         totalErrors: 0,
         criticalErrors: 0,
-        errorRate: 0,
+        errorRate: '0',
         topErrors: [],
         errorsBySource: {} as Record<ErrorSource, number>,
         errorsBySeverity: {} as Record<ErrorSeverity, number>,

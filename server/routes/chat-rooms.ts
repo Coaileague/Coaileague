@@ -608,7 +608,7 @@ router.post(
         {
           conversationType: conversation.conversationType,
           visibility: conversation.visibility,
-          shiftId: shiftId || undefined,
+          shiftId: shiftId || null,
           participantCount: participants?.length || 0,
           activeBots,
         },
@@ -1716,7 +1716,7 @@ router.get(
           createdAt: conversation.createdAt,
           updatedAt: conversation.updatedAt,
           autoCloseAt: conversation.autoCloseAt,
-          shiftId: conversation.shiftId || undefined
+          shiftId: conversation.shiftId || null
         },
         recentEvents: recentEvents.map(event => ({
           eventType: event.eventType,
@@ -2316,7 +2316,7 @@ router.post(
         actorName: userName,
         actorRole: workspaceRole,
         platformRole,
-        reason: reason || undefined,
+        reason: reason || null,
         initiatorType: 'user',
         ipAddress: authReq.ip,
         userAgent: authReq.get("user-agent"),
@@ -2397,7 +2397,7 @@ router.post(
         actorId: userId,
         actorName: userName,
         actorRole: workspaceRole,
-        reason: reason || undefined,
+        reason: reason || null,
         initiatorType: 'user',
         ipAddress: authReq.ip,
         userAgent: authReq.get("user-agent"),

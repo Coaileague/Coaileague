@@ -137,7 +137,7 @@ async function writeAudit(
       entityId,
       actionDescription: description,
       ipAddress: req.ip,
-      userAgent: req.get("user-agent") ?? undefined,
+      userAgent: req.get("user-agent") ?? null,
     });
   } catch (err: unknown) {
     log.warn("[audit] payroll timesheet audit write failed", { error: err instanceof Error ? err.message : String(err) });
@@ -502,7 +502,7 @@ router.post("/:id/submit", async (req: AuthenticatedRequest, res) => {
         entityId: id,
         actionDescription: `Submitted timesheet ${id} for approval`,
         ipAddress: req.ip,
-        userAgent: req.get("user-agent") ?? undefined,
+        userAgent: req.get("user-agent") ?? null,
       }).catch(() => {});
       return [ts];
     });

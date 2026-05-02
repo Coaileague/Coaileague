@@ -266,10 +266,10 @@ export async function getWorkspaceLaborLawRules(
       mealBreakSecondThresholdHours: rule.mealBreakSecondThresholdHours?.toString() || '10.00',
       mealBreakWaiverAllowed: rule.mealBreakWaiverAllowed ?? false,
       mealBreakWaiverMaxShiftHours: rule.mealBreakWaiverMaxShiftHours?.toString() || '6.00',
-      breakViolationPenalty: rule.breakViolationPenalty || undefined,
-      penaltyPerViolation: rule.penaltyPerViolation?.toString() || undefined,
-      legalReference: rule.legalReference || undefined,
-      notes: rule.notes || undefined,
+      breakViolationPenalty: rule.breakViolationPenalty || null,
+      penaltyPerViolation: rule.penaltyPerViolation?.toString() || null,
+      legalReference: rule.legalReference || null,
+      notes: rule.notes || null,
       isDefault: rule.isDefault ?? false,
     };
   }
@@ -308,10 +308,10 @@ export async function getLaborLawRulesByJurisdiction(
       mealBreakSecondThresholdHours: rule.mealBreakSecondThresholdHours?.toString() || '10.00',
       mealBreakWaiverAllowed: rule.mealBreakWaiverAllowed ?? false,
       mealBreakWaiverMaxShiftHours: rule.mealBreakWaiverMaxShiftHours?.toString() || '6.00',
-      breakViolationPenalty: rule.breakViolationPenalty || undefined,
-      penaltyPerViolation: rule.penaltyPerViolation?.toString() || undefined,
-      legalReference: rule.legalReference || undefined,
-      notes: rule.notes || undefined,
+      breakViolationPenalty: rule.breakViolationPenalty || null,
+      penaltyPerViolation: rule.penaltyPerViolation?.toString() || null,
+      legalReference: rule.legalReference || null,
+      notes: rule.notes || null,
       isDefault: rule.isDefault ?? false,
     };
   }
@@ -346,10 +346,10 @@ export async function getAllLaborLawRules(): Promise<LaborLawRuleConfig[]> {
       mealBreakSecondThresholdHours: rule.mealBreakSecondThresholdHours?.toString() || '10.00',
       mealBreakWaiverAllowed: rule.mealBreakWaiverAllowed ?? false,
       mealBreakWaiverMaxShiftHours: rule.mealBreakWaiverMaxShiftHours?.toString() || '6.00',
-      breakViolationPenalty: rule.breakViolationPenalty || undefined,
-      penaltyPerViolation: rule.penaltyPerViolation?.toString() || undefined,
-      legalReference: rule.legalReference || undefined,
-      notes: rule.notes || undefined,
+      breakViolationPenalty: rule.breakViolationPenalty || null,
+      penaltyPerViolation: rule.penaltyPerViolation?.toString() || null,
+      legalReference: rule.legalReference || null,
+      notes: rule.notes || null,
       isDefault: rule.isDefault ?? false,
     }));
   }
@@ -535,7 +535,7 @@ export async function autoScheduleBreaks(
   const scheduledBreaksData: InsertScheduledBreak[] = calculation.requiredBreaks.map(brk => ({
     workspaceId,
     shiftId,
-    employeeId: shift.employeeId || undefined,
+    employeeId: shift.employeeId || null,
     breakType: brk.type,
     scheduledStart: brk.suggestedStart,
     scheduledEnd: brk.suggestedEnd,

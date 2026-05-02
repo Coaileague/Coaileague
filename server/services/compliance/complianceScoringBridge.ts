@@ -559,7 +559,7 @@ class ComplianceScoringBridge {
     } catch (error) {
       log.error('[ComplianceScoringBridge] Error calculating compliance score:', error);
       return {
-        score: 500,
+        score: '500',
         maxScore: 1000,
         grade: 'C',
         breakdown: [],

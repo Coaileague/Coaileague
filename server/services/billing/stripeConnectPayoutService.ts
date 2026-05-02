@@ -217,7 +217,7 @@ class StripeConnectPayoutService {
     workspaceId: string
   ): Promise<PayoutResult> {
     if (!isStripeConfigured()) {
-      return { success: false, amount: 0, currency: 'usd', error: 'Stripe not configured' };
+      return { success: false, amount: '0', currency: 'usd', error: 'Stripe not configured' };
     }
 
     try {
@@ -226,7 +226,7 @@ class StripeConnectPayoutService {
       if (prefs.payrollProvider !== 'local') {
         return { 
           success: false, 
-          amount: 0, 
+          amount: '0', 
           currency: 'usd', 
           error: `Payroll provider is ${prefs.payrollProvider}, not local/Stripe` 
         };
@@ -239,7 +239,7 @@ class StripeConnectPayoutService {
         .limit(1);
 
       if (!entry) {
-        return { success: false, amount: 0, currency: 'usd', error: 'Payroll entry not found' };
+        return { success: false, amount: '0', currency: 'usd', error: 'Payroll entry not found' };
       }
 
       // Get employee Connect account
@@ -249,7 +249,7 @@ class StripeConnectPayoutService {
         .limit(1);
 
       if (!employee) {
-        return { success: false, amount: 0, currency: 'usd', error: 'Employee not found' };
+        return { success: false, amount: '0', currency: 'usd', error: 'Employee not found' };
       }
 
       const [payrollInfo] = await db.select()
@@ -260,19 +260,19 @@ class StripeConnectPayoutService {
       const connectAccountId = payrollInfo?.stripeConnectAccountId || null;
 
       if (!connectAccountId) {
-        return { success: false, amount: 0, currency: 'usd', error: 'Employee has no Connect account configured' };
+        return { success: false, amount: '0', currency: 'usd', error: 'Employee has no Connect account configured' };
       }
 
       // Verify account has payouts enabled
       const account = await stripe.accounts.retrieve(connectAccountId);
       if (!account.payouts_enabled) {
-        return { success: false, amount: 0, currency: 'usd', error: 'Connect account payouts not enabled' };
+        return { success: false, amount: '0', currency: 'usd', error: 'Connect account payouts not enabled' };
       }
 
       // Calculate net pay (should already be calculated in entry)
       const netPay = parseFloat(entry.netPay?.toString() || '0');
       if (netPay <= 0) {
-        return { success: false, amount: 0, currency: 'usd', error: 'No net pay to transfer' };
+        return { success: false, amount: '0', currency: 'usd', error: 'No net pay to transfer' };
       }
 
       // Convert to cents for Stripe
@@ -371,7 +371,7 @@ class StripeConnectPayoutService {
           workspaceId,
           payoutId: payrollEntryId,
           payoutAmountCents: amountCents,
-          recipientName: `${(entry as unknown).firstName || ''} ${(entry as unknown).lastName || ''}`.trim() || undefined,
+          recipientName: `${(entry as unknown).firstName || ''} ${(entry as unknown).lastName || ''}`.trim() || null,
         });
         if (feeResult.success && feeResult.amountCents > 0) {
           log.info(`[StripeConnect] Payout fee charged: $${(feeResult.amountCents / 100).toFixed(2)} for entry ${payrollEntryId}`);
@@ -429,7 +429,7 @@ class StripeConnectPayoutService {
       log.error('[StripeConnect] Payout error:', error);
       return {
         success: false,
-        amount: 0,
+        amount: '0',
         currency: 'usd',
         error: (error instanceof Error ? error.message : String(error)) || 'Payout failed',
       };

@@ -182,7 +182,7 @@ export default function ExternalEmail() {
       subject,
       bodyHtml: body,
       enhancedByTrinity: !!originalBody,
-      originalBody: originalBody || undefined,
+      originalBody: originalBody || null,
     });
   };
 

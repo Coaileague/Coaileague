@@ -166,8 +166,8 @@ class AgentIdentityService {
         entityType: agent.entityType as EntityType,
         expiresAt,
         permissions: agent.permissions || [],
-        workspaceId: agent.workspaceId || undefined,
-        role: agent.role || undefined,
+        workspaceId: agent.workspaceId || null,
+        role: agent.role || null,
       };
 
       // Store token in memory (short-lived)
@@ -266,7 +266,7 @@ class AgentIdentityService {
         actorId: suspendedBy,
         targetType: agent.entityType as EntityType,
         targetId: agentId,
-        workspaceId: agent.workspaceId || undefined,
+        workspaceId: agent.workspaceId || null,
         changeDetails: {
           action: 'suspend',
           reason,
@@ -290,7 +290,7 @@ class AgentIdentityService {
       });
 
       // Invalidate PDP cache
-      policyDecisionPoint.invalidateCache(agent.workspaceId || undefined);
+      policyDecisionPoint.invalidateCache(agent.workspaceId || null);
 
       log.info(`[AgentIdentity] Agent ${agentId} SUSPENDED by ${suspendedBy}: ${reason}`);
       return { success: true };
@@ -337,7 +337,7 @@ class AgentIdentityService {
         actorId: reactivatedBy,
         targetType: agent.entityType as EntityType,
         targetId: agentId,
-        workspaceId: agent.workspaceId || undefined,
+        workspaceId: agent.workspaceId || null,
         changeDetails: {
           action: 'reactivate',
           previousStatus: agent.status,
@@ -346,7 +346,7 @@ class AgentIdentityService {
         newState: { ...agent, status: 'active' },
       });
 
-      policyDecisionPoint.invalidateCache(agent.workspaceId || undefined);
+      policyDecisionPoint.invalidateCache(agent.workspaceId || null);
 
       log.info(`[AgentIdentity] Agent ${agentId} REACTIVATED by ${reactivatedBy}`);
       return { success: true };
@@ -384,7 +384,7 @@ class AgentIdentityService {
         actorId: updatedBy,
         targetType: agent.entityType as EntityType,
         targetId: agentId,
-        workspaceId: agent.workspaceId || undefined,
+        workspaceId: agent.workspaceId || null,
         changeDetails: {
           action: 'update_mission',
           previousMission: agent.missionObjective,
@@ -442,7 +442,7 @@ class AgentIdentityService {
         actorId: updatedBy,
         targetType: agent.entityType as EntityType,
         targetId: agentId,
-        workspaceId: agent.workspaceId || undefined,
+        workspaceId: agent.workspaceId || null,
         changeDetails: {
           action: 'update_access',
           updates,
@@ -451,7 +451,7 @@ class AgentIdentityService {
         newState: { ...agent, ...updates },
       });
 
-      policyDecisionPoint.invalidateCache(agent.workspaceId || undefined);
+      policyDecisionPoint.invalidateCache(agent.workspaceId || null);
 
       return { success: true };
 

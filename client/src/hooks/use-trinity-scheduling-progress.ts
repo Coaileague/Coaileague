@@ -246,7 +246,7 @@ export function useTrinitySchedulingProgress(workspaceId?: string) {
               timestamp: new Date(),
               type: thoughtType,
               message: message.message || '',
-              deliberationType: message.deliberationType || undefined,
+              deliberationType: message.deliberationType || null,
             }],
           }));
         }

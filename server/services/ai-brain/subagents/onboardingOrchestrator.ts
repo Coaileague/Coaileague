@@ -252,7 +252,7 @@ class OnboardingOrchestrator {
             this.deployCustomIndustryCompliance({
               workspaceId,
               customIndustryName: workspace.customIndustryName,
-              customIndustryDescription: workspace.customIndustryDescription || undefined,
+              customIndustryDescription: workspace.customIndustryDescription || null,
               userId,
             }).then(complianceResult => {
               if (!complianceResult.success) {

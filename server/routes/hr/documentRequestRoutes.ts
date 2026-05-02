@@ -321,7 +321,7 @@ router.post('/send', requireAuth, requireManager, async (req: AuthenticatedReque
       featureName: 'HR Document Request',
       description: `Bulk document request: ${input.employeeIds.length} employees × ${input.documentTypes.length} doc types`,
       amountOverride: totalCredits,
-      quantity: 1,
+      quantity: '1',
     });
     if (!creditCheck.success) {
       return res.status(402).json({

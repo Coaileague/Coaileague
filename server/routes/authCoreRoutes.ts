@@ -174,7 +174,7 @@ router.post("/api/auth/register", async (req, res) => {
         newUser.id,
         newUser.email,
         verificationToken,
-        newUser.firstName || undefined
+        newUser.firstName || null
       );
     } catch (emailError: unknown) {
       // Log but don't fail registration - user can request resend later
@@ -818,7 +818,7 @@ router.post("/api/auth/login", async (req, res) => {
       req.session.id,
       ipAddr,
       ua,
-      req.session.cookie?.expires || undefined
+      req.session.cookie?.expires || null
     );
 
     res.json({
@@ -1683,7 +1683,7 @@ router.post("/api/auth/reset-password-request", async (req, res) => {
           result.user.id,
           deliveryEmail,
           result.token,
-          result.user.firstName || undefined
+          result.user.firstName || null
         );
         if (!emailResult?.success) {
           log.error(`[Auth] Password reset email delivery failed for ${data.email}: ${emailResult?.error}`);

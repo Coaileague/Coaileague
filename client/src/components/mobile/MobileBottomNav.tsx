@@ -40,7 +40,7 @@ function NavItem({ icon: Icon, label, href, isActive, badge }: NavItemProps) {
       )}
       data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
       aria-label={`${label}${badge && badge > 0 ? `, ${badge} unread` : ''}`}
-      aria-current={isActive ? 'page' : undefined}
+      aria-current={isActive ? 'page' : null}
     >
       <div className="relative inline-flex items-center justify-center">
         <Icon
@@ -166,7 +166,7 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
             label={item.label}
             href={item.href}
             isActive={isActive(item.href)}
-            badge={'badge' in item ? item.badge : undefined}
+            badge={'badge' in item ? item.badge : null}
           />
         ))}
 
@@ -182,7 +182,7 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
           )}
           data-testid="nav-more"
           aria-label="More options"
-          aria-current={isMoreActive ? 'page' : undefined}
+          aria-current={isMoreActive ? 'page' : null}
         >
           <Menu style={{ width: '22px', height: '22px' }} strokeWidth={isMoreActive ? 2.5 : 2} />
           <span

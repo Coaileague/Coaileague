@@ -575,7 +575,7 @@ Provide a JSON response with:
     return {
       reflectionId,
       passed: false,
-      confidenceScore: 0,
+      confidenceScore: '0',
       critique: 'Maximum reflection cycles reached - escalating to human review',
       issues: [{
         id: `issue-${crypto.randomUUID()}`,
@@ -1032,7 +1032,7 @@ class ReflectionFeedbackLoop {
         totalExecutions: 0,
         successfulExecutions: 0,
         failedExecutions: 0,
-        successRate: 0,
+        successRate: '0',
         averageConfidence: 0,
         confidenceCalibration: 0,
         lastUpdated: new Date(),

@@ -409,9 +409,9 @@ router.post(
                       workspaceId,
                       senderName: userName,
                       attachmentUrl: f.url,
-                      gpsLat: gpsData?.lat ?? undefined,
-                      gpsLng: gpsData?.lng ?? undefined,
-                      gpsAddress: gpsData?.address ?? undefined,
+                      gpsLat: gpsData?.lat ?? null,
+                      gpsLng: gpsData?.lng ?? null,
+                      gpsAddress: gpsData?.address ?? null,
                     });
                   }
                 } catch (botErr: unknown) {

@@ -173,7 +173,7 @@ export function FormShell({
                     "h-7 w-7 rounded-md grid place-items-center font-bold text-xs text-white",
                     !primary && "bg-primary",
                   )}
-                  style={primary ? { backgroundColor: primary } : undefined}
+                  style={primary ? { backgroundColor: primary } : null}
                   aria-hidden
                 >
                   {(companyName || "C")[0]}

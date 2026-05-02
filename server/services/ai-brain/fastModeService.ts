@@ -415,7 +415,7 @@ class FastModeService {
           return {
             agentId,
             agentName: this.getAgentDisplayName(agentId),
-            result: (result as {data: unknown}).data,
+            result: (result as {data: string}).data,
             success: result.success,
             tokensUsed: analysisResult.estimatedTokens
           };
@@ -1076,7 +1076,7 @@ class FastModeService {
       estimatedTimeSeconds,
       slaGuarantee: tierConfig.slaGuarantee,
       features: tierConfig.features,
-      confidenceScore: 0.85,
+      confidenceScore: '0.85',
       budgetStatus: {
         currentBalance,
         afterExecution: Math.max(0, afterExecution),

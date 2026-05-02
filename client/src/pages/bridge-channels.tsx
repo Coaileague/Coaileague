@@ -258,8 +258,8 @@ export default function BridgeChannels() {
     createMutation.mutate({
       displayName: formDisplayName.trim(),
       channelType: formChannelType,
-      phoneNumber: formPhoneNumber || undefined,
-      emailAddress: formEmailAddress || undefined,
+      phoneNumber: formPhoneNumber || null,
+      emailAddress: formEmailAddress || null,
       status: formStatus,
     });
   };
@@ -270,8 +270,8 @@ export default function BridgeChannels() {
       id: editBridge.id,
       data: {
         displayName: formDisplayName.trim(),
-        phoneNumber: formPhoneNumber || undefined,
-        emailAddress: formEmailAddress || undefined,
+        phoneNumber: formPhoneNumber || null,
+        emailAddress: formEmailAddress || null,
         status: formStatus,
       },
     });

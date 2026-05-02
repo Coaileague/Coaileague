@@ -658,7 +658,7 @@ function DateDivider({ date }: { date: Date }) {
   yesterday.setDate(yesterday.getDate() - 1);
   const isYesterday = d.toDateString() === yesterday.toDateString();
 
-  const label = isToday ? "Today" : isYesterday ? "Yesterday" : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: d.getFullYear() !== now.getFullYear() ? "numeric" : undefined });
+  const label = isToday ? "Today" : isYesterday ? "Yesterday" : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: d.getFullYear() !== now.getFullYear() ? "numeric" : null });
 
   // chatdock-date-divider applies sticky positioning so the date pill rides
   // along the top of the scroll viewport like iMessage / Messenger.
@@ -1671,12 +1671,12 @@ export function InlineChatView({ roomId, roomName }: { roomId: string; roomName:
                   data-testid={`chat-msg-${msg.id}`}
                   data-swiping={activeSwipe?.msgId === msg.id ? "true" : "false"}
                   data-swipe-reached={activeSwipe?.msgId === msg.id && activeSwipe.reached ? "true" : "false"}
-                  style={activeSwipe?.msgId === msg.id ? { transform: `translateX(${activeSwipe.dx}px)` } : undefined}
-                  onTouchStart={isMobile ? (e) => handleTouchStart(e, msg.id) : undefined}
-                  onTouchMove={isMobile ? handleTouchMove : undefined}
-                  onTouchEnd={isMobile ? handleTouchEnd : undefined}
-                  onTouchCancel={isMobile ? handleTouchEnd : undefined}
-                  onClick={isMobile ? () => handleDoubleTap(msg.id) : undefined}
+                  style={activeSwipe?.msgId === msg.id ? { transform: `translateX(${activeSwipe.dx}px)` } : null}
+                  onTouchStart={isMobile ? (e) => handleTouchStart(e, msg.id) : null}
+                  onTouchMove={isMobile ? handleTouchMove : null}
+                  onTouchEnd={isMobile ? handleTouchEnd : null}
+                  onTouchCancel={isMobile ? handleTouchEnd : null}
+                  onClick={isMobile ? () => handleDoubleTap(msg.id) : null}
                 >
                   {/* B3: swipe-to-reply hint icon — fades in when the swipe
                        crosses the hint threshold, before the commit threshold. */}
@@ -1731,7 +1731,7 @@ export function InlineChatView({ roomId, roomName }: { roomId: string; roomName:
                         // Compute end-of-run: this is the last message OR the next has a different sender.
                         ((idx === wsMessages.length - 1) || (wsMessages[idx + 1] && wsMessages[idx + 1].senderId !== msg.senderId)) && "chatdock-bubble-tail-end",
                       )}
-                      data-bot={isBot ? (msg.senderId === 'helpai-bot' || msg.senderName === 'HelpAI' ? 'helpai' : 'trinity') : undefined}
+                      data-bot={isBot ? (msg.senderId === 'helpai-bot' || msg.senderName === 'HelpAI' ? 'helpai' : 'trinity') : null}
                     >
                       {parentMsg && <QuotedMessage parentMessage={parentMsg} compact />}
                       {isDeletedForAll ? (
@@ -1741,7 +1741,7 @@ export function InlineChatView({ roomId, roomName }: { roomId: string; roomName:
                           {isMediaMessage[1].includes("image") && (() => {
                             const atIdx = isMediaMessage[1].indexOf(" @ ");
                             const imgGpsAddress = atIdx !== -1 ? isMediaMessage[1].slice(atIdx + 3).trim() : null;
-                            const ts = msg.createdAt ? (msg.createdAt instanceof Date ? msg.createdAt.toISOString() : String(msg.createdAt)) : undefined;
+                            const ts = msg.createdAt ? (msg.createdAt instanceof Date ? msg.createdAt.toISOString() : String(msg.createdAt)) : null;
                             const timeLabel = msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
                             return (
                               <div>
@@ -1750,7 +1750,7 @@ export function InlineChatView({ roomId, roomName }: { roomId: string; roomName:
                                     src={isMediaMessage[2]}
                                     alt="Shared image"
                                     loading="lazy"
-                                    onClick={() => setLightboxData({ src: isMediaMessage[2], senderName: msg.senderName || undefined, timestamp: ts, filename: msg.attachmentName || undefined, gpsAddress: imgGpsAddress || undefined })}
+                                    onClick={() => setLightboxData({ src: isMediaMessage[2], senderName: msg.senderName || null, timestamp: ts, filename: msg.attachmentName || null, gpsAddress: imgGpsAddress || null })}
                                     className="cursor-pointer"
                                     data-testid={`img-preview-${msg.id}`}
                                   />
@@ -1819,7 +1819,7 @@ export function InlineChatView({ roomId, roomName }: { roomId: string; roomName:
                           "opacity-0 group-hover:opacity-100",
                           isOwn ? "-left-1" : "-right-1"
                         )}
-                        style={{ visibility: activeMessageMenu === msg.id ? "visible" : undefined }}
+                        style={{ visibility: activeMessageMenu === msg.id ? "visible" : null }}
                         onClick={(e) => { e.stopPropagation(); setActiveMessageMenu(activeMessageMenu === msg.id ? null : msg.id); }}
                         data-testid={`button-msg-menu-${msg.id}`}
                       >
@@ -1834,7 +1834,7 @@ export function InlineChatView({ roomId, roomName }: { roomId: string; roomName:
                         conversationId={roomId}
                         onClose={() => setActiveMessageMenu(null)}
                         onReply={() => setReplyingTo({ id: msg.id, senderName: msg.senderName || "Unknown", message: msgContent })}
-                        onEdit={isOwn ? () => { setEditingMessage({ id: msg.id, message: msgContent }); setInput(msgContent); } : undefined}
+                        onEdit={isOwn ? () => { setEditingMessage({ id: msg.id, message: msgContent }); setInput(msgContent); } : null}
                         onForward={() => setForwardingMessageId(msg.id)}
                       />
                     )}

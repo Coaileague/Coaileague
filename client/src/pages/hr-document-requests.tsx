@@ -257,12 +257,12 @@ export default function HrDocumentRequests() {
     sendMutation.mutate({
       employeeIds: selectedEmployeesList,
       documentTypes: selectedDocTypesList,
-      notes: notes || undefined,
+      notes: notes || null,
     });
   }
 
   function handleSendToEmployee(employeeId: string, docTypes: string[]) {
-    sendMutation.mutate({ employeeIds: [employeeId], documentTypes: docTypes, notes: undefined });
+    sendMutation.mutate({ employeeIds: [employeeId], documentTypes: docTypes, notes: null });
   }
 
   // ─── RENDER ───────────────────────────────────────────────────────────────

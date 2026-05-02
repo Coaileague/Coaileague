@@ -158,7 +158,7 @@ export default function AnalyticsReportsPage() {
 
   if (accessLoading) {
     return (
-      <CanvasHubPage config={{ ...pageConfig, headerActions: undefined }}>
+      <CanvasHubPage config={{ ...pageConfig, headerActions: null }}>
         <Skeleton className="h-12 w-64 mb-6" />
         <Skeleton className="h-96 w-full" />
       </CanvasHubPage>

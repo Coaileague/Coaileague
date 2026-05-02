@@ -226,7 +226,7 @@ export class GustoService {
       jobs: (employee as EmployeeWithStatus).payRate ? [
         {
           title: employee.position || 'Employee',
-          rate: Number(employee.payRate),
+          rate: String(Number(employee.payRate)),
           payment_unit: employee.payType === 'salary' ? 'Year' : 'Hour',
         },
       ] : undefined,

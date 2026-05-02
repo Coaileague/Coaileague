@@ -49,8 +49,8 @@ export default function SubOrgsPage(): JSX.Element {
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/workspace/sub-orgs", {
         name: name.trim(),
-        subOrgLabel: label.trim() || undefined,
-        primaryOperatingState: primaryState.trim() || undefined,
+        subOrgLabel: label.trim() || null,
+        primaryOperatingState: primaryState.trim() || null,
       });
       return res.json() as Promise<{ subOrg?: SubOrg }>;
     },

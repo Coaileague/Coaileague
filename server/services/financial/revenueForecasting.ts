@@ -147,7 +147,7 @@ function confidenceFromRatio(
   totalProjected: number,
   dataPoints: number,
 ): { level: 'high' | 'medium' | 'low'; score: number } {
-  if (totalProjected <= 0) return { level: 'low', score: 0.2 };
+  if (totalProjected <= 0) return { level: 'low', score: '0.2' };
   const contractCoverage = knownAmount / totalProjected;
   const dataConfidence = Math.min(1, dataPoints / 6); // 6 months = full confidence
   const score = contractCoverage * 0.6 + dataConfidence * 0.4;

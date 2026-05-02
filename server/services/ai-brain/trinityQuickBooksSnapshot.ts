@@ -196,10 +196,10 @@ class TrinityQuickBooksSnapshotService {
           isNotNull(invoices.dueDate)
         ));
       
-      const bucket0_30 = { bucket: '0-30' as const, invoiceCount: 0, totalAmount: 0, percentage: 0 };
-      const bucket31_60 = { bucket: '31-60' as const, invoiceCount: 0, totalAmount: 0, percentage: 0 };
-      const bucket61_90 = { bucket: '61-90' as const, invoiceCount: 0, totalAmount: 0, percentage: 0 };
-      const bucket90Plus = { bucket: '90+' as const, invoiceCount: 0, totalAmount: 0, percentage: 0 };
+      const bucket0_30 = { bucket: '0-30' as const, invoiceCount: 0, totalAmount: '0', percentage: 0 };
+      const bucket31_60 = { bucket: '31-60' as const, invoiceCount: 0, totalAmount: '0', percentage: 0 };
+      const bucket61_90 = { bucket: '61-90' as const, invoiceCount: 0, totalAmount: '0', percentage: 0 };
+      const bucket90Plus = { bucket: '90+' as const, invoiceCount: 0, totalAmount: '0', percentage: 0 };
       
       let totalAR = 0;
       
@@ -449,7 +449,7 @@ class TrinityQuickBooksSnapshotService {
         .slice(0, 3);
       
       return {
-        lastSuccessfulSync: connection.lastSyncAt || undefined,
+        lastSuccessfulSync: connection.lastSyncAt || null,
         connectionStatus: connection.status as SyncHealthSummary['connectionStatus'],
         pendingSyncCount: 0, // Would need to count pending sync items
         errorCount: recentLogs.filter(log => log.status === 'error').length,
@@ -484,7 +484,7 @@ class TrinityQuickBooksSnapshotService {
         syncedToQB: Number(stats[0]?.synced) || 0,
         pendingSync: Number(stats[0]?.pending) || 0,
         syncErrors: Number(stats[0]?.errors) || 0,
-        lastSyncTime: stats[0]?.lastSync || undefined,
+        lastSyncTime: stats[0]?.lastSync || null,
       };
     } catch (error) {
       log.error('[TrinityQBSnapshot] Employee sync status error:', error);

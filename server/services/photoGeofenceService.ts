@@ -70,8 +70,8 @@ class PhotoGeofenceService {
             
             if (lat && lon) {
               siteLocation = {
-                latitude: parseFloat(lat),
-                longitude: parseFloat(lon),
+                latitude: String(parseFloat(lat)),
+                longitude: String(parseFloat(lon)),
               };
               siteName = client.companyName || `${client.firstName} ${client.lastName}` || 'Client Site';
             }
@@ -102,8 +102,8 @@ class PhotoGeofenceService {
             
             if (lat && lon) {
               siteLocation = {
-                latitude: parseFloat(lat),
-                longitude: parseFloat(lon),
+                latitude: String(parseFloat(lat)),
+                longitude: String(parseFloat(lon)),
               };
               siteName = client.companyName || `${client.firstName} ${client.lastName}` || 'Client Site';
             }

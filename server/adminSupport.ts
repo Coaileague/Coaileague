@@ -201,7 +201,7 @@ export async function getWorkspaceDetail(
 
   const usersInWorkspace = workspaceEmployees.map(
     ({ employee, user }: { employee: Employee | null; user: User | null }) => ({
-      employee: employee || undefined,
+      employee: employee || null,
       user: user || ({} as User),
     })
   );
@@ -516,9 +516,9 @@ export async function getStripeStatus(workspaceId: string): Promise<{
 
   return {
     connected: !!workspace.stripeAccountId,
-    customerId: workspace.stripeCustomerId || undefined,
-    accountId: workspace.stripeAccountId || undefined,
-    subscriptionId: workspace.stripeSubscriptionId || undefined,
+    customerId: workspace.stripeCustomerId || null,
+    accountId: workspace.stripeAccountId || null,
+    subscriptionId: workspace.stripeSubscriptionId || null,
     status: workspace.stripeAccountId
       ? "Connected"
       : "Not connected - Customer needs to connect Stripe",
@@ -612,9 +612,9 @@ export async function updateTicketStatus(
       .update(supportTickets)
       .set({
         status,
-        resolution: resolution || undefined,
+        resolution: resolution || null,
         resolvedAt: status === "resolved" || status === "closed" ? new Date() : undefined,
-        resolvedBy: resolvedBy || undefined,
+        resolvedBy: resolvedBy || null,
         updatedAt: new Date(),
       })
       .where(eq(supportTickets.id, ticketId));

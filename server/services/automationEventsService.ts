@@ -326,7 +326,7 @@ class AutomationEventsService {
         action: `automation_${event.type}_${event.status}`,
         entityType: 'automation_job',
         entityId: event.id,
-        workspaceId: event.workspaceId || undefined,
+        workspaceId: event.workspaceId || null,
         metadata: {
           jobId: event.id,
           jobType: event.type,

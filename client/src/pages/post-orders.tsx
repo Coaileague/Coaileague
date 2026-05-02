@@ -343,8 +343,8 @@ function AcknowledgmentDialog({ order, onClose }: { order: Record<string, unknow
               mutation.mutate({
                 shiftOrderId: order.id,
                 employeeId,
-                notes: notes || undefined,
-                signatureUrl: signature.signatureName ? `sig:${signature.signatureName}` : undefined,
+                notes: notes || null,
+                signatureUrl: signature.signatureName ? `sig:${signature.signatureName}` : null,
               })
             }
             disabled={!canSubmit || mutation.isPending}

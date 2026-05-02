@@ -382,7 +382,7 @@ export class UniversalNotificationEngine {
       if (payload.workspaceId) {
         try {
           const [ws] = await db.select({ name: workspaces.name }).from(workspaces).where(eq(workspaces.id, payload.workspaceId)).limit(1);
-          workspaceName = ws?.name || undefined;
+          workspaceName = ws?.name || null;
         } catch { /* non-fatal */ }
       }
 
@@ -426,8 +426,8 @@ export class UniversalNotificationEngine {
             .from(employees)
             .where(and(eq(employees.userId, payload.userId), eq(employees.workspaceId, payload.workspaceId)))
             .limit(1);
-          recipientFirstName = emp?.firstName || undefined;
-          recipientRole = (emp?.workspaceRole as string) || undefined;
+          recipientFirstName = emp?.firstName || null;
+          recipientRole = (emp?.workspaceRole as string) || null;
         } catch { /* non-fatal — enrichment works without it */ }
 
         // Operational types bypass AI enrichment — they are deterministic field-ops alerts

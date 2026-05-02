@@ -257,7 +257,7 @@ class SecurityHardeningService {
       startedAt: new Date(),
       status: 'running',
       findings: [],
-      score: 100,
+      score: '100',
     };
     
     this.scans.set(scan.id, scan);

@@ -161,7 +161,7 @@ export async function sendShiftReminder(
     minute: '2-digit',
     hour12: true 
   });
-  const location = shift.description || undefined;
+  const location = shift.description || null;
   
   if (channels.includes('email') && employee.email) {
     try {

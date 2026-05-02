@@ -133,7 +133,7 @@ export default function ClientSatisfactionPage() {
             <Badge className={`${BADGE_COLORS.red} gap-1`} data-testid="badge-churn-risk">
               <AlertTriangle className="w-3 h-3" /> Churn Risk
             </Badge>
-          ) : undefined
+          ) : null
         }
       >
         {trend?.churnRisk && (

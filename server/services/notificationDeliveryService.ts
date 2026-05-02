@@ -737,7 +737,7 @@ export class NotificationDeliveryService {
           workspaceId: n.workspaceId,
           recipientUserId: n.recipientUserId,
           channel: 'email',
-          subject: n.subject ?? undefined,
+          subject: n.subject ?? null,
           body: n.payload as Record<string, unknown>,
           idempotencyKey: fallbackKey,
         });

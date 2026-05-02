@@ -293,9 +293,9 @@ Assign employees to shifts. Return valid JSON only.`;
   } catch (error : unknown) {
     log.error("AI Scheduling™ AI error:", error);
     // Don't leak raw prompts to users - provide clean error message
-    const userMessage = (error as Record<string, unknown>).status === 400 
+    const userMessage = (error as Record<string, string>).status === 400 
       ? 'AI service configuration error - please contact support'
-      : (error as Record<string, unknown>).status === 429
+      : (error as Record<string, string>).status === 429
       ? 'AI service rate limit exceeded - please try again in a moment'
       : 'AI scheduling temporarily unavailable - please try again';
     throw new Error(userMessage);

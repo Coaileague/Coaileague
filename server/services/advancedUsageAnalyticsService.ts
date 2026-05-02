@@ -312,8 +312,8 @@ class AdvancedUsageAnalyticsService {
       automationROI,
       topValueFeatures: [
         { feature: 'AI Task Automation', usage: completedTasks, estimatedValue: Math.round(completedTasks * estimatedMinutesPerTask / 60 * averageHourlyRate) },
-        { feature: 'Empire Mode Insights', usage: 0, estimatedValue: 0 },
-        { feature: 'Fast Mode Processing', usage: 0, estimatedValue: 0 }
+        { feature: 'Empire Mode Insights', usage: 0, estimatedValue: '0' },
+        { feature: 'Fast Mode Processing', usage: 0, estimatedValue: '0' }
       ]
     };
   }
@@ -325,7 +325,7 @@ class AdvancedUsageAnalyticsService {
       type: (t as Record<string, unknown>).transactionType || 'deduction',
       credits: (t as {amount: string}).amount ?? 0,
       balanceAfter: (t as Record<string, unknown>).balanceAfter ?? 0,
-      description: (t as Record<string, unknown>).description || '',
+      description: (t as Record<string, string>).description || '',
       actionType: (t as Record<string, unknown>).featureKey,
       createdAt: t.createdAt?.toISOString?.() || new Date().toISOString(),
     }));

@@ -572,7 +572,7 @@ aiBrainConsoleRouter.get('/files', requireSupportRole, async (req: Authenticated
     const dirPath = (req.query.path as string) || (req.query['0'] as string) || '.';
     const userId = req.user?.id || 'support';
     const result = await aiBrainFileSystemTools.listDirectory(dirPath, {}, userId);
-    res.json({ files: (result as {data: unknown}).data?.files || result.data?.entries || [], path: dirPath });
+    res.json({ files: (result as {data: string}).data?.files || result.data?.entries || [], path: dirPath });
   } catch (error: unknown) {
     log.error('[AIBrainConsole] Files list error:', error);
     res.status(500).json({ error: sanitizeError(error) });
@@ -585,7 +585,7 @@ aiBrainConsoleRouter.post('/files/read', requireSupportRole, async (req: Authent
     const userId = req.user?.id || 'support';
     if (!filePath) return res.status(400).json({ error: 'filePath is required' });
     const result = await aiBrainFileSystemTools.readFile(filePath, {}, userId);
-    res.json({ content: (result as {data: unknown}).data?.content || '', path: filePath });
+    res.json({ content: (result as {data: string}).data?.content || '', path: filePath });
   } catch (error: unknown) {
     log.error('[AIBrainConsole] File read error:', error);
     res.status(500).json({ error: sanitizeError(error) });
@@ -612,7 +612,7 @@ aiBrainConsoleRouter.post('/files/search', requireSupportRole, async (req: Authe
     const userId = req.user?.id || 'support';
     if (!pattern) return res.status(400).json({ error: 'pattern is required' });
     const result = await aiBrainFileSystemTools.searchFiles(searchPath || '.', { pattern }, userId);
-    res.json({ matches: (result as {data: unknown}).data?.matches || [], pattern });
+    res.json({ matches: (result as {data: string}).data?.matches || [], pattern });
   } catch (error: unknown) {
     log.error('[AIBrainConsole] File search error:', error);
     res.status(500).json({ error: sanitizeError(error) });

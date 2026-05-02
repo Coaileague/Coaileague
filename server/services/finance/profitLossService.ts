@@ -313,13 +313,13 @@ class ProfitLossService {
             return {
               clientId: client.id,
               clientName: displayName,
-              revenue: 0,
-              laborCost: 0,
+              revenue: '0',
+              laborCost: '0',
               directExpenses: 0,
               grossProfit: 0,
               marginPercent: 0,
               invoicedHours: 0,
-              actualHours: 0,
+              actualHours: '0',
               effectiveBillRate: 0,
               isUnderperforming: false,
             };
@@ -424,10 +424,10 @@ Provide ONE specific, actionable recommendation in 1-2 sentences.`;
         trends.push({
           periodStart: start,
           periodEnd: end,
-          revenue: 0,
+          revenue: '0',
           expenses: 0,
-          profit: 0,
-          margin: 0,
+          profit: '0',
+          margin: '0',
         });
       }
     }
@@ -462,7 +462,7 @@ Provide ONE specific, actionable recommendation in 1-2 sentences.`;
       category: a.category,
       title: a.title,
       message: a.message,
-      actionSuggestion: a.actionSuggestion || undefined,
+      actionSuggestion: a.actionSuggestion || null,
       metricValue: a.metricValue ? parseFloat(a.metricValue) : undefined,
       detectedAt: a.detectedAt,
     }));

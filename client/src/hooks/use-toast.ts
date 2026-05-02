@@ -38,7 +38,7 @@ export function useToast() {
 
   const toast = ({ title, description, variant, duration }: ToastOptions) => {
     const msg = buildMessage(title, description);
-    const opts = duration ? { duration } : undefined;
+    const opts = duration ? { duration } : null;
 
     if (variant === "destructive") {
       ut.error(msg, opts);

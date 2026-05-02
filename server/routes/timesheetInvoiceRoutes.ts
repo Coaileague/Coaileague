@@ -358,20 +358,20 @@ timesheetInvoiceRouter.get('/:invoiceId/pdf', requireManager, async (req: Reques
       clientName: invoice.client ? `${invoice.client.firstName || ''} ${invoice.client.lastName || ''}`.trim() : 'Valued Client',
       clientCompany: invoice.client?.companyName || '',
       clientEmail: invoice.client?.email || '',
-      clientAddress: invoice.client?.address || undefined,
+      clientAddress: invoice.client?.address || null,
       workspaceName: workspace?.name || PLATFORM.name,
-      workspaceAddress: workspace?.address || undefined,
+      workspaceAddress: workspace?.address || null,
       lineItems: lineItems.map(li => ({
         description: li.description,
-        quantity: Number(li.quantity),
-        rate: Number(li.unitPrice),
-        amount: Number(li.amount),
+        quantity: String(Number(li.quantity)),
+        rate: String(Number(li.unitPrice)),
+        amount: String(Number(li.amount)),
       })),
       subtotal: Number(invoice.subtotal),
       taxRate: Number(invoice.taxRate || 0),
       taxAmount: Number(invoice.taxAmount || 0),
       total: Number(invoice.total),
-      notes: invoice.notes || undefined,
+      notes: invoice.notes || null,
     };
 
     const pdfBuffer = await generateInvoicePdfBuffer(pdfData);

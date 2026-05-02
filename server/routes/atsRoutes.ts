@@ -32,7 +32,7 @@ function scoreApplicant(data: Record<string, unknown>): { score: number; rationa
   const refs = data.applicant_references || data.references || [];
   if (Array.isArray(refs) && refs.length >= 2) { score += 10; reasons.push("+10: References provided"); }
   if (data.job_posting_id) { score += 5; reasons.push("+5: Applied for specific position"); }
-  return { score: Math.min(100, score), rationale: reasons.join('. ') };
+  return { score: String(Math.min(100, score)), rationale: reasons.join('. ') };
 }
 
 // ── GET all job postings ──────────────────────────────────────────────────

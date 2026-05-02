@@ -168,8 +168,8 @@ router.post('/send', requireAuth, async (req: AuthenticatedRequest, res) => {
     const senderName = formatUserDisplayNameForChat({
       firstName: req.user.firstName,
       lastName: req.user.lastName,
-      email: req.user.email || undefined,
-      platformRole: pmSenderPlatformRole || undefined,
+      email: req.user.email || null,
+      platformRole: pmSenderPlatformRole || null,
     });
 
     const sentMessage = await storage.sendPrivateMessage({

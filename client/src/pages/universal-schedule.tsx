@@ -153,7 +153,7 @@ const DraggableEmployee = ({ employee, isSelected, onSelect, getEmployeeColor }:
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
     opacity: isDragging ? 0 : 1
-  } : undefined;
+  } : null;
 
   return (
     <div
@@ -274,7 +274,7 @@ const InlineDraggableShift = ({ shift, children, canDrag, style: passedStyle, cl
     } : {
       opacity: 1,
     }),
-    opacity: isDragging ? 0.4 : undefined,
+    opacity: isDragging ? 0.4 : null,
   };
 
   return (
@@ -473,7 +473,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       queryClient.invalidateQueries({ queryKey: ['/api/orchestrated-schedule/active-operations', workspaceId] });
     },
     onError: (error: unknown) => {
-      const isCredits = (error as Record<string, unknown>).status === 402 || (error instanceof Error ? error.message : String(error))?.includes('Insufficient credits');
+      const isCredits = (error as Record<string, string>).status === 402 || (error instanceof Error ? error.message : String(error))?.includes('Insufficient credits');
       toast({
         variant: 'destructive',
         title: isCredits ? 'Insufficient Credits' : 'Scheduling Session Failed',
@@ -620,7 +620,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       });
     },
     onError: (error: unknown) => {
-      const isCredits = (error as Record<string, unknown>).status === 402 || (error instanceof Error ? error.message : String(error))?.includes('Insufficient credits');
+      const isCredits = (error as Record<string, string>).status === 402 || (error instanceof Error ? error.message : String(error))?.includes('Insufficient credits');
       toast({
         variant: 'destructive',
         title: isCredits ? 'Insufficient Credits' : 'Failed to generate schedule',
@@ -1162,7 +1162,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       });
     },
     onError: (error: unknown) => {
-      const isCredits = (error as Record<string, unknown>).status === 402 || (error instanceof Error ? error.message : String(error))?.includes('Insufficient credits');
+      const isCredits = (error as Record<string, string>).status === 402 || (error instanceof Error ? error.message : String(error))?.includes('Insufficient credits');
       toast({
         variant: 'destructive',
         title: isCredits ? 'Monthly Token Limit Reached' : 'AI fill failed',
@@ -1256,7 +1256,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       }
     },
     onError: (error: unknown) => {
-      const isCredits = (error as Record<string, unknown>).status === 402 || (error instanceof Error ? error.message : String(error))?.includes('Insufficient credits');
+      const isCredits = (error as Record<string, string>).status === 402 || (error instanceof Error ? error.message : String(error))?.includes('Insufficient credits');
       toast({
         variant: 'destructive',
         title: isCredits ? 'Monthly Token Limit Reached' : 'AI auto-fill failed',
@@ -1588,7 +1588,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
     duplicateShiftMutation.mutate({
       shiftId: shift.id,
       targetDate: nextWeek.toISOString().split('T')[0],
-      targetEmployeeId: shift.employeeId || undefined,
+      targetEmployeeId: shift.employeeId || null,
     });
   }, [duplicateShiftMutation]);
   
@@ -1888,7 +1888,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
           onDayChange={handleToolbarDayChange}
           currentMonth={currentMonth}
           onMonthChange={handleToolbarMonthChange}
-          onCopyPreviousWeek={isManager ? handleCopyPreviousWeek : undefined}
+          onCopyPreviousWeek={isManager ? handleCopyPreviousWeek : null}
         />
 
         {/* Week Stats Bar - Labor cost, hours, overtime, fill rate */}
@@ -2617,10 +2617,10 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
                             const gapPx = 2;
                             const rowHeight = numStackRows > 1 
                               ? `calc(${100 / numStackRows}% - ${gapPx}px)` 
-                              : undefined;
+                              : null;
                             const topOffset = numStackRows > 1 
                               ? `calc(${(rowIdx / numStackRows) * 100}% + ${gapPx / 2}px)` 
-                              : undefined;
+                              : null;
                             
                             return (
                               <InlineDraggableShift

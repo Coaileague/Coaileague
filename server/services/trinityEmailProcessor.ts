@@ -256,13 +256,13 @@ export class TrinityEmailProcessor {
   private async _delegateToFullPipeline(email: unknown): Promise<void> {
     try {
       const parsed: ParsedInboundEmail = {
-        messageId: email.message_id || undefined,
+        messageId: email.message_id || null,
         fromEmail: email.from_email || '',
-        fromName: email.from_name || undefined,
+        fromName: email.from_name || null,
         toEmail: email.to_email || '',
-        subject: email.subject || undefined,
-        bodyText: email.body_text || undefined,
-        bodyHtml: email.body_html || undefined,
+        subject: email.subject || null,
+        bodyText: email.body_text || null,
+        bodyHtml: email.body_html || null,
         attachments: [],
         receivedAt: email.received_at ? new Date(email.received_at) : new Date(),
         rawPayload: {},

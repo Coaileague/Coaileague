@@ -316,7 +316,7 @@ export default function DockChatPage() {
           step: step as IntakeStep,
           stepIndex,
           totalSteps,
-          greeting: messageType === 'intake_greeting' ? greeting : undefined,
+          greeting: messageType === 'intake_greeting' ? greeting : null,
           flowTitle
         });
         setTimeout(() => intakeEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
@@ -385,7 +385,7 @@ export default function DockChatPage() {
         ...prev,
         step: data.nextStep!,
         stepIndex: data.nextStepIndex!,
-        greeting: undefined
+        greeting: null
       } : null);
       setTimeout(() => intakeEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
     }
@@ -578,7 +578,7 @@ export default function DockChatPage() {
       {isInterviewMode && activeRoomId && (
         <CopilotPanel
           roomId={activeRoomId}
-          candidateId={interviewCandidateId ?? undefined}
+          candidateId={interviewCandidateId ?? null}
         />
       )}
     </div>

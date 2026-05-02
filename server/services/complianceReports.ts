@@ -232,8 +232,8 @@ export async function generateTimeEntryAuditLog(
     entityType: log.entityType,
     entityId: log.entityId,
     changes: log.changes,
-    ipAddress: (log as Record<string,unknown>).metadata?.ipAddress || undefined,
-    userAgent: (log as Record<string,unknown>).metadata?.userAgent || undefined,
+    ipAddress: (log as Record<string,unknown>).metadata?.ipAddress || null,
+    userAgent: (log as Record<string,unknown>).metadata?.userAgent || null,
   }));
 
   const uniqueUsers = new Set(auditEntries.map(e => e.userId)).size;

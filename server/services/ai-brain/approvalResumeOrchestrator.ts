@@ -303,7 +303,7 @@ class ApprovalResumeOrchestrator {
           category: 'automation',
           title: 'Paused Job Cleared for Retry',
           description: `Job ${key.id} (${key.operationType}) approved for retry after approval gate ${approvalId}`,
-          workspaceId: key.workspaceId || undefined,
+          workspaceId: key.workspaceId || null,
           metadata: {
             idempotencyKeyId: key.id,
             operationType: key.operationType,

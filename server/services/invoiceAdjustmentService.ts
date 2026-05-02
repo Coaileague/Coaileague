@@ -325,7 +325,7 @@ export async function refundInvoice(
       if (stripe) {
         const stripeRefund = await stripe.refunds.create({
           payment_intent: stripePaymentIntentId,
-          amount: Math.round(refundAmount * 100), // cents
+          amount: String(Math.round(refundAmount * 100)), // cents
           reason: 'requested_by_customer',
           metadata: {
             invoiceId,

@@ -105,7 +105,7 @@ class StaffingClaimService {
         return {
           claimKey,
           alreadyClaimed: true,
-          claimedBy: token.claimedByWorkspaceName || token.claimedByWorkspaceId || undefined,
+          claimedBy: token.claimedByWorkspaceName || token.claimedByWorkspaceId || null,
         };
       }
 
@@ -170,8 +170,8 @@ class StaffingClaimService {
       return {
         success: false,
         alreadyClaimed: true,
-        claimedByWorkspaceId: existing?.claimedByWorkspaceId || undefined,
-        claimedByWorkspaceName: existing?.claimedByWorkspaceName || undefined,
+        claimedByWorkspaceId: existing?.claimedByWorkspaceId || null,
+        claimedByWorkspaceName: existing?.claimedByWorkspaceName || null,
         claimKey: params.claimKey,
       };
     } catch (err: unknown) {
@@ -218,7 +218,7 @@ class StaffingClaimService {
             workspaceName: ws?.name || loser.workspaceName,
             clientEmail: params.clientEmail,
             clientName: params.clientName,
-            shiftDescription: params.shiftDescription || token.shiftDescription || undefined,
+            shiftDescription: params.shiftDescription || token.shiftDescription || null,
             referenceNumber: params.referenceNumber,
           });
 

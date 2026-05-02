@@ -160,7 +160,7 @@ export function SwipeableApprovalCard({
           isMobile && "touch-pan-y"
         )}
         style={{
-          transform: isMobile ? `translateX(${currentSwipeDistance}px)` : undefined
+          transform: isMobile ? `translateX(${currentSwipeDistance}px)` : null
         }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}

@@ -142,7 +142,7 @@ export async function apiRequest(
       method,
       headers,
       // Outgoing: camelCase → snake_case before leaving the client
-      body: data ? JSON.stringify(deepToSnake(data)) : undefined,
+      body: data ? JSON.stringify(deepToSnake(data)) : null,
       credentials: "include",
     });
 
@@ -202,7 +202,7 @@ export async function apiRequest(
               method,
               headers,
               // Outgoing: camelCase → snake_case on retry too
-              body: data ? JSON.stringify(deepToSnake(data)) : undefined,
+              body: data ? JSON.stringify(deepToSnake(data)) : null,
               credentials: "include",
             });
             await throwIfResNotOk(retryRes);

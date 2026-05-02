@@ -731,7 +731,7 @@ export function checkHumanParity(response: string): {
     }
   }
   
-  return { score: Math.max(0, score), issues, suggestions };
+  return { score: String(Math.max(0, score)), issues, suggestions };
 }
 
 // ============================================================================

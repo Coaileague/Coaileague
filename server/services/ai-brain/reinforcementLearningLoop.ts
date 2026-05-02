@@ -456,13 +456,13 @@ class ReinforcementLearningLoop {
         baseConfidence: 0.5,
         adjustedConfidence: 0.5,
         experienceCount: 0,
-        successRate: 0.5,
+        successRate: '0.5',
         lastUpdated: new Date(),
         factors: [
-          { name: 'historical_success', weight: 0.4, currentValue: 0.5, impact: 0.2 },
-          { name: 'recent_performance', weight: 0.3, currentValue: 0.5, impact: 0.15 },
-          { name: 'complexity_handling', weight: 0.2, currentValue: 0.5, impact: 0.1 },
-          { name: 'human_feedback', weight: 0.1, currentValue: 0.5, impact: 0.05 },
+          { name: 'historical_success', weight: '0.4', currentValue: 0.5, impact: 0.2 },
+          { name: 'recent_performance', weight: '0.3', currentValue: 0.5, impact: 0.15 },
+          { name: 'complexity_handling', weight: '0.2', currentValue: 0.5, impact: 0.1 },
+          { name: 'human_feedback', weight: '0.1', currentValue: 0.5, impact: 0.05 },
         ],
       };
     }

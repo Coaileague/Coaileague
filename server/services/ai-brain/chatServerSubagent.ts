@@ -140,7 +140,7 @@ class ChatServerHealthManager {
       lastDiagnostic: null,
       lastSelfHeal: null,
       lastTrinityReport: null,
-      confidenceScore: 1.0,
+      confidenceScore: '1.0',
       knownIssuePatterns: [
         'websocket_disconnect_spike',
         'room_not_loading',

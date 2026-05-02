@@ -23,7 +23,7 @@
  * If this variable is unset the exemption is simply inactive (safe in dev).
  */
 export const GRANDFATHERED_TENANT_ID: string | undefined =
-  process.env.GRANDFATHERED_TENANT_ID || process.env.STATEWIDE_WORKSPACE_ID || undefined;
+  process.env.GRANDFATHERED_TENANT_ID || process.env.STATEWIDE_WORKSPACE_ID || null;
 
 export const PLATFORM_WORKSPACE_ID = process.env.PLATFORM_WORKSPACE_ID || 'coaileague-platform-workspace';
 export const SYSTEM_WORKSPACE_ID = 'system';

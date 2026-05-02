@@ -238,8 +238,8 @@ export default function EmployeeComplianceDetail() {
       fileHashSha256,
       imageSide,
       isColorImage,
-      expirationDate: expirationDate || undefined,
-      verificationNotes: notes || undefined,
+      expirationDate: expirationDate || null,
+      verificationNotes: notes || null,
     });
   };
 

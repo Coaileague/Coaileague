@@ -69,7 +69,7 @@ async function searchEmployees(workspaceId: string, query: string): Promise<Sear
     type: 'employee' as const,
     title: `${emp.firstName} ${emp.lastName}`,
     subtitle: emp.role || 'Employee',
-    description: emp.email || undefined,
+    description: emp.email || null,
     relevanceScore: calculateTextRelevance(query, `${emp.firstName} ${emp.lastName} ${emp.email || ''}`),
     data: {
       id: emp.id,
@@ -113,7 +113,7 @@ async function searchClients(workspaceId: string, query: string): Promise<Search
     type: 'client' as const,
     title: client.companyName || `${client.firstName} ${client.lastName}`,
     subtitle: client.companyName ? `${client.firstName} ${client.lastName}` : 'Client',
-    description: client.email || undefined,
+    description: client.email || null,
     relevanceScore: calculateTextRelevance(query, `${client.firstName} ${client.lastName} ${client.companyName || ''}`),
     data: {
       id: client.id,

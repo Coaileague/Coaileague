@@ -112,7 +112,7 @@ export async function processSMSOutbox(): Promise<void> {
             const result = await sendSMS({
               to: row.to_number,
               body: row.body,
-              userId: row.user_id || undefined,
+              userId: row.user_id || null,
               type: row.sms_type,
               workspaceId: row.workspace_id,
             });

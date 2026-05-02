@@ -542,9 +542,9 @@ router.patch('/:id', requireManagerOrPlatformStaff, async (req: AuthenticatedReq
       await setInvoiceSettings({
         workspaceId,
         clientId: req.params.id,
-        billingCycle: validated.billingFrequency ?? validated.billingCycle ?? undefined,
+        billingCycle: validated.billingFrequency ?? validated.billingCycle ?? null,
         defaultBillRate: validated.billableHourlyRate != null ? String(validated.billableHourlyRate) : undefined,
-        autoSendInvoice: validated.autoSendInvoice ?? undefined,
+        autoSendInvoice: validated.autoSendInvoice ?? null,
         invoiceRecipientEmails: validated.billingEmail != null ? [validated.billingEmail] : undefined,
       }, req.user?.id || null);
     }
@@ -1060,7 +1060,7 @@ router.post('/dockchat/start', dockChatRateLimit, async (req: AuthenticatedReque
       }),
       clientId: z.string().optional(),
       clientName: z.string().optional(),
-      clientEmail: z.string().email().optional().or(z.literal('')).transform(v => v || undefined),
+      clientEmail: z.string().email().optional().or(z.literal('')).transform(v => v || null),
       initialMessage: z.string().optional(),
     });
     const dockStartParsed = dockChatStartSchema.safeParse(req.body);

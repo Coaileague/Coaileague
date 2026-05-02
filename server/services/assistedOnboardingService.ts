@@ -472,7 +472,7 @@ class AssistedOnboardingService {
             workspaceId: workspace.id,
             metadata: {
               ownerId: userId,
-              ownerEmail: user.email || undefined,
+              ownerEmail: user.email || null,
               workspaceName: workspace.name,
               source: 'assisted_onboarding_handoff',
             },

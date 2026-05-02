@@ -634,7 +634,7 @@ export class TokenManager {
       await db.insert(aiUsageEvents).values({
         id,
         workspaceId,
-        userId: userId || undefined,
+        userId: userId || null,
         featureKey,
         usageType: 'token_usage',
         usageAmount: String(cost),

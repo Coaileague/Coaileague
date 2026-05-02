@@ -519,7 +519,7 @@ class DurableJobQueueService {
       lastAttemptAt: row.lastAttemptAt ? new Date(row.lastAttemptAt) : undefined,
       nextAttemptAt: row.nextAttemptAt ? new Date(row.nextAttemptAt) : undefined,
       completedAt: row.completedAt ? new Date(row.completedAt) : undefined,
-      error: row.error || undefined,
+      error: row.error || null,
       result: row.result as Record<string, unknown> | undefined,
       createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt),

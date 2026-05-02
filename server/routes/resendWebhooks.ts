@@ -70,7 +70,7 @@ async function getWorkspaceDetails(workspaceId: string): Promise<{ name: string;
       name: workspaces.name,
       stateLicenseNumber: workspaces.stateLicenseNumber,
     }).from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
-    return { name: ws?.name || 'Our Team', licenseNumber: ws?.stateLicenseNumber || undefined };
+    return { name: ws?.name || 'Our Team', licenseNumber: ws?.stateLicenseNumber || null };
   } catch {
     return { name: 'Our Team' };
   }
@@ -118,7 +118,7 @@ const router = Router();
 // Trimmed to defend against accidental whitespace/newlines introduced when a
 // multiline paste lands in the Railway env-var UI — that was the single biggest
 // source of "mystery 401" reports during the signature verification investigation.
-const RESEND_WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET?.trim() || undefined;
+const RESEND_WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET?.trim() || null;
 
 /**
  * Compute the Svix expected signature for a given (id, timestamp, payload)
@@ -862,7 +862,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
         const { sendCanSpamCompliantEmail } = await import('../services/emailCore');
         const rootFromRaw = inboundEmail.from || '';
         const rootFromEmail = rootFromRaw.match(/<([^>]+)>/)?.[1]?.trim() || rootFromRaw.trim();
-        const rootFromName = rootFromRaw.split('<')[0].trim() || undefined;
+        const rootFromName = rootFromRaw.split('<')[0].trim() || null;
         const rootSubject = inboundEmail.subject || '(no subject)';
         const normalizedBody = buildInboundBodyFallback(inboundEmail);
         const rootBody = normalizedBody.html;
@@ -896,7 +896,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
 
       const fromRaw = inboundEmail.from || '';
       const fromEmail = fromRaw.match(/<([^>]+)>/)?.[1]?.trim() || fromRaw.trim();
-      const fromName = fromRaw.split('<')[0].trim() || undefined;
+      const fromName = fromRaw.split('<')[0].trim() || null;
       const emailBody = inboundEmail.text || (inboundEmail.html || '').replace(/<[^>]*>/g, ' ');
       const subject = inboundEmail.subject || '(no subject)';
 
@@ -1419,7 +1419,7 @@ ${rawBody.substring(0, 2000)}
     const result = await inboundOpportunityAgent.processInboundEmail(workspaceId, {
       messageId: inboundEmail.message_id || `resend-${Date.now()}`,
       fromEmail: inboundEmail.from || 'unknown@unknown.com',
-      fromName: senderName || undefined,
+      fromName: senderName || null,
       toEmail: inboundEmail.to?.[0],
       subject: inboundEmail.subject || 'No Subject',
       bodyText: inboundEmail.text || inboundEmail.html?.replace(/<[^>]*>/g, ' ') || '',
@@ -1450,8 +1450,8 @@ ${rawBody.substring(0, 2000)}
           const { prospect, isNew, tempCode } = await clientProspectService.getOrCreateFromEmail({
             workspaceId,
             email: normalizedSenderEmail,
-            contactName: senderName || undefined,
-            sourceEmailId: inboundEmail.message_id || undefined,
+            contactName: senderName || null,
+            sourceEmailId: inboundEmail.message_id || null,
           });
           isNewProspect = isNew;
           prospectTempCode = tempCode;
@@ -1498,11 +1498,11 @@ ${rawBody.substring(0, 2000)}
           const result = await processInboundEmail({
             messageId: inboundEmail.message_id || `resend-${Date.now()}`,
             fromEmail: senderEmail || inboundEmail.from || 'unknown@unknown.com',
-            fromName: senderName || undefined,
+            fromName: senderName || null,
             toEmail: toAddrs[0] || inboundEmail.to?.[0] || '',
             subject: inboundEmail.subject || '(no subject)',
             bodyText: emailBody,
-            bodyHtml: inboundEmail.html || undefined,
+            bodyHtml: inboundEmail.html || null,
             attachments: (inboundEmail.attachments || []).map((a: unknown) => ({
               filename: a.filename || a.name || 'attachment',
               contentType: a.contentType || a.content_type || 'application/octet-stream',
@@ -1533,9 +1533,9 @@ ${rawBody.substring(0, 2000)}
       processed: true,
       workspaceId,
       workspaceName,
-      orgCode: orgCode || undefined,
+      orgCode: orgCode || null,
       isNewProspect,
-      prospectTempCode: prospectTempCode || undefined,
+      prospectTempCode: prospectTempCode || null,
       trinityProcessingScheduled: workspaceId && emailCategory !== 'verification',
       category: emailCategory,
       result,

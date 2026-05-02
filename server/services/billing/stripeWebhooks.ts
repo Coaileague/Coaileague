@@ -529,7 +529,7 @@ export class StripeWebhookService {
         entryType: 'subscription_payment',
         direction: 'credit',
         amount: amountPaid,
-        referenceNumber: invoice.id || undefined,
+        referenceNumber: invoice.id || null,
         description: `Subscription renewal payment received — $${amountPaid.toFixed(2)} (Stripe invoice ${invoice.number || invoice.id})`,
         metadata: {
           stripeInvoiceId: invoice.id,
@@ -1667,7 +1667,7 @@ export class StripeWebhookService {
       const template = buildBillingEventEmail({
         recipientName:  owner.firstName || owner.email.split('@')[0],
         workspaceName:  (workspace as {name: string}).name || PLATFORM.name,
-        planName:       data.tier || data.newTier || undefined,
+        planName:       data.tier || data.newTier || null,
         event:          billingEvent,
         actionUrl:      billingUrl,
         platformName:   PLATFORM.name,

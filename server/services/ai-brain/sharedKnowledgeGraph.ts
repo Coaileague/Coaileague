@@ -183,7 +183,7 @@ class SharedKnowledgeGraph {
           createdBy: dbEntity.sourceAgent || 'system',
           confidence: parseFloat(dbEntity.confidence || '0.5'),
           usageCount: dbEntity.accessCount || 0,
-          lastAccessedAt: dbEntity.lastAccessed || undefined,
+          lastAccessedAt: dbEntity.lastAccessed || null,
         };
         this.entities.set(entity.id, entity);
         

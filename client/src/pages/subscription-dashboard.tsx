@@ -233,7 +233,7 @@ export default function SubscriptionDashboard() {
     mutationFn: (values: CancelFormValues) =>
       apiRequest("POST", "/api/billing/subscription/cancel", {
         immediate: false,
-        reason: values.reason || undefined,
+        reason: values.reason || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/billing/subscription"] });

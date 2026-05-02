@@ -96,7 +96,7 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
       dealId: deal.id,
       activityType: "deal_created",
       subject: `Deal created for ${deal.prospectCompany}`,
-      performedBy: req.user?.id ?? undefined,
+      performedBy: req.user?.id ?? null,
       createdByUserId: req.user?.id || 'system',
     });
 
@@ -240,7 +240,7 @@ router.patch("/:id", requireManager, async (req: AuthenticatedRequest, res) => {
         dealId: updated.id,
         activityType: "stage_changed",
         subject: `Stage changed from "${oldStage}" to "${newStage}"`,
-        performedBy: req.user?.id ?? undefined,
+        performedBy: req.user?.id ?? null,
         metadata: { oldStage, newStage },
         createdByUserId: req.user?.id || 'system',
       });
@@ -252,7 +252,7 @@ router.patch("/:id", requireManager, async (req: AuthenticatedRequest, res) => {
           dealId: updated.id,
           activityType: "deal_won",
           subject: `Deal won — flagged for client & site creation for ${updated.prospectCompany}`,
-          performedBy: req.user?.id ?? undefined,
+          performedBy: req.user?.id ?? null,
           metadata: { autoFlagClientCreation: true },
           createdByUserId: req.user?.id || 'system',
         });
@@ -294,7 +294,7 @@ router.post("/:id/activities", async (req: AuthenticatedRequest, res) => {
         activityType: req.body.activityType || 'note',
         subject: req.body.description || req.body.activityType || 'note',
         notes: req.body.description,
-        performedBy: req.user?.id ?? undefined,
+        performedBy: req.user?.id ?? null,
         metadata: req.body.metadata || {},
         createdByUserId: req.user?.id || 'system',
       })

@@ -495,9 +495,9 @@ export default function CoAuditorDashboard() {
     mutationFn: () =>
       apiRequest("POST", "/api/auditor/audits", {
         workspaceId: reqWorkspaceId,
-        licenseNumber: reqLicense || undefined,
-        orderDocUrl: reqOrderDoc || undefined,
-        notes: reqNotes || undefined,
+        licenseNumber: reqLicense || null,
+        orderDocUrl: reqOrderDoc || null,
+        notes: reqNotes || null,
       }),
     onSuccess: () => {
       toast({ title: "Audit request queued" });

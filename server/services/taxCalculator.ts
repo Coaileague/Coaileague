@@ -296,10 +296,10 @@ export function calculateTaxes(params: {
   // Federal income tax (simplified 2024 rates)
   const federalRates = {
     single: [
-      { limit: 11600, rate: 0.10 },
-      { limit: 47150, rate: 0.12 },
-      { limit: 100525, rate: 0.22 },
-      { limit: Infinity, rate: 0.24 }
+      { limit: 11600, rate: '0.10' },
+      { limit: 47150, rate: '0.12' },
+      { limit: 100525, rate: '0.22' },
+      { limit: Infinity, rate: '0.24' }
     ]
   };
 

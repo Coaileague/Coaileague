@@ -151,7 +151,7 @@ function IdentityDetail({ record }: { record: FullIdentityRecord }) {
             <Row label="Work ID">{record.workId && <CopyValue value={record.workId} label="Work ID" />}</Row>
             <Row label="Phone" value={record.phone} />
             <Row label="MFA">{record.mfaEnabled ? <Badge variant="secondary" className="text-xs">enabled</Badge> : <Badge variant="outline" className="text-xs">off</Badge>}</Row>
-            <Row label="Last Login" value={record.lastLoginAt ? new Date(record.lastLoginAt).toLocaleString() : undefined} />
+            <Row label="Last Login" value={record.lastLoginAt ? new Date(record.lastLoginAt).toLocaleString() : null} />
             {(record.accountLocked || (record.loginAttempts ?? 0) >= 3) && (
               <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-2 mt-1">
                 <Lock className="h-3.5 w-3.5 text-destructive" />
@@ -239,7 +239,7 @@ function IdentityDetail({ record }: { record: FullIdentityRecord }) {
               <Row label="Employee ID">{record.employeeNumber && <CopyValue value={record.employeeNumber} label="Employee Number" />}</Row>
               <Row label="Position" value={record.position} />
               <Row label="Department" value={record.department} />
-              <Row label="Hire Date" value={record.hireDate ? new Date(record.hireDate).toLocaleDateString() : undefined} />
+              <Row label="Hire Date" value={record.hireDate ? new Date(record.hireDate).toLocaleDateString() : null} />
               <Row label="Status">
                 {record.isActive
                   ? <Badge variant="secondary" className="text-xs">active</Badge>

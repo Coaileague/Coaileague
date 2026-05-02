@@ -654,7 +654,7 @@ class TrinityChatService {
       privacyCheck = await orgDataPrivacyGuard.canAccessWorkspaceData({
         userId,
         sessionWorkspaceId: workspaceId,
-        platformRole: userPlatformRole || undefined,
+        platformRole: userPlatformRole || null,
         entityType: 'trinity',
         actionType: 'chat',
         dataClassification: 'internal',
@@ -1182,7 +1182,7 @@ DO NOT:
     try {
       const eqSignal = trinityEQEngine.analyze(message, {
         userId,
-        userRole: workspaceRole || undefined,
+        userRole: workspaceRole || null,
         workspaceId,
         userName,
       });
@@ -1616,8 +1616,8 @@ Do NOT skip steps — decompose fully before concluding.`;
       userId,
       userMessage: message,
       assistantResponse: aiResponse.text,
-      actionId: aiResponse.toolCalls?.[0]?.name ?? undefined,
-      toolUsed: aiResponse.toolCalls?.[0]?.name ?? undefined,
+      actionId: aiResponse.toolCalls?.[0]?.name ?? null,
+      toolUsed: aiResponse.toolCalls?.[0]?.name ?? null,
     }).catch((err) => log.warn('[TrinityChatService] Fire-and-forget failed:', err));
 
     // === EPISODIC MEMORY STORE (non-blocking post-response) ===

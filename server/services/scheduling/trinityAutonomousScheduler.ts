@@ -209,7 +209,7 @@ interface SchedulingSession {
 
 const URGENCY_WEIGHTS = {
   hoursUntilStart: 0.35,
-  contractValue: 0.25,
+  contractValue: '0.25',
   clientTier: 0.20,
   daysUnfilled: 0.15,
   isRecurring: 0.05,
@@ -3004,7 +3004,7 @@ export class SchedulerEscalationChainService {
             success: true,
             assignedResourceId: overtimeEmployees[0].id,
             resourceType: 'internal',
-            cost: 1.5, // OT rate multiplier
+            cost: '1.5', // OT rate multiplier
             message: `Assigned to ${overtimeEmployees[0].firstName} (overtime)`,
           };
         }
@@ -3018,7 +3018,7 @@ export class SchedulerEscalationChainService {
             success: true,
             assignedResourceId: onCallPool[0].id,
             resourceType: 'internal',
-            cost: 1.25,
+            cost: '1.25',
             message: `Assigned to on-call: ${onCallPool[0].firstName}`,
           };
         }
@@ -3035,7 +3035,7 @@ export class SchedulerEscalationChainService {
             success: true,
             assignedResourceId: contractors[0].id,
             resourceType: 'contractor',
-            cost: 2.0, // Contractor rate multiplier
+            cost: '2.0', // Contractor rate multiplier
             message: `Contractor assigned: ${contractors[0].agencyName || contractors[0].firstName || 'Contract Worker'}`,
           };
         }
@@ -3047,7 +3047,7 @@ export class SchedulerEscalationChainService {
           success: false,
           assignedResourceId: null,
           resourceType: 'partner',
-          cost: 2.5,
+          cost: '2.5',
           message: 'Partner agency request initiated (pending approval)',
         };
         
@@ -3057,7 +3057,7 @@ export class SchedulerEscalationChainService {
           success: false,
           assignedResourceId: null,
           resourceType: 'external',
-          cost: 3.0,
+          cost: '3.0',
           message: 'External staffing request queued (requires management approval)',
         };
     }
@@ -3071,7 +3071,7 @@ export class SchedulerEscalationChainService {
       success: false,
       assignedResourceId: null,
       resourceType: 'external',
-      cost: 0,
+      cost: '0',
       message: 'All escalation tiers exhausted - requires manual intervention',
     };
   }

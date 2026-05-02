@@ -78,7 +78,7 @@ function LogInspectionDialog({ open, onOpenChange }: { open: boolean; onOpenChan
         weaponId,
         inspectionType,
         condition,
-        findings: findings || undefined,
+        findings: findings || null,
         inspectedAt: new Date().toISOString(),
       }),
     onSuccess: () => {
@@ -179,12 +179,12 @@ function RecordQualificationDialog({ open, onOpenChange }: { open: boolean; onOp
       apiRequest("POST", "/api/armory/qualifications", {
         employeeId,
         weaponType,
-        caliber: caliber || undefined,
+        caliber: caliber || null,
         qualifiedAt: new Date(qualifiedAt).toISOString(),
         expiresAt: new Date(expiresAt).toISOString(),
-        score: score ? Number(score) : undefined,
-        maxScore: maxScore ? Number(maxScore) : undefined,
-        instructorName: instructorName || undefined,
+        score: score ? Number(score) : null,
+        maxScore: maxScore ? Number(maxScore) : null,
+        instructorName: instructorName || null,
         status: "active",
       }),
     onSuccess: () => {
@@ -294,7 +294,7 @@ function ReceiveAmmoDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const createInventoryMut = useMutation({
     mutationFn: async () => {
       const inv = (await apiRequest("POST", "/api/armory/ammo", {
-        caliber, manufacturer: manufacturer || undefined,
+        caliber, manufacturer: manufacturer || null,
         quantityOnHand: 0,
         reorderThreshold: reorderThreshold ? Number(reorderThreshold) : 0,
       })) as unknown as { id: string };

@@ -505,7 +505,7 @@ export class PaystubService {
       socialSecurity: parseFloat(toFinancialString(row.socialSecurity || '0')),
       medicare: parseFloat(toFinancialString(row.medicare || '0')),
       totalDeductions: parseFloat(totalDeductionsStr),
-      totalHours: parseFloat(totalHoursStr),
+      totalHours: String(parseFloat(totalHoursStr)),
       regularHours: parseFloat(toFinancialString(row.regularHours || '0')),
       overtimeHours: parseFloat(toFinancialString(row.overtimeHours || '0')),
       payPeriodCount: parseInt(row.payPeriodCount),

@@ -49,7 +49,7 @@ function addDays(date: Date, days: number): Date {
 
 function scoreSection(answers: Record<string, string>, questions: typeof trainingQuestions.$inferSelect[]): { score: number; passed: boolean; missedTopics: string[] } {
   const sectionQuestions = questions.filter(q => !q.isFinalExam);
-  if (sectionQuestions.length === 0) return { score: 100, passed: true, missedTopics: [] };
+  if (sectionQuestions.length === 0) return { score: '100', passed: true, missedTopics: [] };
   let correct = 0;
   const missedTopics: string[] = [];
   for (const q of sectionQuestions) {

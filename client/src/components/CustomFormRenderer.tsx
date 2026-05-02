@@ -334,7 +334,7 @@ export function CustomFormRenderer({
     <FormShell
       variant="internal"
       title={template.title}
-      description={template.description || undefined}
+      description={template.description || null}
       actions={
         <FormPrimaryButton
           loading={isSubmitting}

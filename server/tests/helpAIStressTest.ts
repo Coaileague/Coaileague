@@ -817,7 +817,7 @@ async function testRatingRecordedInDb(): Promise<void> {
 
   // User rates 5 stars
   await updateSessionState(s.id, 'disconnected', {
-    satisfactionScore: 5,
+    satisfactionScore: '5',
     wasResolved: true,
     resolvedAt: new Date(),
     ratedAt: new Date(),

@@ -525,7 +525,7 @@ class BusinessOwnerAnalyticsService {
       totalActions: total,
       successfulActions: total,
       failedActions: 0,
-      successRate: 100
+      successRate: '100'
     };
   }
   

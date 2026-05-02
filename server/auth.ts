@@ -727,7 +727,7 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     return res.status(403).json({ message: lockStatus.message });
   }
 
-  trinityOrchestration.auth.requestAuthenticated(user.id, endpoint, method, user.currentWorkspaceId || undefined);
+  trinityOrchestration.auth.requestAuthenticated(user.id, endpoint, method, user.currentWorkspaceId || null);
 
   // Attach user to request
   req.user = user as typeof req.user;

@@ -189,7 +189,7 @@ export class TrinityLimbicSystem {
     const negativeCount = NEGATIVE_WORDS.filter(w => lowerText.includes(w)).length;
     const total = positiveCount + negativeCount;
 
-    if (total === 0) return { score: 0, label: 'neutral' };
+    if (total === 0) return { score: '0', label: 'neutral' };
 
     const score = (positiveCount - negativeCount) / total;
     const label = score > 0.15 ? 'positive' : score < -0.15 ? 'negative' : 'neutral';

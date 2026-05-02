@@ -35,7 +35,7 @@ export interface ChatExportData {
  */
 export async function generateChatPDF(data: ChatExportData): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 50, size: 'LETTER' });
+    const doc = new PDFDocument({ margin: '50', size: 'LETTER' });
     const buffers: Buffer[] = [];
 
     doc.on('data', (chunk: Buffer) => buffers.push(chunk));

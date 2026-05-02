@@ -103,7 +103,7 @@ export const OrnamentBall = memo(function OrnamentBall({
       viewBox="0 0 40 48"
       className={className}
       style={{
-        animation: animation ? ANIMATION_TOKENS[animation] : undefined,
+        animation: animation ? ANIMATION_TOKENS[animation] : null,
         filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))',
       }}
     >
@@ -192,7 +192,7 @@ export const FacetedStar = memo(function FacetedStar({
       viewBox="0 0 40 40"
       className={className}
       style={{
-        animation: animation ? ANIMATION_TOKENS[animation] : undefined,
+        animation: animation ? ANIMATION_TOKENS[animation] : null,
         filter: glow 
           ? `drop-shadow(0 0 8px ${color}) drop-shadow(0 0 16px ${color})`
           : 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
@@ -216,7 +216,7 @@ export const FacetedStar = memo(function FacetedStar({
       <path 
         d={starPath} 
         fill={`url(#${id}-facet)`}
-        filter={glow ? `url(#${id}-glow)` : undefined}
+        filter={glow ? `url(#${id}-glow)` : null}
       >
         {glow && (
           <animate 
@@ -276,7 +276,7 @@ export const ChristmasLight = memo(function ChristmasLight({
       viewBox="0 0 24 34"
       className={className}
       style={{
-        animation: animation ? ANIMATION_TOKENS[animation] : undefined,
+        animation: animation ? ANIMATION_TOKENS[animation] : null,
         filter: lit 
           ? `drop-shadow(0 0 6px ${color}) drop-shadow(0 0 12px ${color})`
           : 'none',
@@ -373,7 +373,7 @@ export const Snowflake = memo(function Snowflake({
       viewBox="0 0 30 30"
       className={className}
       style={{
-        animation: animation ? ANIMATION_TOKENS[animation] : undefined,
+        animation: animation ? ANIMATION_TOKENS[animation] : null,
         opacity,
         filter: 'drop-shadow(0 0 3px rgba(255,255,255,0.5))',
       }}
@@ -409,7 +409,7 @@ export const SantaSleigh = memo(function SantaSleigh({
       viewBox="0 0 120 60"
       className={className}
       style={{
-        transform: direction === 'ltr' ? 'scaleX(-1)' : undefined,
+        transform: direction === 'ltr' ? 'scaleX(-1)' : null,
         filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))',
       }}
     >

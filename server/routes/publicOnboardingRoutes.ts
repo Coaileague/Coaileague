@@ -745,9 +745,9 @@ router.post('/workspace-invite/register', async (req, res) => {
         firstName: resolvedFirstName,
         lastName: resolvedLastName,
         email: normalizedEmail,
-        phone: resolvedPhone || undefined,
+        phone: resolvedPhone || null,
         workspaceRole: role as unknown,
-        organizationalTitle: invite.organizationalTitle || undefined,
+        organizationalTitle: invite.organizationalTitle || null,
         isActive: true,
         hireDate: new Date(),
         // Default payroll classification so payroll readiness scanner doesn't flag immediately

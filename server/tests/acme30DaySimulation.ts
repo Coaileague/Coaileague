@@ -551,7 +551,7 @@ async function phase7_stripe() {
 
     // Charge $1.00 test invoice
     const pi = await stripe.paymentIntents.create({
-      amount:               100, // $1.00
+      amount:               '100', // $1.00
       currency:             'usd',
       customer:             customer.id,
       payment_method:       pm.id,

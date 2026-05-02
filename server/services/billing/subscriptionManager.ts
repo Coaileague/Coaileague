@@ -159,7 +159,7 @@ export class SubscriptionManager {
 
     // Create new Stripe customer
     const customer = await stripe.customers.create({
-      email: owner?.email || undefined,
+      email: owner?.email || null,
       metadata: {
         workspaceId: workspace.id,
         organizationId: workspace.organizationId || workspace.id,

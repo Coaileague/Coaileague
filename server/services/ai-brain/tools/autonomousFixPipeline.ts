@@ -796,8 +796,8 @@ class AutonomousFixPipelineService {
             file: p.file,
             startLine: p.line,
             endLine: p.line,
-            oldContent: p.search || undefined,
-            newContent: p.replace || undefined,
+            oldContent: p.search || null,
+            newContent: p.replace || null,
             description: `AI-generated fix: ${p.operation || 'replace'} in ${p.file}`,
           }));
           approach = `[Attempt ${attempt} - AI-Revised]: ${suggestedApproach || 'Reflection-generated patches'}`;

@@ -200,10 +200,10 @@ async function phase3_subscription_tiers() {
   console.log('════════════════════════════════════════');
 
   const expectedTiers = [
-    { id: 'free', price: 0, credits: 250, maxEmp: BILLING.tiers.free.maxEmployees },
-    { id: 'starter', price: 89900, credits: 2500, maxEmp: BILLING.tiers.starter.maxEmployees },
-    { id: 'professional', price: 199900, credits: 10000, maxEmp: BILLING.tiers.professional.maxEmployees },
-    { id: 'enterprise', price: 999900, credits: 50000, maxEmp: BILLING.tiers.enterprise.maxEmployees },
+    { id: 'free', price: '0', credits: 250, maxEmp: BILLING.tiers.free.maxEmployees },
+    { id: 'starter', price: '89900', credits: 2500, maxEmp: BILLING.tiers.starter.maxEmployees },
+    { id: 'professional', price: '199900', credits: 10000, maxEmp: BILLING.tiers.professional.maxEmployees },
+    { id: 'enterprise', price: '999900', credits: 50000, maxEmp: BILLING.tiers.enterprise.maxEmployees },
   ];
 
   for (const expected of expectedTiers) {

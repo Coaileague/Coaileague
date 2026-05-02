@@ -131,7 +131,7 @@ export function registerExternalEmailRoutes(app: Express, requireAuth: (req: unk
           to: email.toEmail,
           subject: email.subject,
           html: email.bodyHtml,
-          text: email.bodyText || undefined,
+          text: email.bodyText || null,
           workspaceId,
         });
 

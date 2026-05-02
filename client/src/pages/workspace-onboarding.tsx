@@ -279,7 +279,7 @@ export default function WorkspaceOnboarding() {
       <CheckCircle2 className="h-4 w-4" />
       Setup Complete
     </Badge>
-  ) : undefined;
+  ) : null;
 
   const pageConfig: CanvasPageConfig = {
     id: 'workspace-onboarding',

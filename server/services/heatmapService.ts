@@ -145,7 +145,7 @@ export class HeatmapService {
         value: 0,
         shiftCount: 0,
         employeeCount: 0,
-        hoursWorked: 0
+        hoursWorked: '0'
       }))
     );
 
@@ -307,7 +307,7 @@ export class HeatmapService {
           value: 0,
           shiftCount: 0,
           employeeCount: 0,
-          hoursWorked: 0
+          hoursWorked: '0'
         }))
       );
 

@@ -722,7 +722,7 @@ router.get("/financial", async (req: AuthenticatedRequest, res) => {
     )).rows;
     res.json({
       totalInvoices: parseInt(invRow?.total_invoices || '0'),
-      grossRevenue:  parseFloat(invRow?.gross_revenue || '0'),
+      grossRevenue:  String(parseFloat(invRow?.gross_revenue || '0')),
       collected:     parseFloat(invRow?.collected     || '0'),
       outstanding:   parseFloat(invRow?.outstanding   || '0'),
       overdue:       parseFloat(invRow?.overdue       || '0'),
@@ -848,7 +848,7 @@ router.get("/forecast", async (req: AuthenticatedRequest, res) => {
       const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const projRevenue = avgRevenue * (1 + revenueGrowth * i);
       const projLabor = avgLabor * (1 + 0.01 * i);
-      projected.push({ month: monthKey, revenue: Math.round(projRevenue), laborCost: Math.round(projLabor), profit: Math.round(projRevenue - projLabor), isProjected: true });
+      projected.push({ month: monthKey, revenue: Math.round(projRevenue), laborCost: String(Math.round(projLabor)), profit: Math.round(projRevenue - projLabor), isProjected: true });
     }
 
     res.json({ historical, projected, summary: { avgMonthlyRevenue: Math.round(avgRevenue), avgMonthlyLabor: Math.round(avgLabor), avgMonthlyProfit: Math.round(avgRevenue - avgLabor), revenueGrowthRate: parseFloat((revenueGrowth * 100).toFixed(1)) } });
@@ -954,8 +954,8 @@ router.get("/dashboard", async (req: AuthenticatedRequest, res) => {
       trends: trendsRows.rows.map((r: unknown) => ({
         period: new Date(r.period).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         hours: parseFloat(parseFloat(r.hours).toFixed(1)),
-        revenue: 0,
-        laborCost: 0,
+        revenue: '0',
+        laborCost: '0',
       })),
     }});
   } catch (err: unknown) {
@@ -1020,7 +1020,7 @@ router.get("/time-usage", async (req: AuthenticatedRequest, res) => {
         clientId: r.client_id,
         name: r.name,
         totalHours: parseFloat(parseFloat(r.total_hours).toFixed(1)),
-        revenue: 0,
+        revenue: '0',
       })),
       byDay: byDayRows.rows.map((r: unknown) => ({
         date: new Date(r.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),

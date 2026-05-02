@@ -887,9 +887,9 @@ export default function ProposalBuilderPage() {
         docType: "proposal",
         services: proposal.lineItems || [],
         billingTerms: { rate: proposal.lineItems?.[0]?.rate, term: proposal.contractTermMonths },
-        totalValue: proposal.totalValue ? Number(proposal.totalValue) : undefined,
+        totalValue: proposal.totalValue ? Number(proposal.totalValue) : null,
         specialTerms: proposal.termsAndConditions,
-        expiresAt: proposal.validUntil || undefined,
+        expiresAt: proposal.validUntil || null,
       });
       const contractId = contractRes.contract?.id;
       if (!contractId) throw new Error("Failed to create contract document");
@@ -906,7 +906,7 @@ export default function ProposalBuilderPage() {
         signerRole: "company",
         signerName: name,
         signerEmail: email,
-        signerTitle: title || undefined,
+        signerTitle: title || null,
         signatureType: "typed",
         signatureData: sigData,
         consentText: "I authorize this electronic signature on behalf of the company.",

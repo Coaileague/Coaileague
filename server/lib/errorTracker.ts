@@ -71,7 +71,7 @@ class HttpWebhookAdapter implements ErrorTrackerAdapter {
           context: event.context,
           source: 'coaileague',
           env: process.env.NODE_ENV || 'unknown',
-          host: process.env.HOSTNAME || undefined,
+          host: process.env.HOSTNAME || null,
         }),
         // 2-second cap — observability must never block the request.
         signal: AbortSignal.timeout(2000),

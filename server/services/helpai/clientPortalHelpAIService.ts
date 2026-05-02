@@ -544,7 +544,7 @@ export class ClientPortalHelpAIService {
     }
 
     const allMessages = session.messages;
-    const evidenceText = session.evidenceTexts.join('\n\n').trim() || undefined;
+    const evidenceText = session.evidenceTexts.join('\n\n').trim() || null;
 
     const sentiment = analyzeSentiment(allMessages);
     const severity = deriveSeverity(session.reportType, sentiment.frustrationSignals, allMessages.length);

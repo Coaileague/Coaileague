@@ -66,7 +66,7 @@ async function send(
       results.push({ name, error: msg });
       failed++;
     } else {
-      const id = (result as {data: unknown}).data?.id ?? '?';
+      const id = (result as {data: string}).data?.id ?? '?';
       console.log(`  ✅ [${name}] Sent — id=${id}`);
       results.push({ name, id });
       passed++;

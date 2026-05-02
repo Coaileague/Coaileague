@@ -2312,7 +2312,7 @@ class SubagentSupervisor {
         executionTimeMs: durationMs,
         retryCount,
         escalated: false,
-        confidenceScore: 1.0,
+        confidenceScore: '1.0',
       }).catch(err => log.error('[SubagentSupervisor] Failed to record confidence:', err));
 
       return {
@@ -2321,7 +2321,7 @@ class SubagentSupervisor {
         status: 'completed',
         result: currentResult,
         durationMs,
-        confidenceScore: 1.0,
+        confidenceScore: '1.0',
         retriesUsed: retryCount,
         creditsUsed,
         creditBalance: finalBalance,
@@ -2343,7 +2343,7 @@ class SubagentSupervisor {
         executionTimeMs: failureDurationMs,
         retryCount: 0,
         escalated: false,
-        confidenceScore: 0,
+        confidenceScore: '0',
       }).catch(err => log.error('[SubagentSupervisor] Failed to record failure confidence:', err));
       
       return this.createFailureResult('unexpected_error', error instanceof Error ? error.message : String(error), startTime);
@@ -2428,7 +2428,7 @@ class SubagentSupervisor {
               message: (error instanceof Error ? error.message : String(error)) || 'SLA timeout exceeded'
             },
             durationMs: slaTimeoutMs,
-            confidenceScore: 0
+            confidenceScore: '0'
           };
         }
       });
@@ -2524,7 +2524,7 @@ class SubagentSupervisor {
       return {
         totalFastModeExecutions: 0,
         avgTimesSaved: 0,
-        successRate: 100,
+        successRate: '100',
         popularDomains: []
       };
     }
@@ -2718,7 +2718,7 @@ class SubagentSupervisor {
             status: 'failed' as const,
             error: { code: 'sla_timeout', message: (error instanceof Error ? error.message : String(error)) },
             durationMs: slaTimeoutMs,
-            confidenceScore: 0
+            confidenceScore: '0'
           };
         }
       });
@@ -3573,7 +3573,7 @@ class SubagentSupervisor {
       error: { code, message },
       diagnostics,
       durationMs: Date.now() - startTime,
-      confidenceScore: 0,
+      confidenceScore: '0',
     };
   }
 
@@ -3585,7 +3585,7 @@ class SubagentSupervisor {
       diagnostics,
       escalated: true,
       durationMs: Date.now() - startTime,
-      confidenceScore: 0.5,
+      confidenceScore: '0.5',
     };
   }
 
@@ -3673,7 +3673,7 @@ class SubagentSupervisor {
         subagentId: subagent.id,
         name: subagent.name,
         status: lastTelemetry?.status || 'idle',
-        lastExecution: lastTelemetry?.createdAt ?? undefined,
+        lastExecution: lastTelemetry?.createdAt ?? null,
       });
     }
 
@@ -3732,7 +3732,7 @@ class SubagentSupervisor {
     for (const t of telemetryRecords) {
       const id = t.subagentId || 'unknown';
       if (!bySubagent[id]) {
-        bySubagent[id] = { executions: 0, retries: 0, successRate: 0 };
+        bySubagent[id] = { executions: 0, retries: 0, successRate: '0' };
       }
       bySubagent[id].executions++;
       bySubagent[id].retries += t.retryCount || 0;

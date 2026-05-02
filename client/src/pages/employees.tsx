@@ -239,7 +239,7 @@ function getRoleDot(workspaceRole: string | null | undefined, isArmed: boolean |
                       {ROLE_LABELS[normalizeRole(employee.workspaceRole)] || employee.workspaceRole}
                     </Badge>
                   )}
-                  {getOnboardingStatusBadge(employee.onboardingStatus ?? undefined)}
+                  {getOnboardingStatusBadge(employee.onboardingStatus ?? null)}
                 </div>
                 {/* Email sub-line */}
                 {employee.email && (
@@ -256,7 +256,7 @@ function getRoleDot(workspaceRole: string | null | undefined, isArmed: boolean |
                       variant="ghost" 
                       size="icon" 
                       className={isMobile ? "h-8 w-8 min-h-[44px] min-w-[44px] shrink-0 -mt-1 -mr-1" : "h-6 w-6 shrink-0 -mt-1 -mr-1"}
-                      style={isMobile ? { touchAction: 'manipulation' } : undefined}
+                      style={isMobile ? { touchAction: 'manipulation' } : null}
                       data-testid={`button-employee-menu-${employee.id}`}
                       aria-label="Employee menu"
                     >
@@ -572,13 +572,13 @@ export default function Employees() {
     
     const validatedData = insertEmployeeSchema.parse({
       ...formData,
-      hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate as string).toString() : undefined,
-      platformRole: formData.platformRole || undefined,
+      hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate as string).toString() : null,
+      platformRole: formData.platformRole || null,
       workspaceId: workspaceId!,
       isActive: true,
       isArmed: formData.isArmed ?? false,
       workerType: (formData.workerType as "employee" | "contractor") || (formData.payType === 'contractor' ? 'contractor' : 'employee'),
-      guardCardNumber: (formData.guardCardNumber as string) || undefined,
+      guardCardNumber: (formData.guardCardNumber as string) || null,
     });
 
     createMutation.mutate(validatedData);
@@ -928,10 +928,10 @@ export default function Employees() {
         firstName: editFormData.firstName,
         lastName: editFormData.lastName,
         email: editFormData.email,
-        phone: editFormData.phone || undefined,
-        role: editFormData.role || undefined,
+        phone: editFormData.phone || null,
+        role: editFormData.role || null,
         organizationalTitle: editFormData.organizationalTitle || "staff",
-        hourlyRate: editFormData.hourlyRate ? editFormData.hourlyRate.toString() : undefined,
+        hourlyRate: editFormData.hourlyRate ? editFormData.hourlyRate.toString() : null,
       },
     });
   };

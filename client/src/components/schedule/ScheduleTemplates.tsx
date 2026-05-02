@@ -152,7 +152,7 @@ export function ScheduleTemplates({
 
     createTemplateMutation.mutate({
       name: templateName.trim(),
-      description: templateDescription.trim() || undefined,
+      description: templateDescription.trim() || null,
       shifts: templateShifts,
     });
   };

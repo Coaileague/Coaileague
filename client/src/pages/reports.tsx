@@ -66,7 +66,7 @@ function ReportSubmissionForm({ template, onSubmit, onCancel, isSubmitting }: Re
         } else {
           validator = z.string()
             .optional()
-            .transform((val) => val && val.trim() !== "" ? Number(val) : undefined)
+            .transform((val) => val && val.trim() !== "" ? Number(val) : null)
             .refine((val) => val === undefined || !isNaN(val as number), {
               message: `${field.label} must be a valid number`,
             });
@@ -129,8 +129,8 @@ function ReportSubmissionForm({ template, onSubmit, onCancel, isSubmitting }: Re
                   ) : field.type === "select" && field.options ? (
                     <Select 
                       onValueChange={formField.onChange} 
-                      value={formField.value || undefined}
-                      defaultValue={formField.value || undefined}
+                      value={formField.value || null}
+                      defaultValue={formField.value || null}
                     >
                       <SelectTrigger data-testid={`select-${field.name}`}>
                         <SelectValue placeholder={`Select ${field.label.toLowerCase()}`} />

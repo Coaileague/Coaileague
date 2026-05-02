@@ -440,7 +440,7 @@ class ToolCapabilityRegistry {
       lastCheck: new Date(),
       responseTime: 0,
       uptime: 100,
-      errorRate: 0,
+      errorRate: '0',
       consecutiveFailures: 0,
     });
 

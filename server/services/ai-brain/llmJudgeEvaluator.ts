@@ -126,33 +126,33 @@ export interface ConsensusEvaluationResult {
 // Default evaluation criteria templates
 export const EVALUATION_TEMPLATES = {
   code_quality: [
-    { name: 'correctness', description: 'Does the code do what it should?', weight: 0.3, scoringGuide: '1-5: Completely broken to perfectly correct', minScore: 1, maxScore: 5, failThreshold: 2 },
-    { name: 'readability', description: 'Is the code easy to understand?', weight: 0.2, scoringGuide: '1-5: Unreadable to crystal clear', minScore: 1, maxScore: 5 },
-    { name: 'efficiency', description: 'Is the code performant?', weight: 0.15, scoringGuide: '1-5: Very slow to highly optimized', minScore: 1, maxScore: 5 },
-    { name: 'security', description: 'Does the code follow security best practices?', weight: 0.2, scoringGuide: '1-5: Vulnerable to bulletproof', minScore: 1, maxScore: 5, failThreshold: 2 },
-    { name: 'maintainability', description: 'Can the code be easily maintained?', weight: 0.15, scoringGuide: '1-5: Nightmare to effortless', minScore: 1, maxScore: 5 },
+    { name: 'correctness', description: 'Does the code do what it should?', weight: '0.3', scoringGuide: '1-5: Completely broken to perfectly correct', minScore: 1, maxScore: 5, failThreshold: 2 },
+    { name: 'readability', description: 'Is the code easy to understand?', weight: '0.2', scoringGuide: '1-5: Unreadable to crystal clear', minScore: 1, maxScore: 5 },
+    { name: 'efficiency', description: 'Is the code performant?', weight: '0.15', scoringGuide: '1-5: Very slow to highly optimized', minScore: 1, maxScore: 5 },
+    { name: 'security', description: 'Does the code follow security best practices?', weight: '0.2', scoringGuide: '1-5: Vulnerable to bulletproof', minScore: 1, maxScore: 5, failThreshold: 2 },
+    { name: 'maintainability', description: 'Can the code be easily maintained?', weight: '0.15', scoringGuide: '1-5: Nightmare to effortless', minScore: 1, maxScore: 5 },
   ] as EvaluationCriteria[],
   
   text_quality: [
-    { name: 'clarity', description: 'Is the message clear and understandable?', weight: 0.25, scoringGuide: '1-5: Confusing to crystal clear', minScore: 1, maxScore: 5 },
-    { name: 'completeness', description: 'Does it cover all necessary points?', weight: 0.25, scoringGuide: '1-5: Missing key info to comprehensive', minScore: 1, maxScore: 5 },
-    { name: 'tone', description: 'Is the tone appropriate for the context?', weight: 0.2, scoringGuide: '1-5: Inappropriate to perfectly suited', minScore: 1, maxScore: 5, failThreshold: 2 },
-    { name: 'accuracy', description: 'Is the information factually correct?', weight: 0.3, scoringGuide: '1-5: Incorrect to verified accurate', minScore: 1, maxScore: 5, failThreshold: 3 },
+    { name: 'clarity', description: 'Is the message clear and understandable?', weight: '0.25', scoringGuide: '1-5: Confusing to crystal clear', minScore: 1, maxScore: 5 },
+    { name: 'completeness', description: 'Does it cover all necessary points?', weight: '0.25', scoringGuide: '1-5: Missing key info to comprehensive', minScore: 1, maxScore: 5 },
+    { name: 'tone', description: 'Is the tone appropriate for the context?', weight: '0.2', scoringGuide: '1-5: Inappropriate to perfectly suited', minScore: 1, maxScore: 5, failThreshold: 2 },
+    { name: 'accuracy', description: 'Is the information factually correct?', weight: '0.3', scoringGuide: '1-5: Incorrect to verified accurate', minScore: 1, maxScore: 5, failThreshold: 3 },
   ] as EvaluationCriteria[],
   
   decision_quality: [
-    { name: 'reasoning', description: 'Is the reasoning sound and logical?', weight: 0.3, scoringGuide: '1-5: Illogical to impeccable reasoning', minScore: 1, maxScore: 5 },
-    { name: 'risk_assessment', description: 'Are risks properly considered?', weight: 0.25, scoringGuide: '1-5: Ignores risks to thorough analysis', minScore: 1, maxScore: 5 },
-    { name: 'alternatives', description: 'Were alternatives considered?', weight: 0.2, scoringGuide: '1-5: No alternatives to comprehensive options', minScore: 1, maxScore: 5 },
-    { name: 'implementation_feasibility', description: 'Is the decision implementable?', weight: 0.25, scoringGuide: '1-5: Impractical to easily actionable', minScore: 1, maxScore: 5 },
+    { name: 'reasoning', description: 'Is the reasoning sound and logical?', weight: '0.3', scoringGuide: '1-5: Illogical to impeccable reasoning', minScore: 1, maxScore: 5 },
+    { name: 'risk_assessment', description: 'Are risks properly considered?', weight: '0.25', scoringGuide: '1-5: Ignores risks to thorough analysis', minScore: 1, maxScore: 5 },
+    { name: 'alternatives', description: 'Were alternatives considered?', weight: '0.2', scoringGuide: '1-5: No alternatives to comprehensive options', minScore: 1, maxScore: 5 },
+    { name: 'implementation_feasibility', description: 'Is the decision implementable?', weight: '0.25', scoringGuide: '1-5: Impractical to easily actionable', minScore: 1, maxScore: 5 },
   ] as EvaluationCriteria[],
   
   plan_quality: [
-    { name: 'completeness', description: 'Does the plan cover all requirements?', weight: 0.25, scoringGuide: '1-5: Missing key steps to comprehensive', minScore: 1, maxScore: 5 },
-    { name: 'sequencing', description: 'Are steps in the right order?', weight: 0.2, scoringGuide: '1-5: Wrong order to optimal sequence', minScore: 1, maxScore: 5 },
-    { name: 'feasibility', description: 'Is the plan realistic?', weight: 0.25, scoringGuide: '1-5: Impossible to achievable', minScore: 1, maxScore: 5 },
-    { name: 'contingency', description: 'Are fallback plans included?', weight: 0.15, scoringGuide: '1-5: No fallbacks to robust contingencies', minScore: 1, maxScore: 5 },
-    { name: 'resource_estimation', description: 'Are resources properly estimated?', weight: 0.15, scoringGuide: '1-5: Wildly off to accurate', minScore: 1, maxScore: 5 },
+    { name: 'completeness', description: 'Does the plan cover all requirements?', weight: '0.25', scoringGuide: '1-5: Missing key steps to comprehensive', minScore: 1, maxScore: 5 },
+    { name: 'sequencing', description: 'Are steps in the right order?', weight: '0.2', scoringGuide: '1-5: Wrong order to optimal sequence', minScore: 1, maxScore: 5 },
+    { name: 'feasibility', description: 'Is the plan realistic?', weight: '0.25', scoringGuide: '1-5: Impossible to achievable', minScore: 1, maxScore: 5 },
+    { name: 'contingency', description: 'Are fallback plans included?', weight: '0.15', scoringGuide: '1-5: No fallbacks to robust contingencies', minScore: 1, maxScore: 5 },
+    { name: 'resource_estimation', description: 'Are resources properly estimated?', weight: '0.15', scoringGuide: '1-5: Wildly off to accurate', minScore: 1, maxScore: 5 },
   ] as EvaluationCriteria[],
 };
 
@@ -285,12 +285,12 @@ class LLMJudgeEvaluator {
       return {
         evaluationId,
         timestamp: new Date(),
-        overallScore: 0,
+        overallScore: '0',
         overallVerdict: 'rejected',
         passed: false,
         criteriaScores: request.criteria.map(c => ({
           criteriaName: c.name,
-          score: 0,
+          score: '0',
           maxScore: c.maxScore,
           normalizedScore: 0,
           rationale: 'Evaluation failed',
@@ -302,7 +302,7 @@ class LLMJudgeEvaluator {
         suggestions: ['Retry evaluation'],
         evaluatorPersona: persona,
         evaluationTimeMs: Date.now() - startTime,
-        confidenceScore: 0,
+        confidenceScore: '0',
         auditTrail: this.createAuditEntry(evaluationId, request),
       };
     }
@@ -376,7 +376,7 @@ class LLMJudgeEvaluator {
       criteria: [{
         name: criterion,
         description: criterion,
-        weight: 1,
+        weight: '1',
         scoringGuide: '1-5 scale',
         minScore: 1,
         maxScore: 5,

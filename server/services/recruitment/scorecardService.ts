@@ -149,7 +149,7 @@ export async function generateComprehensiveScorecard(
     const scorecardValues = {
       workspaceId,
       candidateId,
-      qualificationScore: candidate.qualificationScore ?? undefined,
+      qualificationScore: candidate.qualificationScore ?? null,
       communicationScore: sessionScores.emailRound1?.score ?? sessionScores.emailRound2?.score,
       availabilityScore: undefined,
       experienceScore: undefined,

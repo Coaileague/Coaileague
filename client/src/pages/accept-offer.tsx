@@ -121,7 +121,7 @@ export default function AcceptOffer() {
     mutationFn: async () => {
       const res = await apiRequest("POST", `/api/enterprise/public/offer/${offerId}/decline`, {
         token,
-        reason: declineReason || undefined,
+        reason: declineReason || null,
       });
       return res.json();
     },

@@ -117,7 +117,7 @@ export default function IncidentPipeline() {
   const [managerNotes, setManagerNotes] = useState("");
 
   const { data: listData, isLoading: listLoading, isError: listError, refetch: refetchList } = useQuery<{ incidents: Incident[]; total: number }>({
-    queryKey: ["/api/incident-reports", { status: statusFilter === "all" ? undefined : statusFilter, search: searchTerm || undefined, limit: 100 }],
+    queryKey: ["/api/incident-reports", { status: statusFilter === "all" ? undefined : statusFilter, search: searchTerm || null, limit: 100 }],
   });
 
   const { data: detail, isLoading: detailLoading } = useQuery<Incident & { activities: Activity[] }>({
@@ -157,7 +157,7 @@ export default function IncidentPipeline() {
   const incidents = listData?.incidents || [];
 
   const handleStatusChange = (id: string, newStatus: string) => {
-    statusMutation.mutate({ id, status: newStatus, reviewNotes: managerNotes || undefined });
+    statusMutation.mutate({ id, status: newStatus, reviewNotes: managerNotes || null });
   };
 
   if (selectedId && detailLoading) {

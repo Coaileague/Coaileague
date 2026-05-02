@@ -301,7 +301,7 @@ class HelpAIBotService {
         id: r.id,
         question: r.question,
         answer: r.answer,
-        score: 0.5,
+        score: '0.5',
       }));
     } catch (error) {
       log.error(`[${HELPAI.name}] Fallback FAQ search failed:`, error);
@@ -1512,7 +1512,7 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
         shouldRespond: true,
         tokenUsage: {
           totalTokens: 200, // Estimated
-          totalCost: 0.001,
+          totalCost: '0.001',
         },
       };
     } catch (error) {
@@ -1566,7 +1566,7 @@ ALWAYS: Make them feel heard. Make them feel helped. Make them feel valued.${fal
         name,
         role,
         context.workspaceId || 'default',
-        contextStr || undefined
+        contextStr || null
       );
 
       // Append ticket reference if the AI didn't include it

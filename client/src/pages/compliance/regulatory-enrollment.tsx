@@ -137,12 +137,12 @@ export default function RegulatoryEnrollmentPage() {
     if (!selected) return;
     submitMutation.mutate({
       credentialType: selected,
-      cardNumber: form.cardNumber || undefined,
+      cardNumber: form.cardNumber || null,
       issuingState: form.issuingState,
       issuingAgency: form.issuingAgency,
-      expirationDate: form.expirationDate || undefined,
-      fileUrl: form.fileUrl || undefined,
-      notes: form.notes || undefined,
+      expirationDate: form.expirationDate || null,
+      fileUrl: form.fileUrl || null,
+      notes: form.notes || null,
     });
   }
 

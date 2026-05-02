@@ -74,7 +74,7 @@ export default function WorkflowApprovals() {
     approveProposal({
       id: selectedProposal.id,
       action: approvalAction,
-      reason: approvalAction === 'reject' ? rejectionReason : undefined,
+      reason: approvalAction === 'reject' ? rejectionReason : null,
       type: proposalType,
     });
     

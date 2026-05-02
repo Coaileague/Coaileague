@@ -304,7 +304,7 @@ class WeeklyBillingRunServiceImpl {
         completedAt: new Date(),
         workspacesProcessed: 0,
         invoicesGenerated: 0,
-        totalAmount: 0,
+        totalAmount: '0',
         errors: [{ workspaceId: 'system', error: lockCheck.reason || 'Blocked', errorType: 'system' }],
         skipped: [],
       };
@@ -319,7 +319,7 @@ class WeeklyBillingRunServiceImpl {
         completedAt: new Date(),
         workspacesProcessed: 0,
         invoicesGenerated: 0,
-        totalAmount: 0,
+        totalAmount: '0',
         errors: [{ workspaceId: 'system', error: 'Failed to acquire run lock', errorType: 'system' }],
         skipped: [],
       };
@@ -542,7 +542,7 @@ class WeeklyBillingRunServiceImpl {
         return {
           workspaceId,
           success: true,
-          totalAmount: 0,
+          totalAmount: '0',
         };
       }
 

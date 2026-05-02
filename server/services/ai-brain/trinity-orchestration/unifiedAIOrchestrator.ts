@@ -303,7 +303,7 @@ class UnifiedAIOrchestrator {
     return {
       success: false,
       reason: 'Rejected by Claude verification',
-      details: verification.rejectionReason || undefined,
+      details: verification.rejectionReason || null,
       verification,
     };
   }

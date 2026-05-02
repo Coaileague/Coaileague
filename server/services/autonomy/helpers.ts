@@ -171,7 +171,7 @@ export async function executeIdempotencyCheck(params: IdempotencyParams): Promis
   
   return {
     isNew: false,
-    existingResultId: row.result_id || undefined,
+    existingResultId: row.result_id || null,
     idempotencyKeyId: row.id,
     status: row.status as IdempotencyStatus,
   };

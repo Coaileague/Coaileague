@@ -1147,9 +1147,9 @@ class TrinityProactiveScannerService {
         .catch(() => []);
       const todayOpen = openRows.filter(s => new Date(s.startTime) <= new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59));
       if (todayOpen.length > 0) {
-        items.push({ urgency: 'critical', title: `${todayOpen.length} unfilled shift(s) starting today`, detail: `Immediate coverage required. Officers not yet assigned for today's shifts.`, actionHint: 'Use schedule.auto_fill_shift to attempt immediate fill', score: 100 });
+        items.push({ urgency: 'critical', title: `${todayOpen.length} unfilled shift(s) starting today`, detail: `Immediate coverage required. Officers not yet assigned for today's shifts.`, actionHint: 'Use schedule.auto_fill_shift to attempt immediate fill', score: '100' });
       } else if (openRows.length > 0) {
-        items.push({ urgency: 'high', title: `${openRows.length} open shift(s) this week`, detail: `${openRows.length} shift(s) over the next 7 days have no assigned officer.`, actionHint: 'Use schedule.scan_open_shifts then schedule.auto_fill_shift', score: 75 });
+        items.push({ urgency: 'high', title: `${openRows.length} open shift(s) this week`, detail: `${openRows.length} shift(s) over the next 7 days have no assigned officer.`, actionHint: 'Use schedule.scan_open_shifts then schedule.auto_fill_shift', score: '75' });
       }
     } catch (scanErr) { log.warn("[TrinityProactiveScanner] Non-fatal scan section error:", scanErr instanceof Error ? scanErr.message : String(scanErr)); }
 
@@ -1160,7 +1160,7 @@ class TrinityProactiveScannerService {
         .where(and(eq(timeEntries.workspaceId, workspaceId), eq(timeEntries.status, 'pending'), lte(timeEntries.updatedAt, yesterday)))
         .catch(() => []);
       if (pendingTimesheets.length > 0) {
-        items.push({ urgency: 'high', title: `${pendingTimesheets.length} timesheet(s) pending >24 hours`, detail: `Timesheets have been waiting for approval longer than a business day. Delays affect payroll accuracy.`, actionHint: 'Use timesheet.auto_approve_clean or notify approvers', score: 70 });
+        items.push({ urgency: 'high', title: `${pendingTimesheets.length} timesheet(s) pending >24 hours`, detail: `Timesheets have been waiting for approval longer than a business day. Delays affect payroll accuracy.`, actionHint: 'Use timesheet.auto_approve_clean or notify approvers', score: '70' });
       }
     } catch (scanErr) { log.warn("[TrinityProactiveScanner] Non-fatal scan section error:", scanErr instanceof Error ? scanErr.message : String(scanErr)); }
 
@@ -1171,7 +1171,7 @@ class TrinityProactiveScannerService {
         .where(and(eq(employeeDocuments.workspaceId, workspaceId), gte(employeeDocuments.expirationDate, now), lte(employeeDocuments.expirationDate, next7)))
         .catch(() => []);
       if (expiringRows.length > 0) {
-        items.push({ urgency: 'high', title: `${expiringRows.length} certification(s) expiring this week`, detail: `Officers with expiring certs may be pulled from future shifts. Renewal must start immediately.`, actionHint: 'Use compliance.flag_expiring then compliance.request_document', score: 68 });
+        items.push({ urgency: 'high', title: `${expiringRows.length} certification(s) expiring this week`, detail: `Officers with expiring certs may be pulled from future shifts. Renewal must start immediately.`, actionHint: 'Use compliance.flag_expiring then compliance.request_document', score: '68' });
       }
     } catch (scanErr) { log.warn("[TrinityProactiveScanner] Non-fatal scan section error:", scanErr instanceof Error ? scanErr.message : String(scanErr)); }
 
@@ -1189,9 +1189,9 @@ class TrinityProactiveScannerService {
     try {
       const cashGap = await computeCashFlowGap(workspaceId, 7);
       if (cashGap.riskLevel === 'critical') {
-        items.push({ urgency: 'critical', title: `Cash flow gap — payroll at risk`, detail: `Upcoming payroll: $${cashGap.upcomingPayroll.toLocaleString()}. Receivables due before payroll: $${cashGap.receivablesDueBeforePayroll.toLocaleString()}. Shortfall: $${Math.abs(cashGap.cashGap).toLocaleString()}.`, actionHint: 'Use invoice.run_cycle to accelerate collections immediately', dollarImpact: Math.abs(cashGap.cashGap), score: 95 });
+        items.push({ urgency: 'critical', title: `Cash flow gap — payroll at risk`, detail: `Upcoming payroll: $${cashGap.upcomingPayroll.toLocaleString()}. Receivables due before payroll: $${cashGap.receivablesDueBeforePayroll.toLocaleString()}. Shortfall: $${Math.abs(cashGap.cashGap).toLocaleString()}.`, actionHint: 'Use invoice.run_cycle to accelerate collections immediately', dollarImpact: Math.abs(cashGap.cashGap), score: '95' });
       } else if (cashGap.riskLevel === 'warning') {
-        items.push({ urgency: 'high', title: `Tight cash position before payroll`, detail: `$${cashGap.cashGap.toLocaleString()} buffer against upcoming payroll. Accelerate invoice collections.`, actionHint: 'Review aging report with finance.aging_report', dollarImpact: cashGap.cashGap, score: 60 });
+        items.push({ urgency: 'high', title: `Tight cash position before payroll`, detail: `$${cashGap.cashGap.toLocaleString()} buffer against upcoming payroll. Accelerate invoice collections.`, actionHint: 'Review aging report with finance.aging_report', dollarImpact: cashGap.cashGap, score: '60' });
       }
     } catch (scanErr) { log.warn("[TrinityProactiveScanner] Non-fatal scan section error:", scanErr instanceof Error ? scanErr.message : String(scanErr)); }
 
@@ -1203,7 +1203,7 @@ class TrinityProactiveScannerService {
         .catch(() => []);
       const overdueDelegated = overdueTasksRaw.filter((t: unknown) => t.inputParams?.dueBy && new Date(t.inputParams.dueBy) < now);
       if (overdueDelegated.length > 0) {
-        items.push({ urgency: 'high', title: `${overdueDelegated.length} delegated task(s) past due`, detail: `Trinity assigned these tasks but completion has not been verified. Escalation may be needed.`, actionHint: 'Use task.track_overdue then task.escalate for each overdue task', score: 72 });
+        items.push({ urgency: 'high', title: `${overdueDelegated.length} delegated task(s) past due`, detail: `Trinity assigned these tasks but completion has not been verified. Escalation may be needed.`, actionHint: 'Use task.track_overdue then task.escalate for each overdue task', score: '72' });
       }
     } catch (scanErr) { log.warn("[TrinityProactiveScanner] Non-fatal scan section error:", scanErr instanceof Error ? scanErr.message : String(scanErr)); }
 
@@ -1228,7 +1228,7 @@ class TrinityProactiveScannerService {
         ))
         .catch(() => []);
       if (unconfirmedTomorrow.length > 0) {
-        items.push({ urgency: 'high', title: `${unconfirmedTomorrow.length} unconfirmed shift(s) tomorrow`, detail: `Officers have not confirmed attendance for tomorrow's shifts. Risk of no-show coverage gaps.`, actionHint: 'Use shift.flag_unconfirmed to notify supervisors', score: 78 });
+        items.push({ urgency: 'high', title: `${unconfirmedTomorrow.length} unconfirmed shift(s) tomorrow`, detail: `Officers have not confirmed attendance for tomorrow's shifts. Risk of no-show coverage gaps.`, actionHint: 'Use shift.flag_unconfirmed to notify supervisors', score: '78' });
       }
     } catch (scanErr) { log.warn("[TrinityProactiveScanner] Non-fatal scan section error:", scanErr instanceof Error ? scanErr.message : String(scanErr)); }
 
@@ -1252,7 +1252,7 @@ class TrinityProactiveScannerService {
           title: `${activePanics.length} unresolved panic alert(s)`,
           detail: `${activePanics.length} officer panic alert(s) from the last 24 hours remain open and unacknowledged. All affected officers must be verified safe and each alert formally resolved.`,
           actionHint: 'Review Field Operations → Panic Alerts immediately and document resolution',
-          score: 100,
+          score: '100',
         });
       }
     } catch (scanErr) { log.warn("[TrinityProactiveScanner] Non-fatal scan section error:", scanErr instanceof Error ? scanErr.message : String(scanErr)); }
@@ -1313,7 +1313,7 @@ class TrinityProactiveScannerService {
           detail: `$${totalSevere.toLocaleString()} in severely aged receivables from: ${clientDetails}. These clients represent collection risk and potential margin erosion if service continues without payment.`,
           actionHint: 'Use invoice.run_cycle for automated reminders, then escalate to client conversation for 60+ day accounts',
           dollarImpact: totalSevere,
-          score: 88,
+          score: '88',
         });
       }
     } catch (scanErr) { log.warn("[TrinityProactiveScanner] Non-fatal cross-domain insight error:", scanErr instanceof Error ? scanErr.message : String(scanErr)); }
@@ -1371,7 +1371,7 @@ class TrinityProactiveScannerService {
           title: `${openInterventions.length} open training intervention(s)`,
           detail: `Officers flagged for mandatory training intervention. Each intervention must be scheduled and resolved to restore compliance score.`,
           actionHint: 'Use training.check_compliance to review flagged officers and schedule remediation sessions',
-          score: 74,
+          score: '74',
         });
       }
     } catch (scanErr) { log.warn('[TrinityProactiveScanner] Non-fatal scan section error:', scanErr instanceof Error ? scanErr.message : String(scanErr)); }
@@ -1393,7 +1393,7 @@ class TrinityProactiveScannerService {
           title: `${expiringModuleCerts.length} training certificate(s) expiring this week`,
           detail: `Officers must retake and pass affected modules before expiry to avoid compliance score penalties and shift eligibility restrictions.`,
           actionHint: 'Use training.send_reminder to prompt affected officers and assign renewal attempts',
-          score: 66,
+          score: '66',
         });
       }
     } catch (scanErr) { log.warn('[TrinityProactiveScanner] Non-fatal scan section error:', scanErr instanceof Error ? scanErr.message : String(scanErr)); }

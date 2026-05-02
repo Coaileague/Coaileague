@@ -51,7 +51,7 @@ class BillingReconciliationService {
         featureKey: r.featureKey,
         events: r.totalEvents,
         totalUsageAmount: parseFloat(r.totalUsageAmount || '0'),
-        totalCost: parseFloat(r.totalCost || '0'),
+        totalCost: String(parseFloat(r.totalCost || '0')),
       })),
       byActorType: []
     };

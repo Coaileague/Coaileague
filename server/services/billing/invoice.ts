@@ -118,7 +118,7 @@ export class InvoiceService {
       lineItems.push({
         itemType: 'addon',
         description: `${addon.name} - ${this.formatPeriod(billingPeriodStart, billingPeriodEnd)}`,
-        quantity: 1,
+        quantity: '1',
         unitPrice: addon.price,
         amount: addon.price,
         addonId: addon.id,
@@ -361,7 +361,7 @@ export class InvoiceService {
         lineItems.push({
           itemType: 'addon',
           description: `Sub-Organization: ${label}${stateTag} — ${this.formatPeriod(periodStart, periodEnd)}${isNewThisPeriod ? ' (prorated)' : ''}`,
-          quantity: 1,
+          quantity: '1',
           unitPrice: proratedAmount,
           amount: proratedAmount,
           metadata: {
@@ -423,7 +423,7 @@ export class InvoiceService {
     const featureMap = new Map<string, { totalCost: number; totalUsage: number; totalEvents: number }>();
 
     for (const rollup of rollups) {
-      const existing = featureMap.get(rollup.featureKey) || { totalCost: 0, totalUsage: 0, totalEvents: 0 };
+      const existing = featureMap.get(rollup.featureKey) || { totalCost: '0', totalUsage: 0, totalEvents: 0 };
       existing.totalCost += Number(rollup.totalCost) || 0;
       existing.totalUsage += Number(rollup.totalUsageAmount) || 0;
       existing.totalEvents += rollup.totalEvents || 0;

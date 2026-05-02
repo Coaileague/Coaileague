@@ -207,9 +207,9 @@ function calculateSummary(entries: TimesheetReportEntry[]): TimesheetSummary {
     if (!byEmployee[entry.employeeId]) {
       byEmployee[entry.employeeId] = {
         name: entry.employeeName,
-        totalHours: 0,
-        regularHours: 0,
-        overtimeHours: 0,
+        totalHours: '0',
+        regularHours: '0',
+        overtimeHours: '0',
         entryCount: 0,
       };
     }
@@ -222,7 +222,7 @@ function calculateSummary(entries: TimesheetReportEntry[]): TimesheetSummary {
       if (!byClient[entry.clientId]) {
         byClient[entry.clientId] = {
           name: entry.clientName,
-          totalHours: 0,
+          totalHours: '0',
           entryCount: 0,
         };
       }

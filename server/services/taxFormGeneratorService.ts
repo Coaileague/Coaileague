@@ -250,14 +250,14 @@ export class TaxFormGeneratorService {
       const box12Entries: W2Box12Entry[] = deductionAggRows
         .map(row => ({
           code: DEDUCTION_TYPE_TO_W2_CODE[row.deductionType.toLowerCase()] || '',
-          amount: parseFloat(row.total || '0'),
+          amount: String(parseFloat(row.total || '0')),
         }))
         .filter(entry => entry.code !== '' && entry.amount > 0);
 
       const w2Data: W2Data = {
         employerEIN: (workspace as Record<string, unknown>).taxId || (workspace as Record<string, unknown>).ein || 'XX-XXXXXXX',
         employerName: (workspace as Record<string, unknown>).companyName || workspace.name || 'Employer',
-        employerAddress: (workspace as Record<string, unknown>).address || '',
+        employerAddress: (workspace as Record<string, string>).address || '',
         employeeSSN: maskSSN(payrollInfo?.ssn || (employee as EmployeeWithStatus).ssn || ''),
         employeeName: `${(employee as EmployeeWithStatus).firstName || ''} ${(employee as EmployeeWithStatus).lastName || ''}`.trim(),
         employeeAddress: (employee as EmployeeWithStatus).address || '',
@@ -350,7 +350,7 @@ export class TaxFormGeneratorService {
       const form1099Data: Form1099Data = {
         payerEIN: (workspace as Record<string, unknown>).taxId || (workspace as Record<string, unknown>).ein || 'XX-XXXXXXX',
         payerName: (workspace as Record<string, unknown>).companyName || workspace.name || 'Payer',
-        payerAddress: (workspace as Record<string, unknown>).address || '',
+        payerAddress: (workspace as Record<string, string>).address || '',
         recipientTIN: maskSSN(payrollInfo?.ssn || (employee as EmployeeWithStatus).ssn || ''),
         recipientName: `${(employee as EmployeeWithStatus).firstName || ''} ${(employee as EmployeeWithStatus).lastName || ''}`.trim(),
         recipientAddress: (employee as EmployeeWithStatus).address || '',
@@ -401,7 +401,7 @@ export class TaxFormGeneratorService {
 
   private async generateW2PDF(data: W2Data): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ size: 'LETTER', margin: 40 });
+      const doc = new PDFDocument({ size: 'LETTER', margin: '40' });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -581,7 +581,7 @@ export class TaxFormGeneratorService {
       const form940Data: Form940Data = {
         employerEIN: (workspace as Record<string, unknown>).taxId || (workspace as Record<string, unknown>).ein || 'XX-XXXXXXX',
         employerName: (workspace as Record<string, unknown>).companyName || workspace.name || 'Employer',
-        employerAddress: (workspace as Record<string, unknown>).address || '',
+        employerAddress: (workspace as Record<string, string>).address || '',
         taxYear: year,
         totalPayments,
         exemptPayments,
@@ -628,7 +628,7 @@ export class TaxFormGeneratorService {
 
   private async generate940PDF(data: Form940Data): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ size: 'LETTER', margin: 40 });
+      const doc = new PDFDocument({ size: 'LETTER', margin: '40' });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -730,7 +730,7 @@ export class TaxFormGeneratorService {
 
   private async generate1099PDF(data: Form1099Data): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ size: 'LETTER', margin: 40 });
+      const doc = new PDFDocument({ size: 'LETTER', margin: '40' });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -853,7 +853,7 @@ export class TaxFormGeneratorService {
       const form941Data: Form941Data = {
         employerEIN: (workspace as Record<string, unknown>).taxId || (workspace as Record<string, unknown>).ein || 'XX-XXXXXXX',
         employerName: (workspace as Record<string, unknown>).companyName || workspace.name || 'Employer',
-        employerAddress: (workspace as Record<string, unknown>).address || '',
+        employerAddress: (workspace as Record<string, string>).address || '',
         quarter,
         taxYear: year,
         line1_numberOfEmployees: numberOfEmployees,
@@ -939,7 +939,7 @@ export class TaxFormGeneratorService {
 
   private async generate941PDF(data: Form941Data): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ size: 'LETTER', margin: 40 });
+      const doc = new PDFDocument({ size: 'LETTER', margin: '40' });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));

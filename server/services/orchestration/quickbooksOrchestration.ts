@@ -523,7 +523,7 @@ class QuickBooksOrchestrationService {
    */
   private categorizeError(error: unknown): string {
     const message = ((error instanceof Error ? error.message : String(error)) || '').toLowerCase();
-    const status = (error as Record<string, unknown>).status;
+    const status = (error as Record<string, string>).status;
 
     if (status === 401 || message.includes('unauthorized') || message.includes('invalid_grant')) {
       return message.includes('invalid_grant') ? 'INVALID_GRANT' : 'UNAUTHORIZED';

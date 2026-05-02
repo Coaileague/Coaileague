@@ -221,7 +221,7 @@ router.post('/finalize', requireAuth, async (req: AuthenticatedRequest, res) => 
       sopViolationsFound: sopViolationsFound || [],
       severityLevel: severityLevel || 'moderate',
       rehabilitationSuggestions: rehabilitationSuggestions || [],
-      lodCount: lodCount ?? undefined,
+      lodCount: lodCount ?? null,
       generatedByTrinity: true,
     };
 

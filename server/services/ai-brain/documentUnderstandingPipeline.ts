@@ -458,7 +458,7 @@ Only include fields where data was found. Estimate confidence based on data clar
             phone: row['phone'] || row['telephone'] || row['mobile'] || '',
             position: row['position'] || row['title'] || row['job title'] || '',
             department: row['department'] || row['dept'] || '',
-            payRate: parseFloat(row['pay rate'] || row['rate'] || row['salary'] || '0') || undefined,
+            payRate: parseFloat(row['pay rate'] || row['rate'] || row['salary'] || '0') || null,
             payType: row['pay type']?.toLowerCase().includes('salary') ? 'salary' : 'hourly',
             confidence: 0.8
           });

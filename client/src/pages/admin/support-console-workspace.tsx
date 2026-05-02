@@ -518,7 +518,7 @@ export default function SupportConsoleWorkspacePage() {
                 workspaceId,
                 actionType: actionForm.actionType,
                 targetEntityType: actionForm.targetEntityType,
-                targetEntityId: actionForm.targetEntityId || undefined,
+                targetEntityId: actionForm.targetEntityId || null,
                 reason: actionForm.reason,
               })}
             >

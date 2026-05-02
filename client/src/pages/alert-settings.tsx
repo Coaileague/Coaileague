@@ -718,7 +718,7 @@ export default function AlertSettings() {
                 if (acknowledgeAlertId) {
                   acknowledgeMutation.mutate({
                     alertId: acknowledgeAlertId,
-                    notes: acknowledgeNotes || undefined,
+                    notes: acknowledgeNotes || null,
                   });
                 }
               }}

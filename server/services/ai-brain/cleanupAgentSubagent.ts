@@ -284,7 +284,7 @@ class CleanupAgentSubagent {
       if (typeof score !== 'number' || score < 0 || score > 1) {
         log.warn('[CAS] Invalid LLM Judge score, failing closed:', score);
         return {
-          score: 0.3,
+          score: '0.3',
           reasoning: 'Invalid score from LLM Judge - manual review required'
         };
       }
@@ -292,7 +292,7 @@ class CleanupAgentSubagent {
       if (typeof reasoning !== 'string' || reasoning.length < 10) {
         log.warn('[CAS] Missing LLM Judge reasoning, failing closed');
         return {
-          score: 0.3,
+          score: '0.3',
           reasoning: 'Missing reasoning from LLM Judge - manual review required'
         };
       }
@@ -301,7 +301,7 @@ class CleanupAgentSubagent {
     } catch (error) {
       log.error('[CAS] LLM Judge review failed:', error);
       return {
-        score: 0.3,
+        score: '0.3',
         reasoning: 'LLM Judge unavailable - manual review required'
       };
     }

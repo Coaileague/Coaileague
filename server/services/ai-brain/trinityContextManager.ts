@@ -308,7 +308,7 @@ class TrinityContextManager {
       return {
         sessionId: session.id,
         userId: session.userId,
-        workspaceId: session.workspaceId || undefined,
+        workspaceId: session.workspaceId || null,
         turns: turns.map(t => ({
           turnNumber: t.turnNumber,
           role: t.role as 'user' | 'assistant' | 'system' | 'tool',
@@ -316,8 +316,8 @@ class TrinityContextManager {
           contentType: (t.contentType || 'text') as 'text' | 'tool_call' | 'tool_result' | 'error',
           toolCalls: (t.toolCalls as ToolCall[]) || [],
           toolResults: (t.toolResults as ToolResult[]) || [],
-          confidenceScore: t.confidenceScore || undefined,
-          confidenceFactors: (t.confidenceFactors as ConfidenceFactorBreakdown) || undefined,
+          confidenceScore: t.confidenceScore || null,
+          confidenceFactors: (t.confidenceFactors as ConfidenceFactorBreakdown) || null,
           knowledgeGapDetected: t.knowledgeGapDetected || false,
           timestamp: t.createdAt || new Date(),
         })),
@@ -336,7 +336,7 @@ class TrinityContextManager {
     return {
       sessionId: session.id,
       userId: session.userId,
-      workspaceId: session.workspaceId || undefined,
+      workspaceId: session.workspaceId || null,
       turns: [],
       memory: this.createEmptyMemory(),
       metrics: this.createEmptyMetrics(),

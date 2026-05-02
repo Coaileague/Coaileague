@@ -89,7 +89,7 @@ class E2ECrawlRunner {
     
     this.browser = await puppeteer.launch({
       headless: true,
-      executablePath: chromiumPath || undefined,
+      executablePath: chromiumPath || null,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',

@@ -222,8 +222,8 @@ class InvoiceSubagentService {
           traceId,
           clientId,
           clientName: clientData.companyName || [clientData.firstName, clientData.lastName].filter(Boolean).join(' ') || 'Unknown',
-          totalAmount: 0,
-          totalHours: 0,
+          totalAmount: '0',
+          totalHours: '0',
           lineItemCount: 0,
           processingTimeMs: Date.now() - startTime,
           idempotencyKey,
@@ -325,8 +325,8 @@ class InvoiceSubagentService {
             traceId,
             clientId,
             clientName: clientData.companyName || [clientData.firstName, clientData.lastName].filter(Boolean).join(' ') || 'Unknown',
-            totalAmount: 0,
-            totalHours: 0,
+            totalAmount: '0',
+            totalHours: '0',
             lineItemCount: 0,
             processingTimeMs: Date.now() - startTime,
             idempotencyKey,
@@ -447,8 +447,8 @@ class InvoiceSubagentService {
         traceId,
         clientId,
         clientName: 'Unknown',
-        totalAmount: 0,
-        totalHours: 0,
+        totalAmount: '0',
+        totalHours: '0',
         lineItemCount: 0,
         processingTimeMs: Date.now() - startTime,
         idempotencyKey,
@@ -493,7 +493,7 @@ class InvoiceSubagentService {
       this.logAudit(traceId, 'invoice.batch_generate', 'billing_failed', { error: feeErr instanceof Error ? feeErr.message : String(feeErr) });
       return {
         totalGenerated: 0,
-        totalRevenue: 0,
+        totalRevenue: '0',
         results: [],
         failedClients: [`billing: ${feeErr instanceof Error ? feeErr.message : String(feeErr)}`],
       };
@@ -541,7 +541,7 @@ class InvoiceSubagentService {
               featureKey: 'ai_invoice_generation',
               featureName: 'Per-Invoice AI Generation',
               description: `Invoice ${result.invoiceId || 'unknown'} — per-occurrence fee (${perInvoiceFee}cr) for client ${clientId.substring(0, 12)}`,
-              quantity: 1,
+              quantity: '1',
             });
             log.info(`[InvoiceSubagent] Per-invoice fee charged: ${perInvoiceFee}cr for invoice ${result.invoiceId}`);
           } catch (invoiceErr : unknown) {
@@ -713,7 +713,7 @@ class InvoiceSubagentService {
 
       const existing = clientGapsMap.get(entry.clientId) || {
         hours: 0,
-        revenue: 0,
+        revenue: '0',
         oldestDate: new Date(),
       };
 

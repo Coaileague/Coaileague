@@ -169,8 +169,8 @@ function getSessionsForCandidate(email: string): SessionFixture[] {
             { questionId: 'seed-q2', questionText: 'Describe a time you handled a difficult situation on post.', sentAt: new Date('2026-03-20T09:00:00Z') },
           ],
           responsesReceived: [
-            { questionId: 'seed-q1', responseText: '4 years, 2 of which were at DFW International Airport doing access control.', receivedAt: new Date('2026-03-20T11:30:00Z'), score: 8, scoring_notes: 'Strong, verifiable experience' },
-            { questionId: 'seed-q2', responseText: 'Encountered an aggressive visitor at the airport checkpoint. Used de-escalation and called supervisor.', receivedAt: new Date('2026-03-20T11:30:00Z'), score: 7, scoring_notes: 'Appropriate response, good awareness' },
+            { questionId: 'seed-q1', responseText: '4 years, 2 of which were at DFW International Airport doing access control.', receivedAt: new Date('2026-03-20T11:30:00Z'), score: '8', scoring_notes: 'Strong, verifiable experience' },
+            { questionId: 'seed-q2', responseText: 'Encountered an aggressive visitor at the airport checkpoint. Used de-escalation and called supervisor.', receivedAt: new Date('2026-03-20T11:30:00Z'), score: '7', scoring_notes: 'Appropriate response, good awareness' },
           ],
           scoringBreakdown: { experience: 80, communication: 70, availability: 75 },
           startedAt: new Date('2026-03-20T09:00:00Z'),
@@ -197,7 +197,7 @@ function getSessionsForCandidate(email: string): SessionFixture[] {
             { questionId: 'seed-q4', questionText: 'Tell us about your armed security certifications.', sentAt: new Date('2026-03-18T09:00:00Z') },
           ],
           responsesReceived: [
-            { questionId: 'seed-q4', responseText: 'Level III TX license, Glock 19 qualified Expert (94/100), CPR and First Aid certified.', receivedAt: new Date('2026-03-18T10:00:00Z'), score: 9, scoring_notes: 'Exceptional credentials' },
+            { questionId: 'seed-q4', responseText: 'Level III TX license, Glock 19 qualified Expert (94/100), CPR and First Aid certified.', receivedAt: new Date('2026-03-18T10:00:00Z'), score: '9', scoring_notes: 'Exceptional credentials' },
           ],
           scoringBreakdown: { experience: 95, communication: 88, availability: 80 },
           startedAt: new Date('2026-03-18T09:00:00Z'),
@@ -211,7 +211,7 @@ function getSessionsForCandidate(email: string): SessionFixture[] {
             { questionId: 'seed-q5', questionText: 'How do you handle use-of-force escalation decisions in the field?', sentAt: new Date('2026-03-19T09:00:00Z') },
           ],
           responsesReceived: [
-            { questionId: 'seed-q5', responseText: 'Follow the UoF continuum: verbal commands first, then intermediate force only when justified. Always document.', receivedAt: new Date('2026-03-19T10:30:00Z'), score: 10, scoring_notes: 'Textbook answer, clear understanding of policy' },
+            { questionId: 'seed-q5', responseText: 'Follow the UoF continuum: verbal commands first, then intermediate force only when justified. Always document.', receivedAt: new Date('2026-03-19T10:30:00Z'), score: '10', scoring_notes: 'Textbook answer, clear understanding of policy' },
           ],
           scoringBreakdown: { experience: 95, communication: 90, availability: 85 },
           startedAt: new Date('2026-03-19T09:00:00Z'),
@@ -235,7 +235,7 @@ function getSessionsForCandidate(email: string): SessionFixture[] {
             { questionId: 'seed-q6', questionText: 'How many years of security experience do you have?', sentAt: new Date('2026-03-15T09:00:00Z') },
           ],
           responsesReceived: [
-            { questionId: 'seed-q6', responseText: 'About 2 months at a parking lot.', receivedAt: new Date('2026-03-15T13:00:00Z'), score: 2, scoring_notes: 'Insufficient experience for any position' },
+            { questionId: 'seed-q6', responseText: 'About 2 months at a parking lot.', receivedAt: new Date('2026-03-15T13:00:00Z'), score: '2', scoring_notes: 'Insufficient experience for any position' },
           ],
           scoringBreakdown: { experience: 10, communication: 25, availability: 30 },
           startedAt: new Date('2026-03-15T09:00:00Z'),
@@ -256,7 +256,7 @@ function getScorecardForCandidate(email: string): ScorecardFixture | null {
         communicationScore: 70,
         availabilityScore: 75,
         experienceScore: 80,
-        overallScore: 74,
+        overallScore: '74',
         trinityRecommendation: 'advance',
         trinityReasoning: 'Candidate has solid experience and credentials. Round 2 email sent. Pending response before chat interview recommendation.',
       };
@@ -266,7 +266,7 @@ function getScorecardForCandidate(email: string): ScorecardFixture | null {
         communicationScore: 89,
         availabilityScore: 82,
         experienceScore: 95,
-        overallScore: 90,
+        overallScore: '90',
         trinityRecommendation: 'hire',
         trinityReasoning: 'Outstanding candidate. Level III TX armed license, 7 years verified experience, excellent communication. Strongly recommend proceeding to voice interview and extending offer.',
       };
@@ -276,7 +276,7 @@ function getScorecardForCandidate(email: string): ScorecardFixture | null {
         communicationScore: 25,
         availabilityScore: 20,
         experienceScore: 10,
-        overallScore: 19,
+        overallScore: '19',
         trinityRecommendation: 'reject',
         trinityReasoning: 'Candidate does not meet minimum qualifications. No security license, 2 months experience, severely limited availability (Saturday mornings only), no transportation. Recommend rejection.',
       };

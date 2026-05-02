@@ -273,13 +273,13 @@ function parseResendPayload(raw: ResendInboundPayload, targetAddress: string): P
   const fromRaw = raw.from || '';
   const fromMatch = fromRaw.match(/^(?:"?([^"<]+)"?\s+)?<?([^>]+)>?$/);
   const fromEmail = fromMatch?.[2]?.trim() || fromRaw.trim();
-  const fromName = fromMatch?.[1]?.trim() || undefined;
+  const fromName = fromMatch?.[1]?.trim() || null;
 
   const toEmail = targetAddress;
 
   const messageId = raw.headers?.['message-id']
     || raw.headers?.['Message-ID']
-    || undefined;
+    || null;
 
   const attachments = (raw.attachments || []).map(a => ({
     filename: a.filename || 'attachment',
@@ -564,7 +564,7 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
     : rawPayload;
 
   // Step 3: Parse fields
-  const resendEmailId = (payload as Record<string,unknown>).email_id || ((rawPayload as {id?: string}).id) || undefined;
+  const resendEmailId = (payload as Record<string,unknown>).email_id || ((rawPayload as {id?: string}).id) || null;
   const toRaw = Array.isArray(payload.to) ? payload.to[0] : (payload.to || '');
   const toMatch = toRaw.match(/<?([^>]+)>?$/);
   const toEmail = (toMatch?.[1]?.trim() || toRaw).toLowerCase();
@@ -572,15 +572,15 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
   const fromRaw = (payload as Record<string,unknown>).from || '';
   const fromMatch = fromRaw.match(/^(?:"?([^"<]+)"?\s+)?<?([^>]+)>?$/);
   const fromEmail = fromMatch?.[2]?.trim() || fromRaw.trim();
-  const fromName  = fromMatch?.[1]?.trim() || undefined;
+  const fromName  = fromMatch?.[1]?.trim() || null;
 
-  const messageId   = (payload as Record<string,unknown>).message_id || payload.headers?.['message-id'] || payload.headers?.['Message-ID'] || undefined;
-  const inReplyTo   = payload.headers?.['in-reply-to'] || undefined;
-  const references  = payload.headers?.['references'] || undefined;
+  const messageId   = (payload as Record<string,unknown>).message_id || payload.headers?.['message-id'] || payload.headers?.['Message-ID'] || null;
+  const inReplyTo   = payload.headers?.['in-reply-to'] || null;
+  const references  = payload.headers?.['references'] || null;
   const subject     = payload.subject || '(no subject)';
-  const bodyHtml    = payload.html || undefined;
-  const bodyText    = payload.text || undefined;
-  const snippet     = (bodyText || '').replace(/\s+/g, ' ').slice(0, 200) || undefined;
+  const bodyHtml    = payload.html || null;
+  const bodyText    = payload.text || null;
+  const snippet     = (bodyText || '').replace(/\s+/g, ' ').slice(0, 200) || null;
   const attachments = payload.attachments || [];
 
   try {
@@ -766,7 +766,7 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
       routed: true,
       routeType: route.route_type,
       resolvedVia,
-      processAs: route.process_as || undefined,
+      processAs: route.process_as || null,
     });
 
     // Step 8: Trinity auto-process (deferred via scheduleNonBlocking)
@@ -1002,7 +1002,7 @@ inboundEmailRouter.post('/per-org', async (req: Request, res: Response) => {
       from: fromEmail,
       subject: payload.subject || '(no subject)',
       body: payload.text || '',
-      htmlBody: payload.html || undefined,
+      htmlBody: payload.html || null,
       messageId,
       attachments: payload.attachments,
     };

@@ -1177,7 +1177,7 @@ RESPONSE FORMAT (JSON)
           shiftTitle: shift.title || 'Untitled Shift',
           employeeId: best.employee.employeeId,
           employeeName: best.employee.employeeName,
-          confidenceScore: Math.min(best.score / 100, 1),
+          confidenceScore: String(Math.min(best.score / 100, 1)),
           matchReasons: best.reasons,
         });
         // Update in-memory tracking so subsequent shifts see this assignment

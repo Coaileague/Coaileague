@@ -558,7 +558,7 @@ export async function supportLookup(query: string): Promise<Array<{
       entityType: r.entityType,
       entityId: r.entityId,
       externalId: r.externalId,
-      orgId: r.orgId || undefined,
+      orgId: r.orgId || null,
     }));
   }
 
@@ -576,7 +576,7 @@ export async function supportLookup(query: string): Promise<Array<{
         entityType: r.entityType,
         entityId: r.entityId,
         externalId: r.externalId,
-        orgId: r.orgId || undefined,
+        orgId: r.orgId || null,
       }));
     }
 
@@ -915,17 +915,17 @@ export async function supportLookupFull(query: string): Promise<FullIdentityReco
         userId: user.id,
         email: user.email,
         displayName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
-        firstName: user.firstName || undefined,
-        lastName: user.lastName || undefined,
-        phone: user.phone || undefined,
-        profileImageUrl: user.profileImageUrl || undefined,
-        workId: user.workId || undefined,
-        emailVerified: user.emailVerified ?? undefined,
-        lastLoginAt: user.lastLoginAt?.toISOString() || undefined,
+        firstName: user.firstName || null,
+        lastName: user.lastName || null,
+        phone: user.phone || null,
+        profileImageUrl: user.profileImageUrl || null,
+        workId: user.workId || null,
+        emailVerified: user.emailVerified ?? null,
+        lastLoginAt: user.lastLoginAt?.toISOString() || null,
         loginAttempts: user.loginAttempts || 0,
         mfaEnabled: user.mfaEnabled ?? false,
         accountLocked: (user.loginAttempts || 0) >= 5,
-        externalId: extId?.externalId || undefined,
+        externalId: extId?.externalId || null,
       };
 
       // Load workspace info
@@ -934,10 +934,10 @@ export async function supportLookupFull(query: string): Promise<FullIdentityReco
         record.workspaceId = wsId;
         const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, wsId)).limit(1);
         if (ws) {
-          record.workspaceName = ws.name || undefined;
-          record.orgCode = ws.orgCode || undefined;
+          record.workspaceName = ws.name || null;
+          record.orgCode = ws.orgCode || null;
           record.subscriptionTier = ws.subscriptionTier || 'free';
-          record.subscriptionStatus = ws.subscriptionStatus || undefined;
+          record.subscriptionStatus = ws.subscriptionStatus || null;
           record.isSuspended = ws.isSuspended || false;
           record.isFrozen = ws.isFrozen || false;
         }
@@ -946,14 +946,14 @@ export async function supportLookupFull(query: string): Promise<FullIdentityReco
         const [wm] = await db.select().from(workspaceMembers)
           .where(and(eq(workspaceMembers.workspaceId, wsId), eq(workspaceMembers.userId, user.id)))
           .limit(1);
-        if (wm) record.workspaceRole = wm.role || undefined;
+        if (wm) record.workspaceRole = wm.role || null;
 
         // Credit balance (backed by aiUsageEvents since workspace_credits dropped)
         try {
           const credits = await tokenManager.getWorkspaceState(wsId);
           if (credits) {
             record.creditBalance = credits.currentBalance;
-            record.monthlyAllocation = credits.monthlyAllocation || undefined;
+            record.monthlyAllocation = credits.monthlyAllocation || null;
             record.autoRechargeEnabled = false;
           }
         } catch { /* non-critical */ }
@@ -962,7 +962,7 @@ export async function supportLookupFull(query: string): Promise<FullIdentityReco
         const [orgExt] = await db.select().from(externalIdentifiers)
           .where(and(eq(externalIdentifiers.entityType, 'org'), eq(externalIdentifiers.entityId, wsId)))
           .limit(1);
-        record.orgExternalId = orgExt?.externalId || undefined;
+        record.orgExternalId = orgExt?.externalId || null;
       }
 
       // Employee record
@@ -971,10 +971,10 @@ export async function supportLookupFull(query: string): Promise<FullIdentityReco
         .limit(1);
       if (emp) {
         record.employeeId = emp.id;
-        record.employeeNumber = emp.employeeNumber || undefined;
-        record.position = emp.position || undefined;
-        record.department = (emp as EmployeeWithStatus).department || undefined;
-        record.hireDate = emp.hireDate?.toISOString() || undefined;
+        record.employeeNumber = emp.employeeNumber || null;
+        record.position = emp.position || null;
+        record.department = (emp as EmployeeWithStatus).department || null;
+        record.hireDate = emp.hireDate?.toISOString() || null;
         record.isActive = emp.isActive ?? true;
         // Employee external ID
         const [empExt] = await db.select().from(externalIdentifiers)
@@ -987,7 +987,7 @@ export async function supportLookupFull(query: string): Promise<FullIdentityReco
       const [pr] = await db.select().from(platformRoles)
         .where(and(eq(platformRoles.userId, user.id), sql`revoked_at IS NULL`))
         .limit(1);
-      if (pr) record.platformRole = pr.role || undefined;
+      if (pr) record.platformRole = pr.role || null;
 
       // Support / safety code
       try {
@@ -996,7 +996,7 @@ export async function supportLookupFull(query: string): Promise<FullIdentityReco
         const [sr] = await db.select().from(supportRegistry)
           .where(eq(supportRegistry.userId, user.id))
           .limit(1);
-        if (sr) record.supportCode = sr.supportCode || undefined;
+        if (sr) record.supportCode = sr.supportCode || null;
       } catch (srErr : unknown) { log.warn('[Identity] Support registry lookup failed:', srErr instanceof Error ? srErr.message : String(srErr)); }
 
       // Recent HelpAI sessions (last 5)

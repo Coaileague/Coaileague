@@ -420,7 +420,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                       data-testid="button-user-menu-workspace"
                     >
                       <Avatar className="h-8 w-8 sm:h-9 sm:w-9">
-                        <AvatarImage src={user?.profileImageUrl || undefined} alt={user?.firstName || "User"} />
+                        <AvatarImage src={user?.profileImageUrl || null} alt={user?.firstName || "User"} />
                         <AvatarFallback className="text-[10px] font-bold tracking-wide bg-gradient-to-br from-cyan-500 to-blue-500 text-white">
                           {getInitials(user?.firstName, user?.lastName)}
                         </AvatarFallback>
@@ -509,7 +509,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                     data-testid="button-workspace-mobile-menu"
                   >
                     <Avatar className="h-7 w-7">
-                      <AvatarImage src={user?.profileImageUrl || undefined} alt={user?.firstName || "User"} />
+                      <AvatarImage src={user?.profileImageUrl || null} alt={user?.firstName || "User"} />
                       <AvatarFallback className="text-[9px] font-bold tracking-wide bg-gradient-to-br from-cyan-500 to-blue-500 text-white">
                         {getInitials(user?.firstName, user?.lastName)}
                       </AvatarFallback>
@@ -597,7 +597,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
         <TrinityBarErrorBoundary>
           <TrinityThoughtBar
             className="border-t border-cyan-500/20"
-            sessionId={activeSessionId ?? undefined}
+            sessionId={activeSessionId ?? null}
             isProcessing={!!activeSessionId}
           />
         </TrinityBarErrorBoundary>

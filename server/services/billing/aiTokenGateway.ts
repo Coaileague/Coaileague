@@ -100,7 +100,7 @@ export class AITokenGateway {
     }
 
     if (!isFree && workspaceId) {
-      const check = await tokenManager.checkTokens(workspaceId, featureKey, userId || undefined);
+      const check = await tokenManager.checkTokens(workspaceId, featureKey, userId || null);
       if (!check.hasAllowance) {
         // OMEGA-L2: Degraded-mode split — Brain tasks (tokenCost >= 15) are hard-blocked at 0 allowance.
         // Standard/lightweight tasks (tokenCost < 15) are allowed in degraded mode so the org
@@ -185,7 +185,7 @@ export class AITokenGateway {
     if (tokenCost <= 0 || TOKEN_FREE_FEATURES.has(featureKey) || !workspaceId) {
       return { charged: false, tokensUsed: 0, newBalance: -1 };
     }
-    const result = await tokenManager.recordUsage({ workspaceId, featureKey, quantity, userId: userId || undefined });
+    const result = await tokenManager.recordUsage({ workspaceId, featureKey, quantity, userId: userId || null });
     return {
       charged: result.success,
       tokensUsed: result.success ? tokenCost : 0,

@@ -108,7 +108,7 @@ export function DuplicateShiftModal({
                 onDuplicate({
                   shiftId: selectedShift.id,
                   targetDate: duplicateTargetDate,
-                  targetEmployeeId: duplicateTargetEmployee === '_keep' ? undefined : duplicateTargetEmployee || undefined,
+                  targetEmployeeId: duplicateTargetEmployee === '_keep' ? undefined : duplicateTargetEmployee || null,
                 });
               }
             }}
@@ -217,7 +217,7 @@ export function SwapRequestModal({
                 onRequestSwap({
                   shiftId: selectedShift.id,
                   reason: swapReason,
-                  targetEmployeeId: swapTargetEmployee === '_any' ? undefined : swapTargetEmployee || undefined,
+                  targetEmployeeId: swapTargetEmployee === '_any' ? undefined : swapTargetEmployee || null,
                 });
               }
             }}
@@ -302,9 +302,9 @@ export function EditShiftModal({
       shiftId: selectedShift.id,
       data: {
         employeeId: form.employeeId,
-        title: form.title || undefined,
-        clientId: form.clientId || undefined,
-        description: form.description || undefined,
+        title: form.title || null,
+        clientId: form.clientId || null,
+        description: form.description || null,
         date: form.date,
         startTime: startDateTime.toISOString(),
         endTime: endDateTime.toISOString(),

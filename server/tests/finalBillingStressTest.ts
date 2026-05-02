@@ -195,10 +195,10 @@ async function phase4_subscription_tiers_pricing() {
   console.log('='.repeat(70));
 
   const expectedTiers = [
-    { id: 'free', price: 0, credits: 250, maxEmp: 5 },
-    { id: 'starter', price: 89900, credits: 2500, maxEmp: 15 },
-    { id: 'professional', price: 199900, credits: 10000, maxEmp: 50 },
-    { id: 'enterprise', price: 999900, credits: 50000, maxEmp: 500 },
+    { id: 'free', price: '0', credits: 250, maxEmp: 5 },
+    { id: 'starter', price: '89900', credits: 2500, maxEmp: 15 },
+    { id: 'professional', price: '199900', credits: 10000, maxEmp: 50 },
+    { id: 'enterprise', price: '999900', credits: 50000, maxEmp: 500 },
   ];
 
   for (const exp of expectedTiers) {

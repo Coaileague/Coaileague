@@ -358,7 +358,7 @@ class PolicyRulesAgent {
         billable.push({
           clientId,
           qtyHours: totalHours,
-          rate: 0,
+          rate: '0',
           description: `Services for week ending ${cycleKey.replace('_week_end', '')}`,
           employeeIds: Array.from(employeeIds),
         });

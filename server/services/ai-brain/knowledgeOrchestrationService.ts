@@ -786,7 +786,7 @@ Think step-by-step and respond with JSON:
   } {
     const relevantEntries = this.learningEntries.filter(e => e.queryType === queryType);
     if (relevantEntries.length === 0) {
-      return { successRate: 0, avgExecutionTime: 0, commonRoutes: [], recommendations: ['No learning data available'] };
+      return { successRate: '0', avgExecutionTime: 0, commonRoutes: [], recommendations: ['No learning data available'] };
     }
     const successCount = relevantEntries.filter(e => e.wasSuccessful).length;
     const successRate = successCount / relevantEntries.length;

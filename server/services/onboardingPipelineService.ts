@@ -798,7 +798,7 @@ Generate personalized onboarding tasks for this organization.`;
     try {
       const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
       if (!workspace) {
-        return { score: 0, totalChecks: 0, passedChecks: 0, checklist: [], readyForOperation: false, summary: 'Workspace not found' };
+        return { score: '0', totalChecks: 0, passedChecks: 0, checklist: [], readyForOperation: false, summary: 'Workspace not found' };
       }
 
       checklist.push({
@@ -957,7 +957,7 @@ Generate personalized onboarding tasks for this organization.`;
       return { score, totalChecks, passedChecks, checklist, readyForOperation, summary };
     } catch (err: unknown) {
       log.error('[OnboardingPipeline] Readiness score error:', (err instanceof Error ? err.message : String(err)));
-      return { score: 0, totalChecks: 0, passedChecks: 0, checklist: [], readyForOperation: false, summary: 'Error calculating readiness score' };
+      return { score: '0', totalChecks: 0, passedChecks: 0, checklist: [], readyForOperation: false, summary: 'Error calculating readiness score' };
     }
   }
 }

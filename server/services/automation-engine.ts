@@ -165,7 +165,7 @@ function resolveInvoiceRate(client: Client, entries: TimeEntry[]): { rate: numbe
   }
 
   return {
-    rate: 0,
+    rate: '0',
     source: 'missing',
     anomalies: ['No billable rate data found for this client; invoice marked for manual review.'],
   };
@@ -220,7 +220,7 @@ function resolvePayrollRate(employee: Employee, timeEntries: TimeEntry[]): { rat
     return { rate: capturedRate, source: 'timeEntry.capturedPayRate' };
   }
 
-  return { rate: 15, source: 'default_fallback' };
+  return { rate: '15', source: 'default_fallback' };
 }
 
 function buildDeterministicPayrollDecision(employee: Employee, employeeId: string, timeEntries: TimeEntry[]): PayrollDecision {
@@ -566,7 +566,7 @@ Return ONLY valid JSON (no markdown):
       }
       const newShift = await storage.createShift({
         employeeId: shift.employeeId,
-        clientId: shift.clientId || undefined,
+        clientId: shift.clientId || null,
         startTime: new Date(shift.startTime),
         endTime: new Date(shift.endTime),
         status: 'draft',

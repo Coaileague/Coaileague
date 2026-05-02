@@ -112,9 +112,9 @@ class RecurringScheduleTemplateService {
         endTime: `${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`,
         title: shift.title || 'Shift',
         clientId: shift.clientId,
-        position: shift.title || undefined,
+        position: shift.title || null,
         requiredEmployees: 1,
-        notes: (shift as Record<string,unknown>).notes || undefined,
+        notes: (shift as Record<string,unknown>).notes || null,
       };
     });
 

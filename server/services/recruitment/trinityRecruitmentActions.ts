@@ -149,7 +149,7 @@ export function registerRecruitmentActions(): void {
         };
       } else if (roundNum === 2) {
         // round1SessionId optional — service auto-resolves latest Round 1 session if absent
-        const result = await sendEmailRound2(candidate, workspaceId, round1SessionId ?? undefined);
+        const result = await sendEmailRound2(candidate, workspaceId, round1SessionId ?? null);
         return {
           success: true,
           actionId: 'interview.send_questions',

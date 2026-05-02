@@ -164,7 +164,7 @@ timesheetReportRouter.get('/weekly', requireAuth, async (req: Request, res: Resp
     }
 
     // Regular employees only see their own data
-    const report = await getWeeklyReport(workspaceId, date, employeeId || undefined);
+    const report = await getWeeklyReport(workspaceId, date, employeeId || null);
 
     res.json({
       success: true,
@@ -198,7 +198,7 @@ timesheetReportRouter.get('/monthly', requireAuth, async (req: Request, res: Res
     }
 
     // Regular employees only see their own data
-    const report = await getMonthlyReport(workspaceId, date, employeeId || undefined);
+    const report = await getMonthlyReport(workspaceId, date, employeeId || null);
 
     res.json({
       success: true,
@@ -262,7 +262,7 @@ timesheetReportRouter.get('/export/pdf', requireManager, async (req: Request, re
       where: eq(workspaces.id, workspaceId),
     });
 
-    const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument({ margin: '50' });
     const filename = `timesheet-report-${format(startDate, 'yyyy-MM-dd')}-to-${format(endDate, 'yyyy-MM-dd')}.pdf`;
     
     res.setHeader('Content-Type', 'application/pdf');

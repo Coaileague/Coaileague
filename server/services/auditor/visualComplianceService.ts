@@ -225,7 +225,7 @@ async function runTrinityVisionAnalysis(
   const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     log.warn('[VisualCompliance] Anthropic API key not configured — skipping vision analysis');
-    return { status: 'passed', confidenceScore: 0, reasoningText: 'Vision analysis skipped — API key not configured.' };
+    return { status: 'passed', confidenceScore: '0', reasoningText: 'Vision analysis skipped — API key not configured.' };
   }
 
   const prompt = buildVisionPrompt(artifactType, registeredAddress);
@@ -256,7 +256,7 @@ async function runTrinityVisionAnalysis(
     if (!response.ok) {
       const errText = await response.text();
       log.warn('[VisualCompliance] Trinity vision API error:', response.status, errText);
-      return { status: 'flagged', confidenceScore: 0, reasoningText: `Vision API error: ${response.status}` };
+      return { status: 'flagged', confidenceScore: '0', reasoningText: `Vision API error: ${response.status}` };
     }
 
     const data = await response.json() as unknown;
@@ -264,7 +264,7 @@ async function runTrinityVisionAnalysis(
 
     // Parse JSON from Trinity's response (handle markdown code fences)
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return { status: 'flagged', confidenceScore: 0, reasoningText: 'Unparseable Trinity response.' };
+    if (!jsonMatch) return { status: 'flagged', confidenceScore: '0', reasoningText: 'Unparseable Trinity response.' };
 
     const parsed: unknown = JSON.parse(jsonMatch[0]);
     return {
@@ -275,7 +275,7 @@ async function runTrinityVisionAnalysis(
     };
   } catch (err: unknown) {
     log.error('[VisualCompliance] Vision analysis threw:', (err instanceof Error ? err.message : String(err)));
-    return { status: 'flagged', confidenceScore: 0, reasoningText: `Analysis error: ${(err instanceof Error ? err.message : String(err))}` };
+    return { status: 'flagged', confidenceScore: '0', reasoningText: `Analysis error: ${(err instanceof Error ? err.message : String(err))}` };
   }
 }
 

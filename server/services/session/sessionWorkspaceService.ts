@@ -91,7 +91,7 @@ async function cacheWorkspaceInSession(
     req.session.workspaceId = context.workspaceId;
     req.session.activeWorkspaceId = context.workspaceId;
     req.session.workspaceRole = context.workspaceRole;
-    req.session.employeeId = context.employeeId || undefined;
+    req.session.employeeId = context.employeeId || null;
     req.session.workspaceName = context.workspaceName;
   }
 

@@ -178,7 +178,7 @@ export default function AccountingIntegrations() {
       const res = await apiRequest('POST', '/api/integrations/connection-request', {
         integrationId,
         integrationName,
-        notes: requestNotes.trim() || undefined,
+        notes: requestNotes.trim() || null,
       });
 
       if (!res.ok) {

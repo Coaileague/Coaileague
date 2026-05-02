@@ -176,7 +176,7 @@ async function getEmployeeDigestData(
       yesterdayTimeEntries: yesterdayEntries.map(e => ({
         duration: e.clockOut ? (new Date(e.clockOut).getTime() - new Date(e.clockIn).getTime()) / (1000 * 60 * 60) : 0,
         clientName: undefined,
-        notes: e.notes || undefined
+        notes: e.notes || null
       })),
       pendingApprovals,
       complianceAlerts,

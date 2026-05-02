@@ -224,7 +224,7 @@ class FinancialAuditService {
         dueDate: invoice.dueDate,
       },
       monetaryImpact: {
-        amount: parseFloat(invoice.totalAmount ?? invoice.total ?? '0'),
+        amount: String(parseFloat(invoice.totalAmount ?? invoice.total ?? '0')),
         currency: invoice.currency || 'USD',
         direction: eventType === 'INVOICE_VOIDED' ? 'debit' : 
                    eventType === 'INVOICE_PAID' ? 'credit' : 'neutral',
@@ -259,7 +259,7 @@ class FinancialAuditService {
         status: payroll.status,
       },
       monetaryImpact: {
-        amount: parseFloat(payroll.grossPay || '0'),
+        amount: String(parseFloat(payroll.grossPay || '0')),
         currency: payroll.currency || 'USD',
         direction: 'debit',
       },
@@ -296,7 +296,7 @@ class FinancialAuditService {
         syncedAt: new Date().toISOString(),
       },
       monetaryImpact: {
-        amount: 0,
+        amount: '0',
         currency: 'USD',
         direction: 'neutral',
       },
@@ -432,7 +432,7 @@ class FinancialAuditService {
         actorName: (e as EmployeeWithStatus).actorName || 'Unknown',
         before: (e as Record<string,unknown>).changes?.before || null,
         after: e.payload as unknown,
-        monetaryImpact: (e as Record<string,unknown>).payload?.monetaryImpact || { amount: 0, currency: 'USD', direction: 'neutral' },
+        monetaryImpact: (e as Record<string,unknown>).payload?.monetaryImpact || { amount: '0', currency: 'USD', direction: 'neutral' },
         approvals: [],
         checksum: e.actionHash || '',
         previousChecksum: null,

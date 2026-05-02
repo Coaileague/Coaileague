@@ -126,7 +126,7 @@ export function MobilePageHeader({
                   'font-bold',
                   isMobile ? 'text-sm xs:text-base sm:text-lg leading-tight' : 'text-2xl'
                 )}
-                style={isMobile ? { fontSize: 'clamp(0.8rem, 4vw, 1.125rem)' } : undefined}
+                style={isMobile ? { fontSize: 'clamp(0.8rem, 4vw, 1.125rem)' } : null}
               >
                 {title}
               </h1>

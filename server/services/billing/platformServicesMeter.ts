@@ -139,7 +139,7 @@ export class PlatformServicesMeter {
     usageQueue.push({
       workspaceId,
       serviceType,
-      quantity: 1,
+      quantity: '1',
       metadata: { ...metadata, emailType },
       timestamp: new Date(),
     });

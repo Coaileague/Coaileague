@@ -356,7 +356,7 @@ export default function ClientCommunications() {
     mutationFn: async (body: string) => {
       const res = await apiRequest("POST", `/api/client-comms/threads/${selectedThreadId}/messages`, {
         body,
-        attachments: attachments.length > 0 ? attachments : undefined,
+        attachments: attachments.length > 0 ? attachments : null,
       });
       return res.json();
     },

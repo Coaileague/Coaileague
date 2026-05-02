@@ -128,7 +128,7 @@ calendarRouter.get('/schedule.ics', requireAuth, async (req: AuthenticatedReques
     
     if (!requestedEmployeeId) {
       if (!isManager) {
-        employeeId = userEmployee || undefined;
+        employeeId = userEmployee || null;
       }
     } else if (requestedEmployeeId !== userEmployee && !isManager) {
       return res.status(403).json({ error: 'Not authorized to view this schedule' });
@@ -272,7 +272,7 @@ calendarRouter.post('/subscriptions', requireAuth, async (req: AuthenticatedRequ
     const subscription = await createCalendarSubscription(
       workspaceId,
       userId,
-      employeeId || undefined,
+      employeeId || null,
       {
         name: body.name,
         subscriptionType: body.subscriptionType,
@@ -467,7 +467,7 @@ calendarRouter.post('/import', requireAuth, upload.single('file'), localVirusSca
       fileName: req.file.originalname,
       fileSize: req.file.size,
       conflictResolution: conflictResolution as 'skip' | 'overwrite' | 'merge',
-      defaultEmployeeId: employeeId || undefined,
+      defaultEmployeeId: employeeId || null,
     });
 
     res.json({
@@ -579,7 +579,7 @@ calendarRouter.get('/export/ical', requireAuth, async (req: AuthenticatedRequest
     const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
     const includeTeam = req.query.includeTeam === 'true' && isManager;
 
-    const targetEmployeeId = includeTeam ? undefined : (employeeId || undefined);
+    const targetEmployeeId = includeTeam ? undefined : (employeeId || null);
 
     const icsContent = await exportScheduleToICS(workspaceId, targetEmployeeId, startDate, endDate, {
       includePendingShifts: req.query.includePending !== 'false',
@@ -620,7 +620,7 @@ calendarRouter.post('/import/ical', requireAuth, upload.single('file'), localVir
       fileName: req.file.originalname,
       fileSize: req.file.size,
       conflictResolution: (req.body.conflictResolution as 'skip' | 'overwrite' | 'merge') || 'skip',
-      defaultEmployeeId: employeeId || undefined,
+      defaultEmployeeId: employeeId || null,
     });
 
     res.json({

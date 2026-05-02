@@ -353,7 +353,7 @@ class TrinityConfidenceTracker {
       return {
         sessionId,
         userId: session.userId,
-        workspaceId: session.workspaceId || undefined,
+        workspaceId: session.workspaceId || null,
         turnCount: turns.length,
         avgConfidence,
         totalToolCalls,

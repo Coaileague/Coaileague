@@ -38,16 +38,16 @@ const LAST_NAMES = [
 ];
 
 const CLIENT_COMPANIES = [
-  { name: 'Metro Tech Campus', industry: 'Technology', billRate: 35 },
-  { name: 'Sunrise Medical Center', industry: 'Healthcare', billRate: 40 },
-  { name: 'Harbor View Mall', industry: 'Retail', billRate: 28 },
-  { name: 'First National Bank HQ', industry: 'Finance', billRate: 45 },
-  { name: 'Cityscape Apartments', industry: 'Residential', billRate: 25 },
-  { name: 'Industrial Park West', industry: 'Manufacturing', billRate: 32 },
-  { name: 'Grand Hotel & Resort', industry: 'Hospitality', billRate: 38 },
-  { name: 'State University', industry: 'Education', billRate: 30 },
-  { name: 'Downtown Office Tower', industry: 'Commercial', billRate: 42 },
-  { name: 'County Government Center', industry: 'Government', billRate: 35 }
+  { name: 'Metro Tech Campus', industry: 'Technology', billRate: '35' },
+  { name: 'Sunrise Medical Center', industry: 'Healthcare', billRate: '40' },
+  { name: 'Harbor View Mall', industry: 'Retail', billRate: '28' },
+  { name: 'First National Bank HQ', industry: 'Finance', billRate: '45' },
+  { name: 'Cityscape Apartments', industry: 'Residential', billRate: '25' },
+  { name: 'Industrial Park West', industry: 'Manufacturing', billRate: '32' },
+  { name: 'Grand Hotel & Resort', industry: 'Hospitality', billRate: '38' },
+  { name: 'State University', industry: 'Education', billRate: '30' },
+  { name: 'Downtown Office Tower', industry: 'Commercial', billRate: '42' },
+  { name: 'County Government Center', industry: 'Government', billRate: '35' }
 ];
 
 const COLORS = [

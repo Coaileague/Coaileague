@@ -275,7 +275,7 @@ export function createSectionAnchors(sections: string[]): SectionAnchor[] {
   return sections.map(label => ({
     id: generateSectionId(label),
     label,
-    shortLabel: label.length > 12 ? label.substring(0, 10) + '...' : undefined,
+    shortLabel: label.length > 12 ? label.substring(0, 10) + '...' : null,
   }));
 }
 

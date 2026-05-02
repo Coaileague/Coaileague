@@ -132,9 +132,9 @@ function CreateContractDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       clientName: form.clientName,
       clientEmail: form.clientEmail,
       content: form.content,
-      totalValue: form.totalValue ? parseFloat(form.totalValue) : undefined,
-      expiresAt: form.expiresAt || undefined,
-      specialTerms: form.specialTerms || undefined,
+      totalValue: form.totalValue ? parseFloat(form.totalValue) : null,
+      expiresAt: form.expiresAt || null,
+      specialTerms: form.specialTerms || null,
     });
   };
 
@@ -548,7 +548,7 @@ export default function DocumentLibrary() {
   const isContractsView = activeCategory === "contracts_pipeline";
 
   const { data: docsData, isLoading } = useQuery({
-    queryKey: ["/api/documents", (activeCategory !== "all" && activeCategory !== "contracts_pipeline") ? { category: activeCategory } : undefined],
+    queryKey: ["/api/documents", (activeCategory !== "all" && activeCategory !== "contracts_pipeline") ? { category: activeCategory } : null],
     enabled: !isContractsView,
     queryFn: () => apiFetch(
       activeCategory !== "all" && activeCategory !== "contracts_pipeline"

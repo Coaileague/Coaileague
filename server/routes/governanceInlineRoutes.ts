@@ -99,9 +99,9 @@ router.get("/audit-logs", requireAuth, requireProfessional, attachWorkspaceId, a
       details: typeof event.payload === 'object' && event.payload && 'description' in event.payload
         ? String(event.payload.description)
         : `${(event as Record<string,unknown>).eventType} (on as unknown) ${(event as Record<string,unknown>).aggregateType}`,
-      ipAddress: event.ipAddress || undefined,
-      userAgent: event.userAgent || undefined,
-      verificationHash: event.actionHash || undefined,
+      ipAddress: event.ipAddress || null,
+      userAgent: event.userAgent || null,
+      verificationHash: event.actionHash || null,
     }));
 
     res.json(logs);

@@ -294,7 +294,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
           return { proposal: locked, approvedProposal: approved };
         }));
       } catch (txErr: unknown) {
-        const status = (txErr as Record<string, unknown>).status || 500;
+        const status = (txErr as Record<string, string>).status || 500;
         if (status === 404) return res.status(404).json({ message: "Proposal not found" });
         if (status === 409 && (txErr instanceof Error ? txErr.message : String(txErr)) === 'ALREADY_PROCESSED') return res.status(409).json({ message: "Proposal was already processed by another user" });
         if (status === 403) return res.status(403).json({ message: "You cannot approve a payroll proposal that you created. A different authorised manager must approve it.", code: 'SELF_APPROVAL_FORBIDDEN' });
@@ -2172,9 +2172,9 @@ router.get('/ytd/:employeeId', async (req: AuthenticatedRequest, res) => {
         socialSecurity: 0,
         medicare: 0,
         totalDeductions: 0,
-        totalHours: 0,
-        regularHours: 0,
-        overtimeHours: 0,
+        totalHours: '0',
+        regularHours: '0',
+        overtimeHours: '0',
         payPeriodCount: 0,
       });
     }
@@ -2762,7 +2762,7 @@ router.get('/export/pdf/:runId', async (req: AuthenticatedRequest, res) => {
     doc.fontSize(12).text('EMPLOYEE BREAKDOWN', { underline: true });
     doc.moveDown(0.3);
 
-    const colX = { name: 50, hours: 220, rate: 290, gross: 360, taxes: 420, net: 490 };
+    const colX = { name: 50, hours: 220, rate: '290', gross: 360, taxes: 420, net: 490 };
     doc.fontSize(9).font('Helvetica-Bold');
     doc.text('Employee', colX.name, doc.y, { continued: false });
     const headerY = doc.y - 12;
@@ -2898,7 +2898,7 @@ router.get('/pre-run-checklist', async (req: AuthenticatedRequest, res) => {
       outstandingInvoices: outstandingInvoices.map(i => ({
         ...i,
         clientName: clientMap.get(i.clientId) || 'Unknown',
-        amount: parseFloat(i.total),
+        amount: String(parseFloat(i.total)),
       })),
       summary: {
         totalOutstanding,

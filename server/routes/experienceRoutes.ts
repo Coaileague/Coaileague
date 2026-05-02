@@ -406,7 +406,7 @@ router.post('/onboarding/steps/:stepId/complete', async (req: Request, res: Resp
       stepId,
       status: 'completed',
       timestamp: new Date().toISOString(),
-    }, workspaceId || undefined);
+    }, workspaceId || null);
     
     res.json({ success: true, stepId, status: 'completed' });
   } catch (error: unknown) {
@@ -464,7 +464,7 @@ router.post('/onboarding/steps/:stepId/skip', async (req: Request, res: Response
       stepId,
       status: 'skipped',
       timestamp: new Date().toISOString(),
-    }, workspaceId || undefined);
+    }, workspaceId || null);
     
     res.json({ success: true, stepId, status: 'skipped' });
   } catch (error: unknown) {
@@ -538,7 +538,7 @@ router.post('/ai-brain/events', async (req: Request, res: Response) => {
       broadcastToClients('ai_brain:live_event', eventData);
     } else {
       // Broadcast to specific workspace
-      broadcastToClients('ai_brain:live_event', eventData, workspaceId || undefined);
+      broadcastToClients('ai_brain:live_event', eventData, workspaceId || null);
     }
     
     res.json({ success: true, eventId: dbEventId });

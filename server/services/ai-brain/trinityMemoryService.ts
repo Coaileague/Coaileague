@@ -420,7 +420,7 @@ class TrinityMemoryService {
         issueId: gap.id,
         issueType: gap.gapType,
         description: gap.gapDescription || 'Unknown issue',
-        resolution: gap.resolutionDetails || undefined,
+        resolution: gap.resolutionDetails || null,
         resolutionMethod: gap.resolutionStatus === 'resolved' ? 'ai_assisted' : 'self_service',
         timeToResolve: gap.resolvedAt && gap.createdAt 
           ? new Date(gap.resolvedAt).getTime() - new Date(gap.createdAt).getTime() 
@@ -437,7 +437,7 @@ class TrinityMemoryService {
           issueId: outcome.id,
           issueType: 'automation_failure',
           description: `${outcome.actionCategory}.${outcome.actionName} failed`,
-          resolution: outcome.errorDetails || undefined,
+          resolution: outcome.errorDetails || null,
           resolutionMethod: 'automated',
           recurrenceCount: 1,
           lastOccurred: outcome.createdAt ? new Date(outcome.createdAt) : new Date(),

@@ -479,7 +479,7 @@ class TrinityNotificationBridge {
           type: 'system',
               title: payload.title,
               message: payload.message,
-              workspaceId: payload.targetAudience.workspaceId || undefined,
+              workspaceId: payload.targetAudience.workspaceId || null,
               userId: userId,
               severity: payload.priority === 'critical' ? 'critical' : payload.priority === 'high' ? 'high' : 'medium',
               source: 'trinity_notification_bridge',

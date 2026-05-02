@@ -299,12 +299,12 @@ export class AIBrainService {
         if (isTimeout) {
           await ChatServerHub.emitAITimeout({
             conversationId: job.conversationId,
-            workspaceId: job.workspaceId || undefined,
+            workspaceId: job.workspaceId || null,
             jobId: job.id,
             skill: job.skill,
             timeoutMs: 30000, // Default timeout
             executionTimeMs: 30000, // Exceeded timeout
-            userId: job.userId || undefined,
+            userId: job.userId || null,
             retryCount: 0,
             maxRetries: 3,
             canRetry: true,
@@ -312,12 +312,12 @@ export class AIBrainService {
         } else {
           await ChatServerHub.emitAIError({
             conversationId: job.conversationId,
-            workspaceId: job.workspaceId || undefined,
+            workspaceId: job.workspaceId || null,
             jobId: job.id,
             skill: job.skill,
             errorMessage,
             errorStack,
-            userId: job.userId || undefined,
+            userId: job.userId || null,
             retryCount: 0,
             maxRetries: 3,
             canRetry: true,
@@ -469,12 +469,12 @@ export class AIBrainService {
         if (job.conversationId) {
           await ChatServerHub.emitAITimeout({
             conversationId: job.conversationId,
-            workspaceId: job.workspaceId || undefined,
+            workspaceId: job.workspaceId || null,
             jobId: job.id,
             skill: job.skill,
             timeoutMs: JOB_TIMEOUT_MS,
             executionTimeMs: executionTime,
-            userId: job.userId || undefined,
+            userId: job.userId || null,
             retryCount: 0,
             maxRetries: 3,
             canRetry: true,
@@ -518,20 +518,20 @@ export class AIBrainService {
       
       ChatServerHub.emitAIAction({
         conversationId: job.conversationId,
-        workspaceId: job.workspaceId || undefined,
+        workspaceId: job.workspaceId || null,
         actionType,
         title: `AI ${skillLabel}: ${finalStatus === 'requires_approval' ? 'Needs Review' : 'Complete'}`,
         description: finalStatus === 'requires_approval'
           ? `Low confidence (${((confidenceScore || 0) * 100).toFixed(0)}%) - human review recommended`
           : `Completed in ${executionTime}ms with ${((confidenceScore || 1) * 100).toFixed(0)}% confidence`,
-        targetUserId: job.userId || undefined,
+        targetUserId: job.userId || null,
       }).catch((err: Error) => log.error('[AI Brain] Failed to emit chatroom action:', err));
     } else {
       // For non-conversation jobs, emit to platform event bus
       ChatServerHub.emitAIBrainResponse({
         jobId: job.id,
-        workspaceId: job.workspaceId || undefined,
-        userId: job.userId || undefined,
+        workspaceId: job.workspaceId || null,
+        userId: job.userId || null,
         skill: job.skill,
         status: finalStatus,
         confidenceScore,
@@ -570,8 +570,8 @@ export class AIBrainService {
       ? rawMessage.slice(0, 4_000).replace(/\0/g, '')
       : '';
     const { conversationHistory, shouldLearn } = input;
-    const workspaceId = job.workspaceId || undefined;
-    const userId = job.userId || undefined;
+    const workspaceId = job.workspaceId || null;
+    const userId = job.userId || null;
 
     // STEP 1: SENTIMENT ANALYSIS
     const sentiment = analyzeSentiment(message);
@@ -979,7 +979,7 @@ ${faqs.map(f => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n')}
                 updatedAt: new Date(),
                 updatedBy: userId || null,
                 matchCount: sql`COALESCE(${helposFaqs.matchCount}, 0) + 1`,
-                confidenceScore: Math.max(confidence, existingFaq.confidenceScore || 0),
+                confidenceScore: String(Math.max(confidence, existingFaq.confidenceScore || 0)),
                 sourceType: sourceType,
                 sourceId: sourceId || existingFaq.sourceId,
                 sourceContext: {
@@ -1390,7 +1390,7 @@ ${faqs.map(f => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n')}
 
     const enrichedInput = await this.enrichWithExternalIds(
       { shifts: inputShifts, employees: inputEmployees, constraints },
-      job.workspaceId || undefined
+      job.workspaceId || null
     );
 
     const systemPrompt = `You are CoAIleague AI Scheduling AI, an expert at creating optimal employee schedules.
@@ -1419,8 +1419,8 @@ Employees: ${JSON.stringify(enrichedInput.employees, null, 2)}
 Constraints: ${JSON.stringify(enrichedInput.constraints, null, 2)}`;
 
     const response = await geminiClient.generate({
-      workspaceId: job.workspaceId || undefined,
-      userId: job.userId || undefined,
+      workspaceId: job.workspaceId || null,
+      userId: job.userId || null,
       featureKey: 'scheduleos_generation',
       systemPrompt,
       userMessage,
@@ -1557,8 +1557,8 @@ Return a JSON object with:
     const userMessage = `Analyze this data and provide predictions:\n\n${JSON.stringify(historicalData, null, 2)}`;
 
     const response = await geminiClient.generate({
-      workspaceId: job.workspaceId || undefined,
-      userId: job.userId || undefined,
+      workspaceId: job.workspaceId || null,
+      userId: job.userId || null,
       featureKey: 'intelligenceos_prediction',
       systemPrompt,
       userMessage,
@@ -1636,8 +1636,8 @@ Business Context:
 ${JSON.stringify(contextData, null, 2)}`;
 
     const response = await geminiClient.generate({
-      workspaceId: job.workspaceId || undefined,
-      userId: job.userId || undefined,
+      workspaceId: job.workspaceId || null,
+      userId: job.userId || null,
       featureKey: `business_insight_${insightType}`,
       systemPrompt,
       userMessage,
@@ -1708,7 +1708,7 @@ ${JSON.stringify(contextData, null, 2)}`;
             gte(invoices.createdAt, startDate)
           ));
         
-        context.invoices = invoiceStats[0] || { totalInvoices: 0, totalAmount: 0, paidAmount: 0 };
+        context.invoices = invoiceStats[0] || { totalInvoices: 0, totalAmount: '0', paidAmount: 0 };
       }
 
       if (insightType === 'operations' || insightType === 'automation') {
@@ -1744,7 +1744,7 @@ ${JSON.stringify(contextData, null, 2)}`;
             gte(timeEntries.createdAt, startDate)
           ));
         
-        context.timeEntries = timeEntryStats[0] || { totalEntries: 0, totalHours: 0 };
+        context.timeEntries = timeEntryStats[0] || { totalEntries: 0, totalHours: '0' };
       }
     } catch (error) {
       log.error('[AI Brain] Error gathering business context:', error);
@@ -1761,7 +1761,7 @@ ${JSON.stringify(contextData, null, 2)}`;
 
     const response = await geminiClient.generatePlatformRecommendation({
       workspaceId: job.workspaceId ?? '',
-      userId: job.userId || undefined,
+      userId: job.userId || null,
       userNeed,
       currentPlan,
       currentUsage
@@ -1879,8 +1879,8 @@ ${context?.userRole ? `User role: ${context.userRole} - tailor response to their
 ${context?.currentFeature ? `User is currently using: ${context.currentFeature}` : ''}`;
 
     const response = await geminiClient.generate({
-      workspaceId: job.workspaceId || undefined,
-      userId: job.userId || undefined,
+      workspaceId: job.workspaceId || null,
+      userId: job.userId || null,
       featureKey: 'platform_awareness',
       systemPrompt,
       userMessage: query,
@@ -1975,8 +1975,8 @@ ${affectedFeature ? `Affected Feature: ${affectedFeature}` : ''}
 ${context ? `Additional Context: ${JSON.stringify(context)}` : ''}`;
 
     const response = await geminiClient.generate({
-      workspaceId: job.workspaceId || undefined,
-      userId: job.userId || undefined,
+      workspaceId: job.workspaceId || null,
+      userId: job.userId || null,
       featureKey: 'issue_diagnosis',
       systemPrompt,
       userMessage,
@@ -2039,8 +2039,8 @@ Format: Write a 2-3 sentence summary that could be shown to both the user and st
 
     try {
       const response = await geminiClient.generate({
-        workspaceId: job.workspaceId || undefined,
-        userId: job.userId || undefined,
+        workspaceId: job.workspaceId || null,
+        userId: job.userId || null,
         featureKey: 'trinity_summarize',
         systemPrompt,
         userMessage,

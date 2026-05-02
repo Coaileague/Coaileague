@@ -414,7 +414,7 @@ async function seedAnvilStripeMode() {
       const customer = await stripe!.customers.create({
         name: c.companyName,
         email: c.email ?? `billing+${c.id}@anvilsecurity.test`,
-        phone: c.phone ?? undefined,
+        phone: c.phone ?? null,
         description: `Anvil Security Group — CoAIleague test (workspace: ${ANVIL})`,
         metadata: { coaileague_client_id: c.id, coaileague_workspace_id: ANVIL, environment: 'test' },
       });

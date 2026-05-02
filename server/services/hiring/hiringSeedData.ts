@@ -82,16 +82,16 @@ export async function seedHiringData(): Promise<{ success: boolean; message: str
   // 2. DEFAULT QUESTION SETS
   // =========================================================================
   const unarmedQuestions = JSON.stringify([
-    { q: 'What is your availability? Are you able to work nights, weekends, and holidays?', weight: 10, category: 'availability' },
-    { q: 'Tell me about your prior security experience. How many years have you worked in the industry?', weight: 15, category: 'experience' },
-    { q: 'What is your reason for wanting to leave or having left your most recent employer?', weight: 10, category: 'employment_history' },
-    { q: 'A visitor becomes aggressive at the front desk after being denied entry. Walk me through exactly how you handle that situation.', weight: 20, category: 'situational' },
-    { q: 'You observe a coworker sleeping on duty during a night shift. What do you do?', weight: 15, category: 'situational' },
-    { q: 'Are you familiar with Texas DPS licensing requirements for security officers? Is your license currently active and in good standing?', weight: 15, category: 'compliance' },
-    { q: 'Can you confirm you are physically able to stand, walk, and patrol for shifts up to 12 hours?', weight: 5, category: 'physical' },
-    { q: 'Have you ever been terminated from a security position? If yes, please describe the circumstances.', weight: 15, category: 'employment_history' },
-    { q: 'What would you do if you disagreed with a direct order from your supervisor?', weight: 10, category: 'situational' },
-    { q: 'Do you have reliable transportation to report on time to assigned client sites?', weight: 5, category: 'logistics' }
+    { q: 'What is your availability? Are you able to work nights, weekends, and holidays?', weight: '10', category: 'availability' },
+    { q: 'Tell me about your prior security experience. How many years have you worked in the industry?', weight: '15', category: 'experience' },
+    { q: 'What is your reason for wanting to leave or having left your most recent employer?', weight: '10', category: 'employment_history' },
+    { q: 'A visitor becomes aggressive at the front desk after being denied entry. Walk me through exactly how you handle that situation.', weight: '20', category: 'situational' },
+    { q: 'You observe a coworker sleeping on duty during a night shift. What do you do?', weight: '15', category: 'situational' },
+    { q: 'Are you familiar with Texas DPS licensing requirements for security officers? Is your license currently active and in good standing?', weight: '15', category: 'compliance' },
+    { q: 'Can you confirm you are physically able to stand, walk, and patrol for shifts up to 12 hours?', weight: '5', category: 'physical' },
+    { q: 'Have you ever been terminated from a security position? If yes, please describe the circumstances.', weight: '15', category: 'employment_history' },
+    { q: 'What would you do if you disagreed with a direct order from your supervisor?', weight: '10', category: 'situational' },
+    { q: 'Do you have reliable transportation to report on time to assigned client sites?', weight: '5', category: 'logistics' }
   ]);
 
   // Converted to Drizzle ORM: ON CONFLICT
@@ -462,7 +462,7 @@ Thank you again for your time. You represented yourself very well today.
         physical: 5, employment_clean: 15, chain_of_command: 9, logistics: 5,
         total: 82
       },
-      overallScore: 82,
+      overallScore: '82',
       transcriptSummary: 'Samantha Cruz completed all 10 interview questions. De-escalation protocol: Excellent. Healthcare compliance awareness: Outstanding. Employment history: Clean — no terminations. License verified at 97% confidence. Full availability including evenings and overnights. Trinity recommends for offer.',
       completedAt: new Date(d(5, 10)),
       createdAt: new Date(d(6, 3)),

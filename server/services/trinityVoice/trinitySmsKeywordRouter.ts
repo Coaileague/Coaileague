@@ -618,7 +618,7 @@ async function handleCalloff(
     const result = await executeCalloffCoverageWorkflow({
       workspaceId: officer.workspace_id,
       employeeId: officer.id,
-      reason: reason || undefined,
+      reason: reason || null,
       triggerSource: 'sms_calloff',
     });
 

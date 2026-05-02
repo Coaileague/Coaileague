@@ -262,20 +262,20 @@ export function registerInvoiceEmailActions() {
           clientName: `${invoice.client?.firstName || ''} ${invoice.client?.lastName || ''}`.trim() || 'Client',
           clientCompany: invoice.client?.companyName || '',
           clientEmail: invoice.client?.email || '',
-          clientAddress: invoice.client?.address || undefined,
+          clientAddress: invoice.client?.address || null,
           workspaceName: workspace?.name || PLATFORM.name,
-          workspaceAddress: workspace?.address || undefined,
+          workspaceAddress: workspace?.address || null,
           lineItems: lineItems.map(li => ({
             description: li.description,
-            quantity: Number(li.quantity),
-            rate: Number(li.unitPrice),
-            amount: Number(li.amount)
+            quantity: String(Number(li.quantity)),
+            rate: String(Number(li.unitPrice)),
+            amount: String(Number(li.amount))
           })),
           subtotal: Number(invoice.subtotal),
           taxRate: Number(invoice.taxRate || 0),
           taxAmount: Number(invoice.taxAmount || 0),
           total: Number(invoice.total),
-          notes: invoice.notes || undefined
+          notes: invoice.notes || null
         });
 
         return createResult(request.actionId, true, 'Invoice PDF generated successfully', {
@@ -395,7 +395,7 @@ export function registerInvoiceEmailActions() {
 
         return createResult(request.actionId, result.success, result.success ? 'Email sent' : 'Failed to send email', {
           sent: result.success,
-          messageId: (result as {data: unknown}).data?.data?.id
+          messageId: (result as {data: string}).data?.data?.id
         }, start);
       } catch (error : unknown) {
         return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);

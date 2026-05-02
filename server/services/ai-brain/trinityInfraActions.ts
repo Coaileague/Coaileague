@@ -173,7 +173,7 @@ export function registerInfraActions() {
           workspaceId,
           clientId || invoice.clientId,
           new Date(),
-          [{ description: `Invoice ${invoice.invoiceNumber}`, amount: parseFloat(invoice.total || '0') }],
+          [{ description: `Invoice ${invoice.invoiceNumber}`, amount: String(parseFloat(invoice.total || '0')) }],
           'trinity-ai'
         );
         qbEntityId = result.invoiceId;
@@ -285,7 +285,7 @@ export function registerInfraActions() {
             id: line.id,
             employeeName: line.employeeName || `Employee ${line.employeeId}`,
             hours: parseFloat(line.regularHours || '0') + parseFloat(line.overtimeHours || '0'),
-            amount: parseFloat(line.grossPay || '0'),
+            amount: String(parseFloat(line.grossPay || '0')),
             status: 'synced' as const,
             quickbooksId: `QBT-${line.id.slice(0, 8).toUpperCase()}`,
           })),

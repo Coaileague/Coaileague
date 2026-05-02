@@ -902,7 +902,7 @@ export default function Invoices() {
       startDate: hoursFormData.startDate,
       endDate: hoursFormData.endDate,
       taxRate: parseFloat(hoursFormData.taxRate),
-      hourlyRateOverride: hoursFormData.hourlyRateOverride ? parseFloat(hoursFormData.hourlyRateOverride) : undefined,
+      hourlyRateOverride: hoursFormData.hourlyRateOverride ? parseFloat(hoursFormData.hourlyRateOverride) : null,
       notes: hoursFormData.notes,
       dueInDays: parseInt(hoursFormData.dueInDays),
       groupByEmployee: hoursFormData.groupByEmployee,

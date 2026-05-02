@@ -195,9 +195,9 @@ class AIBrainAuthorizationService {
   } {
     return {
       active: this.trinityKillSwitchActive,
-      activatedBy: this.trinityKillSwitchActivatedBy || undefined,
-      activatedAt: this.trinityKillSwitchActivatedAt || undefined,
-      reason: this.trinityKillSwitchReason || undefined,
+      activatedBy: this.trinityKillSwitchActivatedBy || null,
+      activatedAt: this.trinityKillSwitchActivatedAt || null,
+      reason: this.trinityKillSwitchReason || null,
     };
   }
 

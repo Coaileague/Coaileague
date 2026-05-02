@@ -453,14 +453,14 @@ export default function CreateOrg() {
       name: orgName.trim(),
       description: orgDescription,
       size,
-      orgCode: orgCode || undefined,
+      orgCode: orgCode || null,
       sectorId: industrySelection?.sectorId,
       industryGroupId: industrySelection?.industryGroupId,
       subIndustryId: industrySelection?.subIndustryId,
       complianceTemplates: industrySelection?.complianceTemplates,
       certifications: industrySelection?.certifications,
-      stateLicenseNumber: isRegulatedIndustry ? stateLicenseNumber : undefined,
-      stateLicenseState: isRegulatedIndustry ? stateLicenseState : undefined,
+      stateLicenseNumber: isRegulatedIndustry ? stateLicenseNumber : null,
+      stateLicenseState: isRegulatedIndustry ? stateLicenseState : null,
     });
   };
 

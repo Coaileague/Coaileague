@@ -390,7 +390,7 @@ router.post('/request/:id/dispute', requireAuth, async (req: Request, res: Respo
 router.post('/request/:id/grant', requireAuth, async (req: Request, res: Response) => {
   try {
     // Only platform-wide admins (cron or internal staff) may grant auditor access.
-    const platformRole = req.platformRole || req.user?.platformRole || undefined;
+    const platformRole = req.platformRole || req.user?.platformRole || null;
     if (!hasPlatformWideAccess(platformRole)) {
       return res.status(403).json({ success: false, error: 'Platform admin access required' });
     }

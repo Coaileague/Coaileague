@@ -616,8 +616,8 @@ export async function evaluateAgentPayload(taskId: string): Promise<AgentTask> {
         agentKey,
         taskType,
         inputPayload,
-        relatedEntityType: relatedEntityType || undefined,
-        relatedEntityId: relatedEntityId || undefined,
+        relatedEntityType: relatedEntityType || null,
+        relatedEntityId: relatedEntityId || null,
         spawnedBy,
       });
     } catch (retryErr) {

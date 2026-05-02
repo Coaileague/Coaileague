@@ -362,7 +362,7 @@ export class AIGuardRails {
         warning: 'Could not calculate AI-assisted payroll - using manual entry'
       },
       performance_scoring: {
-        score: 50,
+        score: '50',
         reasoning: 'AI scoring unavailable',
         metrics: {}
       }

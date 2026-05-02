@@ -389,7 +389,7 @@ export class PartnerApiUsageService {
     // Aggregate by partner
     for (const event of events) {
       if (!metrics.byPartner[event.partnerType]) {
-        metrics.byPartner[event.partnerType] = { calls: 0, cost: 0, successRate: 0 };
+        metrics.byPartner[event.partnerType] = { calls: 0, cost: '0', successRate: '0' };
       }
       metrics.byPartner[event.partnerType].calls++;
       metrics.byPartner[event.partnerType].cost += Number(event.totalCost || 0);
@@ -408,7 +408,7 @@ export class PartnerApiUsageService {
     for (const event of events) {
       const key = `${event.httpMethod} ${event.endpoint}`;
       if (!metrics.byEndpoint[key]) {
-        metrics.byEndpoint[key] = { calls: 0, avgResponseTime: 0, successRate: 0 };
+        metrics.byEndpoint[key] = { calls: 0, avgResponseTime: 0, successRate: '0' };
       }
       metrics.byEndpoint[key].calls++;
     }

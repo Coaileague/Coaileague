@@ -138,10 +138,10 @@ class SupportSessionService {
         const session: SupportSession = {
           id: dbSession.id,
           status: this.dbStatusToSessionStatus(dbSession.status),
-          userId: dbSession.userId || undefined,
+          userId: dbSession.userId || null,
           workspaceId: dbSession.workspaceId,
-          ticketId: dbSession.supportTicketId || undefined,
-          conversationId: dbSession.conversationId || undefined,
+          ticketId: dbSession.supportTicketId || null,
+          conversationId: dbSession.conversationId || null,
           messages,
           createdAt: dbSession.createdAt || new Date(),
           updatedAt: dbSession.updatedAt || new Date(),
@@ -224,7 +224,7 @@ class SupportSessionService {
       metadata: {
         userAgent: params.userAgent,
         url: params.url,
-        quickbooksId: params.quickbooksId || undefined,
+        quickbooksId: params.quickbooksId || null,
         issueDescription: params.issueDescription,
       },
     };
@@ -341,10 +341,10 @@ class SupportSessionService {
       const session: SupportSession = {
         id: dbSession.id,
         status: this.dbStatusToSessionStatus(dbSession.status),
-        userId: dbSession.userId || undefined,
+        userId: dbSession.userId || null,
         workspaceId: dbSession.workspaceId,
-        ticketId: dbSession.supportTicketId || undefined,
-        conversationId: dbSession.conversationId || undefined,
+        ticketId: dbSession.supportTicketId || null,
+        conversationId: dbSession.conversationId || null,
         messages,
         createdAt: dbSession.createdAt || new Date(),
         updatedAt: dbSession.updatedAt || new Date(),
@@ -512,7 +512,7 @@ class SupportSessionService {
         priority: 'medium',
         status: 'open',
         type: 'support',
-        requestedBy: session.userId || undefined,
+        requestedBy: session.userId || null,
         workspaceId: session.workspaceId || null,
         ticketNumber,
       }).returning();

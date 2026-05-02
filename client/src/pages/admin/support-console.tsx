@@ -497,7 +497,7 @@ function SupportDashboard() {
                 actionType: actionForm.actionType,
                 workspaceId: actionDialog.workspaceId,
                 targetEntityType: actionForm.targetEntityType,
-                targetEntityId: actionForm.targetEntityId || undefined,
+                targetEntityId: actionForm.targetEntityId || null,
                 reason: actionForm.reason
               })}
             >

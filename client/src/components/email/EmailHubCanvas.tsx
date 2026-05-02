@@ -495,7 +495,7 @@ function EmailListItem({
               priorityConfig.glow,
               isHighPriority && "animate-[pulse-glow_3s_ease-in-out_infinite]"
             )}
-            onClick={!isSwiping ? onSelect : undefined}
+            onClick={!isSwiping ? onSelect : null}
             data-testid={`email-list-item-${email.id}`}
           >
             {innerContent}
@@ -1167,8 +1167,8 @@ function EmailHub({
                       onSelect={() => onSelectEmail(email)}
                       onStar={() => onStarEmail?.(email)}
                       isMobile={isMobile}
-                      onArchive={onArchiveEmail ? () => onArchiveEmail(email) : undefined}
-                      onDelete={onDeleteEmail ? () => onDeleteEmail(email) : undefined}
+                      onArchive={onArchiveEmail ? () => onArchiveEmail(email) : null}
+                      onDelete={onDeleteEmail ? () => onDeleteEmail(email) : null}
                     />
                   </div>
                 </div>
@@ -3360,7 +3360,7 @@ function WorkflowPipeline({
   };
 
   const resetWorkflowCounters = (id: string) => {
-    setWorkflows(prev => prev.map(w => w.id === id ? { ...w, triggerCount: 0, lastTriggered: undefined } : w));
+    setWorkflows(prev => prev.map(w => w.id === id ? { ...w, triggerCount: 0, lastTriggered: null } : w));
   };
 
   const getStepIcon = (type: string) => {

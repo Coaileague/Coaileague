@@ -99,8 +99,8 @@ async function getSiteLocation(clientId: string, workspaceId?: string): Promise<
   const geofenceRadius = (client as ClientWithExtras).geofenceRadiusMeters ?? DEFAULT_GEOFENCE_RADIUS_METERS;
 
   return {
-    latitude: parseFloat(latitude),
-    longitude: parseFloat(longitude),
+    latitude: String(parseFloat(latitude)),
+    longitude: String(parseFloat(longitude)),
     name: client.companyName || `${client.firstName} ${client.lastName}` || 'Unknown Site',
     geofenceRadiusMeters: geofenceRadius,
   };

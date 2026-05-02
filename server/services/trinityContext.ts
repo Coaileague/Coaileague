@@ -660,7 +660,7 @@ async function gatherPlatformDiagnostics(): Promise<PlatformDiagnostics> {
   let churnRiskCount = 0;
   let overallHealth: PlatformDiagnostics['overallHealth'] = 'healthy';
   const supportTicketBacklog = { open: 0, urgent: 0, avgAgeHours: 0 };
-  const fastModeStats = { successRate: 0, avgDuration: 0, slaBreeches: 0, totalExecutions: 0 };
+  const fastModeStats = { successRate: '0', avgDuration: 0, slaBreeches: 0, totalExecutions: 0 };
   
   try {
     // Date calculations
@@ -881,7 +881,7 @@ export async function createNotificationSuggestion(params: {
         targetType: params.targetType || 'platform',
         targetId: params.targetId,
         status: 'pending',
-        confidenceScore: 85,
+        confidenceScore: '85',
       })
       .returning({ id: aiSuggestions.id });
     

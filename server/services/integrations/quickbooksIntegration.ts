@@ -98,7 +98,7 @@ export class QuickBooksIntegration {
     } catch (error : unknown) {
       quickbooksRateLimiter.completeRequest(realmId, environment, false);
       
-      if ((error as Record<string, unknown>).status === 429) {
+      if ((error as Record<string, string>).status === 429) {
         quickbooksRateLimiter.recordThrottle(realmId, environment);
         return {
           success: false,
@@ -546,10 +546,10 @@ export class QuickBooksIntegration {
       email: c.email,
       phone: c.phone,
       address: c.address ? {
-        line1: (c as Record<string, unknown>).address.street || (c as Record<string, unknown>).address.line1,
-        city: (c as Record<string, unknown>).address.city,
-        state: (c as Record<string, unknown>).address.state,
-        postalCode: (c as Record<string, unknown>).address.zip || (c as Record<string, unknown>).address.postalCode,
+        line1: (c as Record<string, string>).address.street || (c as Record<string, string>).address.line1,
+        city: (c as Record<string, string>).address.city,
+        state: (c as Record<string, string>).address.state,
+        postalCode: (c as Record<string, string>).address.zip || (c as Record<string, string>).address.postalCode,
       } : undefined,
     })));
 

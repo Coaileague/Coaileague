@@ -952,9 +952,9 @@ class EmployeeDocumentOnboardingService {
         status,
         documentId: doc.id,
         uploadedAt: doc.uploadedAt,
-        expirationDate: doc.expirationDate || undefined,
+        expirationDate: doc.expirationDate || null,
         daysUntilExpiration,
-        rejectionReason: doc.rejectionReason || undefined,
+        rejectionReason: doc.rejectionReason || null,
       };
     });
 

@@ -509,7 +509,7 @@ export default function OrgHub() {
             <Button variant="outline" onClick={() => setShowCreateModal(false)}>Cancel</Button>
             <Button
               disabled={!newBranchName.trim() || createBranch.isPending}
-              onClick={() => createBranch.mutate({ name: newBranchName, subOrgLabel: newBranchLabel || newBranchName, primaryOperatingState: newBranchState || undefined })}
+              onClick={() => createBranch.mutate({ name: newBranchName, subOrgLabel: newBranchLabel || newBranchName, primaryOperatingState: newBranchState || null })}
               data-testid="button-confirm-create-branch"
             >
               {createBranch.isPending ? <RefreshCw size={15} className="animate-spin" /> : <Plus size={15} />}
@@ -552,7 +552,7 @@ export default function OrgHub() {
             <Button variant="outline" onClick={() => setShowAttachModal(false)}>Cancel</Button>
             <Button
               disabled={!attachWorkspaceId.trim() || attachBranch.isPending}
-              onClick={() => attachBranch.mutate({ targetWorkspaceId: attachWorkspaceId, subOrgLabel: attachLabel || undefined })}
+              onClick={() => attachBranch.mutate({ targetWorkspaceId: attachWorkspaceId, subOrgLabel: attachLabel || null })}
               data-testid="button-confirm-attach"
             >
               {attachBranch.isPending ? <RefreshCw size={15} className="animate-spin" /> : <Link2 size={15} />}

@@ -415,11 +415,11 @@ function FieldSettings({ field, allFields, onChange }: { field: FormField; allFi
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1">
             <Label className="text-xs">Min</Label>
-            <Input type="number" value={field.validation?.min ?? ""} onChange={e => onChange({ validation: { ...field.validation, min: e.target.value ? Number(e.target.value) : undefined } })} className="h-8 text-sm" />
+            <Input type="number" value={field.validation?.min ?? ""} onChange={e => onChange({ validation: { ...field.validation, min: e.target.value ? Number(e.target.value) : null } })} className="h-8 text-sm" />
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Max</Label>
-            <Input type="number" value={field.validation?.max ?? ""} onChange={e => onChange({ validation: { ...field.validation, max: e.target.value ? Number(e.target.value) : undefined } })} className="h-8 text-sm" />
+            <Input type="number" value={field.validation?.max ?? ""} onChange={e => onChange({ validation: { ...field.validation, max: e.target.value ? Number(e.target.value) : null } })} className="h-8 text-sm" />
           </div>
         </div>
       )}
@@ -458,7 +458,7 @@ function FieldSettings({ field, allFields, onChange }: { field: FormField; allFi
           <Select
             value={field.conditional?.fieldId || "_none"}
             onValueChange={v => {
-              if (v === "_none") onChange({ conditional: undefined });
+              if (v === "_none") onChange({ conditional: null });
               else onChange({ conditional: { fieldId: v, operator: "equals", value: "" } });
             }}>
             <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Always show" /></SelectTrigger>

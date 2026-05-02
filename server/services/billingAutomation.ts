@@ -717,7 +717,7 @@ async function createInvoiceFromBillableSummary(
       workspaceId,
       entryType: 'invoice_created',
       direction: 'debit',
-      amount: parseFloat(inv.total),
+      amount: String(parseFloat(inv.total)),
       relatedEntityType: 'invoice',
       relatedEntityId: inv.id,
       invoiceId: inv.id,
@@ -946,8 +946,8 @@ export async function sendInvoiceViaStripe(invoiceId: string): Promise<{ success
     
     if (!stripeCustomerId) {
       const customer = await stripe.customers.create({
-        email: client.email || undefined,
-        name: client.companyName || `${client.firstName || ''} ${client.lastName || ''}`.trim() || undefined,
+        email: client.email || null,
+        name: client.companyName || `${client.firstName || ''} ${client.lastName || ''}`.trim() || null,
         metadata: {
           coaileagueClientId: client.id,
           workspaceId: invoice.workspaceId,
@@ -1349,7 +1349,7 @@ export async function processDelinquentInvoices(workspaceId: string) {
           // invoice_created +$10k, invoice_overdue +$10k = $20k — then payment_received
           // -$10k still left $10k on the books). Fix: amount=0 so balanceAfter is unchanged
           // and the entry serves as a pure audit-trail event marker.
-          amount: 0,
+          amount: '0',
           description: `Invoice ${invoice.invoiceNumber} automatically marked overdue after ${daysOverdue} days past due`,
           metadata: {
             previousState: { status: invoice.status },
@@ -1644,7 +1644,7 @@ export async function cascadeTimeEntryEditToInvoice(params: {
           workspaceId,
           entryType: 'adjustment',
           direction: 'credit',
-          amount: parseFloat(invoice.total),
+          amount: String(parseFloat(invoice.total)),
           invoiceId,
           relatedEntityType: 'invoice',
           relatedEntityId: invoiceId,
@@ -1676,7 +1676,7 @@ export async function cascadeTimeEntryEditToInvoice(params: {
       workspaceId,
       entryType: 'adjustment',
       direction: difference < 0 ? 'credit' : 'debit',
-      amount: Math.abs(difference),
+      amount: String(Math.abs(difference)),
       invoiceId,
       relatedEntityType: 'invoice',
       relatedEntityId: invoiceId,

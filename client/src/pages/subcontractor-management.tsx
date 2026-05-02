@@ -103,7 +103,7 @@ export default function SubcontractorManagementPage() {
           </Button>
         }
         title={selected.company_name}
-        subtitle={selected.dba_name ? `DBA: ${selected.dba_name}` : undefined}
+        subtitle={selected.dba_name ? `DBA: ${selected.dba_name}` : null}
         badges={
           <>
             <Badge className={coi.color}>{coi.label}</Badge>

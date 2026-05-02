@@ -248,7 +248,7 @@ class ContextResolver {
           overdueTraining: 0,
           policyViolations: 0,
           upcomingDeadlines: allCerts[0]?.total || 0,
-          complianceScore: 95,
+          complianceScore: '95',
         };
       }
 
@@ -643,12 +643,12 @@ class AIAnalyticsEngine {
         category: row.category as ActionCategory,
         title: row.title,
         message: row.summary,
-        rationale: row.details || undefined,
+        rationale: row.details || null,
         riskLevel: this.mapPriorityToRisk(row.priority),
         confidence: row.confidence ? parseFloat(row.confidence) / 100 : 0.8,
         isRead: row.status === 'dismissed' || row.status === 'acted_upon',
         createdAt: row.createdAt || new Date(),
-        followUpActions: row.suggestedActions || undefined,
+        followUpActions: row.suggestedActions || null,
       }));
     } catch (error) {
       log.error('[AI Analytics Engine] Failed to fetch insights from DB:', error);
@@ -697,7 +697,7 @@ class AIAnalyticsEngine {
         category: row.category as ActionCategory,
         title: row.title,
         message: row.summary,
-        rationale: row.details || undefined,
+        rationale: row.details || null,
         riskLevel: this.mapPriorityToRisk(row.priority),
         confidence: row.confidence ? parseFloat(row.confidence) / 100 : 0.8,
         isRead: row.status === 'dismissed' || row.status === 'acted_upon',

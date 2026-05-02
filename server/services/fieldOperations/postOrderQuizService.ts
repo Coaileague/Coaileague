@@ -181,7 +181,7 @@ class PostOrderQuizService {
     const quiz = await this.getQuizForShift(shiftId, workspaceId);
 
     if (!quiz) {
-      return { passed: true, score: 100, totalQuestions: 0, correctAnswers: 0, failedQuestions: [] };
+      return { passed: true, score: '100', totalQuestions: 0, correctAnswers: 0, failedQuestions: [] };
     }
 
     let correct = 0;

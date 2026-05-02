@@ -989,16 +989,16 @@ export class PayrollAutomationEngine {
    */
   static getLocalTaxJurisdictions(): Array<{ code: string; name: string; state: string; rate: number }> {
     return [
-      { code: 'NYC', name: 'New York City', state: 'NY', rate: 0.03876 },
-      { code: 'PHL', name: 'Philadelphia', state: 'PA', rate: 0.03828 },
-      { code: 'CLEVELAND', name: 'Cleveland', state: 'OH', rate: 0.025 },
-      { code: 'DETROIT', name: 'Detroit', state: 'MI', rate: 0.024 },
-      { code: 'LOUISVILLE', name: 'Louisville', state: 'KY', rate: 0.0285 },
-      { code: 'COLUMBUS', name: 'Columbus', state: 'OH', rate: 0.025 },
-      { code: 'PITTSBURGH', name: 'Pittsburgh', state: 'PA', rate: 0.03 },
-      { code: 'STLOUIS', name: 'St. Louis City', state: 'MO', rate: 0.01 },
-      { code: 'BALTIMORE_CITY', name: 'Baltimore City', state: 'MD', rate: 0.032 },
-      { code: 'WILMINGTON', name: 'Wilmington', state: 'DE', rate: 0.0125 },
+      { code: 'NYC', name: 'New York City', state: 'NY', rate: '0.03876' },
+      { code: 'PHL', name: 'Philadelphia', state: 'PA', rate: '0.03828' },
+      { code: 'CLEVELAND', name: 'Cleveland', state: 'OH', rate: '0.025' },
+      { code: 'DETROIT', name: 'Detroit', state: 'MI', rate: '0.024' },
+      { code: 'LOUISVILLE', name: 'Louisville', state: 'KY', rate: '0.0285' },
+      { code: 'COLUMBUS', name: 'Columbus', state: 'OH', rate: '0.025' },
+      { code: 'PITTSBURGH', name: 'Pittsburgh', state: 'PA', rate: '0.03' },
+      { code: 'STLOUIS', name: 'St. Louis City', state: 'MO', rate: '0.01' },
+      { code: 'BALTIMORE_CITY', name: 'Baltimore City', state: 'MD', rate: '0.032' },
+      { code: 'WILMINGTON', name: 'Wilmington', state: 'DE', rate: '0.0125' },
     ];
   }
 

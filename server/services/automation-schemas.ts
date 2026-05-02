@@ -95,8 +95,8 @@ export const createFallbackInvoiceDecision = (clientId: string): ValidatedInvoic
 
 export const createFallbackPayrollDecision = (employeeId: string): ValidatedPayrollDecision => ({
   employeeId,
-  regularHours: 0,
-  overtimeHours: 0,
+  regularHours: '0',
+  overtimeHours: '0',
   regularPay: 0,
   overtimePay: 0,
   totalPay: 0,

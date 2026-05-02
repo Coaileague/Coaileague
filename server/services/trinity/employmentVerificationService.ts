@@ -53,7 +53,7 @@ function extractFromAddress(from: string | undefined): { email: string; name?: s
   const raw = (from || '').trim();
   const match = raw.match(/<([^>]+)>/);
   if (match?.[1]) {
-    return { email: match[1].trim(), name: raw.split('<')[0].trim() || undefined };
+    return { email: match[1].trim(), name: raw.split('<')[0].trim() || null };
   }
   return { email: raw };
 }

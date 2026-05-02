@@ -83,15 +83,15 @@ async function loadSignersFromDB(contractId: string): Promise<ContractSigner[]> 
     signerRole: r.signerRole,
     signerName: r.signerName,
     signerEmail: r.signerEmail,
-    signerTitle: r.signerTitle || undefined,
+    signerTitle: r.signerTitle || null,
     order: r.signerOrder ?? 0,
     status: (r.signerStatus || 'pending') as ContractSigner['status'],
-    accessToken: r.accessToken || undefined,
-    notifiedAt: r.notifiedAt || undefined,
-    viewedAt: r.viewedAt || undefined,
-    signedAt: r.signedAt || undefined,
+    accessToken: r.accessToken || null,
+    notifiedAt: r.notifiedAt || null,
+    viewedAt: r.viewedAt || null,
+    signedAt: r.signedAt || null,
     reminderCount: r.reminderCount ?? 0,
-    lastReminderAt: r.lastReminderAt || undefined,
+    lastReminderAt: r.lastReminderAt || null,
   })).sort((a, b) => a.order - b.order);
 }
 
@@ -1325,7 +1325,7 @@ class ContractPipelineService {
     
     return {
       valid,
-      storedHash: contract.contentHash || undefined,
+      storedHash: contract.contentHash || null,
       computedHash,
     };
   }

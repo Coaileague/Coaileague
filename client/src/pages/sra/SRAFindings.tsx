@@ -41,7 +41,7 @@ function sraRequest(method: string, path: string, body?: unknown) {
     method,
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     credentials: "include",
-    body: body ? JSON.stringify(body) : undefined,
+    body: body ? JSON.stringify(body) : null,
   }).then(r => r.json());
 }
 
@@ -108,8 +108,8 @@ export default function SRAFindings() {
     }
     createMutation.mutate({
       ...newFinding,
-      fineAmount: newFinding.fineAmount ? parseFloat(newFinding.fineAmount) : undefined,
-      complianceDeadline: newFinding.complianceDeadline || undefined,
+      fineAmount: newFinding.fineAmount ? parseFloat(newFinding.fineAmount) : null,
+      complianceDeadline: newFinding.complianceDeadline || null,
     });
   };
 

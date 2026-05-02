@@ -358,8 +358,8 @@ router.post('/escalations/:taskId/retask', requireAuth, async (req: Authenticate
       agentKey: orig.agentKey,
       taskType: orig.taskType,
       inputPayload,
-      relatedEntityType: orig.relatedEntityType ?? undefined,
-      relatedEntityId: orig.relatedEntityId ?? undefined,
+      relatedEntityType: orig.relatedEntityType ?? null,
+      relatedEntityId: orig.relatedEntityId ?? null,
       spawnedBy: 'management',
     });
     res.json({ success: true, newTaskId: newTask.id });

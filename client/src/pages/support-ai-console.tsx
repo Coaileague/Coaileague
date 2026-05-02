@@ -261,7 +261,7 @@ export default function SupportAIConsole() {
     
     sendMessageMutation.mutate({
       message,
-      conversationId: conversationId || undefined,
+      conversationId: conversationId || null,
       executeActions: true,
     });
     setMessage("");
@@ -293,13 +293,13 @@ export default function SupportAIConsole() {
     if (!searchPattern.trim()) return;
     searchFilesMutation.mutate({
       pattern: searchPattern,
-      path: currentPath !== '.' ? currentPath : undefined,
+      path: currentPath !== '.' ? currentPath : null,
     });
   };
 
   const handleRunTests = () => {
     runTestsMutation.mutate({
-      category: testCategory !== 'all' ? testCategory : undefined,
+      category: testCategory !== 'all' ? testCategory : null,
     });
   };
 

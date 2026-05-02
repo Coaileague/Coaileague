@@ -331,7 +331,7 @@ export default function QuickBooksImportPage() {
             connected: qbConnection.status === 'connected',
             companyName: qbConnection.companyName || qbConnection.metadata?.companyName,
             lastSync: qbConnection.lastSyncedAt,
-          } : undefined,
+          } : null,
         };
       } catch (error) {
         console.error('Connection fetch error:', error);
@@ -366,7 +366,7 @@ export default function QuickBooksImportPage() {
         ...c,
         recommended: c.monthlyRevenue > 1000 || c.invoiceCount > 3,
         recommendReason: c.monthlyRevenue > 5000 ? 'High-value client' : 
-                         c.invoiceCount > 5 ? 'Active client' : undefined,
+                         c.invoiceCount > 5 ? 'Active client' : null,
         isVendor: c.monthlyRevenue === 0 && c.invoiceCount === 0,
       }));
       
@@ -375,7 +375,7 @@ export default function QuickBooksImportPage() {
         recommended: e.active && e.employeeType !== '1099',
         recommendReason: e.employeeType === '1099' ? 'Contractor - review if field staff' :
                          !e.active ? 'Inactive employee' : 
-                         !e.payRate ? 'Missing pay rate' : undefined,
+                         !e.payRate ? 'Missing pay rate' : null,
       }));
 
       return { ...data, customers, employees };

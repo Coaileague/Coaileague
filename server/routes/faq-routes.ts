@@ -149,7 +149,7 @@ app.post('/api/helpos/faqs', requirePlatformStaff, async (req: AuthenticatedRequ
         });
         embeddingVector = JSON.stringify(embeddingResponse.data[0].embedding);
         const { tokenManager } = await import('../services/billing/tokenManager');
-        await (tokenManager as Record<string,unknown>).deductSupportPoolCredits('faq_embedding', 'FAQ Create Embedding', wsId || undefined, req.user?.id);
+        await (tokenManager as Record<string,unknown>).deductSupportPoolCredits('faq_embedding', 'FAQ Create Embedding', wsId || null, req.user?.id);
       } catch (embeddingError) {
         log.error('Error generating embedding:', embeddingError);
       }
@@ -212,7 +212,7 @@ app.patch('/api/helpos/faqs/:id', requirePlatformStaff, async (req: Authenticate
         });
         embeddingVector = JSON.stringify(embeddingResponse.data[0].embedding);
         const { tokenManager } = await import('../services/billing/tokenManager');
-        await (tokenManager as Record<string,unknown>).deductSupportPoolCredits('faq_embedding', 'FAQ Update Embedding', wsId || undefined, req.user?.id);
+        await (tokenManager as Record<string,unknown>).deductSupportPoolCredits('faq_embedding', 'FAQ Update Embedding', wsId || null, req.user?.id);
       } catch (embeddingError) {
         log.error('Error generating embedding:', embeddingError);
       }
@@ -359,7 +359,7 @@ app.post('/api/helpos/faqs/search/semantic', readLimiter, requireAuth, async (re
 
     try {
       const { tokenManager } = await import('../services/billing/tokenManager');
-      await (tokenManager as Record<string,unknown>).deductSupportPoolCredits('faq_embedding', 'FAQ Semantic Search Embedding', wsId || undefined);
+      await (tokenManager as Record<string,unknown>).deductSupportPoolCredits('faq_embedding', 'FAQ Semantic Search Embedding', wsId || null);
     } catch (billingErr: unknown) {
       log.error('[FAQ AI] Support pool deduction failed:', billingErr);
     }
@@ -423,7 +423,7 @@ app.post('/api/helpos/faqs/generate/from-ticket', requirePlatformStaff, async (r
 
     // Use OpenAI to generate FAQ from ticket
     const result = await getMeteredOpenAICompletion({
-      workspaceId: wsId || undefined,
+      workspaceId: wsId || null,
       userId: req.user?.id,
       featureKey: 'faq_chat',
       messages: [
@@ -493,7 +493,7 @@ app.post('/api/helpos/faqs/generate/from-conversation', requirePlatformStaff, as
 
     // Use OpenAI to refine and categorize the FAQ
     const result = await getMeteredOpenAICompletion({
-      workspaceId: wsId || undefined,
+      workspaceId: wsId || null,
       userId: req.user?.id,
       featureKey: 'faq_chat',
       messages: [
@@ -605,7 +605,7 @@ app.post('/api/helpos/faqs/bulk-import', requirePlatformStaff, async (req: Authe
     if (createdFaqs.length > 0) {
       try {
         const { tokenManager } = await import('../services/billing/tokenManager');
-        await (tokenManager as Record<string,unknown>).deductSupportPoolCredits('faq_embedding', 'FAQ Bulk Import Embeddings', wsId || undefined);
+        await (tokenManager as Record<string,unknown>).deductSupportPoolCredits('faq_embedding', 'FAQ Bulk Import Embeddings', wsId || null);
       } catch (billingErr: unknown) {
         log.error('[FAQ AI] Support pool deduction failed:', billingErr);
       }
@@ -652,7 +652,7 @@ app.get('/api/ai/faq/search', readLimiter, requireAuth, async (req: Authenticate
 
     const searchLimit = Math.min(Number(limit) || 5, 20); // Cap at 20 results
     const wsId = req.workspaceId || (req.user)?.workspaceId || (req.user)?.currentWorkspaceId;
-    const convId = (conversationId as string) || undefined;
+    const convId = (conversationId as string) || null;
 
     log.info(`🔍 [FAQ Search] Query: "${query}" - Limit: ${searchLimit}${convId ? ` - ConvId: ${convId}` : ''}`);
 
@@ -726,8 +726,8 @@ Rank these FAQs by relevance to the user's query. Return only valid JSON.`;
 
     try {
       const geminiResponse = await geminiClient.generate({
-        workspaceId: wsId ?? undefined,
-        userId: req.user?.id ?? undefined,
+        workspaceId: wsId ?? null,
+        userId: req.user?.id ?? null,
         featureKey: 'faq_search',
         systemPrompt,
         userMessage,
@@ -839,7 +839,7 @@ Rank these FAQs by relevance to the user's query. Return only valid JSON.`;
       try {
         await ChatServerHub.emitAIAction({
           conversationId: convId,
-          workspaceId: wsId ?? undefined,
+          workspaceId: wsId ?? null,
           actionType: 'suggestion',
           title: 'FAQ Suggestions Found',
           description: resultSummary,
@@ -863,7 +863,7 @@ Rank these FAQs by relevance to the user's query. Return only valid JSON.`;
     // Bill to shared platform support pool (not individual org)
     try {
       const { tokenManager } = await import('../services/billing/tokenManager');
-      await (tokenManager as Record<string,unknown>).deductSupportPoolCredits('faq_search', 'FAQ AI Search', wsId || undefined);
+      await (tokenManager as Record<string,unknown>).deductSupportPoolCredits('faq_search', 'FAQ AI Search', wsId || null);
     } catch (billingErr: unknown) {
       log.warn('[FAQ] Support pool billing failed (non-blocking):', billingErr instanceof Error ? billingErr.message : String(billingErr));
     }

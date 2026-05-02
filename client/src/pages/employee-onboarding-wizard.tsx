@@ -576,13 +576,13 @@ export default function EmployeeOnboardingWizard() {
               body: JSON.stringify({
                 applicationId,
                 workspaceId,
-                licenseType: form.licenseType || undefined,
-                guardCardNumber: form.guardCardNumber || undefined,
-                guardCardIssueDate: form.guardCardIssueDate || undefined,
-                guardCardExpiryDate: form.guardCardExpiryDate || undefined,
-                guardCardScanBase64: form.guardCardScanBase64 || undefined,
-                idFrontBase64: form.idFrontBase64 || undefined,
-                idBackBase64: form.idBackBase64 || undefined,
+                licenseType: form.licenseType || null,
+                guardCardNumber: form.guardCardNumber || null,
+                guardCardIssueDate: form.guardCardIssueDate || null,
+                guardCardExpiryDate: form.guardCardExpiryDate || null,
+                guardCardScanBase64: form.guardCardScanBase64 || null,
+                idFrontBase64: form.idFrontBase64 || null,
+                idBackBase64: form.idBackBase64 || null,
               }),
             });
           } catch {
@@ -599,7 +599,7 @@ export default function EmployeeOnboardingWizard() {
           availableSaturday: form.availableSaturday,
           availableSunday: form.availableSunday,
           preferredShiftTime: form.preferredShiftTime,
-          maxHoursPerWeek: form.maxHoursPerWeek ? parseInt(form.maxHoursPerWeek) : undefined,
+          maxHoursPerWeek: form.maxHoursPerWeek ? parseInt(form.maxHoursPerWeek) : null,
           availabilityNotes: form.availabilityNotes,
           currentStep: 'work_availability',
         } as unknown);

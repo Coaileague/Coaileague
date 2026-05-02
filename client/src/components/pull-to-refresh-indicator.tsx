@@ -34,7 +34,7 @@ export function PullToRefreshIndicator({
         opacity,
         transition: (isSnappingBack || isRefreshing)
           ? 'height 300ms cubic-bezier(0.4,0,0.2,1), opacity 300ms cubic-bezier(0.4,0,0.2,1)'
-          : undefined,
+          : null,
       }}
       data-testid="pull-refresh-indicator"
     >

@@ -102,7 +102,7 @@ export interface AIOptimizationSuggestion {
 // ============================================================================
 
 const CONFIDENCE_WEIGHTS = {
-  successRate: 0.40,
+  successRate: '0.40',
   executionTime: 0.15,
   userFeedback: 0.20,
   errorRecovery: 0.10,
@@ -187,8 +187,8 @@ class SubagentConfidenceMonitor {
           subagentId,
           subagentName: subagent.name,
           domain: subagent.domain,
-          confidenceScore: 50,
-          successRate: 0,
+          confidenceScore: '50',
+          successRate: '0',
           avgExecutionTimeMs: 0,
           totalExecutions: 0,
           recentSuccesses: 0,
@@ -387,7 +387,7 @@ class SubagentConfidenceMonitor {
         const readiness: OrgAutomationReadiness = {
           workspaceId,
           orgName: workspace?.name || 'Unknown',
-          overallScore: 0,
+          overallScore: '0',
           currentLevel: policy.currentLevel as 'hand_held' | 'graduated' | 'full_automation',
           recommendedLevel: 'hand_held',
           canGraduate: false,
@@ -459,7 +459,7 @@ class SubagentConfidenceMonitor {
       const readiness: OrgAutomationReadiness = {
         workspaceId,
         orgName: workspace?.name || 'Unknown',
-        overallScore: Math.round(avgConfidence),
+        overallScore: String(Math.round(avgConfidence)),
         currentLevel: policy.currentLevel as 'hand_held' | 'graduated' | 'full_automation',
         recommendedLevel,
         canGraduate,

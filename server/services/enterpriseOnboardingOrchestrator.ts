@@ -559,7 +559,7 @@ export class EnterpriseOnboardingOrchestrator {
               // Create or get Stripe customer
               if (!stripeCustomerId) {
                 const customer = await stripe.customers.create({
-                  email: fetchedData.org.billingEmail || undefined,
+                  email: fetchedData.org.billingEmail || null,
                   name: fetchedData.org.name,
                   metadata: {
                     workspaceId,
@@ -618,7 +618,7 @@ export class EnterpriseOnboardingOrchestrator {
               if (paymentData.creditPackage && paymentData.creditPackage > 0) {
                 const creditCost = paymentData.creditPackage * BILLING.creditsToUsdRate;
                 await stripe.paymentIntents.create({
-                  amount: Math.round(creditCost * 100),
+                  amount: String(Math.round(creditCost * 100)),
                   currency: 'usd',
                   customer: stripeCustomerId,
                   payment_method: paymentData.paymentMethodId,
@@ -795,8 +795,8 @@ export class EnterpriseOnboardingOrchestrator {
     if (org.status === 'active') {
       return {
         phase: 'complete',
-        orgCode: orgCode ?? undefined,
-        staffingEmail: staffingEmail ?? undefined,
+        orgCode: orgCode ?? null,
+        staffingEmail: staffingEmail ?? null,
         setupChecklist,
       };
     }
@@ -816,8 +816,8 @@ export class EnterpriseOnboardingOrchestrator {
         phase: 'payment',
         pendingConfig,
         subscription,
-        orgCode: orgCode ?? undefined,
-        staffingEmail: staffingEmail ?? undefined,
+        orgCode: orgCode ?? null,
+        staffingEmail: staffingEmail ?? null,
         setupChecklist,
       };
     }
@@ -827,16 +827,16 @@ export class EnterpriseOnboardingOrchestrator {
         phase: 'configuration',
         pendingConfig,
         subscription,
-        orgCode: orgCode ?? undefined,
-        staffingEmail: staffingEmail ?? undefined,
+        orgCode: orgCode ?? null,
+        staffingEmail: staffingEmail ?? null,
         setupChecklist,
       };
     }
     
     return {
       phase: 'signup',
-      orgCode: orgCode ?? undefined,
-      staffingEmail: staffingEmail ?? undefined,
+      orgCode: orgCode ?? null,
+      staffingEmail: staffingEmail ?? null,
       setupChecklist,
     };
   }

@@ -159,7 +159,7 @@ router.post('/helpos-chat', async (req, res) => {
 
       if (!requestedWorkspaceId) {
         const [userRecord] = await db.select().from(users).where(eq(users.id, userId!)).limit(1);
-        requestedWorkspaceId = userRecord?.currentWorkspaceId || undefined;
+        requestedWorkspaceId = userRecord?.currentWorkspaceId || null;
       }
 
       const resolution = await resolveWorkspaceForUser(userId!, requestedWorkspaceId);

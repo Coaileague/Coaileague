@@ -246,7 +246,7 @@ export class A2AProtocolRepository {
         trustScore: agent.trustLevel ? Number(agent.trustLevel) : 0.8,
         messagesSent: 0,
         messagesReceived: 0,
-        successRate: 1.0,
+        successRate: '1.0',
       }).onConflictDoNothing({ target: a2aAgents.id }).returning();
       log.info(`[A2ARepo] Agent persisted: ${agent.name}`);
       return result;
@@ -700,7 +700,7 @@ export class RLLoopRepository {
       };
     } catch (error : unknown) {
       log.error(`[RLRepo] Failed to get metrics:`, (error instanceof Error ? error.message : String(error)));
-      return { totalExperiences: 0, successRate: 0, avgReward: 0, modelCount: 0, adaptationCount: 0 };
+      return { totalExperiences: 0, successRate: '0', avgReward: 0, modelCount: 0, adaptationCount: 0 };
     }
   }
 
@@ -812,7 +812,7 @@ export class RLLoopRepository {
       return { totalDecisions, totalCorrections, accuracyRate, correctionsByAction: byAction };
     } catch (error : unknown) {
       log.error(`[RLRepo] Failed to get accuracy metrics:`, (error instanceof Error ? error.message : String(error)));
-      return { totalDecisions: 0, totalCorrections: 0, accuracyRate: 0, correctionsByAction: {} };
+      return { totalDecisions: 0, totalCorrections: 0, accuracyRate: '0', correctionsByAction: {} };
     }
   }
 }

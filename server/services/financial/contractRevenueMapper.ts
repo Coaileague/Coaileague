@@ -136,8 +136,8 @@ export async function mapContractToRevenue(
         .values({
           workspaceId,
           contractId,
-          invoiceId: invoiceId ?? undefined,
-          scheduleId: scheduleId ?? undefined,
+          invoiceId: invoiceId ?? null,
+          scheduleId: scheduleId ?? null,
           contractValue: contractValue.toFixed(2),
           monthlyValue: monthlyValue.toFixed(2),
           recognitionStartDate: recognitionStart.toISOString().split('T')[0],

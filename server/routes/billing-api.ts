@@ -635,7 +635,7 @@ billingRouter.post('/create-checkout-session', async (req: AuthenticatedRequest,
       line_items: [
         {
           price: priceId,
-          quantity: 1,
+          quantity: '1',
         },
       ],
       mode: 'subscription',
@@ -694,7 +694,7 @@ billingRouter.post('/create-payment-intent', async (req: AuthenticatedRequest, r
     }).parse(req.body);
 
     const intent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Convert to cents
+      amount: String(Math.round(amount * 100)), // Convert to cents
       currency: 'usd',
       metadata: {
         workspaceId,

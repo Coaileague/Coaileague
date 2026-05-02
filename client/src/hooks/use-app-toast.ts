@@ -25,7 +25,7 @@ export function useAppToast() {
 
   const toast = ({ title, description, variant, duration }: AppToastOptions) => {
     const message = description ? `${title}: ${description}` : title;
-    const opts = duration ? { duration } : undefined;
+    const opts = duration ? { duration } : null;
 
     if (variant === "destructive") {
       ut.error(message, opts);

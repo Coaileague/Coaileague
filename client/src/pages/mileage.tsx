@@ -448,7 +448,7 @@ export default function MileagePage() {
     || ["root_admin", "deputy_admin", "sysop", "support_manager"].includes(platformRole);
 
   const { data, isLoading } = useQuery<{ logs: MileageLog[]; summary: MileageSummary }>({
-    queryKey: ["/api/mileage", { status: statusFilter !== "all" ? statusFilter : undefined }],
+    queryKey: ["/api/mileage", { status: statusFilter !== "all" ? statusFilter : null }],
   });
 
   const logs = data?.logs || [];

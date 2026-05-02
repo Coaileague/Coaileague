@@ -2312,7 +2312,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  onClick={(e) =>{
  const target = e.target as HTMLElement;
  if (target.tagName === 'IMG') {
- setLightboxData({ src: (target as HTMLImageElement).src, senderName: msg.senderName || undefined, timestamp: msg.createdAt ? (typeof msg.createdAt === 'string' ? msg.createdAt : msg.createdAt.toISOString()) : undefined, filename: msg.attachmentName || undefined });
+ setLightboxData({ src: (target as HTMLImageElement).src, senderName: msg.senderName || null, timestamp: msg.createdAt ? (typeof msg.createdAt === 'string' ? msg.createdAt : msg.createdAt.toISOString()) : null, filename: msg.attachmentName || null });
  }
  }}
  >
@@ -3454,7 +3454,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  onClick={() =>{
  toggleRoomStatusMutation.mutate({
  status: roomStatusControl,
- statusMessage: roomStatusMessage || undefined,
+ statusMessage: roomStatusMessage || null,
  });
  }}
  disabled={toggleRoomStatusMutation.isPending}
@@ -3476,7 +3476,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  email: user.email,
  status: 'active',
  tier: (user as unknown).subscriptionTier || 'free'
- } : undefined}
+ } : null}
  isStaff={isStaff}
  onAction={(action, data) =>{
  toast({

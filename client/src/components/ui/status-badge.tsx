@@ -94,7 +94,7 @@ export function StatusBadge({ variant, label, size = 'sm', pulse, className, ico
       )}
     >
       {pulse ? (
-        <span className="relative flex shrink-0" style={{ width: sz.dot.split('w-')[1]?.split(' ')[0] ? undefined : undefined }}>
+        <span className="relative flex shrink-0" style={{ width: sz.dot.split('w-')[1]?.split(' ')[0] ? undefined : null }}>
           <span className={cn('animate-ping absolute inline-flex h-full w-full rounded-full opacity-75', cfg.dot, sz.dot)} />
           <span className={cn('relative inline-flex rounded-full', cfg.dot, sz.dot)} />
         </span>

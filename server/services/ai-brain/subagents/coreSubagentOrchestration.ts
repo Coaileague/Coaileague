@@ -727,7 +727,7 @@ export function registerCoreSubagentActions(orchestrator: unknown): void {
 
       const cutoff = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000);
       const logs = await storage.getMileageLogsByWorkspace(workspaceId, {
-        employeeId: employeeId || undefined,
+        employeeId: employeeId || null,
         startDate: cutoff,
       });
 

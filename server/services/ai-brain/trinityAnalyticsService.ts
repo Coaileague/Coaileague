@@ -551,7 +551,7 @@ class TrinityAnalyticsService {
       return {
         totalAITasks: 0,
         avgConfidence: 0,
-        totalCost: 0,
+        totalCost: '0',
         escalationRate: null,
         topPerformingModel: 'unknown',
         recentTrend: 'stable'

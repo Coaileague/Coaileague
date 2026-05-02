@@ -44,7 +44,7 @@ const CATALOGUE = [
     description: '14-day free trial — full access to Trinity AI automation',
     metadata: { tier: 'trial' },
     prices: [
-      { nickname: 'Trial Free', amount: 0, interval: 'month' as const, envKey: 'STRIPE_TEST_PRICE_ID_TRIAL_FREE' },
+      { nickname: 'Trial Free', amount: '0', interval: 'month' as const, envKey: 'STRIPE_TEST_PRICE_ID_TRIAL_FREE' },
     ],
   },
   {
@@ -53,8 +53,8 @@ const CATALOGUE = [
     description: 'AI-powered workforce management for growing security companies',
     metadata: { tier: 'starter' },
     prices: [
-      { nickname: 'Starter Monthly', amount: 29900, interval: 'month' as const, envKey: 'STRIPE_TEST_PRICE_ID_STARTER_MONTHLY' },
-      { nickname: 'Starter Annual', amount: 287040, interval: 'year' as const, envKey: 'STRIPE_TEST_PRICE_ID_STARTER_ANNUAL' },
+      { nickname: 'Starter Monthly', amount: '29900', interval: 'month' as const, envKey: 'STRIPE_TEST_PRICE_ID_STARTER_MONTHLY' },
+      { nickname: 'Starter Annual', amount: '287040', interval: 'year' as const, envKey: 'STRIPE_TEST_PRICE_ID_STARTER_ANNUAL' },
     ],
   },
   {
@@ -63,8 +63,8 @@ const CATALOGUE = [
     description: 'Full Trinity AI suite for established security operations',
     metadata: { tier: 'professional' },
     prices: [
-      { nickname: 'Professional Monthly', amount: 99900, interval: 'month' as const, envKey: 'STRIPE_TEST_PRICE_ID_PROFESSIONAL_MONTHLY' },
-      { nickname: 'Professional Annual', amount: 959040, interval: 'year' as const, envKey: 'STRIPE_TEST_PRICE_ID_PROFESSIONAL_ANNUAL' },
+      { nickname: 'Professional Monthly', amount: '99900', interval: 'month' as const, envKey: 'STRIPE_TEST_PRICE_ID_PROFESSIONAL_MONTHLY' },
+      { nickname: 'Professional Annual', amount: '959040', interval: 'year' as const, envKey: 'STRIPE_TEST_PRICE_ID_PROFESSIONAL_ANNUAL' },
     ],
   },
   {
@@ -73,8 +73,8 @@ const CATALOGUE = [
     description: 'Enterprise-grade security workforce management at scale',
     metadata: { tier: 'business' },
     prices: [
-      { nickname: 'Business Monthly', amount: 299900, interval: 'month' as const, envKey: 'STRIPE_TEST_PRICE_ID_BUSINESS_MONTHLY' },
-      { nickname: 'Business Annual', amount: 2879040, interval: 'year' as const, envKey: 'STRIPE_TEST_PRICE_ID_BUSINESS_ANNUAL' },
+      { nickname: 'Business Monthly', amount: '299900', interval: 'month' as const, envKey: 'STRIPE_TEST_PRICE_ID_BUSINESS_MONTHLY' },
+      { nickname: 'Business Annual', amount: '2879040', interval: 'year' as const, envKey: 'STRIPE_TEST_PRICE_ID_BUSINESS_ANNUAL' },
     ],
   },
   {
@@ -83,8 +83,8 @@ const CATALOGUE = [
     description: 'Custom AI deployment for large security organizations (300+ officers)',
     metadata: { tier: 'enterprise' },
     prices: [
-      { nickname: 'Enterprise Monthly', amount: 799900, interval: 'month' as const, envKey: 'STRIPE_TEST_PRICE_ID_ENTERPRISE_MONTHLY' },
-      { nickname: 'Enterprise Annual', amount: 7679040, interval: 'year' as const, envKey: 'STRIPE_TEST_PRICE_ID_ENTERPRISE_ANNUAL' },
+      { nickname: 'Enterprise Monthly', amount: '799900', interval: 'month' as const, envKey: 'STRIPE_TEST_PRICE_ID_ENTERPRISE_MONTHLY' },
+      { nickname: 'Enterprise Annual', amount: '7679040', interval: 'year' as const, envKey: 'STRIPE_TEST_PRICE_ID_ENTERPRISE_ANNUAL' },
     ],
   },
 ] as const;

@@ -240,7 +240,7 @@ class ApprovalGateEnforcementService {
     }
 
     // Cap at 100
-    return { score: Math.min(100, score), factors };
+    return { score: String(Math.min(100, score)), factors };
   }
 
   /**

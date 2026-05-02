@@ -298,7 +298,7 @@ export class InvoiceReconciliationSkill extends BaseSkill {
         
         if (!ts.clientId) continue;
         
-        const existing = unbilledByClient.get(ts.clientId) || { hours: 0, revenue: 0 };
+        const existing = unbilledByClient.get(ts.clientId) || { hours: 0, revenue: '0' };
         existing.hours += hours;
         existing.revenue += hours * rate;
         unbilledByClient.set(ts.clientId, existing);

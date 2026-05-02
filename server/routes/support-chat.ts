@@ -162,7 +162,7 @@ router.post('/session/:sessionId/join', requirePlatformStaff, async (req: Authen
       ? formatStaffDisplayNameForEndUser({
           firstName: staffInfo.firstName,
           lastName: staffInfo.lastName,
-          email: staffInfo.email || undefined,
+          email: staffInfo.email || null,
         })
       : 'Support';
 

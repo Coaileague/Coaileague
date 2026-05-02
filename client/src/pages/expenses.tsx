@@ -197,7 +197,7 @@ export default function ExpensesPage() {
         <Plus className="w-4 h-4 mr-2" />
         New Expense
       </Button>
-    ) : undefined,
+    ) : null,
   };
 
   if (categoriesLoading || expensesLoading) {

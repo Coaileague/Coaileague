@@ -43,7 +43,7 @@ complianceSprintRouter.post(
         workspaceId: wid(req),
         documentText,
         documentTitle: documentTitle || "Employee Handbook",
-        documentId: documentId || undefined,
+        documentId: documentId || null,
       });
       res.json(result);
     } catch (err: unknown) {

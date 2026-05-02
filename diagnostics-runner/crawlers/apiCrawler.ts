@@ -331,7 +331,7 @@ export class APICrawler {
       const response = await fetch(url, {
         method: testCase.method,
         headers,
-        body: testCase.body ? JSON.stringify(testCase.body) : undefined
+        body: testCase.body ? JSON.stringify(testCase.body) : null
       });
       
       const responseTime = Date.now() - startTime;

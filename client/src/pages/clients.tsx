@@ -411,7 +411,7 @@ export default function Clients() {
 
     const payload = {
       ...formData,
-      billableRate: formData.billableRate ? formData.billableRate.toString() : undefined,
+      billableRate: formData.billableRate ? formData.billableRate.toString() : null,
       workspaceId,
       isActive: true, // NEW: explicitly set to active for backend
     };
@@ -1106,11 +1106,11 @@ export default function Clients() {
         )}
 
         <TabsContent value="active">
-          <ClientsTable workspaceId={isPlatformStaff ? selectedWorkspaceId : undefined} />
+          <ClientsTable workspaceId={isPlatformStaff ? selectedWorkspaceId : null} />
         </TabsContent>
 
         <TabsContent value="deactivated">
-          <DeactivatedClientsView workspaceId={isPlatformStaff ? selectedWorkspaceId : undefined} />
+          <DeactivatedClientsView workspaceId={isPlatformStaff ? selectedWorkspaceId : null} />
         </TabsContent>
       </Tabs>
       </div>

@@ -603,7 +603,7 @@ router.get('/metrics/names', (req: Request, res: Response) => {
 
 router.get('/metrics/series/:name', (req: Request, res: Response) => {
   try {
-    const timeRange = parseInt(req.query.timeRange as string) || undefined;
+    const timeRange = parseInt(req.query.timeRange as string) || null;
     const series = metricsDashboard.getSeries(req.params.name, timeRange);
     if (!series) {
       return res.status(404).json({ success: false, error: 'Metric not found' });

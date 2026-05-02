@@ -67,8 +67,8 @@ export function TOSAgreementStep({
         fullName: fullName.trim(),
         initials: initials.trim().toUpperCase(),
         agreementType,
-        orgName: orgName || undefined,
-        inviteToken: inviteToken || undefined,
+        orgName: orgName || null,
+        inviteToken: inviteToken || null,
       });
       const data = await result.json();
       if (!data.agreementId) throw new Error("No agreement ID returned");
