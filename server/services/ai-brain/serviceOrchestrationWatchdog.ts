@@ -484,7 +484,7 @@ Respond in JSON format:
       if (response.text) {
         const jsonMatch = response.text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          const analysis: unknown = JSON.parse(jsonMatch[0]);
+          const analysis = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
           
           // Publish analysis results
           await platformEventBus.publish({

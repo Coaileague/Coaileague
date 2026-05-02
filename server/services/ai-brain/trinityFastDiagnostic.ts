@@ -215,7 +215,7 @@ Be concise but thorough. Focus on actionable insights. Format your response with
     const jsonMatch = analysis.match(/\[[\s\S]*?\]/);
     if (jsonMatch) {
       try {
-        const parsed: unknown = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
         if (Array.isArray(parsed)) {
           findings.push(...parsed.map(f => ({
             ...f,

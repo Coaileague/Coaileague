@@ -1994,7 +1994,7 @@ ${context ? `Additional Context: ${JSON.stringify(context)}` : ''}`;
     try {
       const jsonMatch = response.text.match(/```(?:json)?\s*([\s\S]*?)```/);
       if (jsonMatch) {
-        const parsed: unknown = JSON.parse(jsonMatch[1].trim());
+        const parsed = JSON.parse(jsonMatch[1].trim()) as Record<string, unknown>;
         diagnosis = { ...diagnosis, ...parsed };
       }
     } catch {

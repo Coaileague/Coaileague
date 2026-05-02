@@ -375,7 +375,7 @@ Respond with JSON:
         responseFormat: 'json',
       });
 
-      const parsed: unknown = JSON.parse(response.response || '{}');
+      const parsed = JSON.parse(response.response || '{}') as Record<string, unknown>;
       
       return {
         riskScore: parsed.overallRiskScore || 50,

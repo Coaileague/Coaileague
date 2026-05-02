@@ -613,7 +613,7 @@ Example: ["Lesson one here", "Lesson two here"]`,
       });
 
       try {
-        const parsed: unknown = JSON.parse(response.content.replace(/```json?\n?/g, '').replace(/```/g, '').trim());
+        const parsed = JSON.parse(response.content.replace(/```json?\n?/g, '').replace(/```/g, '').trim()) as Record<string, unknown>;
         if (Array.isArray(parsed) && parsed.length > 0) return parsed.map(String).slice(0, 5);
       } catch (parseErr) {
         log.warn('[TrinityThoughtEngine] Failed to parse AI response:', parseErr);
@@ -649,7 +649,7 @@ Example: ["Improvement one here", "Improvement two here"]`,
       });
 
       try {
-        const parsed: unknown = JSON.parse(response.content.replace(/```json?\n?/g, '').replace(/```/g, '').trim());
+        const parsed = JSON.parse(response.content.replace(/```json?\n?/g, '').replace(/```/g, '').trim()) as Record<string, unknown>;
         if (Array.isArray(parsed) && parsed.length > 0) return parsed.map(String).slice(0, 5);
       } catch (parseErr) {
         log.warn('[TrinityThoughtEngine] Failed to parse AI response:', parseErr);

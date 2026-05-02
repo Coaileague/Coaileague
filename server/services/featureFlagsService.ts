@@ -311,7 +311,7 @@ export const trinityRuntimeFlagsService = {
       return { success: false, error: `Flag '${key}' is not a boolean toggle` };
     }
     
-    const currentValue: unknown = JSON.parse(flag.currentValue);
+    const currentValue = JSON.parse(flag.currentValue) as Record<string, unknown>;
     return this.updateFlagValue(key, !currentValue, actor, reason, source);
   },
 
@@ -379,7 +379,7 @@ export const trinityRuntimeFlagsService = {
     }
     
     const previousChange = history[1]; // Second most recent change
-    const previousValue: unknown = JSON.parse(previousChange.previousValue);
+    const previousValue = JSON.parse(previousChange.previousValue) as Record<string, unknown>;
     
     return this.updateFlagValue(
       key,

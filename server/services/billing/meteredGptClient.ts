@@ -277,7 +277,7 @@ Respond with JSON: {"category": "chosen_category", "confidence": 0.0-1.0}`,
     });
 
     try {
-      const result: unknown = JSON.parse(response.content);
+      const result = JSON.parse(response.content) as Record<string, unknown>;
       return {
         category: result.category || categories[0],
         confidence: typeof result.confidence === 'number' ? result.confidence : 0.5,

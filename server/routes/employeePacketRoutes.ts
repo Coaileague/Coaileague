@@ -154,7 +154,7 @@ employeePacketPublicRouter.get('/:token', async (req, res) => {
       updatedAt: new Date(),
     }).where(eq(documentSignatures.applicationId, req.params.token));
 
-    const data: unknown = JSON.parse(packet.documentContent || '{}');
+    const data = JSON.parse(packet.documentContent || '{}') as Record<string, unknown>;
     res.json({
       id: packet.id,
       packetType: data.packetType,
@@ -184,7 +184,7 @@ employeePacketPublicRouter.post('/:token/save', async (req, res) => {
     if (!packet) return res.status(404).json({ error: 'Packet not found' });
     if (packet.status === 'signed') return res.status(409).json({ error: 'Already completed' });
 
-    const existing: unknown = JSON.parse(packet.documentContent || '{}');
+    const existing = JSON.parse(packet.documentContent || '{}') as Record<string, unknown>;
     await db.update(documentSignatures).set({
       documentContent: JSON.stringify({ ...existing, formData, sectionInitials }),
       updatedAt: new Date(),
@@ -212,7 +212,7 @@ employeePacketPublicRouter.post('/:token/submit', async (req, res) => {
     if (!packet) return res.status(404).json({ error: 'Packet not found' });
     if (packet.status === 'signed') return res.status(409).json({ error: 'Already completed' });
 
-    const existing: unknown = JSON.parse(packet.documentContent || '{}');
+    const existing = JSON.parse(packet.documentContent || '{}') as Record<string, unknown>;
     const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket?.remoteAddress || '';
 
     await db.update(documentSignatures).set({

@@ -209,7 +209,7 @@ Low: general question, feature request`;
       }
 
       if (aiResult.success && aiResult.content) {
-        const parsed: unknown = JSON.parse(aiResult.content);
+        const parsed = JSON.parse(aiResult.content) as Record<string, unknown>;
         log.info(`[HelpAI] Urgency analyzed (${aiResult.tokensUsed} tokens) - Billed to workspace: ${this.workspaceId}`);
         return parsed.urgency ? parsed : null;
       }

@@ -214,7 +214,7 @@ RECOMMENDATION LOGIC:
 
     const response = await ai.generateContent(prompt, { temperature: 0.1, maxOutputTokens: 1200 });
     const text = (response as Record<string, unknown>).trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
-    const parsed: unknown = JSON.parse(text);
+    const parsed = JSON.parse(text) as Record<string, unknown>;
 
     const totalScore = Math.min(100, Math.max(0, Number(parsed.total_score) || 0));
 
@@ -341,7 +341,7 @@ Return ONLY valid JSON:
 
     const response = await ai.generateContent(prompt, { temperature: 0.1, maxOutputTokens: 200 }); // withGemini
     const text = (response as Record<string, unknown>).trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
-    const parsed: unknown = JSON.parse(text);
+    const parsed = JSON.parse(text) as Record<string, unknown>;
 
     return {
       score: Math.min(maxScore, Math.max(0, Number(parsed.score) || 0)),

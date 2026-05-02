@@ -800,7 +800,7 @@ Focus on: pending approvals that need attention, unsubmitted drafts reminders, r
           maxTokens: 1500,
           temperature: 0.3,
         });
-        const parsed: unknown = JSON.parse(aiResponse.content);
+        const parsed = JSON.parse(aiResponse.content) as Record<string, unknown>;
         recommendations = parsed.recommendations || [];
         aiSummary = parsed.summary || {};
       } catch {

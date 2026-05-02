@@ -3148,7 +3148,7 @@ If no significant insight, respond with:
       if (fenceMatch) rawText = fenceMatch[1].trim();
       // Also strip leading/trailing ` if present
       rawText = rawText.replace(/^`+|`+$/g, '').trim();
-      const parsed: unknown = JSON.parse(rawText || '{"detected": false}');
+      const parsed = JSON.parse(rawText || '{"detected": false}') as Record<string, unknown>;
 
       if (parsed.detected && parsed.type && parsed.content) {
         await db.insert(trinityMetacognitionLog).values({

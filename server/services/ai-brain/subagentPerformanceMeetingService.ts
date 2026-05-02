@@ -465,7 +465,7 @@ Provide a brief performance analysis in JSON format:
         priority: 'medium',
       });
 
-      const parsed: unknown = JSON.parse(result.output?.response || '{}');
+      const parsed = JSON.parse(result.output?.response || '{}') as Record<string, unknown>;
       return {
         summary: parsed.summary || `${subagent.name} scored ${score}/5 with ${successRate.toFixed(1)}% success rate.`,
         issues: parsed.issues || [],
@@ -515,7 +515,7 @@ Generate an optimization strategy in JSON format:
         priority: 'high',
       });
 
-      const strategy: unknown = JSON.parse(result.output?.response || '{}');
+      const strategy = JSON.parse(result.output?.response || '{}') as Record<string, unknown>;
       
       // Apply optimization (in real implementation, this would trigger actual fixes)
       report.optimizationApplied = true;
@@ -764,7 +764,7 @@ Should this action proceed? Reply with JSON:
         priority: 'high',
       });
 
-      const decision: unknown = JSON.parse(result.output?.response || '{"approved": true}');
+      const decision = JSON.parse(result.output?.response || '{"approved": true}') as Record<string, unknown>;
       
       supervisor.supervisionCount++;
       supervisor.lastSupervisionAt = new Date();

@@ -477,7 +477,7 @@ ${content}`;
       });
 
       // Parse AI response
-      const analysis: unknown = JSON.parse(result.text || '{}');
+      const analysis = JSON.parse(result.text || '{}') as Record<string, unknown>;
 
       // Update feedback with AI analysis
       await db.update(broadcastFeedback)

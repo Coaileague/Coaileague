@@ -330,7 +330,7 @@ Body: ${bodyText.slice(0, 1500)}`,
     });
 
     const text = (response as Record<string, unknown>).trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
-    const parsed: unknown = JSON.parse(text);
+    const parsed = JSON.parse(text) as Record<string, unknown>;
     return { data: parsed, confidence: Number(parsed.confidence) || 0 };
   } catch (err: unknown) {
     log.warn('[InboundProcessor] Trinity extraction error:', err instanceof Error ? err.message : String(err));

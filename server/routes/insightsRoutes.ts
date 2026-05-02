@@ -161,7 +161,7 @@ Respond with valid JSON array only.`
 
       const aiContent = insightsAiResult.success ? insightsAiResult.content || '{}' : '{}';
       try {
-        const aiInsightsData: unknown = JSON.parse(aiContent);
+        const aiInsightsData = JSON.parse(aiContent) as Record<string, unknown>;
         const insightsList = aiInsightsData.insights || [];
 
         // Batch insert all insights in one query instead of N sequential inserts

@@ -718,7 +718,7 @@ If NOT a staffing request, use isShiftRequest: false.`;
       // Find JSON object in response
       const jsonMatch = cleanText.match(/\{[^{}]*"isShiftRequest"[^{}]*\}/);
       if (jsonMatch) {
-        const parsed: unknown = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
         return {
           isShiftRequest: parsed.isShiftRequest === true,
           confidence: parsed.confidence || 0.8,
@@ -1281,7 +1281,7 @@ Consider: qualifications match, reliability history, preference match, availabil
         temperature: 0.2,
       });
       
-      const parsed: unknown = JSON.parse(result.text.replace(/```json\n?|\n?```/g, '').trim());
+      const parsed = JSON.parse(result.text.replace(/```json\n?|\n?```/g, '').trim()) as Record<string, unknown>;
       
       return {
         matches: Array.isArray(parsed) ? parsed : [],
@@ -1747,7 +1747,7 @@ Return JSON:
         temperature: 0.1,
       });
       
-      const parsed: unknown = JSON.parse(result.text.replace(/```json\n?|\n?```/g, '').trim());
+      const parsed = JSON.parse(result.text.replace(/```json\n?|\n?```/g, '').trim()) as Record<string, unknown>;
       
       return {
         decision: parsed.decision || 'REVIEW',
@@ -2084,7 +2084,7 @@ Write a concise, professional email. Return JSON:
         temperature: 0.3,
       });
       
-      const parsed: unknown = JSON.parse(result.text.replace(/```json\n?|\n?```/g, '').trim());
+      const parsed = JSON.parse(result.text.replace(/```json\n?|\n?```/g, '').trim()) as Record<string, unknown>;
       
       return {
         subject: parsed.subject || `Shift Confirmation - ${shift.shiftDate}`,

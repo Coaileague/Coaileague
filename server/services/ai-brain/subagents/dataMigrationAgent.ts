@@ -205,7 +205,7 @@ Respond with JSON only:
         throw new Error('Failed to parse column mapping');
       }
 
-      const mapping: unknown = JSON.parse(jsonMatch[0]);
+      const mapping = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
       const detectedType = extractionType === 'auto' ? mapping.detectedType : extractionType;
       
       const transformedData = this.applyColumnMapping(data, mapping.columnMapping, detectedType);
@@ -273,7 +273,7 @@ Respond with JSON:
           throw new Error('Failed to parse extracted data');
         }
 
-        const parsed: unknown = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
         return {
           employees: parsed.employees?.filter((e: unknown) => e.firstName || e.lastName) || [],
           teams: parsed.teams?.filter((d: unknown) => d.name) || [],
@@ -503,7 +503,7 @@ Only include arrays that have data. If no data found for a category, omit that a
         return { confidence: 0, warnings: [], errors: ['No valid JSON found in response'] };
       }
 
-      const parsed: unknown = JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
       return {
         employees: parsed.employees || [],
         teams: parsed.teams || [],
@@ -989,7 +989,7 @@ Respond with JSON only:
 
         const jsonMatch = response.text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          const parsed: unknown = JSON.parse(jsonMatch[0]);
+          const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
           complianceStatus = parsed.status || 'passed';
           if (parsed.checks) {
             parsed.checks.forEach((check: unknown) => {

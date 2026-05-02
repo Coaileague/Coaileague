@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { createContext, useContext, useMemo } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useLayerManager, LayerManagerProvider } from "./LayerManager"
@@ -149,13 +149,13 @@ interface CanvasHubPageProps {
 export function CanvasHubPage({ config, children, className }: CanvasHubPageProps) {
   const isMobile = useIsMobile()
   const { hasActiveLayers } = useLayerManager()
-  const [resolvedConfig, setResolvedConfig] = React.useState(() => resolveConfig(config))
+  const [resolvedConfig, setResolvedConfig] = useState(() => resolveConfig(config))
   
-  React.useEffect(() => {
+  useEffect(() => {
     setResolvedConfig(resolveConfig(config))
   }, [config])
   
-  const updateConfig = React.useCallback((updates: Partial<CanvasPageConfig>) => {
+  const updateConfig = useCallback((updates: Partial<CanvasPageConfig>) => {
     setResolvedConfig(prev => resolveConfig({ ...prev, ...updates }))
   }, [])
   

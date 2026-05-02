@@ -380,7 +380,7 @@ class CognitiveOnboardingService {
 
     try {
       // Decode and validate state
-      const statePayload: unknown = JSON.parse(Buffer.from(state, 'base64url').toString());
+      const statePayload = JSON.parse(Buffer.from(state, 'base64url').toString()) as Record<string, unknown>;
       const workspaceId = statePayload.workspaceId;
 
       // Exchange code for token

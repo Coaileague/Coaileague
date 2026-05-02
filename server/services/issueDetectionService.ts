@@ -229,7 +229,7 @@ export class IssueDetectionService {
       if (result.success && result.text) {
         const jsonMatch = result.text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          const aiAnalysis: unknown = JSON.parse(jsonMatch[0]);
+          const aiAnalysis = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
 
           // Add AI-detected issues
           if (aiAnalysis.additionalIssues) {

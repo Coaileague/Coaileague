@@ -155,7 +155,7 @@ Return only valid JSON array, no markdown:`;
       const text = result.text.trim();
       
       try {
-        const parsed: unknown = JSON.parse(text.replace(/```json\n?|\n?```/g, ''));
+        const parsed = JSON.parse(text.replace(/```json\n?|\n?```/g, '')) as Record<string, unknown>;
         return parsed.map((s: unknown, i: number) => ({
           id: `ai-${Date.now()}-${i}`,
           text: s.text,

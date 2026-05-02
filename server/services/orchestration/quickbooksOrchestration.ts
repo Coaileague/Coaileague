@@ -413,7 +413,7 @@ class QuickBooksOrchestrationService {
           let errorMessage = `QuickBooks API error: ${response.status}`;
           
           try {
-            const errorJson: unknown = JSON.parse(errorText);
+            const errorJson = JSON.parse(errorText) as Record<string, unknown>;
             if (errorJson.Fault?.Error?.[0]?.Message) {
               errorMessage = errorJson.Fault.Error[0].Message;
             }

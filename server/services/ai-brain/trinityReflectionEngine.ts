@@ -321,7 +321,7 @@ Respond ONLY with this JSON (no markdown, no explanation):
         throw new Error('No JSON found in response');
       }
       
-      const parsed: unknown = JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
       
       // Validate and normalize revisedPatches
       let revisedPatches: unknown[] | undefined;

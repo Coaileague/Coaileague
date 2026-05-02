@@ -1,1 +1,0 @@
-{"include": ["server/routes/**/*", "shared/**/*"], "compilerOptions": {"target": "ES2020", "module": "ESNext", "strict": true, "skipLibCheck": true, "moduleResolution": "bundler", "jsx": "preserve", "esModuleInterop": true, "noEmit": true, "baseUrl": ".", "ignoreDeprecations": "6.0", "paths": {"@/*": ["./client/src/*"], "@shared/*": ["./shared/*"]}}}

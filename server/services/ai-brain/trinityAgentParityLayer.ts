@@ -744,7 +744,7 @@ class TrinityAgentParityLayer {
       const output = result.stdout.trim();
       
       if (output && output.startsWith('[')) {
-        const parsed: unknown = JSON.parse(output);
+        const parsed = JSON.parse(output) as Record<string, unknown>;
         const errors = parsed.flatMap((f: unknown) => f.messages.filter((m: unknown) => m.severity === 2).map((m: unknown) => `${m.line}:${m.column} ${m.message}`));
         return { valid: errors.length === 0, errors };
       }
