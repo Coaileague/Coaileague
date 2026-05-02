@@ -20,6 +20,24 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { CanvasHubPage, type CanvasPageConfig } from "@/components/canvas-hub";
 
+interface WorkflowStep {
+  id: string;
+  sequence: number;
+  stepName: string;
+  stepType: string;
+  description: string;
+  isRequired: boolean;
+  hasConditionalLogic: boolean;
+  conditionalLogic: { field: string; value: string; action: string } | null;
+  customFormTemplateId: string | null;
+}
+
+interface ReportTemplate {
+  id: string;
+  name: string;
+}
+
+
 // Step types available in AI Hiring
 const STEP_TYPES = [
   { value: 'personal_info', label: 'Personal Information', icon: FileText, description: 'Name, address, emergency contacts' },
@@ -31,7 +49,13 @@ const STEP_TYPES = [
 ];
 
 // Sortable step item component
-function SortableStepItem({ step, index, onEdit, onDelete, totalSteps }: Record<string, unknown>) {
+function SortableStepItem({ step, index, onEdit, onDelete, totalSteps }: {
+  step: WorkflowStep;
+  index: number;
+  onEdit: (step: WorkflowStep) => void;
+  onDelete: (id: string) => void;
+  totalSteps: number;
+}) {
   const {
     attributes,
     listeners,
@@ -114,7 +138,13 @@ function SortableStepItem({ step, index, onEdit, onDelete, totalSteps }: Record<
 }
 
 // Step editor dialog
-function StepEditorDialog({ open, onOpenChange, step, onSave, reportTemplates }: Record<string, unknown>) {
+function StepEditorDialog({ open, onOpenChange, step, onSave, reportTemplates }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  step: WorkflowStep | null;
+  onSave: (data: Record<string, unknown>) => void;
+  reportTemplates?: ReportTemplate[];
+}) {
   const [formData, setFormData] = useState({
     stepName: '',
     stepType: '',
@@ -362,11 +392,11 @@ const pageConfig: CanvasPageConfig = {
 export default function AIHiringWorkflowBuilder() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [editingStep, setEditingStep] = useState<null>(null);
+  const [editingStep, setEditingStep] = useState<WorkflowStep | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [templateDescription, setTemplateDescription] = useState('');
-  const [steps, setSteps] = useState<any[]>([
+  const [steps, setSteps] = useState<WorkflowStep[]>([
     {
       id: '1',
       stepName: 'Personal Information',

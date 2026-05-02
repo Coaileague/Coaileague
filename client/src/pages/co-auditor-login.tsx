@@ -23,7 +23,7 @@ export default function CoAuditorLogin() {
       if (!body.ok) { setError(body.error || "Login failed"); setSubmitting(false); return; }
       setLocation("/co-auditor/dashboard");
     } catch (e: unknown) {
-      setError(e?.message || "Login failed");
+      setError(e instanceof Error ? e.message : "Login failed");
       setSubmitting(false);
     }
   }
