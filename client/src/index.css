@@ -1998,8 +1998,10 @@ body[data-public-route="true"] .fixed [data-testid*="banner"] {
   --card-gap-mobile: 0.75rem;     /* 12px between elements */
   --panel-padding-mobile: 1rem;   /* 16px page padding */
 
-  /* Mobile bottom nav height — used by MobilePageWrapper scroll container */
-  --bottom-nav-height: 56px;  /* Canonical: matches MobileBottomNav actual height */
+  /* Mobile bottom nav height — published by MobileBottomNav while it is
+     mounted (set on documentElement). Defaults to 0 so routes that hide the
+     nav (chatrooms, public marketing pages) don't reserve empty space. */
+  --bottom-nav-height: 0px;
 
   /* Z-Index Scale for Layering (Unified — matches component z-values) */
   /* ═══════════════════════════════════════════════════════
@@ -2081,13 +2083,6 @@ body[data-public-route="true"] .fixed [data-testid*="banner"] {
   --popover-foreground: 217 33% 12%;   /* Deep charcoal */
 
   --popover-border: 213 16% 86%;       /* Neutral border */
-
-  /* Modal / Sheet / Dialog surface — SOLID, no transparency.
-     Light: pure white, elevated above the light-gray canvas.
-     This variable is the single source of truth for all overlay surfaces. */
-  --modal-bg: 0 0% 100%;              /* Pure white — elevated above canvas */
-  --modal-border: 213 16% 88%;        /* Neutral border */
-  --modal-overlay: rgba(0, 0, 0, 0.55); /* Overlay scrim */
 
   /* Primary - CoAIleague Blue (#2563eb from public pages) */
   --primary: 221 83% 53%;              /* CoAIleague blue #2563eb - Primary CTAs */
@@ -2225,13 +2220,6 @@ body[data-public-route="true"] .fixed [data-testid*="banner"] {
   --popover: 215 24% 18%;
   --popover-foreground: 210 20% 96%;
   --popover-border: 215 20% 25%;
-  
-  /* Modal / Sheet / Dialog surface — SOLID, no transparency.
-     Dark: elevated navy (#111E35) — visibly distinct from the deep navy page (#0A1729).
-     Saturation dropped slightly so the modal reads as a lifted surface, not a peer. */
-  --modal-bg: 217 48% 14%;            /* Elevated navy — sits above the page */
-  --modal-border: 217 40% 24%;        /* Brighter blue-tinted border for definition */
-  --modal-overlay: rgba(0, 0, 0, 0.65); /* Darker scrim to push modal forward */
   
   /* Primary - CoAIleague Blue */
   --primary: 221 83% 58%;              /* CoAIleague blue #2563eb - Slightly brighter for dark mode */
@@ -4808,24 +4796,6 @@ body[data-nav-overlay-open="true"] [role="main"] {
     font-size: 16px !important;
   }
 
-  /* Radix UI SelectTrigger renders as <button> not <select>.
-     iOS zooms when any focused element's computed font-size < 16px.
-     Force 16px on all trigger/combobox roles to prevent zoom-and-lock. */
-  [role="combobox"],
-  [data-radix-select-trigger],
-  [cmdk-input] {
-    font-size: 16px !important;
-  }
-
-  /* Prevent iOS zoom on text-xs inputs by scaling the container rather than
-     the font itself — keeps visual density while keeping font-size ≥ 16px.
-     Use [data-input-compact] to opt specific inputs into this pattern. */
-  [data-input-compact] {
-    font-size: 16px !important;
-    transform: scale(0.875);
-    transform-origin: left center;
-  }
-
   [data-radix-collection-item] {
     min-height: 44px;
   }
@@ -6520,23 +6490,11 @@ select:focus-visible,
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 22px);
 }
 
-/* Mobile: trademark strip sits ABOVE the 56px bottom nav, not behind it.
-   Bottom nav is z-index 1040; strip is z-index 900 so nav draws over strip.
-   But the strip text was bleeding into the nav area visually.
-   Solution: push strip up by exactly the nav height so text clears the nav. */
+/* Mobile already has 120px bottom padding for the bottom nav — strip fits within that */
 @media (max-width: 768px) {
-  .trinity-trademark-strip {
-    bottom: calc(var(--bottom-nav-height, 56px) + env(safe-area-inset-bottom, 0px));
-    /* Strip now floats above the nav — still below all modals/drawers */
-  }
-
   #main-content {
-    /* Nav (56px) + strip (22px) + safe area */
-    padding-bottom: calc(
-      var(--bottom-nav-height, 56px) +
-      22px +
-      env(safe-area-inset-bottom, 0px)
-    );
+    /* Mobile nav already provides 120px — no change needed; strip sits inside that space */
+    padding-bottom: 120px;
   }
 }
 
@@ -6617,98 +6575,29 @@ select:focus-visible,
   );
 }
 
-/* ── ChatDock message bubbles — iMessage/Messenger style ─────────────────── */
-/* Own messages: blue, pill with small TR corner (tail effect) */
+/* ── ChatDock message bubbles ─────────────────────────────────────────────── */
 .chat-bubble-own {
-  border-radius: 18px 18px 4px 18px;
-  background: linear-gradient(135deg, #0b93f6 0%, #0880dc 100%);
-  color: #ffffff;
-  box-shadow: 0 1px 2px rgba(11, 147, 246, 0.20);
+  border-radius: 1rem 1rem 0.25rem 1rem;
 }
-/* Other messages: neutral, pill with small TL corner */
 .chat-bubble-other {
-  border-radius: 18px 18px 18px 4px;
-  background: var(--color-bg-secondary, hsl(var(--muted)));
-  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  border-radius: 1rem 1rem 1rem 0.25rem;
 }
-/* Grouped own — no tail (continuous conversation) */
+/* Grouped: remove the tail on grouped messages */
 .chat-bubble-grouped-own {
-  border-radius: 18px 18px 4px 18px;
-  background: linear-gradient(135deg, #0b93f6 0%, #0880dc 100%);
-  color: #ffffff;
+  border-radius: 1rem 1rem 0.25rem 1rem;
 }
-/* Grouped other — tighter top-left */
 .chat-bubble-grouped-other {
-  border-radius: 4px 18px 18px 4px;
-  background: var(--color-bg-secondary, hsl(var(--muted)));
-}
-/* Dark mode other bubbles */
-.dark .chat-bubble-other,
-.dark .chat-bubble-grouped-other {
-  background: hsl(var(--muted));
+  border-radius: 0.25rem 1rem 1rem 0.25rem;
 }
 
 /* HelpAI bot messages — gold left border */
 .chat-bubble-helpai {
-  border-left: 3px solid hsl(38 92% 50%);
-  border-radius: 4px 18px 18px 4px !important;
+  border-left: 2px solid hsl(38 92% 50%);
 }
 
 /* Trinity messages — purple left border */
 .chat-bubble-trinity {
-  border-left: 3px solid hsl(271 81% 56%);
-  border-radius: 4px 18px 18px 4px !important;
-}
-
-/* ── ChatDock polish: room list items ─────────────────────────────────────── */
-.chatdock-room-item {
-  transition: background 0.12s ease;
-  border-radius: 10px;
-}
-.chatdock-room-item:hover {
-  background: hsl(var(--muted) / 0.7);
-}
-.chatdock-room-item.active {
-  background: hsl(var(--muted));
-}
-
-/* ── Read receipt tick styles ─────────────────────────────────────────────── */
-.chat-tick-sent    { color: rgba(255,255,255,0.55); }
-.chat-tick-read    { color: #53bdeb; }
-.chat-tick-other   { color: hsl(var(--muted-foreground)); }
-
-/* ── Message timestamp — show on hover ────────────────────────────────────── */
-.chat-msg-timestamp {
-  opacity: 0;
-  transition: opacity 0.15s ease;
-  font-size: 10px;
-  color: hsl(var(--muted-foreground));
-  white-space: nowrap;
-}
-.group:hover .chat-msg-timestamp {
-  opacity: 1;
-}
-
-/* ── Typing indicator dots ────────────────────────────────────────────────── */
-.chat-typing-bubble {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 10px 14px;
-  border-radius: 18px 18px 18px 4px;
-  background: hsl(var(--muted));
-}
-.chat-typing-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: hsl(var(--muted-foreground) / 0.6);
-  animation: chatTypingBounce 1.2s ease-in-out infinite;
-}
-.chat-typing-dot:nth-child(2) { animation-delay: 0.2s; }
-.chat-typing-dot:nth-child(3) { animation-delay: 0.4s; }
-@keyframes chatTypingBounce {
-  0%, 60%, 100% { transform: translateY(0); }
-  30% { transform: translateY(-5px); }
+  border-left: 2px solid hsl(271 81% 56%);
 }
 
 /* Read receipt states */
@@ -6893,338 +6782,4 @@ select:focus-visible,
   background: theme('colors.green.500');
   margin-right: 6px;
   animation: status-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
-/* ── Responsive text scaling for desktop/large screens ─────────────── */
-/* text-sm is 14px (fine for mobile), but on 1440p+ it should scale up */
-@media (min-width: 1280px) {
-  /* Scale base text up for readability on large desktop monitors */
-  :root {
-    font-size: 15px;     /* slight upscale from 16px base */
-  }
-  
-  /* Tables, data grids, labels: step up one size on desktop */
-  .text-xs { font-size: 0.8rem !important; }       /* 12px → ~12px (keep compact) */
-  
-  /* Body text: ensure minimum readability on large screens */
-  p, .text-sm {
-    font-size: 0.9375rem; /* 15px on large screens */
-  }
-}
-
-@media (min-width: 1920px) {
-  /* Ultra-wide / 4K monitors: bump further */
-  :root {
-    font-size: 16px;
-  }
-  .text-sm { font-size: 1rem !important; }         /* 14px → 16px */
-  .text-xs { font-size: 0.875rem !important; }     /* 12px → 14px */
-  .text-base { font-size: 1.125rem !important; }   /* 16px → 18px */
-}
-
-/* ═══════════════════════════════════════════════════════
-   GRADE-A VISUAL POLISH — CoAIleague Design System v2
-   Applied: Platform hardening sprint
-   ═══════════════════════════════════════════════════════ */
-
-/* ── Glass Morphism overlays ─────────────────────────── */
-.glass {
-  background: hsl(var(--background) / 0.75);
-  backdrop-filter: blur(12px) saturate(1.4);
-  -webkit-backdrop-filter: blur(12px) saturate(1.4);
-  border: 1px solid hsl(var(--border) / 0.6);
-}
-
-.glass-strong {
-  background: hsl(var(--background) / 0.90);
-  backdrop-filter: blur(20px) saturate(1.6);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
-  border: 1px solid hsl(var(--border) / 0.7);
-  box-shadow: 0 8px 32px hsl(0 0% 0% / 0.12);
-}
-
-.glass-card {
-  background: hsl(var(--card) / 0.80);
-  backdrop-filter: blur(16px) saturate(1.3);
-  -webkit-backdrop-filter: blur(16px) saturate(1.3);
-  border: 1px solid hsl(var(--border) / 0.5);
-  box-shadow:
-    0 1px 3px hsl(0 0% 0% / 0.06),
-    0 4px 16px hsl(0 0% 0% / 0.08),
-    inset 0 1px 0 hsl(var(--foreground) / 0.04);
-}
-
-/* ── Floating card system ────────────────────────────── */
-.card-float {
-  box-shadow:
-    0 1px 2px hsl(0 0% 0% / 0.04),
-    0 4px 12px hsl(0 0% 0% / 0.06),
-    0 8px 24px hsl(0 0% 0% / 0.04);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-}
-.card-float:hover {
-  box-shadow:
-    0 2px 4px hsl(0 0% 0% / 0.06),
-    0 8px 24px hsl(0 0% 0% / 0.10),
-    0 16px 48px hsl(0 0% 0% / 0.06);
-  transform: translateY(-2px);
-}
-
-.card-float-sm {
-  box-shadow: 0 1px 3px hsl(0 0% 0% / 0.08), 0 2px 8px hsl(0 0% 0% / 0.05);
-  transition: box-shadow 0.15s ease, transform 0.15s ease;
-}
-.card-float-sm:hover {
-  box-shadow: 0 2px 6px hsl(0 0% 0% / 0.10), 0 6px 20px hsl(0 0% 0% / 0.08);
-  transform: translateY(-1px);
-}
-
-/* ── Gradient page headers ───────────────────────────── */
-.page-header-gradient {
-  background: linear-gradient(
-    135deg,
-    hsl(var(--primary) / 0.05) 0%,
-    transparent 60%
-  );
-  border-bottom: 1px solid hsl(var(--border) / 0.4);
-}
-
-.page-header-gradient-dark {
-  background: linear-gradient(
-    135deg,
-    hsl(221 83% 53% / 0.08) 0%,
-    hsl(271 81% 56% / 0.05) 50%,
-    transparent 100%
-  );
-}
-
-/* ── Metric stat cards ───────────────────────────────── */
-.stat-card {
-  position: relative;
-  overflow: hidden;
-  background: hsl(var(--card));
-  border: 1px solid hsl(var(--border));
-  border-radius: 1rem;
-  padding: 1.25rem;
-  box-shadow: 0 1px 3px hsl(0 0% 0% / 0.06);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-}
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, hsl(var(--primary) / 0.6), hsl(var(--primary) / 0.1));
-  border-radius: 1rem 1rem 0 0;
-}
-.stat-card:hover {
-  box-shadow: 0 4px 16px hsl(0 0% 0% / 0.10);
-  transform: translateY(-1px);
-}
-
-/* ── Empty state template ────────────────────────────── */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 1.5rem;
-  text-align: center;
-  gap: 1rem;
-}
-.empty-state-icon {
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 50%;
-  background: hsl(var(--muted));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.7;
-}
-.empty-state-title {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: hsl(var(--foreground));
-  letter-spacing: -0.01em;
-}
-.empty-state-desc {
-  font-size: 0.8125rem;
-  color: hsl(var(--muted-foreground));
-  max-width: 24rem;
-  line-height: 1.5;
-}
-
-/* ── Skeleton shimmer enhancement ────────────────────── */
-@keyframes coai-shimmer {
-  0% { background-position: -400px 0; }
-  100% { background-position: 400px 0; }
-}
-.skeleton-shimmer {
-  background: linear-gradient(
-    90deg,
-    hsl(var(--muted)) 0%,
-    hsl(var(--muted) / 0.6) 50%,
-    hsl(var(--muted)) 100%
-  );
-  background-size: 800px 100%;
-  animation: coai-shimmer 1.6s ease-in-out infinite;
-}
-
-/* ── Status indicator dots ───────────────────────────── */
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-  flex-shrink: 0;
-}
-.status-dot-green { background: hsl(142 71% 45%); box-shadow: 0 0 0 2px hsl(142 71% 45% / 0.2); }
-.status-dot-amber { background: hsl(38 92% 50%); box-shadow: 0 0 0 2px hsl(38 92% 50% / 0.2); }
-.status-dot-red   { background: hsl(0 84% 60%); box-shadow: 0 0 0 2px hsl(0 84% 60% / 0.2); }
-.status-dot-blue  { background: hsl(217 91% 60%); box-shadow: 0 0 0 2px hsl(217 91% 60% / 0.2); }
-.status-dot-pulse { animation: status-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
-
-/* ── Row hover for tables and lists ──────────────────── */
-.row-hover {
-  transition: background-color 0.12s ease;
-}
-.row-hover:hover { background: hsl(var(--muted) / 0.5); }
-
-/* ── Action button group ─────────────────────────────── */
-.action-btn-group {
-  display: flex;
-  gap: 0.5rem;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-}
-*:hover > .action-btn-group,
-.group:hover .action-btn-group { opacity: 1; }
-
-/* ── Data number emphasis ────────────────────────────── */
-.data-number {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum';
-  letter-spacing: -0.02em;
-}
-
-/* ── Gradient borders ────────────────────────────────── */
-.border-gradient-primary {
-  border-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.2)) 1;
-}
-.border-top-primary {
-  border-top: 2px solid hsl(var(--primary) / 0.5);
-}
-.border-top-green { border-top: 2px solid hsl(142 71% 45% / 0.6); }
-.border-top-amber { border-top: 2px solid hsl(38 92% 50% / 0.6); }
-.border-top-red   { border-top: 2px solid hsl(0 84% 60% / 0.6); }
-
-/* ── Interactive list items ──────────────────────────── */
-.list-item-interactive {
-  padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
-  transition: background-color 0.12s ease, box-shadow 0.12s ease;
-  cursor: pointer;
-}
-.list-item-interactive:hover {
-  background: hsl(var(--muted) / 0.6);
-  box-shadow: 0 1px 4px hsl(0 0% 0% / 0.05);
-}
-
-/* ── Page section headers ────────────────────────────── */
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid hsl(var(--border) / 0.5);
-  margin-bottom: 1rem;
-}
-.section-title {
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: hsl(var(--muted-foreground));
-}
-
-/* ── Overlay/modal depth ─────────────────────────────── */
-.modal-overlay {
-  background: hsl(0 0% 0% / 0.5);
-  backdrop-filter: blur(4px);
-}
-.modal-content-float {
-  box-shadow:
-    0 25px 50px hsl(0 0% 0% / 0.25),
-    0 10px 20px hsl(0 0% 0% / 0.15),
-    0 0 0 1px hsl(var(--border) / 0.3);
-}
-
-/* ── Trinity purple gradient accent ──────────────────── */
-.trinity-gradient-text {
-  background: linear-gradient(135deg, hsl(271 81% 60%), hsl(221 83% 65%));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.trinity-glow {
-  box-shadow: 0 0 20px hsl(271 81% 56% / 0.15), 0 0 40px hsl(271 81% 56% / 0.08);
-}
-
-/* ── Responsive grid helpers ─────────────────────────── */
-.auto-grid-sm {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
-}
-.auto-grid-md {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.25rem;
-}
-.auto-grid-lg {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-  gap: 1.5rem;
-}
-
-/* ── Focus ring polish ───────────────────────────────── */
-.focus-ring {
-  outline: 2px solid hsl(var(--primary) / 0.5);
-  outline-offset: 2px;
-}
-*:focus-visible {
-  outline: 2px solid hsl(var(--primary) / 0.6);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-/* ── Smooth page transitions ─────────────────────────── */
-@keyframes page-enter {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.page-enter {
-  animation: page-enter 0.25s ease forwards;
-}
-
-/* ── Number counter animation ────────────────────────── */
-@keyframes count-up {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.stat-number {
-  animation: count-up 0.4s ease forwards;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── Active elevation (press effect) ─────────────────── */
-.active-elevate-2 {
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
-}
-.active-elevate-2:active { transform: translateY(-2px) scale(0.98); }
-
-/* Safe area bottom padding for scrollable content inside bottom sheets */
-.pb-safe-mobile {
-  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
 }

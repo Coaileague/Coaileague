@@ -342,9 +342,17 @@ function ExpandableNotificationCard({
 
 interface MobileNotificationHubProps {
   onClose?: () => void;
+  /**
+   * Render the inner Home + Close chrome buttons in the gradient header.
+   * Defaults to false because every known mount site (sheet, dialog, or
+   * the /mobile-hub route which has the bottom nav) already provides
+   * Home/Close — rendering ours produced visible stacked duplicates.
+   * Set true only for a standalone embed with no surrounding chrome.
+   */
+  showHeaderChrome?: boolean;
 }
 
-export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
+export function MobileNotificationHub({ onClose, showHeaderChrome = false }: MobileNotificationHubProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { openModal: openTrinityModal } = useTrinityModal();
@@ -757,30 +765,36 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
                   <Trash2 className="w-4 h-4" />
                 </Button>
               )}
-              <div className="w-px h-5 bg-primary-foreground/25 mx-0.5" />
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-primary-foreground bg-primary-foreground/10"
-                onClick={() => {
-                  if (onClose) onClose();
-                  setLocation('/dashboard');
-                }}
-                data-testid="button-notifications-home"
-                title="Go to Home"
-              >
-                <Home className="w-4 h-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-primary-foreground bg-primary-foreground/10"
-                onClick={() => onClose?.()}
-                data-testid="button-notifications-close"
-                title="Close"
-              >
-                <X className="w-4 h-4" />
-              </Button>
+              {showHeaderChrome && (
+                <>
+                  <div className="w-px h-5 bg-primary-foreground/25 mx-0.5" />
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="text-primary-foreground bg-primary-foreground/10"
+                    onClick={() => {
+                      if (onClose) onClose();
+                      setLocation('/dashboard');
+                    }}
+                    data-testid="button-notifications-home"
+                    title="Go to Home"
+                  >
+                    <Home className="w-4 h-4" />
+                  </Button>
+                  {onClose && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-primary-foreground bg-primary-foreground/10"
+                      onClick={() => onClose?.()}
+                      data-testid="button-notifications-close"
+                      title="Close"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         )}

@@ -93,6 +93,17 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
   const [, setLocation] = useLocation();
   const isMobile = useIsMobile();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  // Publish the bottom-nav height on the document root only while the nav is
+  // mounted. Routes that hide the nav (e.g. /chatrooms/*, /chat/*) will see
+  // 0 via the fallback in `var(--bottom-nav-height, 0px)`, so floating UI
+  // like toasts no longer reserves an empty 64px gap on those pages.
+  useEffect(() => {
+    document.documentElement.style.setProperty('--bottom-nav-height', '56px');
+    return () => {
+      document.documentElement.style.removeProperty('--bottom-nav-height');
+    };
+  }, []);
   const { workspaceRole, platformRole } = useWorkspaceAccess();
 
   const { data: inboxData } = useQuery<{ mailbox?: { unreadCount?: number } }>({

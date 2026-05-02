@@ -29,6 +29,7 @@ import {
   CalendarDays, Zap, AlertTriangle
 } from 'lucide-react';
 import { UniversalEmptyState } from "@/components/universal";
+import { parseShiftError } from '@/lib/shiftErrors';
 import type { Shift, Employee, Client } from '@shared/schema';
 
 const pageConfig: CanvasPageConfig = {
@@ -51,7 +52,7 @@ type SwapRequest = {
   shift?: Shift;
   requestingEmployee?: Employee;
   targetEmployee?: Employee;
-  aiSuggestedEmployees?: unknown[];
+  aiSuggestedEmployees?: any[];
 };
 
 function getStatusBadgeVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
@@ -168,25 +169,47 @@ function OpenShiftsTab({ shifts, clients, employees, isLoading }: {
   }, [openShifts]);
 
   const pickupMutation = useMutation({
-    mutationFn: async (shiftId: string) => {
-      const res = await apiRequest('POST', `/api/shifts/${shiftId}/pickup`);
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        // Surface compliance block with a helpful message
-        if (body.code === 'COMPLIANCE_BLOCK') {
-          const reasons = (body.reasons as string[] | undefined)?.join(', ') || '';
-          throw new Error(reasons ? `Compliance check failed: ${reasons}` : (body.message || 'Compliance documents are incomplete.'));
-        }
-        throw new Error(body.message || `Server error ${res.status}`);
-      }
+    mutationFn: async ({ shiftId, override }: { shiftId: string; override?: boolean }) => {
+      const url = override
+        ? `/api/shifts/${shiftId}/pickup?override=true`
+        : `/api/shifts/${shiftId}/pickup`;
+      const res = await apiRequest('POST', url);
       return res.json();
     },
-    onSuccess: () => {
-      toast({ title: 'Shift claimed!', description: 'You have been assigned to this shift.' });
+    onSuccess: (data) => {
+      if (data?.complianceWarning?.penaltyApplied) {
+        toast({
+          title: 'Shift claimed — compliance flagged',
+          description:
+            data.complianceWarning.message ||
+            'Recorded against your compliance score until paperwork is completed.',
+          variant: 'warning',
+        });
+      } else {
+        toast({ title: 'Shift picked up successfully', variant: 'success' });
+      }
       queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
     },
-    onError: (error) => {
-      toast({ title: 'Unable to claim shift', description: error.message, variant: 'destructive' });
+    onError: (error: unknown, variables) => {
+      const parsed = parseShiftError(error);
+      if (parsed.code === 'COMPLIANCE_BLOCK' && parsed.canOverride && !variables.override) {
+        toast({
+          title: parsed.title,
+          description: `${parsed.description}\n\nYou can take this shift anyway — it will be marked against your compliance score.`,
+          variant: 'destructive',
+          action: (
+            <button
+              onClick={() => pickupMutation.mutate({ shiftId: variables.shiftId, override: true })}
+              className="text-xs font-semibold underline"
+              data-testid="button-override-pickup"
+            >
+              Take anyway
+            </button>
+          ),
+        });
+        return;
+      }
+      toast({ title: parsed.title, description: parsed.description, variant: 'destructive' });
     },
   });
 
@@ -270,7 +293,7 @@ function OpenShiftsTab({ shifts, clients, employees, isLoading }: {
                 <CardFooter className="p-4 pt-0 flex justify-end gap-2 flex-wrap">
                   <Button
                     size="sm"
-                    onClick={() => pickupMutation.mutate(shift.id)}
+                    onClick={() => pickupMutation.mutate({ shiftId: shift.id })}
                     disabled={pickupMutation.isPending || !currentEmployee?.id}
                     data-testid={`button-pickup-shift-${shift.id}`}
                   >
@@ -303,7 +326,7 @@ function SwapBoardTab({ isLoading: shiftsLoading }: { isLoading: boolean }) {
     },
   });
 
-  const swapRequests: SwapRequest[] = (swapData as Record<string,unknown>)?.requests || [];
+  const swapRequests: SwapRequest[] = (swapData as any)?.requests || [];
 
   const approveMutation = useMutation({
     mutationFn: async (swapId: string) => {
@@ -315,7 +338,7 @@ function SwapBoardTab({ isLoading: shiftsLoading }: { isLoading: boolean }) {
       queryClient.invalidateQueries({ queryKey: ['/api/scheduling/swap-requests'] });
       queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({ title: 'Failed to approve', description: error.message, variant: 'destructive' });
     },
   });
@@ -329,7 +352,7 @@ function SwapBoardTab({ isLoading: shiftsLoading }: { isLoading: boolean }) {
       toast({ title: 'Swap request rejected' });
       queryClient.invalidateQueries({ queryKey: ['/api/scheduling/swap-requests'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({ title: 'Failed to reject', description: error.message, variant: 'destructive' });
     },
   });
@@ -442,7 +465,7 @@ function MyRequestsTab() {
     },
   });
 
-  const allRequests: SwapRequest[] = (swapData as Record<string,unknown>)?.requests || [];
+  const allRequests: SwapRequest[] = (swapData as any)?.requests || [];
 
   const myRequests = useMemo(() => {
     if (!currentEmployee?.id) return [];
@@ -458,7 +481,7 @@ function MyRequestsTab() {
       toast({ title: 'Request cancelled' });
       queryClient.invalidateQueries({ queryKey: ['/api/scheduling/swap-requests'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({ title: 'Failed to cancel request', description: error.message, variant: 'destructive' });
     },
   });
@@ -550,58 +573,58 @@ function CoveragePoolTab() {
   const { toast } = useToast();
   const [showPost, setShowPost] = useState(false);
   const [statusFilter, setStatusFilter] = useState("open");
-  const [confirmClaim, setConfirmClaim] = useState<null>(null);
+  const [confirmClaim, setConfirmClaim] = useState<any>(null);
   const [form, setForm] = useState({
     siteName: "", shiftDate: "", shiftStart: "", shiftEnd: "", payRate: "", notes: "",
   });
 
   const { data: coverageData, isLoading } = useQuery<any>({
-    queryKey: ["/api/coverage", workspaceId, statusFilter],
+    queryKey: ["/api/coverage-marketplace", workspaceId, statusFilter],
     enabled: !!workspaceId,
     queryFn: () =>
-      fetch(`/api/coverage?workspaceId=${workspaceId}&status=${statusFilter}`, {
+      fetch(`/api/coverage-marketplace?workspaceId=${workspaceId}&status=${statusFilter}`, {
         credentials: 'include',
       }).then(r => r.json()),
   });
 
   function invalidate() {
-    queryClient.invalidateQueries({ queryKey: ["/api/coverage"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/coverage-marketplace"] });
   }
 
   const postShift = useMutation({
-    mutationFn: (data) =>
-      apiRequest("POST", "/api/coverage/trigger", { ...data, workspaceId }),
+    mutationFn: (data: any) =>
+      apiRequest("POST", "/api/coverage-marketplace", { ...data, workspaceId }),
     onSuccess: () => {
       invalidate();
       setShowPost(false);
       setForm({ siteName: "", shiftDate: "", shiftStart: "", shiftEnd: "", payRate: "", notes: "" });
       toast({ title: "Shift posted to coverage pool" });
     },
-    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const claimShift = useMutation({
     mutationFn: (id: string) =>
-      apiRequest("POST", `/api/coverage/accept/${id}`, {
+      apiRequest("POST", `/api/coverage-marketplace/${id}/claim`, {
         workspaceId,
         claimedByEmployeeId: user?.id,
         claimedByName: user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.email,
       }),
     onSuccess: () => { invalidate(); toast({ title: "Shift claimed successfully" }); },
-    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const approveShift = useMutation({
     mutationFn: (id: string) =>
-      apiRequest("POST", `/api/coverage/accept/${id}`, {
+      apiRequest("POST", `/api/coverage-marketplace/${id}/approve`, {
         workspaceId,
         approvedBy: user?.id,
       }),
     onSuccess: () => { invalidate(); toast({ title: "Claim approved" }); },
-    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const list: unknown[] = coverageData?.shifts || [];
+  const list: any[] = coverageData?.shifts || [];
 
   const stats = [
     { label: "Open", value: list.filter(s => s.status === "open").length, icon: ShoppingBag },
@@ -664,7 +687,7 @@ function CoveragePoolTab() {
         />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {list.map((shift) => (
+          {list.map((shift: any) => (
             <Card key={shift.id} data-testid={`card-coverage-${shift.id}`}>
               <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2 flex-wrap">
                 <div className="min-w-0 flex-1">
@@ -857,8 +880,6 @@ export default function ShiftMarketplace() {
 
   const { data: shifts = [], isLoading: shiftsLoading } = useQuery<{ data: Shift[] }, Error, Shift[]>({
     queryKey: ['/api/shifts'],
-    enabled: true,
-    staleTime: 30_000,
     select: (res) => res?.data ?? [],
   });
 
@@ -866,8 +887,6 @@ export default function ShiftMarketplace() {
 
   const { data: employees = [] } = useQuery<{ data: Employee[] }, Error, Employee[]>({
     queryKey: ['/api/employees'],
-    enabled: true,
-    staleTime: 30_000,
     select: (res) => res?.data ?? [],
   });
 

@@ -75,15 +75,17 @@ export function UniversalToastProvider({ children }: { children: React.ReactNode
     dismiss,
   };
 
+  // Both viewports live in the bottom-right corner — slide-right-to-dismiss
+  // matches user expectations from major platforms.
   const containerStyle: React.CSSProperties = isMobile
     ? {
         position: 'fixed',
-        top: 'calc(var(--u-header-height-mobile) + env(safe-area-inset-top) + var(--space-3))',
-        left: 'var(--space-3)',
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--bottom-nav-height, 56px) + var(--space-3))',
         right: 'var(--space-3)',
+        width: 'min(92vw, 340px)',
         zIndex: 9999,
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'column-reverse',
         gap: 'var(--space-2)',
         pointerEvents: 'none',
       }
@@ -94,7 +96,7 @@ export function UniversalToastProvider({ children }: { children: React.ReactNode
         width: '380px',
         zIndex: 9999,
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'column-reverse',
         gap: 'var(--space-2)',
         pointerEvents: 'none',
       };
@@ -114,6 +116,9 @@ export function UniversalToastProvider({ children }: { children: React.ReactNode
 function ToastItem({ item, onDismiss }: { item: ToastItem; onDismiss: (id: string) => void }) {
   const { id, variant, message, duration = DEFAULT_DURATION, action } = item;
   const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const startXRef = useRef<number | null>(null);
+  const [swipeX, setSwipeX] = useState(0);
+  const [dismissing, setDismissing] = useState(false);
 
   useEffect(() => {
     timerRef.current = setTimeout(() => onDismiss(id), duration);
@@ -122,10 +127,35 @@ function ToastItem({ item, onDismiss }: { item: ToastItem; onDismiss: (id: strin
 
   const accent = variantColors[variant];
 
+  // Right-swipe-to-dismiss — matches Slack, Linear, iOS Notification Center
+  const SWIPE_THRESHOLD = 80;
+  const handlePointerDown = (e: React.PointerEvent) => {
+    startXRef.current = e.clientX;
+    if (timerRef.current) clearTimeout(timerRef.current);
+  };
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (startXRef.current === null) return;
+    const dx = e.clientX - startXRef.current;
+    setSwipeX(Math.max(0, dx));
+  };
+  const handlePointerUp = () => {
+    if (swipeX > SWIPE_THRESHOLD) {
+      setDismissing(true);
+      setTimeout(() => onDismiss(id), 150);
+    } else {
+      setSwipeX(0);
+    }
+    startXRef.current = null;
+  };
+
   return (
     <div
       data-testid={`toast-${variant}`}
       role="alert"
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
       style={{
         pointerEvents: 'auto',
         display: 'flex',
@@ -139,6 +169,11 @@ function ToastItem({ item, onDismiss }: { item: ToastItem; onDismiss: (id: strin
         boxShadow: 'var(--shadow-md)',
         animation: 'u-toast-in var(--duration-normal) var(--ease-out) both',
         position: 'relative',
+        transform: dismissing ? 'translateX(120%)' : `translateX(${swipeX}px)`,
+        opacity: dismissing ? 0 : 1,
+        transition: startXRef.current === null ? 'transform 150ms ease-out, opacity 150ms ease-out' : 'none',
+        touchAction: 'pan-y',
+        cursor: swipeX > 0 ? 'grabbing' : 'grab',
       }}
     >
       <span style={{ color: accent, flexShrink: 0, marginTop: '1px' }}>{variantIcons[variant]}</span>

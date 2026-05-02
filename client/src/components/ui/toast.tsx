@@ -5,9 +5,14 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { CheckCircle2, XCircle, AlertTriangle, Info, ArrowRight, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-const ToastProvider = ToastPrimitives.Provider
+// Default to right-swipe-to-dismiss across the app — matches what users
+// expect on Slack / Linear / iOS Notification Center.
+const ToastProvider = ({ swipeDirection = "right", ...props }: React.ComponentProps<typeof ToastPrimitives.Provider>) => (
+  <ToastPrimitives.Provider swipeDirection={swipeDirection} {...props} />
+)
 
-// Vivaldi-style: bottom-right desktop, top mobile, max 340px wide
+// Bottom-right on every viewport. On mobile we lift the stack above the
+// bottom-nav and the iOS home-indicator with safe-area insets.
 const ToastViewport = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Viewport>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Viewport>
@@ -15,11 +20,11 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed z-[6000] flex max-h-screen w-full flex-col gap-2 p-3",
-      // Mobile: top of screen below header
-      "top-[calc(3.5rem+env(safe-area-inset-top))] left-2 right-2",
-      // Desktop: bottom-right corner
-      "sm:top-auto sm:bottom-4 sm:left-auto sm:right-4 sm:max-w-[340px]",
+      "fixed z-[6000] flex max-h-screen flex-col gap-2 p-3",
+      // Mobile: bottom-right, lifted above the bottom nav + iOS safe-area
+      "left-auto right-2 bottom-[calc(env(safe-area-inset-bottom,0px)+var(--bottom-nav-height,56px)+0.5rem)] w-[min(92vw,340px)]",
+      // Desktop: same bottom-right corner, no bottom-nav offset
+      "sm:bottom-4 sm:right-4 sm:max-w-[340px]",
       className
     )}
     {...props}
@@ -48,7 +53,7 @@ const toastVariants = cva(
     "data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none",
     "data-[state=open]:animate-in data-[state=closed]:animate-out",
     "data-[state=closed]:fade-out-80",
-    "data-[state=open]:slide-in-from-top-2 sm:data-[state=open]:slide-in-from-bottom-2",
+    "data-[state=open]:slide-in-from-bottom-2",
     "data-[state=closed]:slide-out-to-right-full",
     "transition-all duration-200",
   ],

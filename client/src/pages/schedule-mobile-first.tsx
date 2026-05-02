@@ -5,7 +5,6 @@
  */
 
 import { secureFetch } from "@/lib/csrf";
-import { TrinityAnimatedLogo } from "@/components/ui/trinity-animated-logo";
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
@@ -18,7 +17,6 @@ import { useClientLookup } from '@/hooks/useClients';
 import { useEmployee } from '@/hooks/useEmployee';
 import { isSupervisorOrAbove } from '@/lib/roleHierarchy';
 import { useTrinitySchedulingProgress } from '@/hooks/use-trinity-scheduling-progress';
-import { TrinitySchedulingSummaryModal } from '@/components/trinity-scheduling-summary-modal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -47,9 +45,9 @@ import { TrinityLoadingSpinner } from '@/components/trinity-loading-overlay';
 import { useSimpleMode } from '@/contexts/SimpleModeContext';
 import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 import { ShiftCardSkeleton } from '@/components/ui/skeleton-loaders';
+import { parseShiftError } from '@/lib/shiftErrors';
 import type { Shift, Employee, Client } from '@shared/schema';
 import { getShiftStatus, SHIFT_STATUS, type ShiftStatusConfig } from '@/constants/scheduling';
-import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * Get shift status styling using centralized constants from /constants/scheduling.ts
@@ -76,8 +74,8 @@ function getShiftStatusStyling(shift: Shift): {
     endTime: shift.endTime,
     officerId: shift.employeeId,
     isPublished: shift.status === 'published' || shift.status === 'scheduled',
-    clockedIn: (shift as Record<string,unknown>).clockedIn || false,
-    status: shift.status || null,
+    clockedIn: (shift as any).clockedIn || false,
+    status: shift.status || undefined,
   });
   
   // Map centralized config to component styling
@@ -136,7 +134,7 @@ function getPositionColor(title: string | null | undefined): string {
   return 'bg-slate-400'; // Default
 }
 
-function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' | 'full' | 'pending' }) {
+export default function ScheduleMobileFirst({ defaultViewMode }: { defaultViewMode?: 'my' | 'full' | 'pending' }) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const isMobile = useIsMobile();
@@ -148,12 +146,10 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
   const { 
     session: trinitySession, 
     trinityWorking,
-    completionResult: trinityCompletionResult,
     isShiftBeingProcessed,
     wasShiftJustAssigned,
     clearSession: clearTrinitySession,
   } = useTrinitySchedulingProgress(workspaceId);
-  const [showTrinitySummary, setShowTrinitySummary] = useState(false);
   
   const isManagerOrSupervisor = useMemo(() => {
     if (!currentEmployee || !currentEmployee.workspaceRole) return false;
@@ -213,11 +209,10 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
         title: 'Shift marked as calloff',
         description: 'Replacement broadcast has been sent to available officers.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
-      queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
       setCalloffPromptShiftId(null);
     },
-    onError: (err) => {
+    onError: (err: any) => {
       toast({
         title: 'Could not mark shift as calloff',
         description: err?.message || 'Please try again',
@@ -228,7 +223,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
 
   // Fetch shifts for the week
   const weekEnd = addDays(weekStart, 7);
-  const { data: shifts = [], isLoading: shiftsLoading, isError: shiftsError, refetch: refetchShifts } = useQuery<Shift[]>({
+  const { data: shifts = [], isLoading: shiftsLoading } = useQuery<Shift[]>({
     queryKey: ['/api/shifts', weekStart.toISOString(), weekEnd.toISOString()],
     queryFn: async () => {
       const res = await secureFetch(`/api/shifts?weekStart=${weekStart.toISOString()}&weekEnd=${weekEnd.toISOString()}`);
@@ -236,42 +231,16 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
       const json = await res.json();
       return Array.isArray(json) ? json : (json?.data ?? []);
     },
-    retry: 3,
-    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
-    staleTime: 30_000,
-  });
-
-  // Worker pay period earnings — shown in stats bar on My Schedule view
-  const { data: earningsData } = useQuery<{
-    hoursWorked: number;
-    earnings: number;
-    projectedEarnings: number;
-    hourlyRate: number;
-    payPeriodStart: string | null;
-    payPeriodEnd: string | null;
-  }>({
-    queryKey: ['/api/dashboard/worker-earnings'],
-    enabled: viewMode === 'my' && !!currentEmployee?.id,
-    staleTime: 60_000,
   });
 
   // Fetch employees
   const { data: employees = [] } = useQuery<{ data: Employee[] }, Error, Employee[]>({
     queryKey: ['/api/employees'],
-    enabled: true,
-    staleTime: 30_000,
     select: (res) => res?.data ?? [],
   });
 
   // Fetch clients
   const { data: clients = [] } = useClientLookup();
-
-  // Show Trinity summary modal when auto-fill completes (biological feedback loop)
-  useEffect(() => {
-    if (trinityCompletionResult && trinityCompletionResult.summary?.openShiftsFilled > 0) {
-      setShowTrinitySummary(true);
-    }
-  }, [trinityCompletionResult]);
 
   // Calculate pending shifts
   const pendingShifts = useMemo(() => {
@@ -371,22 +340,22 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
 
   // Mutations
   const createShiftMutation = useMutation({
-    mutationFn: async (data) => {
+    mutationFn: async (data: any) => {
       const res = await apiRequest('POST', '/api/shifts', data);
       return res.json();
     },
     onSuccess: () => {
       toast({ title: "Shift created successfully" });
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
 
       setSheetOpen(false);
       setSelectedEmployee(undefined);
       setEditingShift(undefined);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Failed to create shift",
-        description: error instanceof Error ? error.message : String(error),
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -399,13 +368,13 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
     },
     onSuccess: () => {
       toast({ title: "Shift deleted successfully" });
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
 
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Failed to delete shift",
-        description: error instanceof Error ? error.message : String(error),
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -449,7 +418,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
     }
   };
 
-  const handleSubmitShift = async (data) => {
+  const handleSubmitShift = async (data: any) => {
     try {
       await createShiftMutation.mutateAsync(data);
     } catch {
@@ -457,60 +426,88 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
     }
   };
   
-  const [claimingShiftId, setClaimingShiftId] = useState<string | null>(null);
-  const handleClaimShift = async (shift: Shift) => {
+  const claimShiftRequest = async (shift: Shift, override = false) => {
+    const url = override
+      ? `/api/shifts/${shift.id}/pickup?override=true`
+      : `/api/shifts/${shift.id}/pickup`;
+    const res = await apiRequest('POST', url);
+    return res.json();
+  };
+
+  const handleClaimShift = async (shift: Shift, override = false) => {
     if (!currentEmployee?.id) {
-      toast({ title: "Unable to claim shift", description: "Please wait for your profile to load", variant: "destructive" });
+      toast({
+        title: "Unable to claim shift",
+        description: "Please wait for your profile to load",
+        variant: "destructive"
+      });
       return;
     }
-    if (claimingShiftId === shift.id) return; // debounce — prevent triple-fire on double-tap
-    setClaimingShiftId(shift.id);
     try {
-      await apiRequest('POST', `/api/shifts/${shift.id}/pickup`, {});
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
-      queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
+      const result = await claimShiftRequest(shift, override);
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
       setDetailSheetOpen(false);
-      toast({ title: "Shift claimed", description: "This shift is now yours." });
-    } catch (error : unknown) {
-      toast({ title: "Failed to claim shift", description: (error as Error)?.message || "Please try again", variant: "destructive" });
-    } finally {
-      setClaimingShiftId(null);
+      if (result?.complianceWarning?.penaltyApplied) {
+        toast({
+          title: "Shift claimed — compliance flagged",
+          description:
+            result.complianceWarning.message ||
+            "Recorded against your compliance score until paperwork is completed.",
+          variant: "warning",
+        });
+      } else {
+        toast({ title: "Shift claimed successfully", variant: "success" });
+      }
+    } catch (error) {
+      const parsed = parseShiftError(error);
+      if (parsed.code === 'COMPLIANCE_BLOCK' && parsed.canOverride && !override) {
+        toast({
+          title: parsed.title,
+          description: `${parsed.description}\n\nYou can take this shift anyway — it will be marked against your compliance score.`,
+          variant: "destructive",
+          action: (
+            <button
+              onClick={() => handleClaimShift(shift, true)}
+              className="text-xs font-semibold underline"
+              data-testid="button-override-claim"
+            >
+              Take anyway
+            </button>
+          ),
+        });
+        return;
+      }
+      toast({ title: parsed.title, description: parsed.description, variant: "destructive" });
     }
   };
 
   const handleAcceptShift = async (shift: Shift) => {
     try {
-      // Route based on ownership:
-      // - Assigned to me (draft) → /acknowledge (confirm my shift)
-      // - Unassigned / open → /pickup (claim the open shift)
-      const isMyShift = shift.employeeId && shift.employeeId === currentEmployee?.id;
-      const endpoint = isMyShift ? 'acknowledge' : 'pickup';
-      await apiRequest('POST', `/api/shifts/${shift.id}/${endpoint}`, {});
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
-      queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
-      const msg = isMyShift ? 'You are confirmed for this shift.' : 'Shift claimed successfully.';
-      toast({ title: 'Shift accepted', description: msg });
-    } catch (error : unknown) {
-      toast({
-        title: 'Failed to accept shift',
-        description: (error as Error)?.message || 'Please try again',
-        variant: 'destructive',
+      await apiRequest('PATCH', `/api/shifts/${shift.id}`, { 
+        status: 'confirmed' 
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      toast({ title: "Shift accepted" });
+    } catch (error) {
+      toast({ 
+        title: "Failed to accept shift", 
+        variant: "destructive" 
       });
     }
   };
 
   const handleDeclineShift = async (shift: Shift) => {
     try {
-      // POST /deny is the dedicated officer decline endpoint
-      await apiRequest('POST', `/api/shifts/${shift.id}/deny`, {});
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
-      queryClient.invalidateQueries({ queryKey: ['/api/schedules/week/stats'] });
-      toast({ title: 'Shift declined', description: 'Your supervisor has been notified.' });
-    } catch (error : unknown) {
-      toast({
-        title: 'Failed to decline shift',
-        description: (error as Error)?.message || 'Please try again',
-        variant: 'destructive',
+      await apiRequest('PATCH', `/api/shifts/${shift.id}`, { 
+        status: 'cancelled',
+        employeeId: null
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      toast({ title: "Shift declined" });
+    } catch (error) {
+      toast({ 
+        title: "Failed to decline shift", 
+        variant: "destructive" 
       });
     }
   };
@@ -535,7 +532,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
         endTime: endTime.toISOString(),
         status: 'scheduled',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
 
       toast({ title: "Shift duplicated to next day" });
     } catch (error) {
@@ -569,7 +566,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
         endTime: endTime.toISOString(),
         status: 'scheduled',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
 
       toast({ title: "Shift copied to next week" });
     } catch (error) {
@@ -595,7 +592,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
           status: 'scheduled',
         });
       }
-      queryClient.invalidateQueries({ queryKey: ['/api/shifts'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
 
       toast({ 
         title: "Template applied", 
@@ -710,27 +707,33 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
           <div className="flex bg-primary-foreground/15 rounded p-0.5 gap-0.5">
             <button
               onClick={() => setViewMode('my')}
-              className={['flex-1 py-0.5 text-[10px] font-semibold rounded transition-all', viewMode === 'my' 
+              className={`flex-1 py-0.5 text-[10px] font-semibold rounded transition-all ${
+                viewMode === 'my' 
                   ? 'bg-primary-foreground text-primary shadow-sm' 
-                  : 'text-primary-foreground/90 hover:bg-primary-foreground/10'].join(' ')}
+                  : 'text-primary-foreground/90 hover:bg-primary-foreground/10'
+              }`}
               data-testid="tab-my-schedule"
             >
               My Schedule
             </button>
             <button
               onClick={() => setViewMode('full')}
-              className={['flex-1 py-0.5 text-[10px] font-semibold rounded transition-all', viewMode === 'full' 
+              className={`flex-1 py-0.5 text-[10px] font-semibold rounded transition-all ${
+                viewMode === 'full' 
                   ? 'bg-primary-foreground text-primary shadow-sm' 
-                  : 'text-primary-foreground/90 hover:bg-primary-foreground/10'].join(' ')}
+                  : 'text-primary-foreground/90 hover:bg-primary-foreground/10'
+              }`}
               data-testid="tab-full-schedule"
             >
               Full Team
             </button>
             <button
               onClick={() => setViewMode('pending')}
-              className={['flex-1 py-0.5 text-[10px] font-semibold rounded transition-all relative', viewMode === 'pending' 
+              className={`flex-1 py-0.5 text-[10px] font-semibold rounded transition-all relative ${
+                viewMode === 'pending' 
                   ? 'bg-primary-foreground text-primary shadow-sm' 
-                  : 'text-primary-foreground/90 hover:bg-primary-foreground/10'].join(' ')}
+                  : 'text-primary-foreground/90 hover:bg-primary-foreground/10'
+              }`}
               data-testid="tab-pending"
             >
               Pending
@@ -756,19 +759,23 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
               <button
                 key={day.toISOString()}
                 onClick={() => setSelectedDate(day)}
-                className={['flex flex-col items-center justify-center min-h-[28px] py-0 rounded transition-all', isSelected 
+                className={`flex flex-col items-center justify-center min-h-[28px] py-0 rounded transition-all ${
+                  isSelected 
                     ? 'bg-primary-foreground text-primary shadow-sm' 
-                    : 'text-primary-foreground/90 hover:bg-primary-foreground/10'].join(' ')}
+                    : 'text-primary-foreground/90 hover:bg-primary-foreground/10'
+                }`}
                 data-testid={`day-tab-${format(day, 'yyyy-MM-dd')}`}
               >
-                <span className={['text-[7px] uppercase font-medium leading-none', isSelected ? 'text-primary/70' : 'opacity-70'].join(' ')}>
+                <span className={`text-[7px] uppercase font-medium leading-none ${isSelected ? 'text-primary/70' : 'opacity-70'}`}>
                   {format(day, 'EEE').slice(0, 2)}
                 </span>
                 <span className={`text-[11px] font-bold leading-none ${dayIsToday && !isSelected ? 'text-yellow-300' : ''}`}>
                   {format(day, 'd')}
                 </span>
                 {dayShiftCount > 0 && (
-                  <div className={['w-1 h-1 rounded-full', isSelected ? 'bg-primary' : 'bg-primary-foreground/50'].join(' ')} />
+                  <div className={`w-1 h-1 rounded-full ${
+                    isSelected ? 'bg-primary' : 'bg-primary-foreground/50'
+                  }`} />
                 )}
               </button>
             );
@@ -782,9 +789,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
           {format(selectedDate, 'EEE, MMM d')}
         </span>
         <span className="text-[9px] text-muted-foreground">
-          {viewMode === 'my' && earningsData?.earnings != null
-            ? `${weeklyHoursDisplay} · $${earningsData.earnings.toFixed(0)} earned`
-            : weeklyHoursDisplay}
+          {weeklyHoursDisplay}
         </span>
       </div>
       </div>{/* end sticky header block */}
@@ -832,15 +837,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
         )}
 
         <div className="pb-24">
-          {shiftsError ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-              <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center mb-3">
-                <span className="text-destructive text-lg">!</span>
-              </div>
-              <p className="text-sm font-medium text-foreground">Failed to load schedule</p>
-              <p className="text-xs text-muted-foreground mt-1">Check your connection and try again</p>
-            </div>
-          ) : shiftsLoading || (viewMode === 'my' && !currentEmployee?.id) ? (
+          {shiftsLoading || (viewMode === 'my' && !currentEmployee?.id) ? (
             <div className="px-3 py-4 space-y-3">
               {[1, 2, 3].map(i => (
                 <ShiftCardSkeleton key={i} />
@@ -862,7 +859,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
                   const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
                   const emp = employees.find(e => e.id === shift.employeeId);
                   // Use enriched clientName from API response, fallback to client lookup for backwards compatibility
-                  const clientName = (shift as Record<string,unknown>).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
+                  const clientName = (shift as any).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
                   
                   const pendingStatusStyle = getShiftStatusStyling(shift);
                   const positionColor = getPositionColor(shift.title);
@@ -960,7 +957,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
                         const start = new Date(shift.startTime);
                         const end = new Date(shift.endTime);
                         const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-                        const clientName = (shift as Record<string,unknown>).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
+                        const clientName = (shift as any).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
                         const statusStyle = getShiftStatusStyling(shift);
                         const positionColor = getPositionColor(shift.title);
                         
@@ -1019,12 +1016,12 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
                       })
                     ) : (
                       <div className="flex items-center py-3 px-3 gap-3">
-                        <div className={['w-10 h-10 rounded-xl flex flex-col items-center justify-center flex-shrink-0', dayIsToday ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground'].join(' ')}>
+                        <div className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center flex-shrink-0 ${dayIsToday ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground'}`}>
                           <div className="text-sm font-bold leading-none">{format(day, 'd')}</div>
                           <div className="text-[9px] uppercase leading-none mt-0.5 opacity-70">{format(day, 'EEE')}</div>
                         </div>
                         <div className="flex-1 flex items-center gap-2">
-                          <span className={['text-sm font-medium', dayIsToday ? 'text-foreground' : 'text-muted-foreground/70'].join(' ')}>
+                          <span className={`text-sm font-medium ${dayIsToday ? 'text-foreground' : 'text-muted-foreground/70'}`}>
                             {dayIsToday ? 'No shift today' : 'Day off'}
                           </span>
                           {!dayIsToday && (
@@ -1056,9 +1053,11 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
                 return (
                   <div key={dayStr} className="border-b border-border last:border-b-0">
                     {/* Day Header - Blue theme matching brand colors */}
-                    <div className={['flex items-center gap-3 px-3 py-2.5 overflow-hidden', dayIsToday 
+                    <div className={`flex items-center gap-3 px-3 py-2.5 overflow-hidden ${
+                      dayIsToday 
                         ? 'bg-primary text-primary-foreground' 
-                        : 'bg-blue-100 dark:bg-blue-900/40 text-blue-900 dark:text-blue-100'].join(' ')}>
+                        : 'bg-blue-100 dark:bg-blue-900/40 text-blue-900 dark:text-blue-100'
+                    }`}>
                       <div className="text-center min-w-[48px] shrink-0">
                         <div className="text-lg font-bold leading-none">{format(day, 'd')}</div>
                         <div className="text-[10px] uppercase font-semibold opacity-80 leading-none mt-0.5">{format(day, 'EEE')}</div>
@@ -1085,7 +1084,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
                           const start = new Date(shift.startTime);
                           const end = new Date(shift.endTime);
                           const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-                          const clientName = (shift as Record<string,unknown>).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
+                          const clientName = (shift as any).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
                           
                           const isOpenBeingProcessed = isShiftBeingProcessed(shift.id);
                           const wasOpenJustAssigned = wasShiftJustAssigned(shift.id);
@@ -1113,15 +1112,13 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
                               <Button
                                 size="sm"
                                 className="shrink-0 text-xs bg-red-600 hover:bg-red-700"
-                                disabled={!currentEmployee?.id || claimingShiftId === shift.id}
+                                disabled={!currentEmployee?.id}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleClaimShift(shift);
                                 }}
                               >
-                                {claimingShiftId === shift.id ? (
-                                  <><span className="animate-spin mr-1">⟳</span> Claiming…</>
-                                ) : 'Claim'}
+                                Claim
                               </Button>
                             </div>
                           );
@@ -1133,7 +1130,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
                           const end = new Date(shift.endTime);
                           const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
                           const emp = employees.find(e => e.id === shift.employeeId);
-                          const clientName = (shift as Record<string,unknown>).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
+                          const clientName = (shift as any).clientName || clients.find(c => c.id === shift.clientId)?.companyName;
                           const statusStyle = getShiftStatusStyling(shift);
                           const positionColor = getPositionColor(shift.title);
                           const isBeingProcessed = isShiftBeingProcessed(shift.id);
@@ -1198,7 +1195,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
 
 
       {/* Manager Tools Drawer */}
-      <UniversalModal open={showManagerTools} onOpenChange={setShowManagerTools} side="bottom" className="h-auto max-max-h-[calc(65dvh-56px)] sm:max-h-[65dvh] overflow-y-auto">
+      <UniversalModal open={showManagerTools} onOpenChange={setShowManagerTools} side="bottom" className="h-auto max-h-[65vh]">
         <UniversalModalHeader>
           <UniversalModalTitle>Schedule Tools</UniversalModalTitle>
         </UniversalModalHeader>
@@ -1283,7 +1280,7 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
               }}
               data-testid="tool-trinity"
             >
-              <TrinityAnimatedLogo size={20} />
+              <TrinityLogo size={20} />
               <span className="text-sm font-medium">Trinity AI</span>
             </Button>
           </div>
@@ -1301,9 +1298,9 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
         canEdit={canEdit}
         onEdit={handleEditShift}
         onDelete={handleDeleteShift}
-        onClaimShift={currentEmployee?.id ? handleClaimShift : null}
-        onDuplicate={canEdit ? handleDuplicateShift : null}
-        onQuickDuplicate={canEdit ? handleQuickDuplicate : null}
+        onClaimShift={currentEmployee?.id ? handleClaimShift : undefined}
+        onDuplicate={canEdit ? handleDuplicateShift : undefined}
+        onQuickDuplicate={canEdit ? handleQuickDuplicate : undefined}
         quickDuplicatePending={isQuickDuplicating}
         onRequestSwap={handleRequestSwap}
       />
@@ -1369,41 +1366,6 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
         employeeId={currentEmployee?.id}
       />
 
-      {/* Trinity Biological Feedback Loop — runs after every auto-fill */}
-      <TrinitySchedulingSummaryModal
-        open={showTrinitySummary}
-        onOpenChange={setShowTrinitySummary}
-        result={trinityCompletionResult ? {
-          success: true,
-          sessionId: trinityCompletionResult.sessionId,
-          executionId: trinityCompletionResult.executionId || '',
-          totalMutations: trinityCompletionResult.mutationCount || 0,
-          mutations: (trinityCompletionResult.mutations || []).map((m) => ({
-            id: m.id,
-            type: m.type || 'fill_open_shift',
-            description: m.description,
-            employeeName: m.employeeName,
-            clientName: m.clientName,
-            startTime: m.startTime,
-            endTime: m.endTime,
-          })),
-          summary: {
-            shiftsCreated: trinityCompletionResult.summary?.shiftsCreated || 0,
-            shiftsEdited: trinityCompletionResult.summary?.shiftsEdited || 0,
-            shiftsDeleted: trinityCompletionResult.summary?.shiftsDeleted || 0,
-            employeesSwapped: trinityCompletionResult.summary?.employeesSwapped || 0,
-            openShiftsFilled: trinityCompletionResult.summary?.openShiftsFilled || 0,
-            totalHoursScheduled: trinityCompletionResult.summary?.totalHoursScheduled || 0,
-            estimatedLaborCost: trinityCompletionResult.summary?.estimatedLaborCost || 0,
-          },
-          aiSummary: (trinityCompletionResult as Record<string,unknown>).aiSummary || `Trinity filled ${trinityCompletionResult.summary?.openShiftsFilled || 0} shifts.`,
-          requiresVerification: false,
-        } : null}
-        workspaceId={workspaceId || ''}
-        onVerified={() => { setShowTrinitySummary(false); clearTrinitySession(); }}
-        onRejected={() => setShowTrinitySummary(false)}
-      />
-
       {/* Phase 26H — Supervisor calloff confirm (deep-link from Phase 26G) */}
       <UniversalModal
         open={!!calloffPromptShiftId}
@@ -1443,13 +1405,5 @@ function ScheduleMobileFirstInner({ defaultViewMode }: { defaultViewMode?: 'my' 
 
     </div>
     </CanvasHubPage>
-  );
-}
-
-export default function ScheduleMobileFirst() {
-  return (
-    <ErrorBoundary componentName="ScheduleMobileFirst">
-      <ScheduleMobileFirstInner />
-    </ErrorBoundary>
   );
 }
