@@ -182,8 +182,8 @@ export async function searchPlatformFAQs(
         id: faq.id,
         question: faq.question,
         answer: faq.answer,
-        category: faq.category || undefined,
-        score: Math.min(score / Math.max(terms.length, 1), 1),
+        category: faq.category || null,
+        score: String(Math.min(score / Math.max(terms.length, 1)), 1),
       };
     });
 

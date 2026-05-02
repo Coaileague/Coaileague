@@ -63,7 +63,7 @@ function parseYesReply(body: string): { accepted: boolean; name?: string } {
   const upper = trimmed.toUpperCase();
   if (!upper.startsWith('YES')) return { accepted: false };
   const rest = trimmed.slice(3).trim();
-  return { accepted: true, name: rest || undefined };
+  return { accepted: true, name: rest || null };
 }
 
 function normalizePhone(raw: string): string {
@@ -143,7 +143,7 @@ export async function runStaffingPipelineStressTest(): Promise<{
         date: '2026-01-15',
         startTime: '08:00',
         endTime: '16:00',
-        payRate: 22.50,
+        payRate: '22.50',
         testCleanup: true,
       },
     } as unknown);
@@ -380,7 +380,7 @@ export async function runStaffingPipelineStressTest(): Promise<{
       workspaceId: DEV_WORKSPACE,
       userId: DEV_USER,
       state: 'disconnected',
-      satisfactionScore: 5,
+      satisfactionScore: '5',
       wasResolved: true,
       ratedAt: new Date(),
     }).returning();

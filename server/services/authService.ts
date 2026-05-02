@@ -454,7 +454,7 @@ export class AuthService {
       });
 
       const { emailService } = await import('./emailService');
-      await emailService.sendPasswordResetEmail(user.id, user.email, token, user.firstName ?? undefined);
+      await emailService.sendPasswordResetEmail(user.id, user.email, token, user.firstName ?? null);
 
       return { success: true };
     } catch (error: unknown) {

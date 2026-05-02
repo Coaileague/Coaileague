@@ -470,7 +470,7 @@ class DomainLeadSupervisorService {
           error: `Action "${action}" requires human approval`,
           metrics: {
             executionTimeMs: Date.now() - startTime,
-            confidenceScore: 0,
+            confidenceScore: '0',
             subagentUsed: subagent.id,
           },
         };

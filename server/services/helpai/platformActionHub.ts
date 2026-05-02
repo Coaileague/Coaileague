@@ -415,7 +415,7 @@ class PlatformActionHub {
           type: type || 'system',
           title,
           message,
-          workspaceId: request.workspaceId || undefined,
+          workspaceId: request.workspaceId || null,
           targetUserIds: [targetUserId],
           severity: 'warning',
           source: 'platform_action_hub',

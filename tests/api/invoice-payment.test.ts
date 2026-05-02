@@ -20,7 +20,7 @@ async function apiPost(path: string, body: unknown, token?: string) {
 
 describe.skipIf(() => !serverAvailable)('Invoice Payment Flow', () => {
   it('create-payment route exists and is protected', async () => {
-    const res = await apiPost('/api/invoices/test-invoice-id/create-payment', { amount: 100000 });
+    const res = await apiPost('/api/invoices/test-invoice-id/create-payment', { amount: '100000' });
     expect([200, 400, 401, 403, 404, 422, 503]).toContain(res.status);
     expect(res.status).not.toBe(500);
   });

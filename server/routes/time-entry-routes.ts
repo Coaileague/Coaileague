@@ -528,7 +528,7 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
         const gpsValidation = await gpsGeofenceService.validateClockIn(
           workspaceId,
           employee.id,
-          { latitude: Number(latitude), longitude: Number(longitude) }
+          { latitude: String(Number(latitude)), longitude: String(Number(longitude)) }
         );
 
         if (!gpsValidation.allowed) {
@@ -644,8 +644,8 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
         timestamp: clockInTime,
         type: 'in',
         gps: {
-          latitude: Number(latitude || 0),
-          longitude: Number(longitude || 0),
+          latitude: String(Number(latitude || 0)),
+          longitude: String(Number(longitude || 0)),
           accuracy: Number(accuracy || 999),
         },
         withinGeofence: gpsVerificationStatus === 'verified',
@@ -977,7 +977,7 @@ timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Aut
         const gpsValidation = await gpsGeofenceService.validateClockOut(
           workspaceId,
           employee.id,
-          { latitude: Number(latitude), longitude: Number(longitude) }
+          { latitude: String(Number(latitude)), longitude: String(Number(longitude)) }
         );
 
         if (!gpsValidation.allowed) {
@@ -2246,7 +2246,7 @@ timeEntryRouter.get('/reports/summary', requireAuth, readLimiter, async (req: Au
       totalPendingHours: acc.totalPendingHours + (typeof emp.pendingHours === 'number' ? emp.pendingHours : 0)
     }), {
       totalEmployees: 0,
-      totalHours: 0,
+      totalHours: '0',
       totalRegularHours: 0,
       totalOvertimeHours: 0,
       totalApprovedHours: 0,

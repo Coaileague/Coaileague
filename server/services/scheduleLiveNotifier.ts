@@ -336,8 +336,8 @@ export async function onSchedulePublished(params: {
               startTime: startStr,
               endTime: endStr,
               siteName: (s as Record<string, unknown>).location || (s as Record<string, unknown>).siteName || 'TBD',
-              postTitle: (s as Record<string, unknown>).title || (s as Record<string, unknown>).postTitle || 'Security Officer',
-              specialInstructions: (s as Record<string, unknown>).notes || undefined,
+              postTitle: (s as Record<string, string>).title || (s as Record<string, unknown>).postTitle || 'Security Officer',
+              specialInstructions: (s as Record<string, unknown>).notes || null,
             };
           });
 

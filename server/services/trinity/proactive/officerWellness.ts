@@ -294,7 +294,7 @@ async function findLongShiftClockouts(): Promise<WellnessCandidate[]> {
     timeEntryId: row.time_entry_id,
     workspaceId: row.workspace_id,
     employeeId: row.employee_id,
-    hoursWorked: Number(row.hours_worked || 0),
+    hoursWorked: String(Number(row.hours_worked || 0)),
     clockOut: new Date(row.clock_out),
     firstName: row.first_name,
     phone: row.phone,

@@ -24,7 +24,7 @@ router.post('/simulate', async (req, res) => {
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
     const platformRole = await storage.getUserPlatformRole(userId).catch(() => null);
-    if (!hasPlatformWideAccess(platformRole ?? undefined)) {
+    if (!hasPlatformWideAccess(platformRole ?? null)) {
       return res.status(403).json({ error: 'Platform admin access required' });
     }
 

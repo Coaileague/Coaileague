@@ -305,7 +305,7 @@ export class TriadOrchestrator {
       quickWins,
       technicalDebt,
       launchReadiness,
-      confidenceScore: Math.min(95, summary.readinessScore + 10)
+      confidenceScore: String(Math.min(95, summary.readinessScore + 10))
     };
   }
   

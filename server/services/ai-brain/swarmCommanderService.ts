@@ -255,7 +255,7 @@ class SwarmCommanderService {
           lastActivity: latestEntry?.startedAt?.toISOString() || null,
           successRate: totalCount > 0 ? Math.round((successCount / totalCount) * 100) : 100,
           taskCount: totalCount,
-          currentTask: status === 'active' ? latestEntry?.phase || undefined : undefined,
+          currentTask: status === 'active' ? latestEntry?.phase || null : undefined,
         };
       });
 
@@ -404,7 +404,7 @@ class SwarmCommanderService {
         suggestedAction: 'Resolve conflict in Agent Court',
         priority: 'high',
         status: 'pending',
-        confidenceScore: 100,
+        confidenceScore: '100',
       });
       log.info('[SwarmCommander] Agent Court: Conflict filed to database', conflictId);
     } catch (err) {

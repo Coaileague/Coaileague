@@ -675,7 +675,7 @@ Focus areas:
 - GENERAL: Overall business health and improvement`;
     
     const response = await geminiClient.generate({
-      workspaceId: workspaceId || undefined,
+      workspaceId: workspaceId || null,
       userId: req.user?.id || 'support-console',
       featureKey: 'coo_advisor_advice',
       systemPrompt,

@@ -211,7 +211,7 @@ class TrinitySelfEditGovernanceService {
     isOpen: false,
     changesInLastHour: 0,
     changesInLastDay: 0,
-    errorRate: 0,
+    errorRate: '0',
   };
   private changeHistory: Array<{ timestamp: Date; success: boolean }> = [];
   private initialized = false;
@@ -457,7 +457,7 @@ class TrinitySelfEditGovernanceService {
       isOpen: false,
       changesInLastHour: 0,
       changesInLastDay: 0,
-      errorRate: 0,
+      errorRate: '0',
     };
 
     platformEventBus.publish({
@@ -734,8 +734,8 @@ class TrinitySelfEditGovernanceService {
             id: p.id,
             timestamp: p.createdAt || new Date(),
             trinitySessionId: meta.trinitySessionId || 'unknown',
-            workspaceId: p.workspaceId || undefined,
-            userId: meta.userId || undefined,
+            workspaceId: p.workspaceId || null,
+            userId: meta.userId || null,
             // Hydrate full ProposedChange objects including code content
             proposedChanges: (meta.proposedChanges || []).map((c: unknown) => ({
               file: c.file,
@@ -759,11 +759,11 @@ class TrinitySelfEditGovernanceService {
             permissionTier: meta.permissionTier || 'service_logic',
             status: proposalStatus,
             sandboxStatus: meta.sandboxStatus || 'idle',
-            testResults: meta.testResults || undefined,
-            reviewedBy: meta.reviewedBy || undefined,
+            testResults: meta.testResults || null,
+            reviewedBy: meta.reviewedBy || null,
             reviewedAt: meta.reviewedAt ? new Date(meta.reviewedAt) : undefined,
-            reviewNotes: meta.reviewNotes || undefined,
-            rollbackHash: meta.rollbackHash || undefined,
+            reviewNotes: meta.reviewNotes || null,
+            rollbackHash: meta.rollbackHash || null,
             appliedAt: meta.appliedAt ? new Date(meta.appliedAt) : undefined,
             rolledBackAt: meta.rolledBackAt ? new Date(meta.rolledBackAt) : undefined,
           };

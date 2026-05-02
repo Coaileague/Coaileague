@@ -389,7 +389,7 @@ export function resolveRates(context: RateResolutionContext): ResolvedRates {
     const { value: rate, invalid } = safeRate(clientBillableRate, 'client_rate');
     return {
       billingRate: rate,
-      payRate: 0, // No pay rate available — requires manual review
+      payRate: '0', // No pay rate available — requires manual review
       rateSource: 'client_rate',
       hasWarning: true,
       warningMessage: invalid
@@ -411,8 +411,8 @@ export function resolveRates(context: RateResolutionContext): ResolvedRates {
 
   // No rate found — flag for manual review
   return {
-    billingRate: 0,
-    payRate: 0,
+    billingRate: '0',
+    payRate: '0',
     rateSource: 'none',
     hasWarning: true,
     warningMessage: `Time entry ${timeEntry.id} has no applicable rate - requires manual review`,
@@ -558,8 +558,8 @@ export function bucketHours(params: {
   // Holidays override overtime calculation (per architect guidance)
   if (isHoliday) {
     return {
-      regularHours: 0,
-      overtimeHours: 0,
+      regularHours: '0',
+      overtimeHours: '0',
       holidayHours: roundHours(totalHours),
     };
   }

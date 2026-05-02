@@ -881,7 +881,7 @@ class SupportActionsService {
         await emailService.sendPasswordResetEmail( // infra
           targetEmail,
           resetToken,
-          targetUser.currentWorkspaceId || undefined
+          targetUser.currentWorkspaceId || null
         );
         emailSent = true;
       } catch (emailErr : unknown) {

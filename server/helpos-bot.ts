@@ -248,7 +248,7 @@ async function searchFaqsForBot(
       id: row.id,
       question: row.question,
       answer: row.answer,
-      score: parseFloat(row.similarity_score),
+      score: String(parseFloat(row.similarity_score)),
     }));
   } catch (error) {
     console.error('Error searching FAQs for bot:', error);

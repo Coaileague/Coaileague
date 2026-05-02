@@ -452,14 +452,14 @@ class QuickBooksReceiptService {
         items: records.map(r => ({
           id: r.localEntityId || r.id,
           name: r.description || '',
-          amount: parseFloat(r.amount || '0'),
+          amount: String(parseFloat(r.amount || '0')),
           status: r.success ? 'synced' : 'failed',
-          error: r.errorMessage || undefined,
-          quickbooksId: r.quickbooksEntityId || undefined,
+          error: r.errorMessage || null,
+          quickbooksId: r.quickbooksEntityId || null,
         })),
       },
       trinitySignature: first.trinitySignature || '',
-      viewInQuickBooksUrl: first.quickbooksUrl || undefined,
+      viewInQuickBooksUrl: first.quickbooksUrl || null,
     };
   }
 

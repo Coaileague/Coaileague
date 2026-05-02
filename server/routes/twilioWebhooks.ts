@@ -79,7 +79,7 @@ function parseYesReply(body: string): { accepted: boolean; name?: string } {
   const upper = trimmed.toUpperCase();
   if (!upper.startsWith('YES')) return { accepted: false };
   const rest = trimmed.slice(3).trim();
-  return { accepted: true, name: rest || undefined };
+  return { accepted: true, name: rest || null };
 }
 
 // Bilingual decline detection — NO, NO GRACIAS, DECLINE, RECHAZAR, NOPE

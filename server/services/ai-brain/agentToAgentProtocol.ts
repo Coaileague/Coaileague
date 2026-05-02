@@ -212,7 +212,7 @@ class AgentToAgentProtocol {
       lastActiveAt: new Date(),
       messagesSent: 0,
       messagesReceived: 0,
-      successRate: 1.0,
+      successRate: '1.0',
     };
 
     this.agents.set(agent.id, agent);

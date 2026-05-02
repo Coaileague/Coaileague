@@ -45,7 +45,7 @@ async function logAdminAction(actorId: string, action: string, details: Record<s
     action,
     entityType: 'workspace',
     entityId: details.workspaceId || 'unknown',
-    workspaceId: details.workspaceId || undefined,
+    workspaceId: details.workspaceId || null,
     metadata: details,
   });
 }

@@ -691,7 +691,7 @@ class TrinityStaffingOrchestrator {
             'An invoice will be sent after service completion',
             'Contact us immediately if any changes are needed',
           ],
-          specialInstructions: workflow.parsedRequest.notes || undefined,
+          specialInstructions: workflow.parsedRequest.notes || null,
         });
         log.info(`[TrinityStaffing] Step 7 (completion summary) sent for ${ctx.referenceNumber} -> ${workflow.confirmationNumber}`);
       } catch (err) {

@@ -420,7 +420,7 @@ async function buildShiftFieldIntel(
       activeBOLOs = bolos.map(b => ({
         subjectName: b.subjectName,
         reason: b.reason,
-        description: b.subjectDescription || undefined,
+        description: b.subjectDescription || null,
       }));
     } catch {
       // Best-effort
@@ -1154,7 +1154,7 @@ class ShiftRoomBotOrchestrator {
         params.workspaceId,
         message
       );
-      incidentType = aiDetect.incidentType || undefined;
+      incidentType = aiDetect.incidentType || null;
     } catch {
       // Non-blocking — fall back to regex detection already confirmed
     }

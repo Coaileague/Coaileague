@@ -100,12 +100,12 @@ export class AuditLogger {
         eventType,
         userId: actorId,
         actorType,
-        userName: actorName || undefined,
-        workspaceId: workspaceId || undefined,
+        userName: actorName || null,
+        workspaceId: workspaceId || null,
         entityId: aggregateId,
         entityType: aggregateType,
         payload,
-        changes: changes || undefined,
+        changes: changes || null,
         actionHash,
         eventStatus: options?.autoCommit ? 'committed' : 'pending',
         metadata: {
@@ -113,9 +113,9 @@ export class AuditLogger {
           userAgent,
           requestId,
         },
-        ipAddress: ipAddress || undefined,
-        userAgent: userAgent || undefined,
-        requestId: requestId || undefined,
+        ipAddress: ipAddress || null,
+        userAgent: userAgent || null,
+        requestId: requestId || null,
       };
 
       const eventId = await storage.createAuditEvent(auditEvent);
@@ -147,7 +147,7 @@ export class AuditLogger {
       const registryEntry: InsertIdRegistry = {
         id,
         entityType,
-        workspaceId: context.workspaceId || undefined,
+        workspaceId: context.workspaceId || null,
         issuedBy: context.actorId,
         issuedByType: context.actorType,
         neverReuse: true,
@@ -187,7 +187,7 @@ export class AuditLogger {
         entityId: operation.entityId,
         actorId: context.actorId,
         actorType: context.actorType,
-        workspaceId: context.workspaceId || undefined,
+        workspaceId: context.workspaceId || null,
         payload: operation.payload,
         status: 'pending',
       };

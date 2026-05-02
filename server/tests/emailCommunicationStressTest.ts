@@ -607,7 +607,7 @@ async function suiteInternalNotifications() {
       priority: 'high',
       isRead: false,
       isSystemUpdate: false,
-      metadata: { period: 'Feb 16-28', amount: 1234.56 },
+      metadata: { period: 'Feb 16-28', amount: '1234.56' },
     });
     pass('DB: INSERT notification — payroll_processed type', `id=${id}`);
   });
@@ -624,7 +624,7 @@ async function suiteInternalNotifications() {
       priority: 'medium',
       isRead: false,
       isSystemUpdate: false,
-      metadata: { invoiceId: 'INV-STRESS-001', amount: 2500 },
+      metadata: { invoiceId: 'INV-STRESS-001', amount: '2500' },
     });
     pass('DB: INSERT notification — invoice_generated type', `id=${id}`);
   });
@@ -858,7 +858,7 @@ async function suiteE2EWorkflows() {
       priority: 'high',
       isRead: false,
       isSystemUpdate: false,
-      metadata: { employeeCount: 12, totalAmount: 42350 },
+      metadata: { employeeCount: 12, totalAmount: '42350' },
     });
     await db.delete(notifications).where(eq(notifications.id, id));
     pass('Workflow: Payroll Run Completed → Employee Emails + Manager Notification');
@@ -892,7 +892,7 @@ async function suiteE2EWorkflows() {
       reportName: 'Service Agreement',
       submittedBy: 'Sales Manager',
       submittedDate: '2026-02-25',
-      reportData: { contractValue: 50000 },
+      reportData: { contractValue: '50000' },
       attachmentCount: 1,
     });
     if (!emailTpl.subject.includes('Service Agreement')) throw new Error('Contract name missing from subject');

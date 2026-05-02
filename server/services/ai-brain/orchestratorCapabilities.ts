@@ -112,7 +112,7 @@ export class ServiceController {
         name: svc.name,
         status: 'unknown',
         lastCheck: new Date(),
-        healthEndpoint: svc.healthEndpoint || undefined,
+        healthEndpoint: svc.healthEndpoint || null,
       });
     });
   }
@@ -245,7 +245,7 @@ export class FeatureToggleManager {
           type: 'system_update',
       title: `Feature Toggle Updated`,
       message: `${request.featurePath} ${request.enabled ? 'enabled' : 'disabled'}: ${request.reason}`,
-      workspaceId: request.workspaceId || undefined,
+      workspaceId: request.workspaceId || null,
       targetUserIds: [request.userId],
       severity: 'low',
       source: 'feature_toggle_manager',

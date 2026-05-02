@@ -71,8 +71,8 @@ async function recordCompanyResponse(
     sraAccountId: 'workspace_response',
     workspaceId,
     actionType,
-    ipAddress: req.ip || undefined,
-    userAgent: req.headers?.['user-agent'] || undefined,
+    ipAddress: req.ip || null,
+    userAgent: req.headers?.['user-agent'] || null,
     metadata: { findingId, userId, message: message.slice(0, 200) },
   });
 }

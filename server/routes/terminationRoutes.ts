@@ -72,7 +72,7 @@ router.post("/terminations", requireAuth, async (req: AuthenticatedRequest, res)
           requestedBy: req.user?.id || 'unknown',
           requestedByRole: (result as Record<string,unknown>)?.workspace?.role || '',
           workspaceId: workspace.id,
-          targetId: validated.employeeId || undefined,
+          targetId: validated.employeeId || null,
           targetType: 'employee' as const,
           rawCommand: validated.reason || 'Employee termination',
         };

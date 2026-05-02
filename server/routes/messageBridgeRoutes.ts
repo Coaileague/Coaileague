@@ -58,7 +58,7 @@ webhookRouter.post("/api/bridges/webhook/:channelType/:bridgeId", async (req, re
         channelType: "sms",
         senderIdentity: From,
         message: Body,
-        externalMessageId: MessageSid || undefined,
+        externalMessageId: MessageSid || null,
         metadata: { to: To, numMedia: NumMedia, raw: req.body },
       });
 
@@ -79,8 +79,8 @@ webhookRouter.post("/api/bridges/webhook/:channelType/:bridgeId", async (req, re
         channelType: "whatsapp",
         senderIdentity,
         message: Body,
-        externalMessageId: MessageSid || undefined,
-        senderDisplayName: ProfileName || undefined,
+        externalMessageId: MessageSid || null,
+        senderDisplayName: ProfileName || null,
         metadata: { to: To, numMedia: NumMedia, profileName: ProfileName, raw: req.body },
       });
 
@@ -103,8 +103,8 @@ webhookRouter.post("/api/bridges/webhook/:channelType/:bridgeId", async (req, re
         channelType: "email",
         senderIdentity: senderEmail,
         message: messageBody,
-        externalMessageId: messageId || undefined,
-        senderDisplayName: senderName || undefined,
+        externalMessageId: messageId || null,
+        senderDisplayName: senderName || null,
         metadata: { subject, to, raw: req.body },
       });
 
@@ -351,11 +351,11 @@ router.post("/send", async (req: AuthenticatedRequest, res) => {
       workspaceId,
       message: parsed.data.message,
       channelType: parsed.data.channelType,
-      senderId: req.user?.id || undefined,
+      senderId: req.user?.id || null,
       senderName: req.user?.firstName
         ? `${req.user.firstName} ${req.user.lastName || ""}`.trim()
         : req.user?.email || "Support",
-      attachmentUrl: parsed.data.attachmentUrl || undefined,
+      attachmentUrl: parsed.data.attachmentUrl || null,
     });
 
     res.json({

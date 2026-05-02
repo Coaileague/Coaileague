@@ -315,7 +315,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
       if (ownerEmail) {
         const ownerName = user?.firstName && user?.lastName
           ? `${user.firstName} ${user.lastName}`
-          : (user?.firstName || user?.claims?.firstName || undefined);
+          : (user?.firstName || user?.claims?.firstName || null);
         await sendWorkspaceWelcomeEmail(ownerEmail, { orgName: workspace.name, ownerName }, workspace.id);
         log.info(`[Workspace Create] Welcome email sent to ${ownerEmail} for workspace ${workspace.id}`);
       }

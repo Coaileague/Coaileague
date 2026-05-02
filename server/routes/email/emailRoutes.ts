@@ -242,8 +242,8 @@ emailRouter.post('/send', async (req: AuthenticatedRequest, res) => {
         to: Array.isArray(to) ? to : [to],
         cc: cc || [],
         subject,
-        html: finalBodyHtml || undefined,
-        text: finalBodyText || undefined,
+        html: finalBodyHtml || null,
+        text: finalBodyText || null,
         ...(inReplyTo && { replyTo: inReplyTo }),
       });
     } catch (sendErr: unknown) {

@@ -136,7 +136,7 @@ export class UsageTracker {
         .limit(1);
 
       if (!workspace) {
-        return { success: false, amount: 0, error: 'Workspace not found' };
+        return { success: false, amount: '0', error: 'Workspace not found' };
       }
 
       // Founder / billing-exempt workspaces are never charged
@@ -148,17 +148,17 @@ export class UsageTracker {
           skippedAmountUnit: 'cents',
           metadata: { reason: 'founder_exemption — employee overage billing skipped' },
         });
-        return { success: true, amount: 0 };
+        return { success: true, amount: '0' };
       }
 
       if (!workspace.stripeCustomerId) {
-        return { success: false, amount: 0, error: 'No Stripe customer found' };
+        return { success: false, amount: '0', error: 'No Stripe customer found' };
       }
 
       const usage = await this.getEmployeeUsage(workspaceId);
       
       if (usage.overageCount <= 0) {
-        return { success: true, amount: 0 };
+        return { success: true, amount: '0' };
       }
 
       const overageRate = getOverageRate((workspace.subscriptionTier || 'free') as TierKey);
@@ -187,7 +187,7 @@ export class UsageTracker {
       return { success: true, amount: usage.overageCost };
     } catch (error : unknown) {
       log.error(`[UsageTracker] Failed to bill overages for ${workspaceId}:`, error);
-      return { success: false, amount: 0, error: (error instanceof Error ? error.message : String(error)) };
+      return { success: false, amount: '0', error: (error instanceof Error ? error.message : String(error)) };
     }
   }
 

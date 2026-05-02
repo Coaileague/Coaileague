@@ -180,7 +180,7 @@ export async function resolveICalToken(token: string): Promise<{
 
   return {
     workspaceId: subscription.workspaceId,
-    employeeId: subscription.employeeId || undefined,
+    employeeId: subscription.employeeId || null,
     type: subscription.subscriptionType || 'shifts',
   };
 }

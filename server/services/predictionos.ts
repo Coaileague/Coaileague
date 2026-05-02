@@ -551,7 +551,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
       totalTurnoverCost: 15000, // Default estimate
       riskFactors,
       recommendations: "Increase engagement through regular check-ins and career development discussions.",
-      confidenceScore: 65, // Lower confidence for heuristic
+      confidenceScore: '65', // Lower confidence for heuristic
     };
   }
   

@@ -420,7 +420,7 @@ export class QuickBooksOAuthService {
     }
     
     const connectionMetadata = connection.metadata as Record<string, unknown> | null;
-    const { clientId, clientSecret } = this.getCredentialsForBackgroundOps(connectionMetadata || undefined);
+    const { clientId, clientSecret } = this.getCredentialsForBackgroundOps(connectionMetadata || null);
 
     const response = await fetch(this.tokenEndpoint, {
       method: 'POST',
@@ -483,7 +483,7 @@ export class QuickBooksOAuthService {
       const decryptedRefreshToken = decryptToken(connection.refreshToken);
       if (decryptedRefreshToken) {
         const connectionMetadata = connection.metadata as Record<string, unknown> | null;
-        const { clientId, clientSecret } = this.getCredentialsForBackgroundOps(connectionMetadata || undefined);
+        const { clientId, clientSecret } = this.getCredentialsForBackgroundOps(connectionMetadata || null);
         
         const response = await fetch(this.revokeEndpoint, {
           method: 'POST',

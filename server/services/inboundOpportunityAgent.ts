@@ -351,7 +351,7 @@ export class InboundOpportunityAgent {
                     clientEmail: processResult.senderEmail,
                     location: shift.location || '',
                     shiftDate: shift.date || '',
-                    shiftDescription: (shift as Record<string, unknown>).description || (shift as Record<string, unknown>).duties,
+                    shiftDescription: (shift as Record<string, string>).description || (shift as Record<string, unknown>).duties,
                   }).catch(err => log.warn('Claim registration failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
                 }
 
@@ -1667,7 +1667,7 @@ Consider: qualifications match, reliability history, preference match, availabil
                   winnerWorkspaceId: workspaceId,
                   clientEmail: notifyCtx?.senderEmail || '',
                   clientName: notifyCtx?.senderName,
-                  shiftDescription: (processResult as ProcessResult).shift?.location || undefined,
+                  shiftDescription: (processResult as ProcessResult).shift?.location || null,
                   referenceNumber: notifyCtx?.referenceNumber,
                 });
                 notifications.push(`system:drop_notifications_sent:${(processResult as ProcessResult).claimKey}`);
@@ -2006,7 +2006,7 @@ Return JSON:
                 await emailService.sendClientPortalInvitation({ // email-tracked
                   workspaceId,
                   clientEmail: notifyCtx.senderEmail,
-                  clientName: notifyCtx.senderName || prospect.contactName || undefined,
+                  clientName: notifyCtx.senderName || prospect.contactName || null,
                   workspaceName: notifyCtx.workspaceName || 'Our Team',
                   portalUrl,
                   signupUrl,

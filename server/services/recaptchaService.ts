@@ -48,7 +48,7 @@ export async function verifyRecaptcha(
     log.info('[reCAPTCHA] Diagnostics bypass active - secret verified');
     return {
       success: true,
-      score: 1.0,
+      score: '1.0',
       isHuman: true,
       action: expectedAction,
     };
@@ -63,7 +63,7 @@ export async function verifyRecaptcha(
     }
     return {
       success: true,
-      score: 1.0,
+      score: '1.0',
       isHuman: true,
       action: expectedAction,
     };
@@ -74,7 +74,7 @@ export async function verifyRecaptcha(
     log.info('[reCAPTCHA] No token provided - allowing request (graceful degradation)');
     return {
       success: true,
-      score: 0.7, // Neutral score
+      score: '0.7', // Neutral score
       isHuman: true,
     };
   }
@@ -97,7 +97,7 @@ export async function verifyRecaptcha(
       log.warn('[reCAPTCHA] Verification failed:', data['error-codes']);
       return {
         success: false,
-        score: 0,
+        score: '0',
         isHuman: false,
         error: data['error-codes']?.join(', ') || 'Verification failed',
       };
@@ -128,7 +128,7 @@ export async function verifyRecaptcha(
     // Allow on error (don't block legitimate users due to service issues)
     return {
       success: true,
-      score: 0.7,
+      score: '0.7',
       isHuman: true,
       error: 'Verification service unavailable',
     };

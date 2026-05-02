@@ -124,7 +124,7 @@ Respond ONLY with valid JSON, no other text.`;
       return {
         summary: 'AI analysis unavailable - manual review required',
         recommendation: 'needs_review',
-        confidenceScore: 0,
+        confidenceScore: '0',
         analysisFactors: ['AI processing error - human review required'],
         model: 'gpt-4-turbo'
       };
@@ -163,7 +163,7 @@ Respond ONLY with valid JSON, no other text.`;
     return {
       summary: 'AI analysis unavailable - manual review required',
       recommendation: 'needs_review',
-      confidenceScore: 0,
+      confidenceScore: '0',
       analysisFactors: ['AI service error - human review required'],
       model: 'gpt-4-turbo'
     };

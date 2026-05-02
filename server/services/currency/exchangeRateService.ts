@@ -87,7 +87,7 @@ class ExchangeRateService {
       return {
         fromCurrency: from,
         toCurrency: to,
-        rate: 1,
+        rate: '1',
         source: 'identity',
         fetchedAt: new Date(),
         validUntil: new Date(Date.now() + this.cacheTTLMs),
@@ -134,7 +134,7 @@ class ExchangeRateService {
         return {
           fromCurrency: (rate as Record<string,unknown>).fromCurrency,
           toCurrency: (rate as Record<string,unknown>).toCurrency,
-          rate: parseFloat(rate.rate),
+          rate: String(parseFloat(rate.rate)),
           source: rate.source,
           fetchedAt: rate.fetchedAt,
           validUntil: new Date(rate.fetchedAt.getTime() + this.cacheTTLMs),

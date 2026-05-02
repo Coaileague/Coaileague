@@ -1623,7 +1623,7 @@ export class DatabaseStorage implements IStorage {
         metadata: {
           clientId: client.id,
           clientName: client.companyName || `${client.firstName} ${client.lastName}`.trim(),
-          email: client.email || undefined,
+          email: client.email || null,
           source: 'storage_createClient',
         },
       }).catch(() => null)
@@ -3348,7 +3348,7 @@ export class DatabaseStorage implements IStorage {
         totalCharge: acc.totalCharge + parseFloat(record.clientChargeUsd as string || "0"),
         operationCount: acc.operationCount + 1,
       }),
-      { totalCost: 0, totalCharge: 0, operationCount: 0 }
+      { totalCost: '0', totalCharge: 0, operationCount: 0 }
     );
     
     return summary;
@@ -4113,7 +4113,7 @@ export class DatabaseStorage implements IStorage {
       workspaceId: conversation.workspaceId || 'platform',
       participantId: userId,
       participantName: displayName,
-      participantEmail: userInfo?.email || undefined,
+      participantEmail: userInfo?.email || null,
       participantRole: 'member',
     }).onConflictDoNothing();
   }
@@ -4754,7 +4754,7 @@ export class DatabaseStorage implements IStorage {
   }): Promise<void> {
     await db.insert(aiUsageEvents).values({
       workspaceId: data.workspaceId,
-      userId: data.userId ?? undefined,
+      userId: data.userId ?? null,
       featureKey: data.requestType,
       usageType: 'token',
       usageAmount: data.totalTokens.toString(),

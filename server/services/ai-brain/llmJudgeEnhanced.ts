@@ -185,12 +185,12 @@ const RISK_POLICIES: PolicyRule[] = [
 
 // Risk criteria weights
 const RISK_CRITERIA = [
-  { name: 'data_integrity', description: 'Risk to data integrity', weight: 0.25 },
-  { name: 'security_impact', description: 'Potential security implications', weight: 0.25 },
-  { name: 'reversibility', description: 'Can the action be undone', weight: 0.15 },
-  { name: 'scope', description: 'Breadth of impact', weight: 0.15 },
-  { name: 'dependency_risk', description: 'Risk to dependent systems', weight: 0.10 },
-  { name: 'compliance', description: 'Regulatory/compliance implications', weight: 0.10 },
+  { name: 'data_integrity', description: 'Risk to data integrity', weight: '0.25' },
+  { name: 'security_impact', description: 'Potential security implications', weight: '0.25' },
+  { name: 'reversibility', description: 'Can the action be undone', weight: '0.15' },
+  { name: 'scope', description: 'Breadth of impact', weight: '0.15' },
+  { name: 'dependency_risk', description: 'Risk to dependent systems', weight: '0.10' },
+  { name: 'compliance', description: 'Regulatory/compliance implications', weight: '0.10' },
 ];
 
 // ============================================================================
@@ -296,10 +296,10 @@ class EnhancedLLMJudge {
       
       return {
         evaluationId,
-        riskScore: 100,
+        riskScore: '100',
         riskLevel: 'critical',
-        qualityScore: 0,
-        confidenceScore: 0,
+        qualityScore: '0',
+        confidenceScore: '0',
         verdict: 'blocked',
         policyViolations: ['Evaluation system error'],
         isBlocked: true,
@@ -392,12 +392,12 @@ Respond with JSON:
     } catch (error) {
       // Default to high risk on failure
       return {
-        riskScore: 80,
+        riskScore: '80',
         confidence: 0.3,
         reasoning: 'Risk assessment failed - defaulting to high risk',
         criteria: RISK_CRITERIA.map(c => ({
           name: c.name,
-          score: 70,
+          score: '70',
           weight: c.weight,
           reasoning: 'Unable to assess',
           passed: false,
@@ -415,9 +415,9 @@ Respond with JSON:
         content: request.content,
         contentType: request.subjectType === 'hotpatch' ? 'code' : 'json',
         criteria: [
-          { name: 'correctness', description: 'Is this correct?', weight: 0.4, scoringGuide: '1-5', minScore: 1, maxScore: 5 },
-          { name: 'completeness', description: 'Is this complete?', weight: 0.3, scoringGuide: '1-5', minScore: 1, maxScore: 5 },
-          { name: 'safety', description: 'Is this safe?', weight: 0.3, scoringGuide: '1-5', minScore: 1, maxScore: 5 },
+          { name: 'correctness', description: 'Is this correct?', weight: '0.4', scoringGuide: '1-5', minScore: 1, maxScore: 5 },
+          { name: 'completeness', description: 'Is this complete?', weight: '0.3', scoringGuide: '1-5', minScore: 1, maxScore: 5 },
+          { name: 'safety', description: 'Is this safe?', weight: '0.3', scoringGuide: '1-5', minScore: 1, maxScore: 5 },
         ],
       });
 
@@ -464,12 +464,12 @@ Respond with JSON:
           id: existing.id,
           patternHash: existing.patternHash,
           actionType: existing.actionType,
-          domain: existing.domain || undefined,
+          domain: existing.domain || null,
           failureSignature: existing.failureSignature,
           failureCount: existing.failureCount || 1,
           isBlocked: existing.isBlocked || false,
-          blockReason: existing.blockReason || undefined,
-          suggestedFix: existing.suggestedFix || undefined,
+          blockReason: existing.blockReason || null,
+          suggestedFix: existing.suggestedFix || null,
           lastFailureAt: existing.updatedAt || new Date(),
         };
 
@@ -593,12 +593,12 @@ Respond with JSON:
           id: p.id,
           patternHash: p.patternHash,
           actionType: p.actionType,
-          domain: p.domain || undefined,
+          domain: p.domain || null,
           failureSignature: p.failureSignature,
           failureCount: p.failureCount || 0,
           isBlocked: p.isBlocked || false,
-          blockReason: p.blockReason || undefined,
-          suggestedFix: p.suggestedFix || undefined,
+          blockReason: p.blockReason || null,
+          suggestedFix: p.suggestedFix || null,
           lastFailureAt: p.updatedAt || new Date(),
         });
       }

@@ -531,7 +531,7 @@ class AutomationGovernanceService {
           requiresApproval: true,
           computedLevel: 'hand_held',
           policyLevel: 'hand_held',
-          confidenceScore: 0,
+          confidenceScore: '0',
           confidenceFactors,
           isHighRisk: true,
           riskFactors: ['Missing workspace context - cannot determine policy'],
@@ -828,7 +828,7 @@ class AutomationGovernanceService {
           userId: context.userId,
           action: context.actionId,
           entityType: context.actionCategory,
-          entityId: context.trinitySessionId || undefined,
+          entityId: context.trinitySessionId || null,
           workspaceId: context.workspaceId,
           metadata: {
             actionName: context.actionName,

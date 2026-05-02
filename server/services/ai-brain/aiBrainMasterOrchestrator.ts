@@ -3974,7 +3974,7 @@ class AIBrainMasterOrchestrator {
         'action',
         actionId,
         `Action "${actionName}" threw error: ${(error instanceof Error ? error.message : String(error))}`,
-        { success: false, score: 0.2 },
+        { success: false, score: '0.2' },
         workspaceId
       ).catch((err) => log.warn('[AIBrainOrchestrator] Fire-and-forget failed:', err));
 

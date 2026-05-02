@@ -1073,9 +1073,9 @@ voiceRouter.post('/main-menu-route', twilioSignatureMiddleware, async (req: Requ
         // Phase 25 — surface client context (provider workspace + caller phone +
         // pre-resolved clientId) so clientExtension can enrich Trinity's prompt.
         const meta = (session?.metadata as Record<string, unknown> | null) || {};
-        const providerWorkspaceId = meta.client_provider_workspace_id || undefined;
-        const clientId = meta.client_id || undefined;
-        const callerPhone = (req.body.From as string | undefined) || session?.callerNumber || undefined;
+        const providerWorkspaceId = meta.client_provider_workspace_id || null;
+        const clientId = meta.client_id || null;
+        const callerPhone = (req.body.From as string | undefined) || session?.callerNumber || null;
         const xml = await handleClientSupport({
           ...baseParams,
           clientId,
@@ -1646,8 +1646,8 @@ voiceRouter.post('/status-callback', twilioSignatureMiddleware, async (req: Requ
         status: CallStatus,
         endedAt: new Date(),
         durationSeconds: durationSec,
-        recordingUrl: RecordingUrl || undefined,
-        recordingSid: RecordingSid || undefined,
+        recordingUrl: RecordingUrl || null,
+        recordingSid: RecordingSid || null,
       });
 
       // Record call usage for overage billing (flat-rate model — no balance deducted)
@@ -1669,13 +1669,13 @@ voiceRouter.post('/status-callback', twilioSignatureMiddleware, async (req: Requ
             callSessionId: session.id,
             durationSeconds: durationSec,
             twilioCallSid: CallSid,
-            callerNumber: session.callerNumber || undefined,
+            callerNumber: session.callerNumber || null,
             outcome: sessionMeta.ai_resolved ? 'ai_resolved'
               : sessionMeta.escalated ? 'escalated'
               : sessionMeta.voicemail ? 'voicemail'
               : 'abandoned',
             aiAttempted: sessionMeta.ai_attempted ?? false,
-            extensionHandled: sessionMeta.extension || undefined,
+            extensionHandled: sessionMeta.extension || null,
           });
 
           voiceSmsMeteringService.recordVoiceCall({
@@ -2026,7 +2026,7 @@ voiceRouter.post('/support-create-case', twilioSignatureMiddleware, async (req: 
       workspaceId,
       callSessionId: sessionId,
       callerNumber,
-      callerName: callerName || undefined,
+      callerName: callerName || null,
       issueSummary,
       aiResolutionAttempted: aiAttempted,
       aiModelUsed: aiModel !== 'none' ? aiModel : undefined,
@@ -2279,8 +2279,8 @@ voiceRouter.post('/status', twilioSignatureMiddleware, async (req: Request, res:
         status: CallStatus,
         endedAt: new Date(),
         durationSeconds: durationSec,
-        recordingUrl: RecordingUrl || undefined,
-        recordingSid: RecordingSid || undefined,
+        recordingUrl: RecordingUrl || null,
+        recordingSid: RecordingSid || null,
       });
       if (CallStatus === 'completed' && durationSec > 0) {
         const [session] = await db.select({ id: voiceCallSessions.id, workspaceId: voiceCallSessions.workspaceId })

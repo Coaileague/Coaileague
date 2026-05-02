@@ -262,8 +262,8 @@ export class CostAggregationService {
     if (lineItems.length > 1) {
       lineItems.push({
         description: `${PLATFORM.name} Platform Markup (${costSummary.markupRate * 100}% - ${costSummary.workspaceTier.toUpperCase()} tier)`,
-        amount: 0, // Markup is already included in individual line items
-        quantity: 1,
+        amount: '0', // Markup is already included in individual line items
+        quantity: '1',
         metadata: {
           workspaceId,
           period: costSummary.period,
@@ -324,7 +324,7 @@ export class CostAggregationService {
     
     return {
       date: startDate.toISOString().split('T')[0],
-      totalCost: Number(result[0]?.totalCost || 0),
+      totalCost: String(Number(result[0]?.totalCost || 0)),
       totalCalls: Number(result[0]?.totalCalls || 0),
       successfulCalls: Number(result[0]?.successfulCalls || 0),
       failedCalls: Number(result[0]?.failedCalls || 0),

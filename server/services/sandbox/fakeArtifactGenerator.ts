@@ -312,7 +312,7 @@ This agreement self-destructs the instant the simulation harness is reseeded.
       netDisbursed: 10453.32,
     },
     netMargin: {
-      grossMargin: 13440.0,
+      grossMargin: '13440.0',
       afterFees: 11854.0,
       afterEmployerTaxes: 10383.0,
       marginPct: 38.6,

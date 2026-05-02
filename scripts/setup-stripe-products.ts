@@ -152,7 +152,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'starter',
     envVar: 'STRIPE_STARTER_MONTHLY_PRICE_ID',
-    amount: 19900,        // $199/month
+    amount: '19900',        // $199/month
     currency: 'usd',
     interval: 'month',
     usageType: 'licensed',
@@ -162,7 +162,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'starter',
     envVar: 'STRIPE_STARTER_ANNUAL_PRICE_ID',
-    amount: 199000,       // $1,990/year (2 months free)
+    amount: '199000',       // $1,990/year (2 months free)
     currency: 'usd',
     interval: 'year',
     usageType: 'licensed',
@@ -174,7 +174,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'professional',
     envVar: 'STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID',
-    amount: 74900,        // $749/month
+    amount: '74900',        // $749/month
     currency: 'usd',
     interval: 'month',
     usageType: 'licensed',
@@ -184,7 +184,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'professional',
     envVar: 'STRIPE_PROFESSIONAL_ANNUAL_PRICE_ID',
-    amount: 749000,       // $7,490/year (2 months free)
+    amount: '749000',       // $7,490/year (2 months free)
     currency: 'usd',
     interval: 'year',
     usageType: 'licensed',
@@ -196,7 +196,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'business',
     envVar: 'STRIPE_BUSINESS_MONTHLY_PRICE_ID',
-    amount: 224900,       // $2,249/month
+    amount: '224900',       // $2,249/month
     currency: 'usd',
     interval: 'month',
     usageType: 'licensed',
@@ -206,7 +206,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'business',
     envVar: 'STRIPE_BUSINESS_ANNUAL_PRICE_ID',
-    amount: 2249000,      // $22,490/year (2 months free)
+    amount: '2249000',      // $22,490/year (2 months free)
     currency: 'usd',
     interval: 'year',
     usageType: 'licensed',
@@ -218,7 +218,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'enterprise',
     envVar: 'STRIPE_ENTERPRISE_MONTHLY_PRICE_ID',
-    amount: 699900,       // $6,999/month
+    amount: '699900',       // $6,999/month
     currency: 'usd',
     interval: 'month',
     usageType: 'licensed',
@@ -228,7 +228,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'enterprise',
     envVar: 'STRIPE_ENTERPRISE_ANNUAL_PRICE_ID',
-    amount: 6999000,      // $69,990/year (2 months free)
+    amount: '6999000',      // $69,990/year (2 months free)
     currency: 'usd',
     interval: 'year',
     usageType: 'licensed',
@@ -240,7 +240,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'seat_overage_starter',
     envVar: 'STRIPE_STARTER_SEAT_OVERAGE_PRICE_ID',
-    amount: 2000,         // $20/seat/month
+    amount: '2000',         // $20/seat/month
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -251,7 +251,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'seat_overage_professional',
     envVar: 'STRIPE_PROFESSIONAL_SEAT_OVERAGE_PRICE_ID',
-    amount: 2500,         // $25/seat/month
+    amount: '2500',         // $25/seat/month
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -262,7 +262,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'seat_overage_business',
     envVar: 'STRIPE_BUSINESS_SEAT_OVERAGE_PRICE_ID',
-    amount: 3000,         // $30/seat/month
+    amount: '3000',         // $30/seat/month
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -273,7 +273,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'seat_overage_enterprise',
     envVar: 'STRIPE_ENTERPRISE_SEAT_OVERAGE_PRICE_ID',
-    amount: 3500,         // $35/seat/month
+    amount: '3500',         // $35/seat/month
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -286,7 +286,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'site_overage_starter',
     envVar: 'STRIPE_STARTER_SITE_OVERAGE_PRICE_ID',
-    amount: 4900,         // $49/site/month
+    amount: '4900',         // $49/site/month
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -297,7 +297,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'site_overage_professional',
     envVar: 'STRIPE_PROFESSIONAL_SITE_OVERAGE_PRICE_ID',
-    amount: 4900,         // $49/site/month
+    amount: '4900',         // $49/site/month
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -308,7 +308,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'site_overage_business',
     envVar: 'STRIPE_BUSINESS_SITE_OVERAGE_PRICE_ID',
-    amount: 3900,         // $39/site/month
+    amount: '3900',         // $39/site/month
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -319,7 +319,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'site_overage_enterprise',
     envVar: 'STRIPE_ENTERPRISE_SITE_OVERAGE_PRICE_ID',
-    amount: 2900,         // $29/site/month
+    amount: '2900',         // $29/site/month
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -332,7 +332,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'interaction_overage',
     envVar: 'STRIPE_STARTER_INTERACTION_OVERAGE_PRICE_ID',
-    amount: 15,           // $0.15/interaction above hard cap
+    amount: '15',           // $0.15/interaction above hard cap
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -343,7 +343,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'interaction_overage',
     envVar: 'STRIPE_PROFESSIONAL_INTERACTION_OVERAGE_PRICE_ID',
-    amount: 12,           // $0.12/interaction above hard cap
+    amount: '12',           // $0.12/interaction above hard cap
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -354,7 +354,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'interaction_overage',
     envVar: 'STRIPE_BUSINESS_INTERACTION_OVERAGE_PRICE_ID',
-    amount: 10,           // $0.10/interaction above hard cap
+    amount: '10',           // $0.10/interaction above hard cap
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -365,7 +365,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'interaction_overage',
     envVar: 'STRIPE_ENTERPRISE_INTERACTION_OVERAGE_PRICE_ID',
-    amount: 8,            // $0.08/interaction above hard cap
+    amount: '8',            // $0.08/interaction above hard cap
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -378,7 +378,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'payroll_processing',
     envVar: 'STRIPE_PROFESSIONAL_PAYROLL_PRICE_ID',
-    amount: 250,          // $2.50/employee/run (Professional)
+    amount: '250',          // $2.50/employee/run (Professional)
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -389,7 +389,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'payroll_processing',
     envVar: 'STRIPE_BUSINESS_PAYROLL_PRICE_ID',
-    amount: 175,          // $1.75/employee/run (Business)
+    amount: '175',          // $1.75/employee/run (Business)
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -400,7 +400,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'payroll_processing',
     envVar: 'STRIPE_ENTERPRISE_PAYROLL_PRICE_ID',
-    amount: 150,          // $1.50/employee/run (Enterprise)
+    amount: '150',          // $1.50/employee/run (Enterprise)
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -413,7 +413,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'invoice_card_processing',
     envVar: 'STRIPE_PROFESSIONAL_CARD_RATE_PRICE_ID',
-    amount: 25,           // $0.25 flat component (2.4% computed server-side)
+    amount: '25',           // $0.25 flat component (2.4% computed server-side)
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -424,7 +424,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'invoice_card_processing',
     envVar: 'STRIPE_BUSINESS_CARD_RATE_PRICE_ID',
-    amount: 20,           // $0.20 flat component (2.2% computed server-side)
+    amount: '20',           // $0.20 flat component (2.2% computed server-side)
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -435,7 +435,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'invoice_card_processing',
     envVar: 'STRIPE_ENTERPRISE_CARD_RATE_PRICE_ID',
-    amount: 15,           // $0.15 flat component (2.0% computed server-side)
+    amount: '15',           // $0.15 flat component (2.0% computed server-side)
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -448,7 +448,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'invoice_ach_processing',
     envVar: 'STRIPE_PROFESSIONAL_ACH_PRICE_ID',
-    amount: 50,           // $0.50/ACH transaction (Professional)
+    amount: '50',           // $0.50/ACH transaction (Professional)
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -459,7 +459,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'invoice_ach_processing',
     envVar: 'STRIPE_BUSINESS_ACH_PRICE_ID',
-    amount: 40,           // $0.40/ACH transaction (Business)
+    amount: '40',           // $0.40/ACH transaction (Business)
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -470,7 +470,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'invoice_ach_processing',
     envVar: 'STRIPE_ENTERPRISE_ACH_PRICE_ID',
-    amount: 30,           // $0.30/ACH transaction (Enterprise)
+    amount: '30',           // $0.30/ACH transaction (Enterprise)
     currency: 'usd',
     interval: 'month',
     usageType: 'metered',
@@ -483,7 +483,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'emergency_event_enterprise',
     envVar: 'STRIPE_EMERGENCY_EVENT_ENTERPRISE_PRICE_ID',
-    amount: 100000,       // $1,000 flat per event
+    amount: '100000',       // $1,000 flat per event
     currency: 'usd',
     isOneTime: true,
     nickname: 'Emergency Event — Enterprise ($1,000/event)',
@@ -492,7 +492,7 @@ const PRICES: PriceDef[] = [
   {
     productName: 'emergency_event_strategic',
     envVar: 'STRIPE_EMERGENCY_EVENT_STRATEGIC_PRICE_ID',
-    amount: 250000,       // $2,500 flat per event
+    amount: '250000',       // $2,500 flat per event
     currency: 'usd',
     isOneTime: true,
     nickname: 'Emergency Event — Strategic ($2,500/event)',

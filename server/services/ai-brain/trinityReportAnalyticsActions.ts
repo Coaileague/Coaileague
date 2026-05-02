@@ -286,7 +286,7 @@ export function registerReportAnalyticsActions(): void {
           return {
             clientId: client.id,
             name: client.companyName || client.firstName + ' ' + client.lastName,
-            score: Math.max(0, score),
+            score: String(Math.max(0, score)),
             metrics: {
               overdueAmount,
               recentShiftCount: shiftCount,

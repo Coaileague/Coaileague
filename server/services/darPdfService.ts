@@ -1342,7 +1342,7 @@ export async function generateShiftTransparencyPdf(darId: string, workspaceId: s
           trinityArticulated: !!dar.trinity_articulated,
           messageCount: chatMessages.length,
           photoCount: photos.length,
-          patrolCount: shiftOpsSnapshot.patrol_rounds_completed ?? undefined,
+          patrolCount: shiftOpsSnapshot.patrol_rounds_completed ?? null,
         });
 
         footer(doc, dar.id, orgName);

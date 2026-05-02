@@ -444,7 +444,7 @@ class AdaptiveSupervisionRouter {
     const taskTypeScore = TASK_COMPLEXITY_HINTS[request.taskType] || 0.5;
     factors.push({
       factor: 'taskType',
-      weight: 0.2,
+      weight: '0.2',
       score: taskTypeScore,
       description: `Task type: ${request.taskType}`,
     });

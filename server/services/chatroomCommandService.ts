@@ -400,7 +400,7 @@ function initializeSystemCommandHandlers(): void {
       handled: true,
       response: {
         type: 'help',
-        content: formatHelpMessage(modes, activeBots, args || undefined),
+        content: formatHelpMessage(modes, activeBots, args || null),
         timestamp: new Date(),
       },
     }),

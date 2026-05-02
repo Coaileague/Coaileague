@@ -108,8 +108,8 @@ export async function createLinkToken(opts: {
     products,
     country_codes: [CountryCode.Us],
     language: 'en',
-    webhook: process.env.PLAID_WEBHOOK_URL || undefined,
-    redirect_uri: opts.redirectUri || undefined,
+    webhook: process.env.PLAID_WEBHOOK_URL || null,
+    redirect_uri: opts.redirectUri || null,
   });
 
   return {
@@ -251,7 +251,7 @@ export async function initiateTransfer(opts: {
       transferResponse = await client.transferCreate(transferCreateBody);
       break; // success
     } catch (err: unknown) {
-      const status = (err as Record<string, unknown>).response?.status ?? (err as Record<string, unknown>).status;
+      const status = (err as Record<string, unknown>).response?.status ?? (err as Record<string, string>).status;
       const isRateLimit = status === 429 || err?.error_code === 'RATE_LIMIT_EXCEEDED';
       if (isRateLimit && attempt < MAX_PLAID_RETRIES) {
         const backoff = PLAID_RETRY_BASE_MS * Math.pow(2, attempt - 1); // 1s, 2s, 4s
@@ -281,7 +281,7 @@ export async function getTransferStatus(transferId: string): Promise<{
   const transfer = response.data.transfer;
   return {
     status: transfer.status,
-    failureReason: (transfer as Record<string,unknown>).failure_reason?.description || undefined,
+    failureReason: (transfer as Record<string,unknown>).failure_reason?.description || null,
   };
 }
 

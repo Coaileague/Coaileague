@@ -147,7 +147,7 @@ export async function createRegulatoryViolation(params: CreateViolationParams): 
     shiftStartTime: params.shiftStartTime,
     shiftEndTime: params.shiftEndTime,
     stateCode,
-    stateLicenseAuthority: stateLicenseAuthority ?? undefined,
+    stateLicenseAuthority: stateLicenseAuthority ?? null,
     regulatoryReference,
     isWormLocked: true,
   }).returning({ id: regulatoryViolations.id });

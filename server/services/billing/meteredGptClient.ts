@@ -374,7 +374,7 @@ Respond with JSON containing only the requested fields. Use null for missing val
         const match = line.match(/CONFIDENCE:\s*([\d.]+)\s*-?\s*(.*)/i);
         if (match) {
           confidence = parseFloat(match[1]);
-          reason = match[2] || undefined;
+          reason = match[2] || null;
           // Remove confidence line from content
           cleanContent = lines.slice(0, i).join('\n').trim();
           break;

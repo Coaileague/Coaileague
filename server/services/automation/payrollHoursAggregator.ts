@@ -296,7 +296,7 @@ export async function aggregatePayrollHours(params: {
       // each portion.
       const totalHours = parseFloat(timeEntry.totalHours);
 
-      const hoursBucket = { regularHours: 0, overtimeHours: 0, holidayHours: 0 };
+      const hoursBucket = { regularHours: '0', overtimeHours: '0', holidayHours: 0 };
       let regularPay = 0;
       let overtimePay = 0;
       let holidayPay = 0;

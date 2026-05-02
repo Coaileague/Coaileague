@@ -72,7 +72,7 @@ async function requireManagerRole(req: AuthenticatedRequest): Promise<{ allowed:
 
   req.workspaceId = resolved.workspaceId;
   req.workspaceRole = resolved.role as unknown;
-  req.employeeId = resolved.employeeId || undefined;
+  req.employeeId = resolved.employeeId || null;
   return { allowed: true };
 }
 
@@ -1143,7 +1143,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
       // FIX [INVOICE AMOUNT MANIPULATION]: Block changes to financial totals once an
       // invoice has left the draft state (i.e., it has been sent to the client). An
       // authenticated manager could previously zero-out a $50,000 invoice by sending
-      // PATCH with {totalAmount: 0.01}. Correct financial corrections require credit memos
+      // PATCH with {totalAmount: '0.01'}. Correct financial corrections require credit memos
       // or adjustments — not a direct PATCH of the invoice total.
       // Non-negative validation also applied here as an additional defense-in-depth layer.
       const sentStatuses = new Set(['sent', 'overdue', 'partial']);
@@ -1452,7 +1452,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
             status: 'paid',
             paidAt,
             amountPaid: sql`${invoices.total}`,
-            notes: notes || undefined,
+            notes: notes || null,
           })
           .where(and(
             eq(invoices.id, id),
@@ -1486,7 +1486,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
           workspaceId: workspace.id,
           entryType: 'payment_received',
           direction: 'credit',
-          amount: parseFloat(updated.total),
+          amount: String(parseFloat(updated.total)),
           relatedEntityType: 'invoice',
           relatedEntityId: id,
           invoiceId: id,
@@ -1614,7 +1614,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
             amountPaid: parseFloat(updated.total || '0').toFixed(2),
             paymentDate: paidAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
             paymentMethod,
-            referenceNumber: referenceNumber || undefined,
+            referenceNumber: referenceNumber || null,
             invoiceUrl: `${process.env.APP_BASE_URL || 'https://app.coaileague.com'}/invoices/${id}`,
           }, workspace.id);
           log.info(`[InvoiceRoutes] Invoice paid email sent to ${owner.email} for invoice ${updated.invoiceNumber}`);
@@ -1644,7 +1644,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
             amountPaid: parseFloat(String(updated.total ?? 0)).toFixed(2),
             paymentDate: paidAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
             paymentMethod,
-            referenceNumber: referenceNumber || undefined,
+            referenceNumber: referenceNumber || null,
           }, workspace.id);
           log.info(`[InvoiceRoutes] Payment receipt sent to client ${clientRow.email} for invoice ${updated.invoiceNumber}`);
         } catch (receiptErr: unknown) {
@@ -1987,7 +1987,7 @@ router.post('/:id/create-payment', async (req, res) => {
       // Create Stripe customer if doesn't exist
       if (!stripeCustomerId) {
         const customer = await stripe.customers.create({
-          email: payerEmail || client.email || undefined,
+          email: payerEmail || client.email || null,
           name: payerName || client.companyName || `${client.firstName} ${client.lastName}`,
           metadata: {
             clientId: client.id,
@@ -2011,7 +2011,7 @@ router.post('/:id/create-payment', async (req, res) => {
             workspaceId: invoice.workspaceId,
             clientId: client.id,
             stripeCustomerId: customer.id,
-            billingEmail: payerEmail || client.email || undefined,
+            billingEmail: payerEmail || client.email || null,
           });
         }
       }
@@ -2054,7 +2054,7 @@ router.post('/:id/create-payment', async (req, res) => {
           amount: invoice.total,
           currency: 'usd',
           status: 'pending',
-          payerEmail: payerEmail || client.email || undefined,
+          payerEmail: payerEmail || client.email || null,
           payerName: payerName || client.companyName || `${client.firstName} ${client.lastName}`,
         });
 
@@ -2654,7 +2654,7 @@ router.get('/cash-flow-summary', async (req: AuthenticatedRequest, res) => {
         ...i,
         clientName: topClientMap.get(i.clientId) || 'Unknown',
         daysOverdue: Math.floor((now.getTime() - new Date(i.dueDate!).getTime()) / (1000 * 60 * 60 * 24)),
-        amount: parseFloat(i.total || '0'), // GAP-52: null-safe
+        amount: String(parseFloat(i.total || '0')), // GAP-52: null-safe
       })),
     });
   } catch (error: unknown) {

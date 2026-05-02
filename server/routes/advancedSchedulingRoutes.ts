@@ -127,10 +127,10 @@ advancedSchedulingRouter.post('/recurring/:patternId/generate', requireManager, 
     const result = await generateRecurringShifts({
       template: {
         workspaceId,
-        employeeId: pattern.employeeId || undefined,
-        clientId: pattern.clientId || undefined,
+        employeeId: pattern.employeeId || null,
+        clientId: pattern.clientId || null,
         title: pattern.title,
-        description: pattern.description || undefined,
+        description: pattern.description || null,
         category: pattern.category || 'general',
         startTimeOfDay: pattern.startTimeOfDay,
         endTimeOfDay: pattern.endTimeOfDay,
@@ -221,7 +221,7 @@ advancedSchedulingRouter.get('/swap-requests', requireAuth, async (req: Request,
     const employeeId = await getEmployeeId(userId, workspaceId);
 
     const requests = await getSwapRequests(workspaceId, {
-      employeeId: employeeIdFilter || undefined,
+      employeeId: employeeIdFilter || null,
       status,
     });
 

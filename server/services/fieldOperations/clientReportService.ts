@@ -84,7 +84,7 @@ class ClientReportService {
   private async calculateSummary(postId: string, periodStart: Date, periodEnd: Date): Promise<ClientPOSReportSummary> {
     return {
       totalShifts: 0,
-      totalHours: 0,
+      totalHours: '0',
       totalOfficers: 0,
       posPhotosSubmitted: 0,
       posPhotosRequired: 0,

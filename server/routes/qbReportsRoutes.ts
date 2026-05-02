@@ -190,8 +190,8 @@ router.get("/payroll-summary", async (req: AuthenticatedRequest, res) => {
         name: emp[0] ? `${emp[0].firstName || ""} ${emp[0].lastName || ""}`.trim() : "Unknown",
         grossPay: parseFloat(entry.totalGross),
         netPay: parseFloat(entry.totalNet),
-        regularHours: parseFloat(entry.totalRegularHours),
-        overtimeHours: parseFloat(entry.totalOvertimeHours),
+        regularHours: String(parseFloat(entry.totalRegularHours)),
+        overtimeHours: String(parseFloat(entry.totalOvertimeHours)),
       });
     }
 
@@ -693,7 +693,7 @@ router.get("/workers-comp", async (req: AuthenticatedRequest, res) => {
     for (const row of rows) {
       const code = row.classificationCode;
       if (!byClassification[code]) {
-        byClassification[code] = { totalHours: 0, employeeCount: 0, regularHours: 0, overtimeHours: 0 };
+        byClassification[code] = { totalHours: '0', employeeCount: 0, regularHours: '0', overtimeHours: '0' };
       }
       byClassification[code].totalHours += row.totalHours;
       byClassification[code].employeeCount += 1;

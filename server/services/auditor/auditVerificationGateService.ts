@@ -312,7 +312,7 @@ export async function submitAuditorPaperwork(
 
   // Trinity verifies the paperwork
   const verificationResult = await trinityVerifyPaperwork(
-    params.fileBuffer, params.mimeType, auditInfo.licenseNumber ?? undefined,
+    params.fileBuffer, params.mimeType, auditInfo.licenseNumber ?? null,
   );
 
   if (!verificationResult.verified) {

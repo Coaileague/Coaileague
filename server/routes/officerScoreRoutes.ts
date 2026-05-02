@@ -65,7 +65,7 @@ router.get('/api/score/me', requireAuth, async (req, res) => {
 
     // If no score record yet, try to initialize (respects owner rules)
     if (!data.score) {
-      await officerScoreService.getOrInitScore(emp.id, workspaceId, { workspaceRole: workspaceRole ?? undefined });
+      await officerScoreService.getOrInitScore(emp.id, workspaceId, { workspaceRole: workspaceRole ?? null });
       const fresh = await officerScoreService.getScoreWithHistory(emp.id, workspaceId);
       return res.json({ ...fresh, employeeId: emp.id });
     }

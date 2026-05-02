@@ -85,7 +85,7 @@ export const ensureWorkspaceAccess: RequestHandler = async (req: Request, res: R
   if (!requestedWorkspaceId && req.session?.workspaceId && req.session?.workspaceRole) {
     authReq.workspaceId = req.session.workspaceId;
     authReq.workspaceRole = req.session.workspaceRole as unknown;
-    authReq.employeeId = req.session.employeeId || undefined;
+    authReq.employeeId = req.session.employeeId || null;
 
     log.debug('[ensureWorkspaceAccess] Using session workspace (fast-path)', {
       workspaceId: req.session.workspaceId,
@@ -135,13 +135,13 @@ export const ensureWorkspaceAccess: RequestHandler = async (req: Request, res: R
   }
 
   authReq.workspaceId = resolved.workspaceId;
-  authReq.workspaceRole = resolved.role || undefined;
-  authReq.employeeId = resolved.employeeId || undefined;
+  authReq.workspaceRole = resolved.role || null;
+  authReq.employeeId = resolved.employeeId || null;
 
   if (req.session && !req.session.workspaceId) {
     req.session.workspaceId = resolved.workspaceId;
-    req.session.workspaceRole = resolved.role || undefined;
-    req.session.employeeId = resolved.employeeId || undefined;
+    req.session.workspaceRole = resolved.role || null;
+    req.session.employeeId = resolved.employeeId || null;
   }
 
   // T005: Block suspended/frozen workspaces on mutation routes
@@ -193,8 +193,8 @@ export function requireWorkspaceParam(paramName: string = 'workspaceId'): Reques
     }
 
     authReq.workspaceId = resolved.workspaceId;
-    authReq.workspaceRole = resolved.role || undefined;
-    authReq.employeeId = resolved.employeeId || undefined;
+    authReq.workspaceRole = resolved.role || null;
+    authReq.employeeId = resolved.employeeId || null;
     next();
   };
 }

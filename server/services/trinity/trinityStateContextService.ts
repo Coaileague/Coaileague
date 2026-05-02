@@ -364,7 +364,7 @@ ${ctx.fallbackToManualVerification ? '\n⚠ MANUAL VERIFICATION REQUIRED: This s
     return {
       stateCode: effectiveState,
       salesTaxApplicable,
-      salesTaxRate: salesTaxApplicable ? rate : 0,
+      salesTaxRate: salesTaxApplicable ? rate : '0',
       salesTaxNotes: taxCtx.invoiceSalesTaxNotes,
       invoiceLineItemLabel: salesTaxApplicable ? `${effectiveState} Sales Tax (${(rate * 100).toFixed(2)}%)` : 'Sales Tax N/A — Security services exempt',
     };

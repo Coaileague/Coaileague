@@ -219,7 +219,7 @@ class TrinityResolutionFabricService {
       tier: strategy?.tier ?? 'escalated',
       actionsPerformed: [],
       trinityMessage: '',
-      confidenceScore: 0,
+      confidenceScore: '0',
       processingTimeMs: 0,
     };
 
@@ -363,7 +363,7 @@ class TrinityResolutionFabricService {
             tier: 'delegated',
             actionsPerformed: [`Published ${promoted} FAQ answer(s) from recurring question patterns`],
             trinityMessage: `Trinity detected a recurring support pattern and published ${promoted} FAQ answer(s) to help your team self-serve faster.`,
-            confidenceScore: 0.88,
+            confidenceScore: '0.88',
             processingTimeMs: Date.now() - startTime,
           };
         }
@@ -395,7 +395,7 @@ class TrinityResolutionFabricService {
           tier: 'delegated',
           actionsPerformed: [`Delegated to ${strategy.domain}/${strategy.domainAction}: ${delegateResult.data ? JSON.stringify(delegateResult.data).substring(0, 200) : 'in progress'}`],
           trinityMessage: `Trinity delegated resolution to ${strategy.domain} supervisor. Action: ${strategy.domainAction}`,
-          confidenceScore: 0.82,
+          confidenceScore: '0.82',
           processingTimeMs: Date.now() - startTime,
         };
       } else {
@@ -538,7 +538,7 @@ class TrinityResolutionFabricService {
       tier: 'escalated',
       actionsPerformed: [`Created escalation ticket${ticketId ? ` ${ticketId}` : ''}`, `Notified org owner`],
       trinityMessage: `Trinity could not auto-resolve this issue and has escalated to your team. ${reason}`,
-      confidenceScore: 0.0,
+      confidenceScore: '0.0',
       escalationTicketId: ticketId,
       processingTimeMs: 0,
     };

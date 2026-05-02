@@ -383,8 +383,8 @@ class AICostMonitorService {
         statsByType[opType] = {
           operationType: opType,
           totalOperations: 0,
-          totalCost: 0,
-          totalRevenue: 0,
+          totalCost: '0',
+          totalRevenue: '0',
           avgMargin: 0,
           unprofitableCount: 0,
         };
@@ -434,7 +434,7 @@ class AICostMonitorService {
       if (!wsId) continue;
 
       if (!byWorkspace[wsId]) {
-        byWorkspace[wsId] = { totalCost: 0, totalRevenue: 0, operationCount: 0 };
+        byWorkspace[wsId] = { totalCost: '0', totalRevenue: '0', operationCount: 0 };
       }
 
       byWorkspace[wsId].totalCost += metadata.actualUsdCost || 0;

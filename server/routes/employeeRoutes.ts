@@ -224,8 +224,8 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
     const validationResult = insertEmployeeSchema.safeParse({
       ...employeeData,
       workspaceId,
-      guardCardNumber: employeeData.guardCardNumber || undefined,
-      guardCardExpiryDate: employeeData.guardCardExpiryDate || undefined,
+      guardCardNumber: employeeData.guardCardNumber || null,
+      guardCardExpiryDate: employeeData.guardCardExpiryDate || null,
     });
 
     if (!validationResult.success) {

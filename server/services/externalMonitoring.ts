@@ -146,7 +146,7 @@ export async function monitorSLACompliance(
     return {
       uptime: 0,
       responseTime: 0,
-      errorRate: 100,
+      errorRate: '100',
       workspacesImpacted: 0,
     };
   }

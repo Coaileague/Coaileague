@@ -532,7 +532,7 @@ export async function getRecentUpdatesForUser(
     isNew: u.isNew ?? true,
     isViewed: viewedIds.has(u.id),
     createdAt: u.createdAt || new Date(),
-    learnMoreUrl: u.learnMoreUrl || undefined,
+    learnMoreUrl: u.learnMoreUrl || null,
   }));
 }
 
@@ -819,7 +819,7 @@ export async function getNewUserWelcomeSummary(
       title: u.title,
       description: u.description || '',
       category: u.category || 'announcement',
-      learnMoreUrl: u.learnMoreUrl || undefined,
+      learnMoreUrl: u.learnMoreUrl || null,
     }));
 
     // Generate AI summary
@@ -1264,7 +1264,7 @@ JSON:`;
       aiEnriched,
       originalTitle: title,
       originalMessage: message,
-      recipientRole: recipientRole || undefined,
+      recipientRole: recipientRole || null,
       workspaceName: companyName !== 'CoAIleague' ? companyName : undefined,
     },
   };

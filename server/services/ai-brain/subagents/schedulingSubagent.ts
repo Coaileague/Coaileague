@@ -476,7 +476,7 @@ Generate a JSON schedule with format:
         log.error('[SchedulingSubagent] AI schedule generation blocked:', aiResult.error);
         return {
           schedule: [],
-          metrics: { coveragePercent: 0, overtimeHours: 0, preferenceScore: 0, costEfficiency: 0 },
+          metrics: { coveragePercent: 0, overtimeHours: '0', preferenceScore: 0, costEfficiency: 0 },
           aiInsights: 'AI optimization unavailable. Manual scheduling recommended.',
         };
       }
@@ -582,7 +582,7 @@ Generate a JSON schedule with format:
             schedule: [],
             metrics: {
               coveragePercent: 0,
-              overtimeHours: 0,
+              overtimeHours: '0',
               preferenceScore: 0,
               costEfficiency: 0,
             },
@@ -617,7 +617,7 @@ Generate a JSON schedule with format:
       schedule: [],
       metrics: {
         coveragePercent: 0,
-        overtimeHours: 0,
+        overtimeHours: '0',
         preferenceScore: 0,
         costEfficiency: 0,
       },
@@ -1045,7 +1045,7 @@ Generate a JSON schedule with format:
     if (!judgeResult.approved) {
       log.warn('[SchedulingSubagent] LLM Judge rejected strategic schedule:', judgeResult.reason);
       parsedResponse.confidence = {
-        score: 0.4,
+        score: '0.4',
         reasoning: `LLM Judge concern: ${judgeResult.reason}`,
         recommendation: 'MANUAL_REQUIRED',
       };
@@ -1069,8 +1069,8 @@ Generate a JSON schedule with format:
     return {
       schedule: parsedResponse.schedule || [],
       businessMetrics: parsedResponse.businessMetrics || {
-        totalRevenue: 0,
-        totalCost: 0,
+        totalRevenue: '0',
+        totalCost: '0',
         totalProfit: 0,
         avgProfitMargin: 0,
         enterpriseClientsCovered: 0,
@@ -1081,7 +1081,7 @@ Generate a JSON schedule with format:
       strategicDecisions: parsedResponse.strategicDecisions || [],
       alerts: parsedResponse.alerts || [],
       confidence: parsedResponse.confidence || {
-        score: 0.7,
+        score: '0.7',
         reasoning: 'Standard strategic optimization applied',
         recommendation: 'REVIEW_RECOMMENDED',
       },
@@ -1326,7 +1326,7 @@ ${openShifts.map(s => {
         ? [`${openShifts.length - schedule.length} shifts could not be assigned due to insufficient qualified employees`]
         : [],
       confidence: {
-        score: 0.6,
+        score: '0.6',
         reasoning: 'Fallback algorithm used - Gemini response parsing failed',
         recommendation: 'REVIEW_RECOMMENDED' as const,
       },

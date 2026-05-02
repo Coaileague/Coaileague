@@ -922,7 +922,7 @@ export async function getComplianceTrend(workspaceId: string): Promise<Array<{
       [workspaceId],
     );
     return r.rows.map((row: unknown) => ({
-      score: Number(row.score),
+      score: String(Number(row.score)),
       recordedAt: row.recorded_at,
     }));
   } catch {

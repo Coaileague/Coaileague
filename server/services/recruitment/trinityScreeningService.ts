@@ -230,7 +230,7 @@ RECOMMENDATION LOGIC:
   } catch (err: unknown) {
     log.warn('[TrinityScreening] Screening error:', err instanceof Error ? err.message : String(err));
     return {
-      score: 0,
+      score: '0',
       reasoning: 'AI screening temporarily unavailable — manual review required.',
       parsedData: {},
       dimensions: {} as TrinityScoreDimensions,
@@ -348,7 +348,7 @@ Return ONLY valid JSON:
       notes: String(parsed.notes || ''),
     };
   } catch {
-    return { score: 0, notes: 'Scoring unavailable' };
+    return { score: '0', notes: 'Scoring unavailable' };
   }
 }
 

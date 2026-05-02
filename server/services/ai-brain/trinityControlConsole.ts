@@ -208,13 +208,13 @@ class TrinityControlConsoleService {
       const payload: ThoughtSignaturePayload = {
         id: inserted.id,
         sessionId: thought.sessionId,
-        workspaceId: thought.workspaceId || undefined,
-        userId: thought.userId || undefined,
-        runId: thought.runId || undefined,
+        workspaceId: thought.workspaceId || null,
+        userId: thought.userId || null,
+        runId: thought.runId || null,
         thoughtType: thought.thoughtType as ThoughtType,
         content: thought.content,
         context: thought.context as Record<string, unknown> | undefined,
-        confidence: thought.confidence || undefined,
+        confidence: thought.confidence || null,
         timestamp: new Date().toISOString(),
       };
 
@@ -268,17 +268,17 @@ class TrinityControlConsoleService {
       const payload: ActionLogPayload = {
         id: inserted.id,
         sessionId: action.sessionId,
-        workspaceId: action.workspaceId || undefined,
-        userId: action.userId || undefined,
-        runId: action.runId || undefined,
-        thoughtId: action.thoughtId || undefined,
+        workspaceId: action.workspaceId || null,
+        userId: action.userId || null,
+        runId: action.runId || null,
+        thoughtId: action.thoughtId || null,
         actionType: action.actionType as ActionType,
         actionName: action.actionName,
         parameters: action.parameters as Record<string, unknown> | undefined,
         result: action.result as Record<string, unknown> | undefined,
         status: action.status as ActionStatus,
-        durationMs: action.durationMs || undefined,
-        errorMessage: action.errorMessage || undefined,
+        durationMs: action.durationMs || null,
+        errorMessage: action.errorMessage || null,
         timestamp: new Date().toISOString(),
       };
 

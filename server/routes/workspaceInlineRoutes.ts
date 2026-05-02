@@ -925,10 +925,10 @@ async function applyAutomationUpdate(params: {
       const { tier } = req.body;
       
       const tierConfig: Record<string, { fee: number; name: string; price: number }> = {
-        free: { fee: 0, name: "Free Trial", price: 0 },
-        starter: { fee: 3, name: "Starter", price: 4999 },
-        professional: { fee: 3, name: "Professional", price: 9999 },
-        enterprise: { fee: 2, name: "Enterprise", price: 17999 },
+        free: { fee: 0, name: "Free Trial", price: '0' },
+        starter: { fee: 3, name: "Starter", price: '4999' },
+        professional: { fee: 3, name: "Professional", price: '9999' },
+        enterprise: { fee: 2, name: "Enterprise", price: '17999' },
       };
 
       if (!tierConfig[tier]) {
@@ -1105,7 +1105,7 @@ async function applyAutomationUpdate(params: {
 
       if (!parentWorkspaceId) {
         const { workspaceId } = await resolveWorkspaceForUser(userId);
-        parentWorkspaceId = workspaceId || undefined;
+        parentWorkspaceId = workspaceId || null;
       }
 
       if (!parentWorkspaceId) {

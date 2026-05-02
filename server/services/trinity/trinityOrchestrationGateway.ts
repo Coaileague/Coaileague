@@ -281,7 +281,7 @@ class TrinityOrchestrationGateway {
               endpoint: r.endpoint,
               method: r.method,
             },
-            sourceRoute: r.endpoint || undefined,
+            sourceRoute: r.endpoint || null,
           })));
         } catch (err: unknown) {
           log.warn('[trinityOrchestrationGateway] Audit batch write failed (non-fatal):', (err instanceof Error ? err.message : String(err)) ?? err);
@@ -923,7 +923,7 @@ export function trinityOrchestrationMiddleware() {
     const userId = req.session?.userId || req.user?.id || null;
     const endpoint = req.originalUrl || req.url;
     const method = req.method;
-    const userAgent = req.get('user-agent') || undefined;
+    const userAgent = req.get('user-agent') || null;
     const ipAddress = req.ip || req.connection?.remoteAddress;
     const sessionId = req.sessionID;
     
@@ -1025,7 +1025,7 @@ export function trinityOrchestrationMiddleware() {
           {
             resourceId: (res as Record<string, unknown>).responseData?.id
               || (res as Record<string, unknown>).responseData?.data?.id
-              || undefined,
+              || null,
             metadata: { method, endpoint, status: responseStatus },
           }
         );

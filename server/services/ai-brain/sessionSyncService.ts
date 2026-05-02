@@ -224,7 +224,7 @@ class SessionSyncService {
       action,
       resource,
       queryKeys,
-      workspaceId: workspaceId || undefined,
+      workspaceId: workspaceId || null,
       timestamp: new Date().toISOString(),
     };
 

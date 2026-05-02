@@ -389,7 +389,7 @@ export async function recordSlaFirstResponse(
 
   try {
     await db.insert(helpaiSlaLog).values({
-      workspaceId: workspaceId || undefined,
+      workspaceId: workspaceId || null,
       conversationId,
       layer,
       channelType,
@@ -494,7 +494,7 @@ export async function createHelpAIConversation(params: {
   const [conv] = await db
     .insert(helpaiConversations)
     .values({
-      workspaceId: params.workspaceId || undefined,
+      workspaceId: params.workspaceId || null,
       layer: params.layer,
       channelType: params.channelType,
       channelId: params.channelId,

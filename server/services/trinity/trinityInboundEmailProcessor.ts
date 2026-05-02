@@ -1566,10 +1566,10 @@ export async function reprocessInboundEmail(logId: string): Promise<ProcessingRe
   const email: ParsedInboundEmail = {
     messageId: undefined, // Clear so re-processing doesn't hit unique constraint
     fromEmail: entry.fromEmail,
-    fromName: entry.fromName || undefined,
+    fromName: entry.fromName || null,
     toEmail: entry.toEmail,
-    subject: entry.subject || undefined,
-    bodyText: entry.bodyFull || undefined,
+    subject: entry.subject || null,
+    bodyText: entry.bodyFull || null,
     attachments: (entry.attachmentMeta as unknown[]) || [],
     rawPayload: entry.rawPayload as Record<string, unknown> || {},
   };

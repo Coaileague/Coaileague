@@ -228,24 +228,24 @@ export async function getEmergencyChain(workspaceId: string): Promise<{
 
   const supervisors = allOnCall
     .filter(c => c.role === 'supervisor')
-    .map(c => ({ id: c.userId, name: c.name, phone: c.phone ?? undefined }));
+    .map(c => ({ id: c.userId, name: c.name, phone: c.phone ?? null }));
 
   const managers = allOnCall
     .filter(c => c.role === 'manager')
-    .map(c => ({ id: c.userId, name: c.name, phone: c.phone ?? undefined }));
+    .map(c => ({ id: c.userId, name: c.name, phone: c.phone ?? null }));
 
   const ownerEntry = coverage.fallbackOwner ?? allOnCall.find(c => c.role === 'owner');
 
   // Always fall back to first workspace owner if none in on-call table
   let ownerId = ownerEntry?.userId ?? '';
-  let ownerPhone = ownerEntry?.phone ?? undefined;
+  let ownerPhone = ownerEntry?.phone ?? null;
 
   if (!ownerId) {
     const owner = await db.query.users.findFirst({
       where: and(eq(users.workspaceId, workspaceId), eq(users.role, 'owner')),
     });
     ownerId = owner?.id ?? '';
-    ownerPhone = owner?.phone ?? undefined;
+    ownerPhone = owner?.phone ?? null;
   }
 
   return { supervisors, managers, ownerId, ownerPhone };

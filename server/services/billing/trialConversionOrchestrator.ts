@@ -175,7 +175,7 @@ class TrialConversionOrchestrator {
         ownerEmail: owner?.email || '',
         daysRemaining,
         hasPaymentMethod: !!workspace.stripeCustomerId,
-        selectedTier: workspace.subscriptionTier as SubscriptionTier || undefined,
+        selectedTier: workspace.subscriptionTier as SubscriptionTier || null,
       });
     }
 

@@ -120,7 +120,7 @@ class TrinityHelpAICommandBus {
       const [entry] = await db
         .insert(commandBusTable)
         .values({
-          workspaceId: params.workspaceId || undefined,
+          workspaceId: params.workspaceId || null,
           direction: params.direction,
           messageType: params.messageType,
           priority: params.priority,

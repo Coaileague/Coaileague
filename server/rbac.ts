@@ -337,7 +337,7 @@ export function requireWorkspaceRole(allowedRoles: WorkspaceRole[]) {
 
     req.workspaceId = workspaceId;
     req.workspaceRole = role;
-    req.employeeId = employeeId || undefined;
+    req.employeeId = employeeId || null;
     next();
   };
 }
@@ -438,7 +438,7 @@ export const requireManagerOrPlatformStaff: RequestHandler = async (req, res, ne
   
   authReq.workspaceId = resolved.workspaceId;
   authReq.workspaceRole = resolved.role;
-  authReq.employeeId = resolved.employeeId || undefined;
+  authReq.employeeId = resolved.employeeId || null;
   
   next();
 };
@@ -591,7 +591,7 @@ export const attachWorkspaceId: RequestHandler = async (req, res, next) => {
   if (!requestedWorkspaceId && req.session?.workspaceId && req.session?.workspaceRole) {
     authReq.workspaceId = req.session.workspaceId;
     authReq.workspaceRole = req.session.workspaceRole as unknown;
-    authReq.employeeId = req.session.employeeId || undefined;
+    authReq.employeeId = req.session.employeeId || null;
     return next();
   }
   
@@ -606,14 +606,14 @@ export const attachWorkspaceId: RequestHandler = async (req, res, next) => {
   }
   
   authReq.workspaceId = resolved.workspaceId;
-  authReq.workspaceRole = resolved.role || undefined;
-  authReq.employeeId = resolved.employeeId || undefined;
+  authReq.workspaceRole = resolved.role || null;
+  authReq.employeeId = resolved.employeeId || null;
   
   // Cache in session for subsequent requests
   if (req.session && !req.session.workspaceId) {
     req.session.workspaceId = resolved.workspaceId;
-    req.session.workspaceRole = resolved.role || undefined;
-    req.session.employeeId = resolved.employeeId || undefined;
+    req.session.workspaceRole = resolved.role || null;
+    req.session.employeeId = resolved.employeeId || null;
   }
   
   next();
@@ -677,20 +677,20 @@ export const attachWorkspaceIdOptional: RequestHandler = async (req, res, next) 
   if (!requestedWorkspaceId && req.session?.workspaceId && req.session?.workspaceRole) {
     authReq.workspaceId = req.session.workspaceId;
     authReq.workspaceRole = req.session.workspaceRole as unknown;
-    authReq.employeeId = req.session.employeeId || undefined;
+    authReq.employeeId = req.session.employeeId || null;
     return next();
   }
   
   const resolved = await resolveWorkspaceForUser(userId, requestedWorkspaceId as string | undefined);
   
-  authReq.workspaceId = resolved.workspaceId || undefined;
-  authReq.workspaceRole = resolved.role || undefined;
-  authReq.employeeId = resolved.employeeId || undefined;
+  authReq.workspaceId = resolved.workspaceId || null;
+  authReq.workspaceRole = resolved.role || null;
+  authReq.employeeId = resolved.employeeId || null;
   
   if (req.session && resolved.workspaceId && !req.session.workspaceId) {
     req.session.workspaceId = resolved.workspaceId;
-    req.session.workspaceRole = resolved.role || undefined;
-    req.session.employeeId = resolved.employeeId || undefined;
+    req.session.workspaceRole = resolved.role || null;
+    req.session.employeeId = resolved.employeeId || null;
   }
   
   next();
@@ -1235,7 +1235,7 @@ export const attachSupportSessionContext: RequestHandler = async (req, res, next
         targetWorkspaceId: activeSession.workspaceId,
         scope: activeSession.scope,
         isOrgFrozen: activeSession.isOrgFrozen || false,
-        freezeReason: activeSession.freezeReason || undefined,
+        freezeReason: activeSession.freezeReason || null,
       };
     }
     
@@ -1294,7 +1294,7 @@ export const requireActiveSupport = (scopes: string[]): RequestHandler => {
         targetWorkspaceId: activeSession.workspaceId,
         scope: activeSession.scope,
         isOrgFrozen: activeSession.isOrgFrozen || false,
-        freezeReason: activeSession.freezeReason || undefined,
+        freezeReason: activeSession.freezeReason || null,
       };
       
       next();

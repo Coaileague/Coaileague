@@ -25,7 +25,7 @@ async function apiPost(path: string, body: unknown, token?: string) {
 describe('Panic Alert Flow', () => {
   it('panic route requires authentication', async () => {
     if (!serverReachable) return;
-    const res = await apiPost('/api/safety/panic', { latitude: 0, longitude: 0 });
+    const res = await apiPost('/api/safety/panic', { latitude: '0', longitude: '0' });
     expect([400, 401, 403, 422]).toContain(res.status);
     expect(res.status).not.toBe(404);
   });

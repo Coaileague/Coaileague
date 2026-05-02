@@ -27,7 +27,7 @@ describe('GPS Clock-In Flow', () => {
     if (!serverReachable) return;
     const res = await apiPost('/api/time-entries/clock-in', {
       shiftId: 'test-shift-id',
-      latitude: 29.4241,
+      latitude: '29.4241',
       longitude: -98.4936,
       accuracy: 15,
     });
@@ -39,7 +39,7 @@ describe('GPS Clock-In Flow', () => {
   it('clock-out endpoint exists and enforces auth/session', async () => {
     if (!serverReachable) return;
     const res = await apiPost('/api/time-entries/clock-out', {
-      latitude: 29.4241,
+      latitude: '29.4241',
       longitude: -98.4936,
     });
 

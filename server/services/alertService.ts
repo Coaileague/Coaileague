@@ -419,8 +419,8 @@ class AlertService {
         title: alert.title,
         message: alert.message,
         actionUrl: '/alert-settings',
-        relatedEntityType: alert.relatedEntityType || undefined,
-        relatedEntityId: alert.relatedEntityId || undefined,
+        relatedEntityType: alert.relatedEntityType || null,
+        relatedEntityId: alert.relatedEntityId || null,
         metadata: {
           alertId: alert.id,
           severity: alert.severity,

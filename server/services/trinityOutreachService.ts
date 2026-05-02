@@ -432,7 +432,7 @@ export class TrinityOutreachService {
       return {
         companyName: inv.organizationName,
         email: inv.email,
-        contactName: inv.contactName || undefined,
+        contactName: inv.contactName || null,
         website: '',
         stage: currentStage,
       };

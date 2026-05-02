@@ -106,7 +106,7 @@ Classification rules:
     try {
       parsed = JSON.parse(jsonText);
     } catch {
-      parsed = { sentiment: 'neutral', sentimentScore: 0, confidence: 50, urgencyLevel: 2, shouldEscalate: false, summary: 'Parse error — defaulting to neutral' };
+      parsed = { sentiment: 'neutral', sentimentScore: '0', confidence: 50, urgencyLevel: 2, shouldEscalate: false, summary: 'Parse error — defaulting to neutral' };
     }
 
     const result: ChatSentimentAnalysisResult = {
@@ -125,7 +125,7 @@ Classification rules:
     // Return neutral sentiment on error to avoid breaking the chat flow
     return {
       sentiment: 'neutral',
-      sentimentScore: 0,
+      sentimentScore: '0',
       confidence: 0,
       urgencyLevel: 2,
       shouldEscalate: false,

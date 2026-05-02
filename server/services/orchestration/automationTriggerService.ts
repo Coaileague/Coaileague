@@ -1004,7 +1004,7 @@ class AutomationTriggerService {
       enabledTriggers: 0,
       disabledTriggers: 0,
       executionsToday: 0,
-      successRate: 0,
+      successRate: '0',
       byAutomationType: {} as Record<AutomationType, number>,
     };
 

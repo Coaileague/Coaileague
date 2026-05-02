@@ -71,12 +71,12 @@ class TrinityPerformanceCalculator {
     // client is null when client_feedback table doesn't exist.
     // Redistribute the 15% weight proportionally across remaining metrics.
     const weightedScores = [
-      { score: clockin.score, weight: 0.25 },
-      { score: attendance.score, weight: 0.30 },
-      { score: reports.qualityScore, weight: 0.10 },
-      { score: reports.submissionScore, weight: 0.10 },
-      ...(client !== null ? [{ score: (client as ClientWithExtras).score, weight: 0.15 }] : []),
-      { score: responseTime.score, weight: 0.10 },
+      { score: clockin.score, weight: '0.25' },
+      { score: attendance.score, weight: '0.30' },
+      { score: reports.qualityScore, weight: '0.10' },
+      { score: reports.submissionScore, weight: '0.10' },
+      ...(client !== null ? [{ score: (client as ClientWithExtras).score, weight: '0.15' }] : []),
+      { score: responseTime.score, weight: '0.10' },
     ];
     const totalWeight = weightedScores.reduce((sum, s) => sum + s.weight, 0);
     const composite = Math.round(
@@ -219,7 +219,7 @@ class TrinityPerformanceCalculator {
   private async calcResponseTime(workspaceId: string, employeeId: string, _start: Date, _end: Date) {
     // Response time: based on message/dispatch acknowledgment latency
     // Default to 85 if no dispatch system data — real value filled when available
-    return { score: 85 };
+    return { score: '85' };
   }
 
   private async calcStreaks(workspaceId: string, employeeId: string) {

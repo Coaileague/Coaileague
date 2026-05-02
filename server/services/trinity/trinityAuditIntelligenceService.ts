@@ -231,9 +231,9 @@ AUDIT INTELLIGENCE INSTRUCTIONS:
         auditorId: rows[0].id,
         name: rows[0].name,
         agencyName: rows[0].agency_name,
-        badgeNumber: rows[0].badge_number || undefined,
+        badgeNumber: rows[0].badge_number || null,
         stateCode: rows[0].state_code,
-        accountType: rows[0].account_type || undefined,
+        accountType: rows[0].account_type || null,
       };
     } catch { return null; }
   }
@@ -305,7 +305,7 @@ AUDIT INTELLIGENCE INSTRUCTIONS:
           title: f.title,
           severity: f.severity || 'medium',
           conditionMet: !!f.condition_met,
-          conditionDeadline: f.condition_deadline || undefined,
+          conditionDeadline: f.condition_deadline || null,
           finePaid: !!f.fine_paid,
           fineAmount: f.fine_amount || 0,
           createdAt: f.created_at,
@@ -327,8 +327,8 @@ AUDIT INTELLIGENCE INSTRUCTIONS:
 
       return {
         priorAuditCount: parseInt(sessionRow?.cnt || '0', 10),
-        lastAuditDate: sessionRow?.last_date || undefined,
-        lastAuditOutcome: sessionRow?.final_outcome || undefined,
+        lastAuditDate: sessionRow?.last_date || null,
+        lastAuditOutcome: sessionRow?.final_outcome || null,
         openFindings,
         resolvedFindings,
         overdueConditions,

@@ -197,7 +197,7 @@ ESCALATE = Too risky for AI, flag for human review`;
           verdict = (['AFFIRM', 'OVERRIDE', 'ESCALATE'].includes(parsed.verdict))
             ? parsed.verdict : 'AFFIRM';
           judgeReasoning = parsed.reasoning || response.content;
-          suggestedAlt = parsed.suggestedAlternativeId || undefined;
+          suggestedAlt = parsed.suggestedAlternativeId || null;
         }
       } catch {
         if (response.content.includes('OVERRIDE')) verdict = 'OVERRIDE';

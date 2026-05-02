@@ -1167,7 +1167,7 @@ async function revalidateUserAuth(ws: WebSocketClient): Promise<{
     
     // Get current platform role from database
     const role = await storage.getUserPlatformRole(ws.userId).catch(() => null);
-    const isStaff = hasPlatformWideAccess(role ?? undefined);
+    const isStaff = hasPlatformWideAccess(role ?? null);
     
     return {
       userId: user.id,
@@ -1851,15 +1851,15 @@ export function setupWebSocket(server: Server) {
               displayName = userInfo ? formatUserDisplayNameForChat({
                 firstName: userInfo.firstName,
                 lastName: userInfo.lastName,
-                email: userInfo.email || undefined,
-                platformRole: userInfo.platformRole || undefined,
-                workspaceRole: userInfo.workspaceRole || undefined,
+                email: userInfo.email || null,
+                platformRole: userInfo.platformRole || null,
+                workspaceRole: userInfo.workspaceRole || null,
               }) : 'User';
 
               // Determine user type and set initial status
               const fetchedRole = await storage.getUserPlatformRole(effectiveUserId).catch(() => null);
               platformRole = fetchedRole ?? null;
-              isStaff = hasPlatformWideAccess(platformRole ?? undefined);
+              isStaff = hasPlatformWideAccess(platformRole ?? null);
               
               if (isStaff) {
                 userType = 'staff';
@@ -1943,7 +1943,7 @@ export function setupWebSocket(server: Server) {
             // SECURITY: Guests don't get workspace assignment; authenticated users keep session workspace
             ws.userId = effectiveUserId;
             ws.userName = displayName;
-            ws.workspaceId = isGuestUser ? undefined : (ws.serverAuth?.workspaceId || undefined);
+            ws.workspaceId = isGuestUser ? undefined : (ws.serverAuth?.workspaceId || null);
             ws.conversationId = conversationId; // Use resolved conversation ID
             ws.userStatus = 'online'; // Default status
             ws.userType = userType;
@@ -1982,7 +1982,7 @@ export function setupWebSocket(server: Server) {
                   userId: effectiveUserId,
                   userName: displayName,
                   userType,
-                  workspaceId: conversation.workspaceId || undefined,
+                  workspaceId: conversation.workspaceId || null,
                   source: 'websocket',
                 });
               } catch (err: unknown) {
@@ -2014,7 +2014,7 @@ export function setupWebSocket(server: Server) {
               ChatServerHub.emitUserJoinedRoom({
                 conversationId: conversationId,
                 roomName: conversation.subject || 'Chat',
-                workspaceId: conversation.workspaceId || undefined,
+                workspaceId: conversation.workspaceId || null,
                 userId: effectiveUserId,
                 userName: displayName,
               }).catch(err => log.error('ChatServerHub failed to emit user_joined_room', { error: err }));
@@ -2113,7 +2113,7 @@ export function setupWebSocket(server: Server) {
                 const clientArray = Array.from(clients);
                 for (const client of clientArray) {
                   if (client.userId && client.readyState === WebSocket.OPEN) {
-                    const userRole = await storage.getUserPlatformRole(client.userId) || undefined;
+                    const userRole = await storage.getUserPlatformRole(client.userId) || null;
                     const isClientStaff = hasPlatformWideAccess(userRole);
                     
                     // SYNC FIX: Use formatUserDisplayNameForChat for consistency with messages
@@ -2121,9 +2121,9 @@ export function setupWebSocket(server: Server) {
                     const displayName = userInfo ? formatUserDisplayNameForChat({
                       firstName: userInfo.firstName,
                       lastName: userInfo.lastName,
-                      email: userInfo.email || undefined,
-                      platformRole: userInfo.platformRole || undefined,
-                      workspaceRole: userInfo.workspaceRole || undefined,
+                      email: userInfo.email || null,
+                      platformRole: userInfo.platformRole || null,
+                      workspaceRole: userInfo.workspaceRole || null,
                     }) : (client.userName || 'User');
                     
                     // Map platform role to frontend category (staff/customer/guest)
@@ -2176,9 +2176,9 @@ export function setupWebSocket(server: Server) {
                   const displayName = userInfo ? formatUserDisplayNameForChat({
                     firstName: userInfo.firstName,
                     lastName: userInfo.lastName,
-                    email: userInfo.email || undefined,
-                    platformRole: userInfo.platformRole || undefined,
-                    workspaceRole: userInfo.workspaceRole || undefined,
+                    email: userInfo.email || null,
+                    platformRole: userInfo.platformRole || null,
+                    workspaceRole: userInfo.workspaceRole || null,
                   }) : (client.userName || 'User');
                   
                   participants.push({
@@ -2255,7 +2255,7 @@ export function setupWebSocket(server: Server) {
             // STEP 2-3: SUPPORT ROOM ANNOUNCEMENTS: User Joined + HelpAI Welcome
             if (supportsBots && !userAlreadyInRoom) {
               try {
-                const announcePlatformRole = await storage.getUserPlatformRole(payload.userId) || undefined;
+                const announcePlatformRole = await storage.getUserPlatformRole(payload.userId) || null;
                 const isAnnounceStaff = hasPlatformWideAccess(announcePlatformRole);
                 
                 // STEP 2: SYSTEM announcement (IRC-style): User joined
@@ -2327,7 +2327,7 @@ export function setupWebSocket(server: Server) {
                         .where(eq((await import('@shared/schema')).users.id, sessionUserId))
                         .limit(1);
                       if (uRecord) {
-                        userEmail = uRecord.email || undefined;
+                        userEmail = uRecord.email || null;
                         if (!ws.serverAuth?.role && uRecord.role) userClassRole = uRecord.role;
                       }
                     } catch { /* best-effort */ }
@@ -2398,7 +2398,7 @@ export function setupWebSocket(server: Server) {
                     for (const client of allClients) {
                       if (client !== ws && client.readyState === WebSocket.OPEN) {
                         const cRole = await storage.getUserPlatformRole(client.userId || '').catch(() => null);
-                        if (hasPlatformWideAccess(cRole ?? undefined)) {
+                        if (hasPlatformWideAccess(cRole ?? null)) {
                           client.send(JSON.stringify({
                             type: 'new_message',
                             conversationId: conversationId,
@@ -2627,7 +2627,7 @@ export function setupWebSocket(server: Server) {
             // IRC-STYLE VOICE CHECK: Only applies in helpdesk/support rooms (supportsBots)
             // DMs, group chats, and org chatrooms allow all users to send freely
             const senderPlatformRole = await storage.getUserPlatformRole(ws.userId).catch(() => null);
-            const senderIsStaff = hasPlatformWideAccess(senderPlatformRole ?? undefined);
+            const senderIsStaff = hasPlatformWideAccess(senderPlatformRole ?? null);
             
             const isSupportRoom = ws.supportsBots === true;
             if (isSupportRoom && !senderIsStaff && !hasVoiceInConversation(ws.conversationId, ws.userId)) {
@@ -2666,7 +2666,7 @@ export function setupWebSocket(server: Server) {
                     for (const client of staffClients) {
                       if (client !== ws && client.readyState === WebSocket.OPEN) {
                         const clientRole = await storage.getUserPlatformRole(client.userId || '').catch(() => null);
-                        if (hasPlatformWideAccess(clientRole ?? undefined)) {
+                        if (hasPlatformWideAccess(clientRole ?? null)) {
                           client.send(JSON.stringify({ 
                             type: 'new_message', 
                             conversationId: ws.conversationId, 
@@ -2685,9 +2685,9 @@ export function setupWebSocket(server: Server) {
                   } else {
                     _botResponseText = await helpAIBotService.generateUserResponse(userMessage, {
                       conversationId: ws.conversationId!,
-                      customerName: ws.userName || undefined,
-                      workspaceId: ws.workspaceId || undefined,
-                      userId: ws.userId || undefined,
+                      customerName: ws.userName || null,
+                      workspaceId: ws.workspaceId || null,
+                      userId: ws.userId || null,
                     });
                   }
                   const helpResponse = { response: _botResponseText };
@@ -2727,7 +2727,7 @@ export function setupWebSocket(server: Server) {
                     for (const client of staffClients) {
                       if (client !== ws && client.readyState === WebSocket.OPEN) {
                         const clientRole = await storage.getUserPlatformRole(client.userId || '').catch(() => null);
-                        if (hasPlatformWideAccess(clientRole ?? undefined)) {
+                        if (hasPlatformWideAccess(clientRole ?? null)) {
                           client.send(JSON.stringify({ 
                             type: 'new_message', 
                             conversationId: ws.conversationId, 
@@ -2787,7 +2787,7 @@ export function setupWebSocket(server: Server) {
                       for (const client of staffClients) {
                         if (client.readyState === WebSocket.OPEN) {
                           const clientRole = await storage.getUserPlatformRole(client.userId || '').catch(() => null);
-                          if (hasPlatformWideAccess(clientRole ?? undefined)) {
+                          if (hasPlatformWideAccess(clientRole ?? null)) {
                             client.send(JSON.stringify({ 
                               type: 'new_message', 
                               conversationId: ws.conversationId, 
@@ -2841,7 +2841,7 @@ export function setupWebSocket(server: Server) {
                           role: h.role as string,
                           message: h.message,
                         })) || [],
-                        ws.workspaceId || undefined
+                        ws.workspaceId || null
                       );
                     } catch (summaryErr) {
                       agentSummary = `User: ${ws.userName || 'Unknown'}\nIssue: ${userMessage.substring(0, 300)}\nConversation turns: ${conversation?.conversationHistory?.length || 0}`;
@@ -2864,7 +2864,7 @@ export function setupWebSocket(server: Server) {
                       for (const client of staffClients) {
                         if (client.readyState === WebSocket.OPEN) {
                           const clientRole = await storage.getUserPlatformRole(client.userId || '').catch(() => null);
-                          if (hasPlatformWideAccess(clientRole ?? undefined)) {
+                          if (hasPlatformWideAccess(clientRole ?? null)) {
                             client.send(JSON.stringify({ 
                               type: 'new_message', 
                               conversationId: ws.conversationId, 
@@ -2960,7 +2960,7 @@ export function setupWebSocket(server: Server) {
                     for (const client of staffClientsErr) {
                       if (client !== ws && client.readyState === WebSocket.OPEN) {
                         const clientRole = await storage.getUserPlatformRole(client.userId || '').catch(() => null);
-                        if (hasPlatformWideAccess(clientRole ?? undefined)) {
+                        if (hasPlatformWideAccess(clientRole ?? null)) {
                           client.send(JSON.stringify({ 
                             type: 'new_message', 
                             conversationId: ws.conversationId, 
@@ -3006,7 +3006,7 @@ export function setupWebSocket(server: Server) {
                     for (const client of handoffStaffClients) {
                       if (client !== ws && client.readyState === WebSocket.OPEN) {
                         const clientRole = await storage.getUserPlatformRole(client.userId || '').catch(() => null);
-                        if (hasPlatformWideAccess(clientRole ?? undefined)) {
+                        if (hasPlatformWideAccess(clientRole ?? null)) {
                           client.send(JSON.stringify({ 
                             type: 'new_message', 
                             conversationId: ws.conversationId, 
@@ -3039,9 +3039,9 @@ export function setupWebSocket(server: Server) {
             const displayName = userInfo ? formatUserDisplayNameForChat({
               firstName: userInfo.firstName,
               lastName: userInfo.lastName,
-              email: userInfo.email || undefined,
-              platformRole: userInfo.platformRole || undefined,
-              workspaceRole: userInfo.workspaceRole || undefined,
+              email: userInfo.email || null,
+              platformRole: userInfo.platformRole || null,
+              workspaceRole: userInfo.workspaceRole || null,
             }) : payload.senderName || 'User';
 
             // SLASH COMMAND HANDLER: Check if message is a command
@@ -3060,7 +3060,7 @@ export function setupWebSocket(server: Server) {
               // Check if user has permission for staff commands
               const commandDef = COMMAND_REGISTRY[parsedCommand.command];
               if (commandDef.requiresStaff) {
-                const cmdPlatformRole = await storage.getUserPlatformRole(ws.userId) || undefined;
+                const cmdPlatformRole = await storage.getUserPlatformRole(ws.userId) || null;
                 const isCmdStaff = hasPlatformWideAccess(cmdPlatformRole);
                 if (!isCmdStaff) {
                   ws.send(JSON.stringify({
@@ -3080,9 +3080,9 @@ export function setupWebSocket(server: Server) {
               const staffDisplayName = staffInfo ? formatUserDisplayNameForChat({
                 firstName: staffInfo.firstName,
                 lastName: staffInfo.lastName,
-                email: staffInfo.email || undefined,
-                platformRole: staffInfo.platformRole || undefined,
-                workspaceRole: staffInfo.workspaceRole || undefined,
+                email: staffInfo.email || null,
+                platformRole: staffInfo.platformRole || null,
+                workspaceRole: staffInfo.workspaceRole || null,
               }) : ws.userName || 'Support';
               
               const staffRole = staffInfo?.platformRole || 'support';
@@ -3280,15 +3280,15 @@ export function setupWebSocket(server: Server) {
                   if (!rateLimit.allowed) {
                     await storage.logPasswordResetAttempt({
                       requestedBy: userId,
-                      requestedByWorkspaceId: workspaceId || undefined,
+                      requestedByWorkspaceId: workspaceId || null,
                       targetUserId: undefined,
                       targetEmail: email,
                       targetWorkspaceId: undefined,
                       success: false,
                       outcomeCode: 'rate_limited',
                       reason: `Rate limit exceeded (blocked by ${rateLimit.blockedBy})`,
-                      ipAddress: ws.ipAddress || undefined,
-                      userAgent: ws.userAgent || undefined,
+                      ipAddress: ws.ipAddress || null,
+                      userAgent: ws.userAgent || null,
                     });
                     
                     const resetMsg = `❌ Rate Limit Exceeded\n\nToo many password reset attempts.\n\nBlocked by: ${rateLimit.blockedBy}\nLimit: 5 attempts per hour\n\nPlease try again later.`;
@@ -3308,15 +3308,15 @@ export function setupWebSocket(server: Server) {
                       // User not found - BLOCK action and log as security event
                       await storage.logPasswordResetAttempt({
                         requestedBy: userId,
-                        requestedByWorkspaceId: workspaceId || undefined,
+                        requestedByWorkspaceId: workspaceId || null,
                         targetUserId: undefined,
                         targetEmail: email,
                         targetWorkspaceId: undefined,
                         success: false,
                         outcomeCode: 'not_found',
                         reason: 'User not found - action blocked for security',
-                        ipAddress: ws.ipAddress || undefined,
-                        userAgent: ws.userAgent || undefined,
+                        ipAddress: ws.ipAddress || null,
+                        userAgent: ws.userAgent || null,
                       });
                       
                       // SECURITY: Generic message (don't reveal if email exists)
@@ -3338,15 +3338,15 @@ export function setupWebSocket(server: Server) {
                       // Cross-workspace attempt - LOG AND BLOCK
                       await storage.logPasswordResetAttempt({
                         requestedBy: userId,
-                        requestedByWorkspaceId: workspaceId || undefined,
+                        requestedByWorkspaceId: workspaceId || null,
                         targetUserId: user.id,
                         targetEmail: email,
-                        targetWorkspaceId: targetWorkspaceId || undefined,
+                        targetWorkspaceId: targetWorkspaceId || null,
                         success: false,
                         outcomeCode: 'error',
                         reason: 'Cross-workspace reset blocked',
-                        ipAddress: ws.ipAddress || undefined,
-                        userAgent: ws.userAgent || undefined,
+                        ipAddress: ws.ipAddress || null,
+                        userAgent: ws.userAgent || null,
                       });
                       
                       resetMsg = `❌ Cross-Workspace Access Denied\n\nYou cannot reset passwords for users in other workspaces.\n\nTarget workspace: ${targetWorkspaceId || 'platform'}\nYour workspace: ${workspaceId || 'platform'}`;
@@ -3365,15 +3365,15 @@ export function setupWebSocket(server: Server) {
                       // Success - log with IP/session context
                       await storage.logPasswordResetAttempt({
                         requestedBy: userId,
-                        requestedByWorkspaceId: workspaceId || undefined,
+                        requestedByWorkspaceId: workspaceId || null,
                         targetUserId: user.id,
                         targetEmail: email,
-                        targetWorkspaceId: user.currentWorkspaceId || undefined,
+                        targetWorkspaceId: user.currentWorkspaceId || null,
                         success: true,
                         outcomeCode: 'sent',
                         reason: 'Reset email sent',
-                        ipAddress: ws.ipAddress || undefined,
-                        userAgent: ws.userAgent || undefined,
+                        ipAddress: ws.ipAddress || null,
+                        userAgent: ws.userAgent || null,
                       });
                       
                       // Redact email for privacy
@@ -3388,15 +3388,15 @@ export function setupWebSocket(server: Server) {
                       
                       await storage.logPasswordResetAttempt({
                         requestedBy: userId,
-                        requestedByWorkspaceId: workspaceId || undefined,
+                        requestedByWorkspaceId: workspaceId || null,
                         targetUserId: user.id,
                         targetEmail: email,
-                        targetWorkspaceId: user.currentWorkspaceId || undefined,
+                        targetWorkspaceId: user.currentWorkspaceId || null,
                         success: false,
                         outcomeCode: 'email_failed',
                         reason: `Email send failed: ${(emailError as Error).message}`,
-                        ipAddress: ws.ipAddress || undefined,
-                        userAgent: ws.userAgent || undefined,
+                        ipAddress: ws.ipAddress || null,
+                        userAgent: ws.userAgent || null,
                       });
                       
                       resetMsg = `❌ Password Reset Failed\n\nFailed to send password reset email.\n\nReason: ${(emailError as Error).message}\n\nPlease try again or contact system administrator.`;
@@ -3884,7 +3884,7 @@ export function setupWebSocket(server: Server) {
                 }
                 
                 case 'help': {
-                  const helpPlatformRole = await storage.getUserPlatformRole(ws.userId) || undefined;
+                  const helpPlatformRole = await storage.getUserPlatformRole(ws.userId) || null;
                   const isHelpStaff = hasPlatformWideAccess(helpPlatformRole);
                   
                   // Get room modes dynamically from conversation metadata
@@ -6322,7 +6322,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
             }
 
             // SECURITY: Only platform staff (root_admin, deputy admins, support managers) can kick users
-            const kickerRole = await storage.getUserPlatformRole(ws.userId).catch(() => null) ?? undefined;
+            const kickerRole = await storage.getUserPlatformRole(ws.userId).catch(() => null) ?? null;
             const canKick = hasPlatformWideAccess(kickerRole);
             
             if (!canKick) {
@@ -6343,7 +6343,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
             const rawTargetInfo = await storage.getUserDisplayInfo(payload.targetUserId).catch(() => null);
             const targetUserInfo = rawTargetInfo ? {
               ...rawTargetInfo,
-              email: rawTargetInfo.email ?? undefined,
+              email: rawTargetInfo.email ?? null,
             } : null;
             const targetDisplayName = targetUserInfo ? formatUserDisplayName(targetUserInfo) : 'User';
             
@@ -6491,9 +6491,9 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                   targetUserName = formatUserDisplayName({
                     firstName: targetInfo.firstName,
                     lastName: targetInfo.lastName,
-                    email: targetInfo.email || undefined,
-                    platformRole: targetInfo.platformRole || undefined,
-                    workspaceRole: targetInfo.workspaceRole || undefined,
+                    email: targetInfo.email || null,
+                    platformRole: targetInfo.platformRole || null,
+                    workspaceRole: targetInfo.workspaceRole || null,
                   });
                 }
               } catch (err) {
@@ -6552,13 +6552,13 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
             const clientsArray = Array.from(clients).filter(c => c.userId && c.userName);
             const realUsers = await Promise.all(clientsArray.map(async (c) => {
               const platformRole = await storage.getUserPlatformRole(c.userId!).catch(() => null);
-              const isStaffUser = hasPlatformWideAccess(platformRole || undefined);
+              const isStaffUser = hasPlatformWideAccess(platformRole || null);
               const category = isStaffUser ? 'staff' : (c.userType === 'guest' ? 'guest' : 'customer');
               return {
                 id: c.userId!,
                 name: c.userName!,
                 role: category,
-                platformRole: platformRole || undefined,
+                platformRole: platformRole || null,
                 status: c.userStatus || 'online',
                 userType: c.userType || 'guest',
               };
@@ -6598,9 +6598,9 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
               const kickerDisplayName = kickerInfo ? formatUserDisplayName({
                 firstName: kickerInfo.firstName,
                 lastName: kickerInfo.lastName,
-                email: kickerInfo.email || undefined,
-                platformRole: kickerInfo.platformRole || undefined,
-                workspaceRole: kickerInfo.workspaceRole || undefined,
+                email: kickerInfo.email || null,
+                platformRole: kickerInfo.platformRole || null,
+                workspaceRole: kickerInfo.workspaceRole || null,
               }) : ws.userName || 'Unknown';
 
               await storage.createAuditLog({
@@ -6658,7 +6658,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
             }
 
             // SECURITY: Only platform staff can silence users
-            const silencerRole = await storage.getUserPlatformRole(ws.userId).catch(() => null) ?? undefined;
+            const silencerRole = await storage.getUserPlatformRole(ws.userId).catch(() => null) ?? null;
             const canSilence = hasPlatformWideAccess(silencerRole);
             
             if (!canSilence) {
@@ -6792,9 +6792,9 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
               const silencerDisplayName = silencerInfo ? formatUserDisplayName({
                 firstName: silencerInfo.firstName,
                 lastName: silencerInfo.lastName,
-                email: silencerInfo.email || undefined,
-                platformRole: silencerInfo.platformRole || undefined,
-                workspaceRole: silencerInfo.workspaceRole || undefined,
+                email: silencerInfo.email || null,
+                platformRole: silencerInfo.platformRole || null,
+                workspaceRole: silencerInfo.workspaceRole || null,
               }) : ws.userName || 'Unknown';
 
               await storage.createAuditLog({
@@ -6871,7 +6871,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
             }
 
             // SECURITY: Only platform staff can give voice
-            const voiceStaffRole = await storage.getUserPlatformRole(ws.userId).catch(() => null) ?? undefined;
+            const voiceStaffRole = await storage.getUserPlatformRole(ws.userId).catch(() => null) ?? null;
             const canGiveVoice = hasPlatformWideAccess(voiceStaffRole);
             
             if (!canGiveVoice) {
@@ -7000,9 +7000,9 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
               const staffDisplayName = staffInfo ? formatUserDisplayName({
                 firstName: staffInfo.firstName,
                 lastName: staffInfo.lastName,
-                email: staffInfo.email || undefined,
-                platformRole: staffInfo.platformRole || undefined,
-                workspaceRole: staffInfo.workspaceRole || undefined,
+                email: staffInfo.email || null,
+                platformRole: staffInfo.platformRole || null,
+                workspaceRole: staffInfo.workspaceRole || null,
               }) : ws.userName || 'Unknown';
 
               await storage.createAuditLog({
@@ -7354,7 +7354,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
 
             // Check if user has staff permissions using centralized hasPlatformWideAccess
             const staffInfo = await storage.getUserDisplayInfo(ws.userId);
-            const isBanStaff = hasPlatformWideAccess(staffInfo?.platformRole ?? undefined);
+            const isBanStaff = hasPlatformWideAccess(staffInfo?.platformRole ?? null);
             
             if (!isBanStaff) {
               ws.send(JSON.stringify({
@@ -7373,16 +7373,16 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
             const staffDisplayNameFull = staffInfo ? formatUserDisplayName({
               firstName: staffInfo.firstName,
               lastName: staffInfo.lastName,
-              email: staffInfo.email || undefined,
-              platformRole: staffInfo.platformRole || undefined,
-              workspaceRole: staffInfo.workspaceRole || undefined,
+              email: staffInfo.email || null,
+              platformRole: staffInfo.platformRole || null,
+              workspaceRole: staffInfo.workspaceRole || null,
             }) : ws.userName || 'Unknown';
             const staffDisplayName = staffInfo ? formatUserDisplayNameForChat({
               firstName: staffInfo.firstName,
               lastName: staffInfo.lastName,
-              email: staffInfo.email || undefined,
-              platformRole: staffInfo.platformRole || undefined,
-              workspaceRole: staffInfo.workspaceRole || undefined,
+              email: staffInfo.email || null,
+              platformRole: staffInfo.platformRole || null,
+              workspaceRole: staffInfo.workspaceRole || null,
             }) : ws.userName || 'Support';
 
             // Audit log the ban action (uses full name internally)
@@ -8056,9 +8056,9 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
           const displayName = userInfo ? formatUserDisplayNameForChat({
             firstName: userInfo.firstName,
             lastName: userInfo.lastName,
-            email: userInfo.email || undefined,
-            platformRole: userInfo.platformRole || undefined,
-            workspaceRole: userInfo.workspaceRole || undefined,
+            email: userInfo.email || null,
+            platformRole: userInfo.platformRole || null,
+            workspaceRole: userInfo.workspaceRole || null,
           }) : 'User';
 
           // Create leave announcement
@@ -8112,7 +8112,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
               conversationId: ws.conversationId,
               userId: ws.userId,
               userName: ws.userName,
-              workspaceId: ws.workspaceId || undefined,
+              workspaceId: ws.workspaceId || null,
               source: 'websocket',
             });
           }

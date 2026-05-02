@@ -170,7 +170,7 @@ export async function generateInvoiceFromTimesheets(
       employeeBreakdown[entry.employeeId] = {
         name: employeeName,
         hours: 0,
-        amount: 0,
+        amount: '0',
       };
     }
     employeeBreakdown[entry.employeeId].hours += totalEntryHours;
@@ -350,7 +350,7 @@ export async function getUninvoicedTimeEntries(workspaceId: string, clientId?: s
 
     if (entry.clientId) {
       if (!byClient[entry.clientId]) {
-        byClient[entry.clientId] = { name: clientName, hours: 0, amount: 0, count: 0 };
+        byClient[entry.clientId] = { name: clientName, hours: 0, amount: '0', count: 0 };
       }
       byClient[entry.clientId].hours += hours;
       byClient[entry.clientId].amount += amount;
@@ -423,7 +423,7 @@ export async function markInvoicePaid(
       status: 'paid',
       paidAt: new Date(),
       amountPaid: paidAmount.toFixed(2),
-      paymentIntentId: paymentIntentId || undefined,
+      paymentIntentId: paymentIntentId || null,
     })
     .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspaceId)))
     .returning();
@@ -648,20 +648,20 @@ export async function sendInvoiceWithEmail(input: SendInvoiceEmailInput): Promis
     clientName: `${invoice.client.firstName || ''} ${invoice.client.lastName || ''}`.trim() || 'Valued Client',
     clientCompany: invoice.client.companyName || '',
     clientEmail: invoice.client.email,
-    clientAddress: invoice.client.address || undefined,
+    clientAddress: invoice.client.address || null,
     workspaceName: workspace?.name || 'CoAIleague',
-    workspaceAddress: workspace?.address || undefined,
+    workspaceAddress: workspace?.address || null,
     lineItems: lineItems.map(li => ({
       description: li.description,
-      quantity: Number(li.quantity),
-      rate: Number(li.unitPrice),
-      amount: Number(li.amount),
+      quantity: String(Number(li.quantity)),
+      rate: String(Number(li.unitPrice)),
+      amount: String(Number(li.amount)),
     })),
     subtotal: Number(invoice.subtotal),
     taxRate: Number(invoice.taxRate || 0),
     taxAmount: Number(invoice.taxAmount || 0),
     total: Number(invoice.total),
-    notes: invoice.notes || undefined,
+    notes: invoice.notes || null,
     paymentUrl: `${getBaseUrl()}/pay-invoice/${invoiceId}`,
   };
 
@@ -835,7 +835,7 @@ export async function checkOverdueInvoices(workspaceId: string): Promise<{
       id: inv.id,
       invoiceNumber: inv.invoiceNumber,
       clientName: inv.clientCompanyName || `${inv.clientFirstName || ''} ${inv.clientLastName || ''}`.trim() || 'Unknown',
-      amount: Number(inv.total),
+      amount: String(Number(inv.total)),
       daysOverdue,
     };
   });
@@ -1089,7 +1089,7 @@ export async function generateInvoiceFromHours(input: GenerateFromHoursInput): P
         subtotal += regularAmount + otAmount;
 
         if (!employeeBreakdown[entry.employeeId]) {
-          employeeBreakdown[entry.employeeId] = { name: employeeName, hours: 0, amount: 0 };
+          employeeBreakdown[entry.employeeId] = { name: employeeName, hours: 0, amount: '0' };
         }
         employeeBreakdown[entry.employeeId].hours += totalEntryHours;
         employeeBreakdown[entry.employeeId].amount += regularAmount + otAmount;
@@ -1107,7 +1107,7 @@ export async function generateInvoiceFromHours(input: GenerateFromHoursInput): P
         subtotal += amount;
 
         if (!employeeBreakdown[entry.employeeId]) {
-          employeeBreakdown[entry.employeeId] = { name: employeeName, hours: 0, amount: 0 };
+          employeeBreakdown[entry.employeeId] = { name: employeeName, hours: 0, amount: '0' };
         }
         employeeBreakdown[entry.employeeId].hours += totalEntryHours;
         employeeBreakdown[entry.employeeId].amount += amount;

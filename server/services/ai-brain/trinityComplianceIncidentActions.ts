@@ -263,7 +263,7 @@ export function registerComplianceIncidentActions() {
     const coverageRate = total > 0 ? (covered / total) * 100 : 100;
     const overdueResult = await db.select({ amount: sql`SUM(amount)` })
       .from(sql`invoices WHERE workspace_id = ${workspaceId} AND client_id = ${clientId} AND status = 'overdue'`)
-      .catch(() => [{ amount: 0 }]);
+      .catch(() => [{ amount: '0' }]);
     const overdueAmount = parseFloat(String((overdueResult[0] as unknown)?.amount || 0));
     const score = Math.round(coverageRate * 0.6 + (overdueAmount === 0 ? 40 : 0));
     return { clientId, score, coverageRate: +coverageRate.toFixed(1), overdueAmount, totalShifts30d: total, health: score >= 80 ? 'healthy' : score >= 60 ? 'at_risk' : 'critical' };

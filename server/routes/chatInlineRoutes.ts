@@ -114,7 +114,7 @@ async function getRoomHistoryCursor(conversationId: string, userId: string): Pro
         )
       )
       .limit(1);
-    return participant?.joinedAt ?? undefined;
+    return participant?.joinedAt ?? null;
   } catch {
     return undefined;
   }
@@ -392,8 +392,8 @@ router.post('/main-room/messages', async (req: AuthenticatedRequest, res) => {
     const senderName = formatUserDisplayNameForChat({
       firstName: user.firstName,
       lastName: user.lastName,
-      email: user.email || undefined,
-      platformRole: platformRole || undefined,
+      email: user.email || null,
+      platformRole: platformRole || null,
     });
 
     const newMessage = await storage.createChatMessage({
@@ -480,8 +480,8 @@ router.post('/help-bot/respond', async (req: AuthenticatedRequest, res) => {
     const { HelpBotService } = await import('../services/helpai/helpAIBotService');
     const botResponse = await HelpBotService.generateResponse(userMessage, {
       conversationId,
-      customerName: conversation.customerName || undefined,
-      customerEmail: conversation.customerEmail || undefined,
+      customerName: conversation.customerName || null,
+      customerEmail: conversation.customerEmail || null,
       previousMessages,
       workspaceId: workspace.id,
       userId,
@@ -593,13 +593,13 @@ router.post('/trinity-field-query', async (req: AuthenticatedRequest, res) => {
       intent = { actionId: 'safety.get_panic_history', payload: { limit: 5 }, label: 'recent panic alerts' };
     } else if (/incident.*officer|officer.*incident|report.*by/i.test(q)) {
       const nameMatch = question.match(/officer\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i);
-      intent = { actionId: 'rms.get_officer_incident_history', payload: { employeeName: nameMatch?.[1] || undefined, days: 30 }, label: 'officer incident history' };
+      intent = { actionId: 'rms.get_officer_incident_history', payload: { employeeName: nameMatch?.[1] || null, days: 30 }, label: 'officer incident history' };
     } else if (/incident|report|crime|case/i.test(q)) {
       const siteMatch = question.match(/at\s+([A-Z][a-zA-Z\s]+?)(?:\s+this|\s+today|\s+last|\?|$)/i);
-      intent = { actionId: 'rms.get_incidents_by_site', payload: { siteName: siteMatch?.[1]?.trim() || undefined, limit: 10 }, label: 'recent incidents' };
+      intent = { actionId: 'rms.get_incidents_by_site', payload: { siteName: siteMatch?.[1]?.trim() || null, limit: 10 }, label: 'recent incidents' };
     } else if (/status.*officer|officer.*status|where is/i.test(q)) {
       const nameMatch = question.match(/(?:status of|where is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i);
-      intent = { actionId: 'scheduling.get_officer_status', payload: { employeeName: nameMatch?.[1] || undefined }, label: 'officer status' };
+      intent = { actionId: 'scheduling.get_officer_status', payload: { employeeName: nameMatch?.[1] || null }, label: 'officer status' };
     }
 
     if (!intent) {

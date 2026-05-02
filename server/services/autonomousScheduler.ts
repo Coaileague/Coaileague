@@ -1313,7 +1313,7 @@ async function runWeeklyScheduleGeneration() {
                     
                     // Get workspace owner for credit tracking
                     const owner = workspaceEmployees.find(e => e.workspaceRole === 'org_owner');
-                    const ownerUserId = owner?.userId || undefined;
+                    const ownerUserId = owner?.userId || null;
                     
                     // Fetch shifts in outer scope so they're accessible after withTokens returns
                     const existingShifts = await db.select().from(shifts)
@@ -3744,7 +3744,7 @@ export function startAutonomousScheduler() {
               category: 'feature',
               title: 'New staffing leads discovered',
               description: `QB staffing scan found ${totalSynced} new inbound email contact${totalSynced !== 1 ? 's' : ''} and added them as leads.`,
-              workspaceId: workspaceIds[0] || undefined,
+              workspaceId: workspaceIds[0] || null,
               metadata: { source: 'qb_staffing_scan', clientsSynced: totalSynced, workspaces: workspaceIds.length },
             });
           } catch (err) {

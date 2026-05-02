@@ -253,9 +253,9 @@ export class HelpaiAuditService {
     // Recalculate hash
     const recalculatedHash = this.generateActionHash({
       action: log.action,
-      apiName: log.apiName || undefined,
+      apiName: log.apiName || null,
       requestPayload: log.requestPayload as Record<string, unknown>,
-      integrationId: log.integrationId || undefined,
+      integrationId: log.integrationId || null,
     });
 
     return recalculatedHash === log.actionHash;

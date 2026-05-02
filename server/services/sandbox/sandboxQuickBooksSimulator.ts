@@ -258,7 +258,7 @@ export class SandboxQuickBooksSimulator {
       billingAddress: c.address || '',
       balance: 0,
       syncStatus: c.quickbooksClientId ? 'synced' : 'pending' as const,
-      qbId: c.quickbooksClientId || undefined,
+      qbId: c.quickbooksClientId || null,
     }));
   }
 
@@ -271,11 +271,11 @@ export class SandboxQuickBooksSimulator {
       displayName: `${e.firstName} ${e.lastName}`,
       companyName: '',
       email: e.email || '',
-      taxId: (e as EmployeeWithStatus).ssn || undefined,
+      taxId: (e as EmployeeWithStatus).ssn || null,
       is1099: (e as Record<string, unknown>).employmentType === '(1099)' || (e as Record<string, unknown>).employmentType === 'contractor',
       balance: 0,
       syncStatus: e.quickbooksVendorId ? 'synced' : 'pending' as const,
-      qbId: e.quickbooksVendorId || undefined,
+      qbId: e.quickbooksVendorId || null,
     }));
   }
 
@@ -301,18 +301,18 @@ export class SandboxQuickBooksSimulator {
         customerName: client ? `${client.firstName} ${client.lastName}` : 'Unknown',
         txnDate: new Date(inv.issueDate!),
         dueDate: new Date(inv.dueDate!),
-        totalAmount: parseFloat(inv.total || '0'),
+        totalAmount: String(parseFloat(inv.total || '0')),
         balance: parseFloat(inv.total || '0') - parseFloat(inv.amountPaid || '0'),
         status: inv.status as unknown,
         lineItems: lineItems.map(li => ({
           description: li.description,
-          quantity: parseFloat(li.quantity),
-          rate: parseFloat(li.unitPrice),
-          amount: parseFloat(li.amount),
-          itemId: li.productServiceName || undefined,
+          quantity: String(parseFloat(li.quantity)),
+          rate: String(parseFloat(li.unitPrice)),
+          amount: String(parseFloat(li.amount)),
+          itemId: li.productServiceName || null,
         })),
         syncStatus: inv.quickbooksInvoiceId ? 'synced' : 'pending',
-        qbId: inv.quickbooksInvoiceId || undefined,
+        qbId: inv.quickbooksInvoiceId || null,
       });
     }
 
@@ -340,8 +340,8 @@ export class SandboxQuickBooksSimulator {
         entryDetails.push({
           employeeId: entry.employeeId || '',
           employeeName: emp ? `${emp.firstName} ${emp.lastName}` : 'Unknown',
-          regularHours: parseFloat(entry.regularHours || '0'),
-          overtimeHours: parseFloat(entry.overtimeHours || '0'),
+          regularHours: String(parseFloat(entry.regularHours || '0')),
+          overtimeHours: String(parseFloat(entry.overtimeHours || '0')),
           regularPay: parseFloat(entry.regularPay || '0'),
           overtimePay: parseFloat(entry.overtimePay || '0'),
           grossPay: parseFloat(entry.grossPay || '0'),
@@ -875,7 +875,7 @@ export class SandboxQuickBooksSimulator {
         clientName: client ? (client.companyName || `${client.firstName} ${client.lastName}`.trim() || 'Unknown') : 'Unknown',
         clockIn: entry.clockIn,
         clockOut: entry.clockOut,
-        totalHours: parseFloat(entry.totalHours || '0'),
+        totalHours: String(parseFloat(entry.totalHours || '0')),
         status: entry.status,
         invoiced: entry.invoiceId,
       });

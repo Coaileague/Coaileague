@@ -161,7 +161,7 @@ const EMPLOYEE_SCORE_WEIGHTS = {
 };
 
 const CLIENT_TIER_WEIGHTS = {
-  revenue: 0.30,         // Monthly revenue contribution
+  revenue: '0.30',         // Monthly revenue contribution
   loyalty: 0.25,         // Years as client
   satisfaction: 0.20,    // Client satisfaction score
   profitability: 0.15,   // Profit margin

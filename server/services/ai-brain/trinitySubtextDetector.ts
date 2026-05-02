@@ -35,10 +35,10 @@ function classifyStatedSentiment(message: string): { sentiment: string; score: n
   const negative = /\b(bad|terrible|awful|tired|exhausted|stressed|overwhelmed|struggling|burned out|rough|hard|difficult|not okay|not good)\b/i;
   const neutral = /\b(okay|ok|fine|alright|whatever|sure|yes|no|maybe)\b/i;
 
-  if (positive.test(message) && !negative.test(message)) return { sentiment: 'positive', score: 0.8 };
-  if (negative.test(message)) return { sentiment: 'negative', score: 0.8 };
-  if (neutral.test(message)) return { sentiment: 'neutral', score: 0.5 };
-  return { sentiment: 'neutral', score: 0.3 };
+  if (positive.test(message) && !negative.test(message)) return { sentiment: 'positive', score: '0.8' };
+  if (negative.test(message)) return { sentiment: 'negative', score: '0.8' };
+  if (neutral.test(message)) return { sentiment: 'neutral', score: '0.5' };
+  return { sentiment: 'neutral', score: '0.3' };
 }
 
 // ── Behavioral signal from shift/absence patterns ────────────────────────────
@@ -68,7 +68,7 @@ async function getBehavioralSignal(officerId: string, workspaceId: string): Prom
     `, [officerId, workspaceId]);
 
     const row = result.rows[0];
-    if (!row || Number(row.total_shifts) === 0) return { signal: 'insufficient_data', score: 0.3 };
+    if (!row || Number(row.total_shifts) === 0) return { signal: 'insufficient_data', score: '0.3' };
 
     const missedRate = Number(row.missed) / Math.max(Number(row.total_shifts), 1);
     const recentHours = Number(row.recent_hours);
@@ -88,12 +88,12 @@ async function getBehavioralSignal(officerId: string, workspaceId: string): Prom
 
     if (overtimeCount > 3) { score += 0.1; signals.push(`repeated overtime`); }
 
-    if (signals.length === 0) return { signal: 'stable', score: 0 };
+    if (signals.length === 0) return { signal: 'stable', score: '0' };
 
     const label = score >= 0.5 ? 'high_stress_pattern' : score >= 0.25 ? 'moderate_stress_pattern' : 'mild_stress_indicators';
-    return { signal: `${label}: ${signals.join(', ')}`, score: Math.min(1, score) };
+    return { signal: `${label}: ${signals.join(', ')}`, score: String(Math.min(1, score)) };
   } catch {
-    return { signal: 'unavailable', score: 0 };
+    return { signal: 'unavailable', score: '0' };
   }
 }
 

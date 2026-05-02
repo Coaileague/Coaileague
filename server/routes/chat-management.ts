@@ -1596,8 +1596,8 @@ router.post(
       const senderName = formatUserDisplayNameForChat({
         firstName: user.firstName,
         lastName: user.lastName,
-        email: user.email || undefined,
-        platformRole: userPlatformRole || undefined,
+        email: user.email || null,
+        platformRole: userPlatformRole || null,
       });
 
       const forwardedContent = `[Forwarded from ${originalMsg.senderName || "Unknown"}]\n${originalMsg.message}`;

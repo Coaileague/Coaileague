@@ -247,7 +247,7 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: (req: unknown, 
             workspaceId,
             activityType: 'status_change',
             subject: `Status changed from ${existing.leadStatus} to ${leadStatus}`,
-            previousStatus: existing.leadStatus || undefined,
+            previousStatus: existing.leadStatus || null,
             newStatus: leadStatus,
           });
         }

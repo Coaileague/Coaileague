@@ -28,7 +28,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     description: 'AI-powered scheduling that reduces conflicts and optimizes coverage automatically',
     icon: Zap,
     tier: 'professional',
-    price: 0, // Included in Starter+ plans
+    price: '0', // Included in Starter+ plans
     savings: {
       label: 'Reduces scheduling coordination workload — actual savings vary by organization',
       value: 77500,
@@ -52,7 +52,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     description: 'Automatic payroll processing with tax calculations and direct deposit integration',
     icon: DollarSign,
     tier: 'professional',
-    price: 0, // Included in Starter+ plans
+    price: '0', // Included in Starter+ plans
     savings: {
       label: 'Reduces payroll processing time — actual savings vary by organization',
       value: 90000,
@@ -75,7 +75,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     description: 'Complete customization with your brand colors, logo, and domain',
     icon: Palette,
     tier: 'enterprise',
-    price: 0, // Included in Enterprise plan
+    price: '0', // Included in Enterprise plan
     savings: {
       label: 'Charge clients your own markup',
       value: 84012, // ($50/employee × 200 employees × 12 months) - $4,999/mo base
@@ -99,7 +99,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     description: 'Automatically generate and send invoices based on completed work',
     icon: FileText,
     tier: 'professional',
-    price: 0, // Included in Starter+ plans
+    price: '0', // Included in Starter+ plans
     savings: {
       label: 'Reduces billing administration workload — actual savings vary by organization',
       value: 85000,
@@ -123,7 +123,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     description: 'Applicant tracking system with job posting and candidate management',
     icon: Users,
     tier: 'professional',
-    price: 0, // Included in Professional+ plans
+    price: '0', // Included in Professional+ plans
     savings: {
       label: 'Streamlines HR recruiting workflows — actual savings vary by organization',
       value: 30000, // Partial value attribution
@@ -146,7 +146,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     description: 'Deep insights into labor costs, productivity, and profitability',
     icon: TrendingUp,
     tier: 'professional',
-    price: 0, // Included in Professional+ plans
+    price: '0', // Included in Professional+ plans
     savings: {
       label: 'Reduces manual reporting effort — actual savings vary by organization',
       value: 40000, // Partial value attribution
@@ -169,7 +169,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     description: 'Manage health insurance, 401(k), PTO, and other employee benefits',
     icon: Shield,
     tier: 'professional',
-    price: 0, // Included in Professional+ plans
+    price: '0', // Included in Professional+ plans
     savings: {
       label: 'Streamlines benefits management workflows — actual savings vary by organization',
       value: 30000, // Partial value attribution
@@ -193,7 +193,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     description: 'Manage multiple locations with centralized control and local autonomy',
     icon: Briefcase,
     tier: 'enterprise',
-    price: 0, // Included in Enterprise plan
+    price: '0', // Included in Enterprise plan
     savings: {
       label: 'Reduces regional admin overhead — actual savings vary by organization',
       value: 250000, // Typical enterprise efficiency gains
@@ -216,7 +216,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     description: 'Training courses, certifications, and compliance tracking',
     icon: Calendar,
     tier: 'professional',
-    price: 0, // Included in Professional+ plans
+    price: '0', // Included in Professional+ plans
     savings: {
       label: 'Streamlines training management workflows — actual savings vary by organization',
       value: 22000, // Partial value attribution
@@ -239,7 +239,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     description: 'AI-powered keyword scanning and severity assignment for shift-to-shift handoff notes, ensuring critical information is never lost between shifts',
     icon: ArrowRightLeft,
     tier: 'professional',
-    price: 0,
+    price: '0',
     savings: {
       label: 'Reduces information gaps between shifts — actual savings vary by organization',
       value: 35000,

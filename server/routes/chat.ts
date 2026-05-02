@@ -389,8 +389,8 @@ const router = Router();
       const senderName = formatUserDisplayNameForChat({
         firstName: user.firstName,
         lastName: user.lastName,
-        email: user.email || undefined,
-        platformRole: platformRole || undefined,
+        email: user.email || null,
+        platformRole: platformRole || null,
       });
       
       const newMessage = await storage.createChatMessage({
@@ -487,8 +487,8 @@ const router = Router();
       const { HelpBotService } = await import('./ai/help-bot');
       const botResponse = await HelpBotService.generateResponse(userMessage, {
         conversationId,
-        customerName: conversation.customerName || undefined,
-        customerEmail: conversation.customerEmail || undefined,
+        customerName: conversation.customerName || null,
+        customerEmail: conversation.customerEmail || null,
         previousMessages,
         workspaceId: workspace.id, // CRITICAL: Required for billing tracking
         userId, // Track which user initiated the request

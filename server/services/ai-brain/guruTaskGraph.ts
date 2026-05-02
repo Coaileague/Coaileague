@@ -449,7 +449,7 @@ class GuruTaskGraphService {
             actionFunction: card.actionFunction,
             confidence: 0.9,
             createdAt: now,
-            expiresAt: card.expiresAt || undefined,
+            expiresAt: card.expiresAt || null,
           });
         }
       }
@@ -732,7 +732,7 @@ class GuruTaskGraphService {
         totalRecommendations: 0,
         pendingTasks: 0,
         completedTasks: 0,
-        successRate: 0,
+        successRate: '0',
         topOpportunities: [],
         recentCompletions: [],
         lastUpdated: new Date(),

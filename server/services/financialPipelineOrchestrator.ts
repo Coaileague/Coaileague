@@ -74,7 +74,7 @@ function defaultProfile(workspaceId: string): WorkspaceConfidenceProfile {
     lastPayrollRun: null,
     autoApproveInvoices: false,
     autoApprovePayroll: false,
-    confidenceScore: 50,
+    confidenceScore: '50',
   };
 }
 
@@ -508,7 +508,7 @@ export async function onPayrollApproved(payrollRunId: string, workspaceId: strin
           id: payrollRunId,
           employeeName: `Payroll-${payrollRunId.slice(0, 8)}`,
           hours: 0,
-          amount: 0,
+          amount: '0',
           status: 'synced' as const,
           quickbooksId: syncResult.qbInvoiceId,
         }],

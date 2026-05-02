@@ -278,7 +278,7 @@ class ReportBotPdfService {
           : Promise.resolve(null),
       ]);
 
-      const doc = new PDFDocument({ margin: 40, size: 'LETTER' });
+      const doc = new PDFDocument({ margin: '40', size: 'LETTER' });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk: Buffer) => chunks.push(chunk));
       const done = new Promise<Buffer>((resolve, reject) => {
@@ -430,7 +430,7 @@ class ReportBotPdfService {
     messages: ShiftMessage[];
   }): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ margin: 50, size: 'LETTER' });
+      const doc = new PDFDocument({ margin: '50', size: 'LETTER' });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk: Buffer) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));

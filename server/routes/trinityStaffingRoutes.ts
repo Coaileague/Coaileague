@@ -46,14 +46,14 @@ async function restoreWebhookConfigFromDb(token: string): Promise<boolean> {
       for (const row of all) {
         const blob = row.blob as Record<string, unknown> || {};
         if (blob.staffingWebhookToken === token) {
-          trinityStaffingOrchestrator.registerWebhookToken(row.id, token, blob.staffingWebhookSecret || undefined, blob.staffingWebhookSystemUserId || undefined);
+          trinityStaffingOrchestrator.registerWebhookToken(row.id, token, blob.staffingWebhookSecret || null, blob.staffingWebhookSystemUserId || null);
           return true;
         }
       }
       return false;
     }
     const blob = ws.blob as Record<string, unknown> || {};
-    trinityStaffingOrchestrator.registerWebhookToken(ws.id, token, blob.staffingWebhookSecret || undefined, blob.staffingWebhookSystemUserId || undefined);
+    trinityStaffingOrchestrator.registerWebhookToken(ws.id, token, blob.staffingWebhookSecret || null, blob.staffingWebhookSystemUserId || null);
     return true;
   } catch {
     return false;

@@ -1070,7 +1070,7 @@ Respond with JSON only:
         hierarchyAssignments.push({
           employeeId: emp.employeeId || `imported-${index}`,
           managerId: undefined, // Would be assigned based on team/position logic
-          teamId: emp.team || undefined,
+          teamId: emp.team || null,
         });
       });
     }

@@ -102,7 +102,7 @@ export function issueAuditorToken(opts: IssueOptions): IssuedToken {
     w: opts.workspaceId,
     iss: opts.issuingUserId,
     aud: opts.regulatorEmail.trim().toLowerCase(),
-    name: opts.regulatorName?.trim() || undefined,
+    name: opts.regulatorName?.trim() || null,
     exp,
     iat: now,
     nonce: b64urlEncode(randomBytes(12)),

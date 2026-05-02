@@ -300,7 +300,7 @@ export async function acceptShiftToken(token: string): Promise<AcceptTokenResult
     success: true,
     broadcastId: recipient.broadcastId!,
     shiftId: data.shiftId,
-    employeeId: recipient.employeeId ?? undefined,
+    employeeId: recipient.employeeId ?? null,
     officerName,
   };
 }
@@ -703,7 +703,7 @@ export async function resolveReplacementToken(
   return {
     valid: true,
     action: actualAction,
-    employeeId: match.employeeId || undefined,
+    employeeId: match.employeeId || null,
     siteName: rd?.siteName,
     shiftDate: rd?.shiftDate,
     orgName: rd?.orgName,

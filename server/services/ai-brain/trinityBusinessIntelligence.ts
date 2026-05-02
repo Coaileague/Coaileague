@@ -874,7 +874,7 @@ For agency/subcontract clients, pay special attention to external reference numb
             domain: domain === 'all' ? 'invoicing' : domain as KnowledgeDomain,
             action: `deep_analysis_${domain}`,
             outcome: 'success',
-            reward: 1.0,
+            reward: '1.0',
             context: { domain, questionProvided: !!question, dataPointsAnalyzed: contextParts.length },
             workspaceId,
           });

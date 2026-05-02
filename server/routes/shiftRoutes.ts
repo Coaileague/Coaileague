@@ -152,7 +152,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
         }
       } else {
         const result = await resolveWorkspaceForUser(userId, req.query.workspaceId as string | undefined);
-        targetWorkspaceId = result.workspaceId ?? undefined;
+        targetWorkspaceId = result.workspaceId ?? null;
         if (!targetWorkspaceId) {
           return res.status(403).json({ error: result.error || 'No workspace access found' });
         }
@@ -788,7 +788,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
       // SCHED-7: Trinity Audit — Who/What/Where/When/Why on shift create
       auditShiftMutation({
         workspaceId,
-        userId: userId || undefined,
+        userId: userId || null,
         userEmail: req.user?.email,
         action: 'shift_created',
         shiftId: shift.id,
@@ -1937,7 +1937,7 @@ async function validateShiftAccess(shiftId: string, employeeId: string, workspac
 
         return {
           contractor,
-          score: Math.min(score, 1.0),
+          score: String(Math.min(score, 1.0)),
           matchReasons: [
             contractor.availableForLastMinute && "Available for last-minute shifts",
             contractorRate <= maxPay && `Rate within budget ($${contractorRate}/hr)`,

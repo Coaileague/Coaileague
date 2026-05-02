@@ -154,7 +154,7 @@ class TrinitySentinel {
       lastChecked: new Date(),
       checkIntervalMs: 30000,
       metrics: {
-        successRate: 100,
+        successRate: '100',
         avgLatencyMs: 0,
         errorCount: 0,
         requestCount: 0,
@@ -176,7 +176,7 @@ class TrinitySentinel {
       lastChecked: new Date(),
       checkIntervalMs: 30000,
       metrics: {
-        successRate: 100,
+        successRate: '100',
         avgLatencyMs: 0,
         errorCount: 0,
         requestCount: 0,
@@ -198,7 +198,7 @@ class TrinitySentinel {
       lastChecked: new Date(),
       checkIntervalMs: 60000,
       metrics: {
-        successRate: 100,
+        successRate: '100',
         avgLatencyMs: 0,
         errorCount: 0,
         requestCount: 0,
@@ -220,7 +220,7 @@ class TrinitySentinel {
       lastChecked: new Date(),
       checkIntervalMs: 60000,
       metrics: {
-        successRate: 100,
+        successRate: '100',
         avgLatencyMs: 0,
         errorCount: 0,
         requestCount: 0,

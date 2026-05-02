@@ -192,7 +192,7 @@ export class IntelligentSchedulerSkill extends BaseSkill {
           featureKey: 'ai_shift_matching',
           featureName: 'Intelligent Shift Matching',
           description: `AI shift matching for shift ${params.shiftId.substring(0, 8)} — ${candidates.length} candidates scored`,
-          quantity: 1,
+          quantity: '1',
         });
         logs.push(`[IntelligentScheduler] Billed 1 × ai_shift_matching credit`);
       } catch (creditErr : unknown) {

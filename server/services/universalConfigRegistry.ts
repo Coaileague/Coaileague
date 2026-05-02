@@ -388,7 +388,7 @@ export class UniversalConfigRegistry {
       for (const [domain, entries] of Object.entries(data)) {
         for (const [key, value] of Object.entries(entries)) {
           await this.set(domain, key, value, {
-            workspaceId: snapshot.workspaceId || undefined,
+            workspaceId: snapshot.workspaceId || null,
             changedBy: options.changedBy,
             changeSource: 'snapshot_restore',
             reason: options.reason || `Restored from snapshot: ${snapshot.name} (v${snapshot.version})`,

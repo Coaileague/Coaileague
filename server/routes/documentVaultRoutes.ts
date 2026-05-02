@@ -227,7 +227,7 @@ router.get("/", async (req: AuthenticatedRequest, res) => {
     // ── Check 12: Officer document scope ─────────────────────────────────────
     // Employees and contractors must only see documents they are a signatory on
     // or that are explicitly addressed to them (relatedEntityId = their employeeId).
-    const role = req.workspaceRole || req.session?.workspaceRole || req.user?.platformRole || undefined;
+    const role = req.workspaceRole || req.session?.workspaceRole || req.user?.platformRole || null;
     if (role && OFFICER_ROLES.includes(role)) {
       const userId = req.user?.id;
       if (!userId) return res.status(403).json({ error: "Unauthorized" });
@@ -372,7 +372,7 @@ async function streamVaultPdf(req: AuthenticatedRequest, res: Response, mode: 'a
     if (!doc) return res.status(404).json({ error: "Document not found" });
 
     // Officer scope — same rules as list (signatory or addressed-to)
-    const role = req.workspaceRole || (req as Record<string, unknown>).session?.workspaceRole || req.user?.platformRole || undefined;
+    const role = req.workspaceRole || (req as Record<string, unknown>).session?.workspaceRole || req.user?.platformRole || null;
     if (role && OFFICER_ROLES.includes(role)) {
       const userId = req.user?.id;
       if (!userId) return res.status(403).json({ error: "Unauthorized" });

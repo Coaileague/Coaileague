@@ -254,9 +254,9 @@ async function _analyzeAndSuggest(workspaceId: string): Promise<void> {
   const [suggestion] = await db.insert(upsellEvents).values({
     workspaceId,
     eventType: 'tier_suggestion',
-    featureKey: topFeature || undefined,
+    featureKey: topFeature || null,
     depletionCount: total,
-    suggestedTier: nextTier || undefined,
+    suggestedTier: nextTier || null,
     addonFeatureKey: (addonPlan && topFeatureCount >= ADDON_FEATURE_THRESHOLD) ? topFeature : undefined,
     notificationSent: false,
     metadata: {

@@ -478,8 +478,8 @@ class TrinitySelfAssessment {
           capabilities: [],
           limitations: ['NO TELEMETRY DATA - Cannot assess capability'],
           maturityLevel: 'nascent',
-          confidenceScore: 0, // Zero confidence - no data
-          successRate: 0, // Zero success rate - no data
+          confidenceScore: '0', // Zero confidence - no data
+          successRate: '0', // Zero success rate - no data
         });
       }
     }
@@ -531,7 +531,7 @@ class TrinitySelfAssessment {
     // If no tracked capabilities, score is 0
     if (trackedCapabilities.length === 0) {
       return {
-        score: 0,
+        score: '0',
         breakdown: {
           successRateContribution: 0,
           maturityContribution: 0,
@@ -566,7 +566,7 @@ class TrinitySelfAssessment {
     const finalScore = Math.max(0, Math.min(100, baseScore - totalPenalty));
     
     return {
-      score: Math.round(finalScore),
+      score: String(Math.round(finalScore)),
       breakdown: {
         successRateContribution: avgSuccessRate * 50,
         maturityContribution: matureRatio * 50,

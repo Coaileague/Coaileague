@@ -787,7 +787,7 @@ export function registerScheduleTimeclockActions() {
         ? `URGENT: ${conflicts.length} double-booking conflict(s) found. Officers cannot be in two places simultaneously. Resolve by unassigning or cancelling one shift per conflict.`
         : 'No double-booking conflicts detected in this window.',
       approvalRequired: conflicts.length > 0,
-      confidenceScore: 1.0,
+      confidenceScore: '1.0',
     };
   }));
 

@@ -649,8 +649,8 @@ const router = Router();
           await presenceMonitorService.processLocationPing(
             {
               officerId: employee.id,
-              latitude: Number(latitude),
-              longitude: Number(longitude),
+              latitude: String(Number(latitude)),
+              longitude: String(Number(longitude)),
               accuracy: Number(accuracy || 999),
               source: 'background',
             },
@@ -803,8 +803,8 @@ const router = Router();
           timeEntryId: req.params.id,
           employeeId: timeEntry.employeeId,
           shiftId: timeEntry.shiftId,
-          totalHours: parseFloat(totalHours),
-          totalAmount: parseFloat(totalAmount),
+          totalHours: String(parseFloat(totalHours)),
+          totalAmount: String(parseFloat(totalAmount)),
           clockOut: clockOut.toISOString(),
         },
         visibility: 'supervisor',

@@ -299,7 +299,7 @@ export async function exportScheduleToICS(
         ? `Work Shift${clientName ? ` - ${clientName}` : ''}`
         : `${employeeName}${clientName ? ` @ ${clientName}` : ''}`,
       description: descriptionParts.join('\n'),
-      location: clientName || undefined,
+      location: clientName || null,
       start: startDateTime,
       end: endDateTime,
       reminder: 30,
@@ -342,7 +342,7 @@ export async function exportTimesheetsToICS(
   const events: CalendarEvent[] = entries.map(entry => ({
     uid: `timeentry-${entry.id}@coaileague.com`,
     title: 'Work Hours',
-    description: entry.notes || undefined,
+    description: entry.notes || null,
     start: new Date(entry.clockIn),
     end: entry.clockOut ? new Date(entry.clockOut) : addHours(new Date(entry.clockIn), 1),
   }));
@@ -365,7 +365,7 @@ export async function exportBySubscriptionToken(token: string, clientIp?: string
 
   return exportScheduleToICS(
     subscription.workspaceId,
-    subscription.employeeId || undefined,
+    subscription.employeeId || null,
     startDate,
     endDate,
     {

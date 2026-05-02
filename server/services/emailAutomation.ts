@@ -85,7 +85,7 @@ async function sendRawCampaignEmail(options: EmailOptions): Promise<{ success: b
       return { success: false, error: (response as Record<string, unknown>).error.message };
     }
 
-    return { success: true, messageId: (response as {data: unknown}).data?.id ?? (response as {id: string}).id };
+    return { success: true, messageId: (response as {data: string}).data?.id ?? (response as {id: string}).id };
   } catch (error) {
     log.error("[EmailAutomation] Failed to send:", error);
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
@@ -180,7 +180,7 @@ export async function sendBilledEmail(
     return {
       success: false,
       sentCount: 0,
-      cost: 0,
+      cost: '0',
       error: error instanceof Error ? error.message : "Unknown error",
     };
   }
@@ -273,7 +273,7 @@ export async function sendTemplatedEmail(
 ): Promise<{ success: boolean; cost: number; error?: string }> {
   const template = EMAIL_TEMPLATES[type];
   if (!template) {
-    return { success: false, cost: 0, error: `Unknown template type: ${type}` };
+    return { success: false, cost: '0', error: `Unknown template type: ${type}` };
   }
 
   const paramOrder = TEMPLATE_PARAM_ORDER[type] || [];

@@ -173,7 +173,7 @@ export function registerExternalIntelligenceActions() {
         : maxRisk === 'medium'
         ? `Moderate weather risk at ${locationName}. Monitor conditions and brief guards on any operational adjustments.`
         : `Conditions at ${locationName} look favorable for the next 3 days.`,
-      confidenceScore: 0.88,
+      confidenceScore: '0.88',
     };
   }));
 
@@ -202,7 +202,7 @@ export function registerExternalIntelligenceActions() {
       advisory: `No live event data source is connected. For ${siteName}, manually check local event calendars (city events, sports, concerts, protests) that may increase foot traffic or crowd density requiring additional staffing.`,
       dataSource: 'advisory-only',
       checkSources: ['City/county events calendar', 'Ticketmaster/Eventbrite for nearby venues', 'Local police non-emergency for scheduled protests', 'School/university calendars if near campus'],
-      confidenceScore: 0.4,
+      confidenceScore: '0.4',
     };
   }));
 

@@ -1801,7 +1801,7 @@ class AIBrainActionRegistry {
           type: effectiveType,
           title: title,
           message: message,
-          workspaceId: request.workspaceId || undefined,
+          workspaceId: request.workspaceId || null,
           targetUserIds,
           severity: effectiveSeverity,
           source: 'action_registry',
@@ -2162,7 +2162,7 @@ class AIBrainActionRegistry {
           whatIKnow: `Time entry ID: ${timeEntryId}. Requested by: ${request.userId} (${request.userRole}).`,
           myOptions: 'Approve entry (includes in next payroll run) OR reject (requires correction)',
           myDecision: 'APPROVED: Marking time entry as approved, setting approvedBy and approvedAt',
-          confidenceScore: 0.9,
+          confidenceScore: '0.9',
           actionId: request.actionId,
         }).catch(() => null); // fire-and-forget, non-fatal
 
@@ -4603,7 +4603,7 @@ class AIBrainActionRegistry {
           payrollEntryId,
           kind,
           label,
-          amount: Number(amount),
+          amount: String(Number(amount)),
           addedBy: request.userId || 'system',
           reason,
         });

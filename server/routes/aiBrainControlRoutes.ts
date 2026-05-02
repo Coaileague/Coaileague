@@ -202,7 +202,7 @@ router.post('/workflows/:runId/retry', requirePlatformAdmin, async (req: Request
       workflow.category,
       {
         source: 'api',
-        workspaceId: workflow.workspaceId || undefined,
+        workspaceId: workflow.workspaceId || null,
         userId: user.id,
         parentRunId: runId,
       },

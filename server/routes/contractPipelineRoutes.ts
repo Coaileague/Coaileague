@@ -363,7 +363,7 @@ publicPortalRouter.get('/:token', async (req: Request, res: Response) => {
     // Record view
     await contractPipelineService.recordView(result.contract!.id, {
       actorType: 'client',
-      actorEmail: result.contract!.clientEmail || undefined,
+      actorEmail: result.contract!.clientEmail || null,
       ipAddress: getClientIP(req),
       userAgent: req.headers['user-agent'],
     });
@@ -386,7 +386,7 @@ publicPortalRouter.post('/:token/accept', async (req: Request, res: Response) =>
       result.contract!.id,
       {
         actorType: 'client',
-        actorEmail: result.contract!.clientEmail || undefined,
+        actorEmail: result.contract!.clientEmail || null,
         ipAddress: getClientIP(req),
         userAgent: req.headers['user-agent'],
       }
@@ -496,7 +496,7 @@ publicPortalRouter.post('/:token/decline', async (req: Request, res: Response) =
       reason || 'No reason provided',
       {
         actorType: 'client',
-        actorEmail: result.contract!.clientEmail || undefined,
+        actorEmail: result.contract!.clientEmail || null,
         ipAddress: getClientIP(req),
         userAgent: req.headers['user-agent'],
       }
@@ -526,7 +526,7 @@ publicPortalRouter.post('/:token/request-changes', async (req: Request, res: Res
       changesRequested,
       {
         actorType: 'client',
-        actorEmail: result.contract!.clientEmail || undefined,
+        actorEmail: result.contract!.clientEmail || null,
         ipAddress: getClientIP(req),
         userAgent: req.headers['user-agent'],
       }

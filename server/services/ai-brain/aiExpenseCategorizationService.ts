@@ -184,9 +184,9 @@ If any field cannot be determined, use null. Focus on accuracy over completeness
         const parsed: unknown = JSON.parse(jsonMatch[0]);
         return {
           success: true,
-          merchant: parsed.merchant || undefined,
+          merchant: parsed.merchant || null,
           amount: typeof parsed.amount === 'number' ? parsed.amount : undefined,
-          date: parsed.date || undefined,
+          date: parsed.date || null,
           items: Array.isArray(parsed.items) ? parsed.items : undefined,
           confidence: parsed.confidence || 50,
           rawText: text

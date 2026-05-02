@@ -267,8 +267,8 @@ class HelpAIOrchestrator {
       actionName: 'user_message',
       commandUsed: msg.startsWith('/') ? msg.split(' ')[0] : undefined,
       inputPayload: { message: msg.substring(0, 500), state },
-      workspaceId: session.workspaceId ?? undefined,
-      userId: session.userId ?? undefined,
+      workspaceId: session.workspaceId ?? null,
+      userId: session.userId ?? null,
     });
 
     // Content moderation gate — check every message before any processing (including slash commands)
@@ -286,8 +286,8 @@ class HelpAIOrchestrator {
         inputPayload: { level: moderation.level, category: moderation.category },
         outputPayload: { action: moderation.action, strikeCount: moderation.strikeCount },
         success: false,
-        workspaceId: session.workspaceId ?? undefined,
-        userId: session.userId ?? undefined,
+        workspaceId: session.workspaceId ?? null,
+        userId: session.userId ?? null,
       });
       return this.makeResponse(session, state, {
         message: moderation.blockedMessage || 'Your message could not be processed at this time.',
@@ -301,8 +301,8 @@ class HelpAIOrchestrator {
         inputPayload: { level: moderation.level, category: moderation.category },
         outputPayload: { action: moderation.action, strikeCount: moderation.strikeCount },
         success: true,
-        workspaceId: session.workspaceId ?? undefined,
-        userId: session.userId ?? undefined,
+        workspaceId: session.workspaceId ?? null,
+        userId: session.userId ?? null,
       });
       return this.makeResponse(session, state, {
         message: moderation.blockedMessage || 'Please keep our conversation professional and on-topic.',
@@ -385,12 +385,12 @@ class HelpAIOrchestrator {
         actionName: 'session_verified',
         outputPayload: { method: 'session', verified: true },
         success: true,
-        workspaceId: session.workspaceId ?? undefined,
-        userId: session.userId ?? undefined,
+        workspaceId: session.workspaceId ?? null,
+        userId: session.userId ?? null,
       });
 
       const [updatedSession] = await db.select().from(helpaiSessions).where(eq(helpaiSessions.id, session.id));
-      return this.handleAssist(updatedSession, message, { sessionId: session.id, message, userId: session.userId ?? undefined, workspaceId: session.workspaceId ?? undefined });
+      return this.handleAssist(updatedSession, message, { sessionId: session.id, message, userId: session.userId ?? null, workspaceId: session.workspaceId ?? null });
     }
 
     // Detect if user provided a safety code (6-char alphanumeric)
@@ -411,8 +411,8 @@ class HelpAIOrchestrator {
           actionName: 'safety_code_verified',
           outputPayload: { method: 'safety_code', verified: true, userId: result.userId },
           success: true,
-          workspaceId: session.workspaceId ?? undefined,
-          userId: session.userId ?? undefined,
+          workspaceId: session.workspaceId ?? null,
+          userId: session.userId ?? null,
         });
 
         return this.makeResponse(session, HelpAIState.GREETING, {
@@ -434,7 +434,7 @@ class HelpAIOrchestrator {
     });
 
     const [updatedSession] = await db.select().from(helpaiSessions).where(eq(helpaiSessions.id, session.id));
-    return this.handleAssist(updatedSession, message, { sessionId: session.id, message, userId: session.userId ?? undefined, workspaceId: session.workspaceId ?? undefined });
+    return this.handleAssist(updatedSession, message, { sessionId: session.id, message, userId: session.userId ?? null, workspaceId: session.workspaceId ?? null });
   }
 
   private async handleAssist(
@@ -509,8 +509,8 @@ class HelpAIOrchestrator {
       },
       success: true,
       confidenceScore: String(botResponse.confidence ?? 0.8),
-      workspaceId: session.workspaceId ?? undefined,
-      userId: session.userId ?? undefined,
+      workspaceId: session.workspaceId ?? null,
+      userId: session.userId ?? null,
     });
 
     // Log FAQ reads if any
@@ -521,8 +521,8 @@ class HelpAIOrchestrator {
           actionName: 'faq_served',
           outputPayload: { question: faq.question.substring(0, 200), score: faq.score },
           success: true,
-          workspaceId: session.workspaceId ?? undefined,
-          userId: session.userId ?? undefined,
+          workspaceId: session.workspaceId ?? null,
+          userId: session.userId ?? null,
         });
       }
     }
@@ -576,8 +576,8 @@ class HelpAIOrchestrator {
         actionName: 'satisfaction_positive',
         outputPayload: { userMessage: answer, resolved: true },
         success: true,
-        workspaceId: session.workspaceId ?? undefined,
-        userId: session.userId ?? undefined,
+        workspaceId: session.workspaceId ?? null,
+        userId: session.userId ?? null,
       });
 
       return this.makeResponse(session, HelpAIState.RATING, {
@@ -627,8 +627,8 @@ class HelpAIOrchestrator {
         actionName: 'session_rated_and_closed',
         outputPayload: { rating, durationMs },
         success: true,
-        workspaceId: session.workspaceId ?? undefined,
-        userId: session.userId ?? undefined,
+        workspaceId: session.workspaceId ?? null,
+        userId: session.userId ?? null,
       });
 
       const ratingEmoji = rating >= 4 ? 'Thank you so much!' : rating === 3 ? `Thanks for your feedback.` : `We're sorry to hear that. Your feedback helps us improve.`;
@@ -677,8 +677,8 @@ class HelpAIOrchestrator {
       actionName: 'password_reset_initiated',
       outputPayload: { userId: session.userId, verified: true },
       success: true,
-      workspaceId: session.workspaceId ?? undefined,
-      userId: session.userId ?? undefined,
+      workspaceId: session.workspaceId ?? null,
+      userId: session.userId ?? null,
     });
 
     return this.makeResponse(session, HelpAIState.ANSWERING, {
@@ -717,7 +717,7 @@ class HelpAIOrchestrator {
       agentSummary = await helpAIBotService.generateEscalationSummary(
         userMessage,
         conversationHistory,
-        session.workspaceId ?? undefined
+        session.workspaceId ?? null
       );
       log.info(`[HelpAI Orchestrator] Generated agent handoff summary for ${session.ticketNumber}`);
     } catch (e) {
@@ -732,7 +732,7 @@ class HelpAIOrchestrator {
         const [ticket] = await db.insert(supportTickets).values({
           ticketNumber: session.ticketNumber,
           workspaceId: session.workspaceId ?? 'platform',
-          userId: session.userId ?? undefined,
+          userId: session.userId ?? null,
           subject: `HelpAI Escalation - ${session.ticketNumber}`,
           description: `[Agent Handoff Summary]\n${agentSummary}\n\n[Escalation Reason]\n${reason}\n\n[Last User Message]\n${userMessage.substring(0, 500)}`,
           status: 'open',
@@ -766,7 +766,7 @@ class HelpAIOrchestrator {
       escalatedAt: now,
       escalationReason: reason,
       issueSummary: agentSummary,
-      supportTicketId: ticketId ?? undefined,
+      supportTicketId: ticketId ?? null,
     });
 
     await this.logAction(session.id, {
@@ -780,8 +780,8 @@ class HelpAIOrchestrator {
         agentSummaryLength: agentSummary.length,
       },
       success: true,
-      workspaceId: session.workspaceId ?? undefined,
-      userId: session.userId ?? undefined,
+      workspaceId: session.workspaceId ?? null,
+      userId: session.userId ?? null,
     });
 
     // Remove this session from queue — HelpAI moves to serve the next user
@@ -866,8 +866,8 @@ class HelpAIOrchestrator {
       actionName: 'slash_command',
       commandUsed: cmd,
       inputPayload: { command, args },
-      workspaceId: session.workspaceId ?? undefined,
-      userId: session.userId ?? undefined,
+      workspaceId: session.workspaceId ?? null,
+      userId: session.userId ?? null,
     });
 
     switch (cmd) {
@@ -1079,8 +1079,8 @@ class HelpAIOrchestrator {
       botName,
       command: '/summon',
       instructions: instructions || 'perform your primary function',
-      workspaceId: session.workspaceId ?? undefined,
-      userId: session.userId ?? undefined,
+      workspaceId: session.workspaceId ?? null,
+      userId: session.userId ?? null,
     });
 
     return this.makeResponse(session, session.state as HelpAIState, {
@@ -1206,8 +1206,8 @@ class HelpAIOrchestrator {
       actionName: 'session_force_closed',
       outputPayload: { resolution, agentId, durationMs },
       success: true,
-      workspaceId: session.workspaceId ?? undefined,
-      userId: session.userId ?? undefined,
+      workspaceId: session.workspaceId ?? null,
+      userId: session.userId ?? null,
     });
 
     return { success: true };
@@ -1396,7 +1396,7 @@ class HelpAIOrchestrator {
       shouldEscalate: opts.shouldEscalate ?? false,
       shouldClose: opts.shouldClose ?? false,
       shouldDisconnect: opts.shouldDisconnect ?? false,
-      queuePosition: opts.queuePosition ?? session.queuePosition ?? undefined,
+      queuePosition: opts.queuePosition ?? session.queuePosition ?? null,
       requiresRating: opts.requiresRating ?? false,
     };
   }

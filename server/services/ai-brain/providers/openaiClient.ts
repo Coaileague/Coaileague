@@ -125,7 +125,7 @@ class OpenAIClient {
         modelId,
         isHealthy: true,
         avgLatencyMs: 0,
-        successRate: 1.0,
+        successRate: '1.0',
         requestCount: 0,
         errorCount: 0,
       });

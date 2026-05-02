@@ -476,15 +476,15 @@ class MessageBridgeService {
     if (adapter) {
       try {
         const fromAddress = channelType === 'email'
-          ? bridgeConfig.emailAddress || undefined
-          : bridgeConfig.phoneNumber || undefined;
+          ? bridgeConfig.emailAddress || null
+          : bridgeConfig.phoneNumber || null;
 
         const result = await adapter.send({
           to: bridgeConv.externalIdentifier,
           message,
           from: fromAddress,
-          attachmentUrl: attachmentUrl || undefined,
-          metadata: bridgeConfig.providerConfig || undefined,
+          attachmentUrl: attachmentUrl || null,
+          metadata: bridgeConfig.providerConfig || null,
         });
 
         externalMessageId = result.externalMessageId;
@@ -606,7 +606,7 @@ class MessageBridgeService {
           return {
             userId: user.id,
             displayName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || identifier,
-            email: user.email || undefined,
+            email: user.email || null,
           };
         }
 
@@ -618,9 +618,9 @@ class MessageBridgeService {
             const emp = empResults[0];
             return {
               employeeId: emp.id,
-              userId: emp.userId || undefined,
+              userId: emp.userId || null,
               displayName: `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || identifier,
-              email: emp.email || undefined,
+              email: emp.email || null,
             };
           }
         }
@@ -635,7 +635,7 @@ class MessageBridgeService {
           return {
             userId: user.id,
             displayName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.phone || identifier,
-            phone: user.phone || undefined,
+            phone: user.phone || null,
           };
         }
 
@@ -647,9 +647,9 @@ class MessageBridgeService {
             const emp = empResults[0];
             return {
               employeeId: emp.id,
-              userId: emp.userId || undefined,
+              userId: emp.userId || null,
               displayName: `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || identifier,
-              phone: emp.phone || undefined,
+              phone: emp.phone || null,
             };
           }
         }

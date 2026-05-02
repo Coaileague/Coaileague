@@ -211,7 +211,7 @@ class AIOrchestrationService {
           taskId: '',
           modelUsed: '',
           provider: 'google',
-          cost: 0,
+          cost: '0',
           inputTokens: 0,
           outputTokens: 0,
           latencyMs: 0,
@@ -320,7 +320,7 @@ class AIOrchestrationService {
       taskId: queueEntry.id,
       modelUsed: '',
       provider: 'google',
-      cost: 0,
+      cost: '0',
       inputTokens: 0,
       outputTokens: 0,
       latencyMs: 0,
@@ -383,7 +383,7 @@ class AIOrchestrationService {
             content: geminiResult.content,
             inputTokens: 0,
             outputTokens: 0,
-            cost: 0,
+            cost: '0',
           };
           break;
       }
@@ -662,7 +662,7 @@ class AIOrchestrationService {
 
       if (model) {
         if (!byModel[model.modelName]) {
-          byModel[model.modelName] = { tasks: 0, cost: 0, tokens: 0 };
+          byModel[model.modelName] = { tasks: 0, cost: '0', tokens: 0 };
         }
         byModel[model.modelName].tasks++;
         byModel[model.modelName].cost += cost;
@@ -671,7 +671,7 @@ class AIOrchestrationService {
 
       if (taskType) {
         if (!byTaskType[taskType.taskType]) {
-          byTaskType[taskType.taskType] = { tasks: 0, cost: 0 };
+          byTaskType[taskType.taskType] = { tasks: 0, cost: '0' };
         }
         byTaskType[taskType.taskType].tasks++;
         byTaskType[taskType.taskType].cost += cost;

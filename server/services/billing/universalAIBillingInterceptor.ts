@@ -28,7 +28,7 @@ function getOpenAIClient(): OpenAI {
     }
     _openaiClient = new OpenAI({
       apiKey,
-      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || null,
     });
   }
   return _openaiClient;
@@ -78,7 +78,7 @@ export async function getMeteredOpenAICompletion(
     jsonMode = false,
   } = request;
 
-  const effectiveWorkspaceId = workspaceId || undefined;
+  const effectiveWorkspaceId = workspaceId || null;
 
   const authResult = await aiTokenGateway.preAuthorize(effectiveWorkspaceId, userId, featureKey);
   if (!authResult.authorized) {

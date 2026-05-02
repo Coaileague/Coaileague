@@ -477,14 +477,14 @@ class TrinityGuruMode {
   
   private initializeInternalAgents(): void {
     const internalAgents: InternalAgent[] = [
-      { id: 'scheduler', name: 'Scheduling Agent', capabilities: ['schedule', 'shifts', 'coverage'], trustScore: 1.0, cost: 0, status: 'available' },
-      { id: 'compliance', name: 'Compliance Agent', capabilities: ['audit', 'compliance', 'certification'], trustScore: 1.0, cost: 0, status: 'available' },
-      { id: 'payroll', name: 'Payroll Agent', capabilities: ['payroll', 'taxes', 'deductions'], trustScore: 1.0, cost: 0, status: 'available' },
-      { id: 'analytics', name: 'Analytics Agent', capabilities: ['reports', 'metrics', 'insights'], trustScore: 1.0, cost: 0, status: 'available' },
-      { id: 'billing', name: 'Billing Agent', capabilities: ['invoices', 'payments', 'collections'], trustScore: 1.0, cost: 0, status: 'available' },
-      { id: 'hr', name: 'HR Agent', capabilities: ['onboarding', 'documents', 'benefits'], trustScore: 1.0, cost: 0, status: 'available' },
-      { id: 'communication', name: 'Communication Agent', capabilities: ['email', 'sms', 'notifications'], trustScore: 1.0, cost: 0, status: 'available' },
-      { id: 'diagnostic', name: 'Diagnostic Agent', capabilities: ['debug', 'health', 'performance'], trustScore: 1.0, cost: 0, status: 'available' },
+      { id: 'scheduler', name: 'Scheduling Agent', capabilities: ['schedule', 'shifts', 'coverage'], trustScore: 1.0, cost: '0', status: 'available' },
+      { id: 'compliance', name: 'Compliance Agent', capabilities: ['audit', 'compliance', 'certification'], trustScore: 1.0, cost: '0', status: 'available' },
+      { id: 'payroll', name: 'Payroll Agent', capabilities: ['payroll', 'taxes', 'deductions'], trustScore: 1.0, cost: '0', status: 'available' },
+      { id: 'analytics', name: 'Analytics Agent', capabilities: ['reports', 'metrics', 'insights'], trustScore: 1.0, cost: '0', status: 'available' },
+      { id: 'billing', name: 'Billing Agent', capabilities: ['invoices', 'payments', 'collections'], trustScore: 1.0, cost: '0', status: 'available' },
+      { id: 'hr', name: 'HR Agent', capabilities: ['onboarding', 'documents', 'benefits'], trustScore: 1.0, cost: '0', status: 'available' },
+      { id: 'communication', name: 'Communication Agent', capabilities: ['email', 'sms', 'notifications'], trustScore: 1.0, cost: '0', status: 'available' },
+      { id: 'diagnostic', name: 'Diagnostic Agent', capabilities: ['debug', 'health', 'performance'], trustScore: 1.0, cost: '0', status: 'available' },
     ];
     
     internalAgents.forEach(agent => {
@@ -504,7 +504,7 @@ class TrinityGuruMode {
     for (const [, agent] of this.agentMarketplace.internalAgents) {
       if (agent.status === 'available' && requiredCapabilities.some(cap => agent.capabilities.includes(cap))) {
         this.logAgentSelection(auditId, agent.id, 'internal', 0, task, requiredCapabilities);
-        return { agent, tier: 'internal', cost: 0, auditId };
+        return { agent, tier: 'internal', cost: '0', auditId };
       }
     }
     
@@ -522,7 +522,7 @@ class TrinityGuruMode {
     }
     
     this.logAgentSelection(auditId, null, 'none', 0, task, requiredCapabilities);
-    return { agent: null, tier: 'internal', cost: 0, auditId };
+    return { agent: null, tier: 'internal', cost: '0', auditId };
   }
   
   private resetDailySpendIfNeeded(): void {

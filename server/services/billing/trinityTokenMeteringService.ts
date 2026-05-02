@@ -193,12 +193,12 @@ export class TrinityTokenMeteringService {
       totalTokens += tokens;
       totalCostUsd += cost;
 
-      if (!byFeature[r.feature]) byFeature[r.feature] = { tokens: 0, cost: 0, count: 0 };
+      if (!byFeature[r.feature]) byFeature[r.feature] = { tokens: 0, cost: '0', count: 0 };
       byFeature[r.feature].tokens += tokens;
       byFeature[r.feature].cost += cost;
       byFeature[r.feature].count += count;
 
-      if (!byModel[r.model]) byModel[r.model] = { tokens: 0, cost: 0 };
+      if (!byModel[r.model]) byModel[r.model] = { tokens: 0, cost: '0' };
       byModel[r.model].tokens += tokens;
       byModel[r.model].cost += cost;
     }
@@ -372,7 +372,7 @@ export class TrinityTokenMeteringService {
       const byModelTier = rows.map(r => ({
         model: r.model,
         tokens: Number(r.tokens),
-        costUsd: Number(r.cost_usd),
+        costUsd: String(Number(r.cost_usd)),
         callCount: Number(r.call_count),
       }));
 

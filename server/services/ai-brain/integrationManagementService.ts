@@ -128,7 +128,7 @@ class IntegrationManagementService {
 
     return connections.map(c => ({
       ...c.integration_connections,
-      integration: c.integration_marketplace || undefined
+      integration: c.integration_marketplace || null
     }));
   }
 

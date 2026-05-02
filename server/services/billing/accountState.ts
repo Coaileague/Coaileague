@@ -283,9 +283,9 @@ export class AccountStateService {
     return {
       state,
       isActive: state === 'active',
-      suspensionReason: workspace.accountSuspensionReason || undefined,
-      suspendedAt: workspace.accountSuspendedAt || undefined,
-      supportTicketId: workspace.supportTicketId || undefined,
+      suspensionReason: workspace.accountSuspensionReason || null,
+      suspendedAt: workspace.accountSuspendedAt || null,
+      supportTicketId: workspace.supportTicketId || null,
       canBeReactivated: state !== 'active',
       requiresSupportIntervention,
     };

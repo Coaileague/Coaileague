@@ -710,7 +710,7 @@ class SolutionDiscoveryLoop {
       changesApplied: [],
       testsRun: [],
       success: false,
-      confidenceScore: 0,
+      confidenceScore: '0',
       issues: [],
       shouldCommit: false,
       shouldRetry: false,

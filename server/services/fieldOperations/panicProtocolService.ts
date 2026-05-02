@@ -318,7 +318,7 @@ export async function acknowledgePanic(params: PanicAcknowledgeParams): Promise<
       status: 'acknowledged',
       firstAcknowledgmentAt: now,
       firstAcknowledgedBy: params.acknowledgedBy,
-      responseTimeSeconds: responseTimeSeconds ?? undefined,
+      responseTimeSeconds: responseTimeSeconds ?? null,
       updatedAt: now,
     })
     .where(eq(emergencyEvents.id, params.eventId));

@@ -630,7 +630,7 @@ export async function getEngagementTrend(
       .limit(limit);
     
     const scores = history.map(h => ({
-      score: parseFloat(h.overallScore),
+      score: String(parseFloat(h.overallScore)),
       period: h.periodStart?.toISOString().slice(0, 10) || '',
       delta: h.scoreDelta ? parseFloat(h.scoreDelta) : null,
     }));

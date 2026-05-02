@@ -75,23 +75,23 @@ const STANDARD_DEDUCTION_2026 = { single: 15000, married: 30000, head_of_househo
 interface TaxBracket { min: number; max: number; rate: number; baseTax: number; }
 
 const FEDERAL_BRACKETS_SINGLE_2026: TaxBracket[] = [
-  { min: 0,       max: 11925,   rate: 0.10, baseTax: 0         },
-  { min: 11925,   max: 48475,   rate: 0.12, baseTax: 1192.50   },
-  { min: 48475,   max: 103350,  rate: 0.22, baseTax: 5578.50   },
-  { min: 103350,  max: 197300,  rate: 0.24, baseTax: 17651.50  },
-  { min: 197300,  max: 250525,  rate: 0.32, baseTax: 40199.50  },
-  { min: 250525,  max: 626350,  rate: 0.35, baseTax: 57231.50  },
-  { min: 626350,  max: Infinity,rate: 0.37, baseTax: 188769.75 },
+  { min: 0,       max: 11925,   rate: '0.10', baseTax: 0         },
+  { min: 11925,   max: 48475,   rate: '0.12', baseTax: 1192.50   },
+  { min: 48475,   max: 103350,  rate: '0.22', baseTax: 5578.50   },
+  { min: 103350,  max: 197300,  rate: '0.24', baseTax: 17651.50  },
+  { min: 197300,  max: 250525,  rate: '0.32', baseTax: 40199.50  },
+  { min: 250525,  max: 626350,  rate: '0.35', baseTax: 57231.50  },
+  { min: 626350,  max: Infinity,rate: '0.37', baseTax: 188769.75 },
 ];
 
 const FEDERAL_BRACKETS_MFJ_2026: TaxBracket[] = [
-  { min: 0,       max: 23850,   rate: 0.10, baseTax: 0         },
-  { min: 23850,   max: 96950,   rate: 0.12, baseTax: 2385.00   },
-  { min: 96950,   max: 206700,  rate: 0.22, baseTax: 11157.00  },
-  { min: 206700,  max: 394600,  rate: 0.24, baseTax: 35302.00  },
-  { min: 394600,  max: 501050,  rate: 0.32, baseTax: 80398.00  },
-  { min: 501050,  max: 751600,  rate: 0.35, baseTax: 114462.00 },
-  { min: 751600,  max: Infinity,rate: 0.37, baseTax: 202154.50 },
+  { min: 0,       max: 23850,   rate: '0.10', baseTax: 0         },
+  { min: 23850,   max: 96950,   rate: '0.12', baseTax: 2385.00   },
+  { min: 96950,   max: 206700,  rate: '0.22', baseTax: 11157.00  },
+  { min: 206700,  max: 394600,  rate: '0.24', baseTax: 35302.00  },
+  { min: 394600,  max: 501050,  rate: '0.32', baseTax: 80398.00  },
+  { min: 501050,  max: 751600,  rate: '0.35', baseTax: 114462.00 },
+  { min: 751600,  max: Infinity,rate: '0.37', baseTax: 202154.50 },
 ];
 
 const STATE_INCOME_TAX_RATES: Record<string, number> = {
@@ -180,7 +180,7 @@ export function registerSchedulingCognitionActions() {
     }));
 
     return {
-      confidenceScore: Math.min(0.95, 0.5 + weeksBack * 0.04),
+      confidenceScore: String(Math.min(0.95, 0.5 + weeksBack * 0.04)),
       analysisType: 'demand_forecast',
       weeksAnalyzed: weeksBack,
       sitesAnalyzed: forecasts.length,
@@ -466,7 +466,7 @@ export function registerSchedulingCognitionActions() {
         isArmed, armedVerified,
         distanceMiles,
         availabilityMode: availMode,
-        payRate: Number(e.hourlyRate || 0),
+        payRate: String(Number(e.hourlyRate || 0)),
         eligible: disqualifiers.length === 0,
         disqualifiers,
       };
@@ -494,7 +494,7 @@ export function registerSchedulingCognitionActions() {
       advisory: eligible.length > 0
         ? `${eligible.length} eligible officer(s) found. Top pick: ${eligible[0]?.name} (score ${eligible[0]?.schedulingScore}). Human must approve final assignments.`
         : `No eligible officers found for these constraints. Consider relaxing armed/distance/score requirements or expanding the roster.`,
-      confidenceScore: 0.91,
+      confidenceScore: '0.91',
     };
   }));
 
@@ -534,7 +534,7 @@ export function registerSchedulingCognitionActions() {
         overtime: { payRate: otPay, billRate: otBill, margin: Math.round(otMargin * 100) / 100, marginPct: Math.round(otMarginPct * 10) / 10 },
         profitabilityTier: marginPct >= 35 ? 'excellent' : marginPct >= 25 ? 'good' : marginPct >= 15 ? 'acceptable' : marginPct > 0 ? 'thin' : 'unprofitable',
         advisory: `${e.firstName} ${e.lastName} at ${(c as Record<string,unknown>).companyName || 'this client'}: ${Math.round(marginPct * 10) / 10}% margin ($${Math.round(margin * 100) / 100}/hr). ${marginPct < 15 ? 'WARNING: Thin margin. Consider rate renegotiation.' : 'Profitable assignment.'}`,
-        confidenceScore: 0.97,
+        confidenceScore: '0.97',
       };
     }
 
@@ -557,7 +557,7 @@ export function registerSchedulingCognitionActions() {
       workspaceId,
       summary,
       advisory: `Workspace has ${allEmp.length} officers (pay $${summary.lowestPayRate}–$${summary.highestPayRate}/hr) and ${allClients.length} clients (bill $${summary.lowestBillRate}–$${summary.highestBillRate}/hr). Use scheduling.officer_compatibility_score with specific employeeId + clientId for per-pairing margin analysis.`,
-      confidenceScore: 0.90,
+      confidenceScore: '0.90',
     };
   }));
 
@@ -684,7 +684,7 @@ export function registerSchedulingCognitionActions() {
       advisory: eligible.length > 0
         ? `Top pick: ${eligible[0]?.name} — rank score ${eligible[0]?.rankScore}/100. ${requiresArmed ? 'Armed officers only — armed license verified.' : 'Unarmed post.'} Human approval required before assigning.`
         : `No eligible officers for this site on this date. Check armed requirements, distance, and officer availability.`,
-      confidenceScore: 0.93,
+      confidenceScore: '0.93',
     };
   }));
 
@@ -752,7 +752,7 @@ export function registerSchedulingCognitionActions() {
       risks,
       clientRemainingCoverage: clientShifts[0]?.count || 0,
       requiresHumanReview: risks.length > 0,
-      confidenceScore: 0.91,
+      confidenceScore: '0.91',
       advisory: risks.length > 0
         ? `ATTENTION: ${risks.length} downstream risk(s) detected. Human review required before this change is applied.`
         : 'No critical downstream impacts detected. Change may proceed with standard approval.',
@@ -803,7 +803,7 @@ export function registerSchedulingCognitionActions() {
         : openShifts.length > 0
         ? `${openShifts.length} open shift(s) detected in next ${hoursAhead}h. Fill workflows should begin now.`
         : `No coverage gaps detected in the next ${hoursAhead} hours.`,
-      confidenceScore: 0.99,
+      confidenceScore: '0.99',
     };
   }));
 
@@ -979,7 +979,7 @@ export function registerPayrollMathEngineActions() {
       filingDeadline: `January 31, ${taxYear + 1}`,
       advisory: `${above600.length} contractor(s) have crossed the $600 threshold and require 1099-NEC filing by Jan 31, ${taxYear + 1}. Verify figures before filing.`,
       approvalRequired: true,
-      confidenceScore: 0.95,
+      confidenceScore: '0.95',
     };
   }));
 
@@ -1040,7 +1040,7 @@ export function registerPayrollMathEngineActions() {
         ? `${riskFlags.length} contractor(s) show W2 employment patterns. Legal review required before next payment cycle.`
         : 'No misclassification risks detected in current 1099 contractors.',
       disclaimer: 'Classification guidance only. Consult employment attorney. IRS 20-factor test is authoritative.',
-      confidenceScore: 0.83,
+      confidenceScore: '0.83',
       approvalRequired: riskFlags.length > 0,
     };
   }));
@@ -1101,7 +1101,7 @@ export function registerPayrollMathEngineActions() {
       rates: { futaNet: '0.6% (after 5.4% SUTA credit)', suta: `${(SUTA_RATE * 100).toFixed(1)}%`, employerSS: '6.2%', employerMedicare: '1.45%' },
       advisory: `Employer tax obligation for this payroll run: $${totalEmployerCost.toFixed(2)}. Deposit required per IRS Schedule B deadlines.`,
       approvalRequired: true,
-      confidenceScore: 0.94,
+      confidenceScore: '0.94',
     };
   }));
 
@@ -1150,7 +1150,7 @@ export function registerPayrollMathEngineActions() {
       netPay: Math.round(netPay * 100) / 100,
       legalNote: 'IRS wage garnishment limits apply (max 25% of disposable income or amount above 30× federal minimum wage, whichever is less). Child support orders take priority over all other garnishments.',
       approvalRequired: true,
-      confidenceScore: 0.96,
+      confidenceScore: '0.96',
     };
   }));
 
@@ -1233,7 +1233,7 @@ export function registerPayrollMathEngineActions() {
       exportFormats: ['CSV', 'QuickBooks', 'Gusto', 'ADP'],
       disclaimer: 'AI-generated staging data. Employer EINs and SSNs must be verified before filing. CoAIleague is middleware — not a tax preparer. Consult CPA before submission.',
       approvalRequired: true,
-      confidenceScore: 0.9,
+      confidenceScore: '0.9',
     };
   }));
 
@@ -1390,7 +1390,7 @@ export function registerComplianceBrainActions() {
         ? `CA daily overtime detected: ${caDoubleTimeRisk.length} instance(s) of CA Labor Code §510 daily OT rules triggered this week.`
         : 'No FLSA violations detected this week.',
       approvalRequired: hasAnyViolation,
-      confidenceScore: 0.97,
+      confidenceScore: '0.97',
     };
   }));
 
@@ -1552,7 +1552,7 @@ export function registerComplianceBrainActions() {
         : 'No classification concerns detected in the monitoring window.',
       legalNote: 'IRS 20-factor test and ABC test (in applicable states) are authoritative. Consult employment attorney.',
       approvalRequired: flags.length > 0,
-      confidenceScore: 0.82,
+      confidenceScore: '0.82',
     };
   }));
 
@@ -1593,7 +1593,7 @@ export function registerComplianceBrainActions() {
         ? `Audit readiness gaps found: ${auditRisks.join('; ')}. Resolve before any audit request.`
         : 'Documentation appears audit-ready. Review and verify before any official audit.',
       approvalRequired: true,
-      confidenceScore: 0.90,
+      confidenceScore: '0.90',
     };
   }));
 
@@ -1676,7 +1676,7 @@ export function registerClientBillingIntelligenceActions() {
       advisory: analysis.filter(a => a.renewalAlert).length > 0
         ? `${analysis.filter(a => a.renewalAlert).length} contract(s) expire within 60 days. Initiate renewal discussions immediately.`
         : 'All active contracts within normal term windows.',
-      confidenceScore: 0.89,
+      confidenceScore: '0.89',
     };
   }));
 
@@ -1743,7 +1743,7 @@ export function registerClientBillingIntelligenceActions() {
         ? `${underMinimum.length} client(s) below contract minimum hours. Billing adjustments or makeup scheduling required.`
         : 'All clients meeting or exceeding contracted hour minimums.',
       approvalRequired: underMinimum.length > 0,
-      confidenceScore: 0.92,
+      confidenceScore: '0.92',
     };
   }));
 
@@ -1800,7 +1800,7 @@ export function registerClientBillingIntelligenceActions() {
         ? `${warning.length} invoice(s) in 31-60 day aging bucket. Initiate second payment reminders.`
         : 'AR aging within normal parameters.',
       approvalRequired: critical.length > 0,
-      confidenceScore: 0.95,
+      confidenceScore: '0.95',
     };
   }));
 
@@ -1862,7 +1862,7 @@ export function registerPredictiveAnalyticsBrainActions() {
       trendPct: Math.round(trendPct * 1000) / 10,
       forecasts,
       advisory: `Projected next period gross payroll: $${forecasts[0]?.projectedGrossPayroll?.toLocaleString()}. Trend is ${trendPct > 0.02 ? 'increasing' : trendPct < -0.02 ? 'decreasing' : 'stable'} (${Math.round(trendPct * 100) > 0 ? '+' : ''}${Math.round(trendPct * 100)}%).`,
-      confidenceScore: Math.min(0.90, 0.55 + historicalPayroll.length * 0.07),
+      confidenceScore: String(Math.min(0.90, 0.55 + historicalPayroll.length * 0.07)),
     };
   }));
 
@@ -1919,7 +1919,7 @@ export function registerPredictiveAnalyticsBrainActions() {
         risks.push({
           employeeId: emp.id,
           name: `${emp.firstName} ${emp.lastName}`,
-          riskScore: Math.min(100, riskScore),
+          riskScore: String(Math.min(100, riskScore)),
           riskLevel: riskScore >= 60 ? 'HIGH' : 'MEDIUM',
           riskFactors,
           recommendation: 'Schedule retention conversation. Offer preferred shift patterns if available.',
@@ -1935,7 +1935,7 @@ export function registerPredictiveAnalyticsBrainActions() {
       advisory: risks.length > 0
         ? `${risks.length} officer(s) show turnover risk signals. ${risks.filter(r => r.riskLevel === 'HIGH').length} are high-risk. Proactive retention recommended.`
         : 'No significant turnover risk signals detected in the current workforce.',
-      confidenceScore: 0.78,
+      confidenceScore: '0.78',
     };
   }));
 
@@ -1970,7 +1970,7 @@ export function registerPredictiveAnalyticsBrainActions() {
         churnRisks.push({
           clientId: client.clientId,
           clientName: client.clientName,
-          riskScore: Math.min(100, riskScore),
+          riskScore: String(Math.min(100, riskScore)),
           riskLevel: riskScore >= 60 ? 'HIGH' : 'MEDIUM',
           riskFactors,
           recommendation: 'Schedule client health review. Escalate coverage gaps. Confirm contract renewal intent.',
@@ -1985,7 +1985,7 @@ export function registerPredictiveAnalyticsBrainActions() {
       advisory: churnRisks.length > 0
         ? `${churnRisks.length} client relationship(s) show churn indicators. Proactive outreach recommended.`
         : 'All client relationships within healthy parameters.',
-      confidenceScore: 0.80,
+      confidenceScore: '0.80',
     };
   }));
 
@@ -2040,7 +2040,7 @@ export function registerPredictiveAnalyticsBrainActions() {
       advisory: understaffed.length > 0
         ? `${understaffed.length} site(s) understaffed (below 80% fill rate). Risk of service level violations and client churn.`
         : 'All sites at adequate staffing levels.',
-      confidenceScore: 0.88,
+      confidenceScore: '0.88',
     };
   }));
 
@@ -2083,7 +2083,7 @@ export function registerExternalIntegrationIntelligenceActions() {
         ? `URGENT: ${urgent.length} IRS filing deadline(s) within 30 days: ${urgent.map(d => `${d.form} (${d.daysUntil} days)`).join(', ')}`
         : 'No IRS filings due within the next 30 days.',
       note: 'Deadlines may shift if they fall on weekends or federal holidays. Verify with IRS.gov. Engage a CPA for actual filing.',
-      confidenceScore: 0.99,
+      confidenceScore: '0.99',
     };
   }));
 
@@ -2137,7 +2137,7 @@ export function registerExternalIntegrationIntelligenceActions() {
       irsPortal: 'https://www.irs.gov/e-file-providers/e-file-for-business-and-self-employed-taxpayers',
       disclaimer: 'AI-generated staging data only. Employer EIN required. Submit through IRS e-file or qualified payroll processor. CoAIleague is not a tax preparer.',
       approvalRequired: true,
-      confidenceScore: 0.88,
+      confidenceScore: '0.88',
     };
   }));
 
@@ -2198,7 +2198,7 @@ export function registerExternalIntegrationIntelligenceActions() {
       advisory: `${nachaEntries.length} direct deposit entries ready. ${missing.length} employee(s) missing bank info — must be paid by check.`,
       disclaimer: 'NACHA file generation staging only. Verify routing numbers before transmission. Your bank is responsible for ACH compliance.',
       approvalRequired: true,
-      confidenceScore: 0.93,
+      confidenceScore: '0.93',
     };
   }));
 
@@ -2250,7 +2250,7 @@ export function registerExternalIntegrationIntelligenceActions() {
       compatibleWith: ['ADP RUN', 'ADP Workforce Now', 'Paychex Flex (manual mapping required)', 'Gusto (with field remapping)'],
       advisory: 'Export data ready for payroll processor upload. Verify field mapping matches your processor\'s import template before uploading.',
       approvalRequired: true,
-      confidenceScore: 0.91,
+      confidenceScore: '0.91',
     };
   }));
 
@@ -2294,7 +2294,7 @@ export function registerNaturalLanguageReasoningActions() {
         suggestedAction: null,
         ambiguous: true,
         clarifyingQuestion: 'Could you clarify what area you need help with — scheduling, payroll, billing, compliance, or analytics?',
-        confidenceScore: 0.2,
+        confidenceScore: '0.2',
       };
     }
 
@@ -2347,7 +2347,7 @@ export function registerNaturalLanguageReasoningActions() {
       period: '30 days',
       narrative: narrativeLines.join(' '),
       metrics: { headcount, openShifts: gaps, overdueInvoices: overdue, outstandingAR: outstanding, payroll30Days: payroll30 },
-      confidenceScore: 0.87,
+      confidenceScore: '0.87',
     };
   }));
 
@@ -2438,7 +2438,7 @@ export function registerAnomalyDetectionActions() {
         ? `${anomalies.length} time entry anomaly(ies) detected. Human review required before payroll processing.`
         : 'No time entry anomalies detected in the scan period.',
       approvalRequired: anomalies.length > 0,
-      confidenceScore: 0.88,
+      confidenceScore: '0.88',
     };
   }));
 
@@ -2504,7 +2504,7 @@ export function registerAnomalyDetectionActions() {
         ? `${anomalies.length} payroll anomaly(ies) flagged. Disbursement should be held pending manager review.`
         : 'No payroll calculation anomalies detected.',
       approvalRequired: anomalies.length > 0,
-      confidenceScore: 0.85,
+      confidenceScore: '0.85',
     };
   }));
 
@@ -2600,7 +2600,7 @@ export function registerAnomalyDetectionActions() {
         ? `${anomalies.length} invoice anomaly(ies) detected. Review before sending to clients.`
         : 'No invoice anomalies detected in the last 90 days.',
       approvalRequired: anomalies.length > 0,
-      confidenceScore: 0.87,
+      confidenceScore: '0.87',
     };
   }));
 

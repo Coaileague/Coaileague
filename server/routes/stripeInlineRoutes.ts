@@ -305,7 +305,7 @@ router.post('/pay-invoice', requireAuth, async (req: AuthenticatedRequest, res) 
         title: `Invoice Paid via Stripe`,
         description: `Invoice ${invoice.invoiceNumber || invoiceId} paid — $${parseFloat(invoice.total as string).toFixed(2)} received via Stripe`,
         workspaceId: workspace.id,
-        userId: req.userId || undefined,
+        userId: req.userId || null,
         metadata: {
           invoiceId: invoice.id,
           invoiceNumber: invoice.invoiceNumber,
@@ -462,7 +462,7 @@ router.post('/create-subscription', requireAuth, async (req: AuthenticatedReques
         metadata: {
           subscriptionId: subscription.id,
           tier,
-          stripeCustomerId: workspace.stripeCustomerId || undefined,
+          stripeCustomerId: workspace.stripeCustomerId || null,
           workspaceName: workspace.name,
         },
       }).catch((err: Error) => log.warn('[Stripe] subscription_created publish failed (non-blocking):', err instanceof Error ? err.message : String(err)))
@@ -681,7 +681,7 @@ router.post('/create-subscription-checkout', requireAuth, async (req: Authentica
 
     const priceId = TIER_PRICE_IDS[tier];
     const lineItem = priceId
-      ? { price: priceId, quantity: 1 }
+      ? { price: priceId, quantity: '1' }
       : {
           price_data: {
             currency: 'usd',
@@ -689,7 +689,7 @@ router.post('/create-subscription-checkout', requireAuth, async (req: Authentica
             recurring: { interval: 'month' as const },
             unit_amount: TIER_FALLBACK_AMOUNTS[tier].amount,
           },
-          quantity: 1,
+          quantity: '1',
         };
 
     const idempotencyKey = `checkout-sub-${workspaceId}-${tier}-${Math.floor(Date.now() / 60000)}`;

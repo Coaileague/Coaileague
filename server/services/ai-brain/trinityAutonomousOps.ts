@@ -152,7 +152,7 @@ async function getSupportRoleTargets(
           role: member.role as unknown,
           userId: member.userId,
           workspaceId,
-          email: u?.email || undefined,
+          email: u?.email || null,
         });
       }
     } else {
@@ -182,7 +182,7 @@ async function getSupportRoleTargets(
             role: row.role as unknown,
             userId: row.userId,
             workspaceId: userWorkspaceId,
-            email: u?.email || undefined,
+            email: u?.email || null,
           });
         }
       }

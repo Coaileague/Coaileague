@@ -112,7 +112,7 @@ export class ComplianceMonitoringService {
 
       const hours = (new Date(shift.endTime).getTime() - new Date(shift.startTime).getTime()) / (1000 * 60 * 60);
       
-      const existing = employeeHours.get(shift.employeeId || '') || { employee: shift.employee, totalHours: 0 };
+      const existing = employeeHours.get(shift.employeeId || '') || { employee: shift.employee, totalHours: '0' };
       existing.totalHours += hours;
       employeeHours.set(shift.employeeId || '', existing);
     }
