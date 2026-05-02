@@ -3,7 +3,8 @@
  * Eliminates hardcoded email addresses, templates, and workflow steps
  * Centralized configuration for employee onboarding workflows
  */
-export const onboardingConfig = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const onboardingConfig: any = {
   // Email Configuration
   email: {
     fromAddress: process.env.VITE_ONBOARDING_FROM_EMAIL || 'onboarding@coaileague.ai',

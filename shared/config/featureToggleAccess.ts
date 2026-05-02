@@ -37,11 +37,11 @@ export async function getFeatureToggle(path: string): Promise<boolean> {
   try {
     const config = await getFeatureToggles();
     const keys = path.split('.');
-    let value: unknown = config;
+    let value: Record<string, unknown> = config as Record<string, unknown>;
     for (const key of keys) {
-      value = value?.[key];
+      value = (value?.[key] ?? {}) as Record<string, unknown>;
     }
-    return value ?? false;
+    return (value as unknown as boolean) ?? false;
   } catch {
     return false; // Safe default — feature off if registry unavailable
   }

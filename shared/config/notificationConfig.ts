@@ -525,7 +525,7 @@ export function getCategoriesForTab(tab: NotificationTab): string[] {
     .map(([category]) => category);
   
   // Filter to only include valid database enum values to prevent PostgreSQL errors
-  return categories.filter(cat => VALID_DB_CATEGORIES.includes(cat as string));
+  return categories.filter(cat => ([...VALID_DB_CATEGORIES] as string[]).includes(cat as string));
 }
 
 /**
@@ -536,7 +536,7 @@ export function shouldRoleReceiveNotification(
   notificationType: keyof typeof RBAC_NOTIFICATION_TARGETING
 ): boolean {
   const allowedRoles = RBAC_NOTIFICATION_TARGETING[notificationType];
-  return allowedRoles.includes(role as string);
+  return ([...allowedRoles] as string[]).includes(role as string);
 }
 
 // ============================================================================

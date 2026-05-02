@@ -377,6 +377,9 @@ const AdminBanners = lazy(() => import("@/pages/admin-banners"));
 const AdminPermissionMatrix = lazy(() => import("@/pages/admin-permission-matrix"));
 const AdminTicketReviews = lazy(() => import("@/pages/admin-ticket-reviews"));
 const AdminHelpAI = lazy(() => import("@/pages/admin-helpai"));
+const PlatformUsers = lazy(() => import("@/pages/platform-users"));
+const HelpAIOrchestration = lazy(() => import("@/pages/helpai-orchestration"));
+const ExternalEmail = lazy(() => import("@/pages/external-email"));
 const BreachResponse = lazy(() => import("@/pages/breach-response"));
 const AutomationAuditLog = lazy(() => import("@/pages/automation-audit-log"));
 const AutomationSettings = lazy(() => import("@/pages/automation-settings"));
@@ -943,6 +946,9 @@ function AppContent() {
                 <Route path="/worker/panic"><ErrorBoundary><WorkerPanic /></ErrorBoundary></Route>
                 <Route path="/worker/guard-tour/scan"><ErrorBoundary><GuardTourScan /></ErrorBoundary></Route>
                 <Route path="/admin/platform-ops"><RBACRoute require="platform_staff"><ErrorBoundary><PlatformOps /></ErrorBoundary></RBACRoute></Route>
+                <Route path="/admin/platform-users"><RBACRoute require="platform_staff"><Suspense fallback={<div/>}><ErrorBoundary><PlatformUsers /></ErrorBoundary></Suspense></RBACRoute></Route>
+                <Route path="/admin/helpai-orchestration"><RBACRoute require="platform_staff"><Suspense fallback={<div/>}><ErrorBoundary><HelpAIOrchestration /></ErrorBoundary></Suspense></RBACRoute></Route>
+                <Route path="/external-email"><RBACRoute require="manager"><Suspense fallback={<div/>}><ErrorBoundary><ExternalEmail /></ErrorBoundary></Suspense></RBACRoute></Route>
                 <Route path="/settings/data-privacy"><ErrorBoundary><SettingsDataPrivacy /></ErrorBoundary></Route>
                 <Route path="/worker/incidents"><ErrorBoundary><WorkerIncidents /></ErrorBoundary></Route>
                 <Route path="/schedule"><ErrorBoundary componentName="Schedule Board"><UniversalSchedule /></ErrorBoundary></Route>

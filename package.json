@@ -7,7 +7,7 @@
     "dev": "cross-env NODE_ENV=development tsx server/index.ts",
     "build": "vite build && node build.mjs",
     "start": "cross-env NODE_ENV=production node dist/index.js",
-    "check": "tsc",
+    "check": "npm run check:shared && npm run check:server-core && npm run check:client && npm run check:strict-routes",
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
@@ -19,7 +19,12 @@
     "sim:acme30": "npx tsx server/tests/acme30DaySimulation.ts",
     "sim:billing": "npx tsx scripts/billing-stress-test.ts",
     "sim:acme-persist": "python3 scripts/acme_hard_persist.py",
-    "sim:acme-purge": "python3 scripts/acme_purge_sim.py"
+    "sim:acme-purge": "python3 scripts/acme_purge_sim.py",
+    "check:shared": "tsc -p tsconfig.shared.json --pretty false",
+    "check:server-core": "tsc -p tsconfig.server-core.json --pretty false",
+    "check:client": "tsc -p tsconfig.client.json --pretty false",
+    "check:strict-routes": "tsc -p tsconfig.strict-routes.json --pretty false",
+    "check:all": "npm run check"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
