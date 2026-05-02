@@ -2027,7 +2027,6 @@ export const insertRoomEventSchema = createInsertSchema(roomEvents).omit({
 export type ChatUpload = typeof chatUploads.$inferSelect;
 export type InsertRoomEvent = z.infer<typeof insertRoomEventSchema>;
 export type RoomEvent = typeof roomEvents.$inferSelect;
-export type InsertRoomVoiceSession = z.infer<typeof insertRoomVoiceSessionSchema>;
 
 // ============================================================================
 // DM AUDIT & INVESTIGATION SYSTEM
@@ -2188,7 +2187,6 @@ export type InsertLead = z.infer<typeof insertLeadSchema>;
 export type Lead = typeof leads.$inferSelect;
 export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateSchema>;
 export type EmailTemplate = typeof emailTemplates.$inferSelect;
-export type InsertEmailCampaign = z.infer<typeof insertEmailCampaignSchema>;
 export type InsertEmailSend = z.infer<typeof insertEmailSendSchema>;
 export type EmailSend = typeof emailSends.$inferSelect;
 
@@ -2928,7 +2926,6 @@ export type EmployeePayrollInfo = typeof employeePayrollInfo.$inferSelect;
 // MERGED: payrollPayouts → payrollEntries (table dropped, Mar 2026)
 export const payrollPayouts = payrollEntries;
 export type PayrollPayout = typeof payrollEntries.$inferSelect;
-export type InsertPayrollPayout = z.infer<typeof insertPayrollPayoutSchema>;
 
 // ============================================================================
 // PAYMENT REMINDERS - Systematic overdue invoice follow-up tracking
@@ -3026,7 +3023,7 @@ export type MileageLog = typeof mileageLogs.$inferSelect;
 export const insertContractDocumentSchema = z.object({});
 
 export type InsertContractDocument = z.infer<typeof insertContractDocumentSchema>;
-export type ContractDocument = z.infer<typeof insertContractDocumentsSchema> & { id: string; createdAt: Date | null; updatedAt: Date | null };
+export type ContractDocument = InsertContractDocument & { id: string; createdAt: Date | null; updatedAt: Date | null };
 
 // ============================================================================
 // ORGANIZATION ONBOARDING - COMPLETE SETUP WORKFLOW
@@ -3188,7 +3185,6 @@ export const insertUserNotificationPreferencesSchema = createInsertSchema(userNo
 });
 
 export type UserNotificationPreferences = typeof userNotificationPreferences.$inferSelect;
-export type InsertNotificationDigest = z.infer<typeof insertNotificationDigestSchema>;
 
 // ============================================================================
 // UNS - NOTIFICATION RULES (User-Defined Categorization & Filtering)
@@ -3513,12 +3509,12 @@ export type QuickbooksMigrationRun = typeof quickbooksMigrationRuns.$inferSelect
 export const insertPartnerApiUsageEventSchema = z.object({});
 
 export type InsertPartnerApiUsageEvent = z.infer<typeof insertPartnerApiUsageEventSchema>;
-export type PartnerApiUsageEvent = z.infer<typeof insertPartnerApiUsageEventsSchema> & { id: string; createdAt: Date | null; updatedAt: Date | null };
+export type PartnerApiUsageEvent = InsertPartnerApiUsageEvent & { id: string; createdAt: Date | null; updatedAt: Date | null };
 
 export const insertPartnerDataMappingSchema = z.object({});
 
 export type InsertPartnerDataMapping = z.infer<typeof insertPartnerDataMappingSchema>;
-export type PartnerDataMapping = z.infer<typeof insertPartnerDataMappingsSchema> & { id: string; createdAt: Date | null; updatedAt: Date | null };
+export type PartnerDataMapping = InsertPartnerDataMapping & { id: string; createdAt: Date | null; updatedAt: Date | null };
 
 // OAuth States - Store CSRF tokens and PKCE verifiers for OAuth flows
 
@@ -3819,7 +3815,7 @@ export type AiBrainJob = typeof aiBrainJobs.$inferSelect;
 export const insertAiGlobalPatternSchema = z.object({});
 
 export type InsertAiGlobalPattern = z.infer<typeof insertAiGlobalPatternSchema>;
-export type AiGlobalPattern = z.infer<typeof insertAiGlobalPatternsSchema> & { id: string; createdAt: Date | null; updatedAt: Date | null };
+export type AiGlobalPattern = { id: string; createdAt: Date | null; updatedAt: Date | null; [key: string]: unknown };
 
 // AI Audit Logs - Unified audit log for all AI events (MERGED: action_logs, execution_log, token_usage, feedback_loops, event_stream, decision_audit, solution_library, skill_registry)
 
@@ -3965,7 +3961,6 @@ export type InternalEmailRecipient = typeof internalEmailRecipients.$inferSelect
 // ============================================================================
 // SUPPORT TICKET HISTORY AUDIT TRAIL (NEW - Tier 1 Critical Fix #5)
 // ============================================================================
-export type InsertSupportTicketHistory = z.infer<typeof insertSupportTicketHistorySchema>;
 
 // ============================================================================
 // INVOICE ADJUSTMENTS TABLE (NEW - Tier 1 Critical Fix #2)
@@ -3992,7 +3987,6 @@ export type PasswordResetAuditLog = typeof passwordResetAuditLog.$inferSelect;
 // ============================================================================
 // GUSTO SYNC HISTORY (Gap #12 - Persist Gusto integration data)
 // ============================================================================
-export type InsertGustoSyncHistory = z.infer<typeof insertGustoSyncHistorySchema>;
 
 // ============================================================================
 // ENGAGEMENT SCORE HISTORY (Gap #4 - Track historical engagement for trends)
@@ -4027,7 +4021,7 @@ export type Achievement = typeof achievements.$inferSelect;
 export const insertEmployeeAchievementSchema = z.object({});
 
 export type InsertEmployeeAchievement = z.infer<typeof insertEmployeeAchievementSchema>;
-export type EmployeeAchievement = z.infer<typeof insertEmployeeAchievementsSchema> & { id: string; createdAt: Date | null; updatedAt: Date | null };
+export type EmployeeAchievement = InsertEmployeeAchievement & { id: string; createdAt: Date | null; updatedAt: Date | null };
 
 // Employee points ledger
 
@@ -4085,7 +4079,7 @@ export type CoaileagueEmployeeProfile = typeof coaileagueEmployeeProfiles.$infer
 export const insertEmployeeScoreSnapshotSchema = z.object({});
 
 export type InsertEmployeeScoreSnapshot = z.infer<typeof insertEmployeeScoreSnapshotSchema>;
-export type EmployeeScoreSnapshot = z.infer<typeof insertEmployeeScoreSnapshotsSchema> & { id: string; createdAt: Date | null; updatedAt: Date | null };
+export type EmployeeScoreSnapshot = InsertEmployeeScoreSnapshot & { id: string; createdAt: Date | null; updatedAt: Date | null };
 
 // Employee Event Log (Event-driven score updates)
 
@@ -4173,7 +4167,6 @@ export type InsertOrgReward = z.infer<typeof insertOrgRewardSchema>;
 export type OrgReward = typeof orgRewards.$inferSelect;
 
 // Pipeline metrics for tracking conversion rates
-export type InsertPipelineMetrics = z.infer<typeof insertPipelineMetricsSchema>;
 
 // ============================================================================
 // HELPAI ORCHESTRATION SYSTEM - PHASES 2-5
@@ -4948,7 +4941,7 @@ export type KnowledgeGapLog = typeof knowledgeGapLogs.$inferSelect;
 
 export const insertAiWorkboardTaskSchema = z.object({});
 export type InsertAiWorkboardTask = z.infer<typeof insertAiWorkboardTaskSchema>;
-export type AiWorkboardTask = z.infer<typeof insertAiWorkboardTasksSchema> & { id: string; createdAt: Date | null; updatedAt: Date | null };
+export type AiWorkboardTask = InsertAiWorkboardTask & { id: string; createdAt: Date | null; updatedAt: Date | null };
 
 /**
  * AI Approval Requests - Universal approval queue for AI Brain, Trinity, and subagent requests
@@ -4961,7 +4954,7 @@ export type AiApproval = typeof aiApprovals.$inferSelect;
 
 // MERGED: aiApprovalRequests → aiApprovals (table dropped, Mar 2026)
 export const aiApprovalRequests = aiApprovals;
-export type InsertAiApprovalRequest = z.infer<typeof insertAiApprovalRequestSchema>;
+export type InsertAiApprovalRequest = InsertAiApproval;
 
 // ============================================================================
 // VISUAL QA SYSTEM - AI Brain Eyes
@@ -6202,7 +6195,7 @@ export type ComplianceRequirement = typeof complianceRequirements.$inferSelect;
 
 export const insertEmployeeComplianceRecordSchema = z.object({});
 export type InsertEmployeeComplianceRecord = z.infer<typeof insertEmployeeComplianceRecordSchema>;
-export type EmployeeComplianceRecord = z.infer<typeof insertEmployeeComplianceRecordsSchema> & { id: string; createdAt: Date | null; updatedAt: Date | null };
+export type EmployeeComplianceRecord = InsertEmployeeComplianceRecord & { id: string; createdAt: Date | null; updatedAt: Date | null };
 
 /**
  * Table 5: Compliance Documents - Locked document vault with SHA-256 hashing
@@ -6307,7 +6300,7 @@ export type ComplianceChecklist = typeof complianceChecklists.$inferSelect;
 
 export const insertClientContractTemplateSchema = z.object({});
 export type InsertClientContractTemplate = z.infer<typeof insertClientContractTemplateSchema>;
-export type ClientContractTemplate = z.infer<typeof insertClientContractTemplatesSchema> & { id: string; createdAt: Date | null; updatedAt: Date | null };
+export type ClientContractTemplate = InsertClientContractTemplate & { id: string; createdAt: Date | null; updatedAt: Date | null };
 
 /**
  * Client Contracts - Core proposal/contract table
@@ -6321,7 +6314,7 @@ export type ClientContract = typeof clientContracts.$inferSelect;
 
 export const insertClientContractSignatureSchema = z.object({});
 export type InsertClientContractSignature = z.infer<typeof insertClientContractSignatureSchema>;
-export type ClientContractSignature = z.infer<typeof insertClientContractSignaturesSchema> & { id: string; createdAt: Date | null; updatedAt: Date | null };
+export type ClientContractSignature = InsertClientContractSignature & { id: string; createdAt: Date | null; updatedAt: Date | null };
 
 /**
  * Client Contract Audit Log - Immutable trail for legal compliance
@@ -6746,7 +6739,7 @@ export type ApiKeyUsageLog = typeof apiKeyUsageLogs.$inferSelect;
 // ============================================================================
 // MERGED: complianceStateRequirements → complianceRequirements (table dropped, Mar 2026)
 export const complianceStateRequirements = complianceRequirements;
-export type InsertComplianceStateRequirement = z.infer<typeof insertComplianceStateRequirementSchema>;
+export type InsertComplianceStateRequirement = z.infer<typeof insertComplianceRequirementSchema>;
 
 // ============================================================================
 // BACKUP RECORDS - Database backup tracking for disaster recovery
@@ -6989,7 +6982,7 @@ export type OrgFinanceSettings = typeof orgFinanceSettings.$inferSelect;
 
 export const insertPayrollExportSchema = z.object({});
 export type InsertPayrollExport = z.infer<typeof insertPayrollExportSchema>;
-export type PayrollExport = z.infer<typeof insertPayrollExportsSchema> & { id: string; createdAt: Date | null; updatedAt: Date | null };
+export type PayrollExport = InsertPayrollExport & { id: string; createdAt: Date | null; updatedAt: Date | null };
 
 export const insertPayrollProviderConnectionSchema = createInsertSchema(payrollProviderConnections).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertPayrollProviderConnection = z.infer<typeof insertPayrollProviderConnectionSchema>;

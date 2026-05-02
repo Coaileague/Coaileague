@@ -78,10 +78,10 @@ import {
   recordFailedLogin,
   recordIpAuthFailure,
   recordSuccessfulLogin,
-  requireAuth,
   resetPassword,
   validatePassword,
   verifyEmailToken,
+  verifyPassword,
   requireAuth,
 } from "../auth";
 import { checkWorkspacePaymentStatus, hasPlatformWideAccess, getUserPlatformRole , type AuthenticatedRequest} from "../rbac";
@@ -92,6 +92,7 @@ import { systemAuditLogs } from "@shared/schema";
 import { rotateCsrfToken } from "../middleware/csrf";
 import { verifyRecaptcha } from "../services/recaptchaService";
 import { mutationLimiter } from "../middleware/rateLimiter";
+import { verifyMfaToken } from "../services/auth/mfa";
 
 const router = Router();
 
@@ -265,12 +266,46 @@ async function registerSession(
 }
 
 // ── Phase 53 Session & MFA Stubs (pending full implementation) ────────────────
+const PENDING_MFA_TOKEN_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 function issuePendingMfaToken(userId: string): string {
   // Issue a short-lived token for MFA verification step
   // In full implementation this would be a signed JWT with 5min expiry
-  const crypto = require('crypto');
   return Buffer.from(userId + ':' + Date.now()).toString('base64url');
 }
+
+function validatePendingMfaToken(token: string): string {
+  let decoded: string;
+  try {
+    decoded = Buffer.from(token, 'base64url').toString('utf-8');
+  } catch {
+    throw new Error('Invalid pending MFA token');
+  }
+  const idx = decoded.lastIndexOf(':');
+  if (idx < 0) throw new Error('Invalid pending MFA token');
+  const userId = decoded.slice(0, idx);
+  const issuedAt = Number(decoded.slice(idx + 1));
+  if (!userId || !Number.isFinite(issuedAt)) {
+    throw new Error('Invalid pending MFA token');
+  }
+  if (Date.now() - issuedAt > PENDING_MFA_TOKEN_TTL_MS) {
+    throw new Error('Pending MFA token expired');
+  }
+  return userId;
+}
+
+// Platform support roles that require the SMS-OTP gate after password+TOTP login.
+// Kept as a Set so the auth flow's `.has(role)` check is O(1).
+const SUPPORT_PLATFORM_ROLES = new Set<string>([
+  'root_admin',
+  'deputy_admin',
+  'sysop',
+  'sysops',
+  'support_manager',
+  'support_agent',
+  'compliance_officer',
+  'co_admin',
+]);
 
 function isMfaMandatory(role: string): boolean {
   // Mandatory MFA roles — platform admin roles require MFA setup
