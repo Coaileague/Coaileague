@@ -3,17 +3,18 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { 
-  BarChart3, Users, Calendar, Clock, FileText, 
+import {
+  BarChart3, Users, Calendar, Clock, FileText,
   DollarSign, Shield, Headphones, TrendingUp, Building2,
   CheckCircle, Receipt, ShieldCheck, Book, MessageSquare,
-  Truck, HelpCircle, ArrowRight, Activity
+  Truck, HelpCircle, ArrowRight, Activity,
+  type LucideIcon
 } from "lucide-react";
 import { UniversalSpinner } from "@/components/ui/universal-spinner";
 import type { WorkspaceFeature } from "@shared/workspaceFeatures";
 import { CanvasHubPage, type CanvasPageConfig } from '@/components/canvas-hub';
 
-const iconMap: Record<string, unknown> = {
+const iconMap: Record<string, LucideIcon> = {
   BarChart3, Users, Calendar, Clock, FileText,
   DollarSign, Shield, Headphones, TrendingUp, Building2,
   CheckCircle, Receipt, ShieldCheck, Book, MessageSquare,

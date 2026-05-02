@@ -1,6 +1,6 @@
 # COAILEAGUE — MASTER AGENT HANDOFF
 # ONE FILE — update in place.
-# Last updated: 2026-05-01 — Claude (architect, continuous session monitoring)
+# Last updated: 2026-05-02 — Claude (workspace + sub-tenant + workflow page audit pass)
 
 ---
 
@@ -10,6 +10,48 @@
 origin/development → 5c8f43b2  (🟢 GREEN — build clean, Railway auto-deploying)
 TS debt: 8,566 → 2124 combined (-75.2% from baseline)
 ```
+
+---
+
+## 2026-05-02 — workspace / sub-tenant / workflow audit pass
+Branch: `claude/fix-workspace-pages-ZyETl`
+Scope: workspace tools, login, fetch/query wiring, cross-platform tenant /
+sub-tenant / end-user / client pages, action + workflow CRUD, activate /
+deactivate. Audited 18 in-scope pages; esbuild parse exit=0 across all.
+
+### Fixed
+| Page | Issue | Fix |
+|------|-------|-----|
+| `client/src/App.tsx` | `pages/sub-orgs.tsx` existed but had **no route** — page unreachable | Added `lazy(() => import('@/pages/sub-orgs'))` and `Route path="/sub-orgs"` in both desktop and mobile router branches |
+| `pages/sub-orgs.tsx` | `createMut`/`switchMut` mutations returned raw `Response`, then `data?.workspaceName` was read on a Response object — switch-toast always showed "undefined". `err?.message` / `err?.response?.json()` accessed unknown without narrowing | Mutations now `await res.json()`; `onError` narrows `err instanceof Error` and casts `response?.json` access through a typed shape |
+| `pages/workspace.tsx` | `iconMap: Record<string, unknown>` made `<Icon className=… />` un-renderable (`unknown` is not a JSX element type) | Imported `LucideIcon` from `lucide-react`, retyped `iconMap: Record<string, LucideIcon>` |
+| `pages/workflow-approvals.tsx` | `useState<null>(null)` for `selectedProposal` broke `selectedProposal.id` access; `proposal: unknown` parameters in `handleApprove/handleReject` blocked typed property reads downstream | Imported `ScheduleProposal \| InvoiceProposal \| PayrollProposal` from the hook, declared local `AnyProposal` union, retyped the state and handlers |
+
+### Verified routed + reachable
+`/workspace`, `/workspace-onboarding`, `/workspace-sales` (also `/sales`,
+`/platform/sales`), `/workflow-approvals`, `/owner/hireos/workflow-builder`,
+`/clients`, `/sub-orgs` (newly added), `/end-user-controls`, `/client/portal`,
+`/client-portal/setup`, `/client-portal/:tempCode`, `/client-signup`,
+`/client-status-lookup`, `/client-communications`, `/client-satisfaction`,
+`/client-profitability`, `/sps-client-pipeline`, `/login`, `/auditor/login`,
+`/co-auditor/login`, `/regulatory-audit/login`.
+
+### Verified CRUD / activate / deactivate endpoints (server)
+- `clientRoutes.ts`: `POST /:id/deactivate`, `POST /:id/reactivate`
+- `deactivateRoutes.ts`: workspace + employee deactivate/reactivate
+- `workspaceInlineRoutes.ts`: full sub-orgs CRUD + attach/detach/batch
+- `platformRoutes.ts`: staff suspend/unsuspend
+- `service-control.ts`: per-workspace service suspend
+- `workOrderRoutes.ts`, `scheduleosRoutes.ts`, `enterpriseOnboardingRoutes.ts`,
+  `onboardingPipelineRoutes.ts`: activate flows
+All endpoints have a UI consumer in the audited pages.
+
+### Out-of-scope but observed (not fixed — flag for follow-up)
+- `pages/auditor-login.tsx`: `err.response?.json()` in `onError` accesses a
+  property not on `Error` (TanStack v5 default). esbuild compiles, but strict
+  `tsc` would flag. Same pattern in `co-auditor-login.tsx` (`e?.message`).
+- `pages/hireos-workflow-builder.tsx` lines 34, 117: `: any` on two
+  internal sub-components. Listed under TS-DEBT.
 
 ---
 

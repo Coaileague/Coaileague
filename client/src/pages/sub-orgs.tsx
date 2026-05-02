@@ -46,12 +46,14 @@ export default function SubOrgsPage(): JSX.Element {
   });
 
   const createMut = useMutation({
-    mutationFn: () =>
-      apiRequest("POST", "/api/workspace/sub-orgs", {
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/workspace/sub-orgs", {
         name: name.trim(),
         subOrgLabel: label.trim() || undefined,
         primaryOperatingState: primaryState.trim() || undefined,
-      }),
+      });
+      return res.json() as Promise<{ subOrg?: SubOrg }>;
+    },
     onSuccess: async () => {
       toast({ title: "Sub-organization created" });
       setCreateOpen(false);
@@ -63,22 +65,25 @@ export default function SubOrgsPage(): JSX.Element {
     onError: (err: unknown) => {
       toast({
         title: "Could not create sub-organization",
-        description: err?.message || "Try again.",
+        description: err instanceof Error ? err.message : "Try again.",
         variant: "destructive",
       });
     },
   });
 
   const switchMut = useMutation({
-    mutationFn: (workspaceId: string) =>
-      apiRequest("POST", `/api/workspace/switch/${workspaceId}`, {}),
-    onSuccess: (data: unknown) => {
+    mutationFn: async (workspaceId: string) => {
+      const res = await apiRequest("POST", `/api/workspace/switch/${workspaceId}`, {});
+      return res.json() as Promise<{ workspaceName?: string; code?: string }>;
+    },
+    onSuccess: (data) => {
       toast({ title: `Switched to ${data?.workspaceName || "sub-organization"}` });
       window.location.href = "/dashboard";
     },
     onError: async (err: unknown) => {
+      const apiErr = err as { response?: { json?: () => Promise<{ code?: string }> }; message?: string };
       try {
-        const body = await err?.response?.json?.();
+        const body = await apiErr?.response?.json?.();
         if (body?.code === "ONBOARDING_INCOMPLETE") {
           toast({
             title: "Sub-org onboarding incomplete",
@@ -90,7 +95,8 @@ export default function SubOrgsPage(): JSX.Element {
       } catch {
         /* fall through */
       }
-      toast({ title: "Switch failed", description: err?.message, variant: "destructive" });
+      const msg = err instanceof Error ? err.message : apiErr?.message;
+      toast({ title: "Switch failed", description: msg, variant: "destructive" });
     },
   });
 

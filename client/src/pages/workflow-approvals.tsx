@@ -5,7 +5,13 @@
 
 import { useState } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useWorkflowProposals, type ProposalType } from '@/hooks/useWorkflowProposals';
+import {
+  useWorkflowProposals,
+  type ProposalType,
+  type ScheduleProposal,
+  type InvoiceProposal,
+  type PayrollProposal,
+} from '@/hooks/useWorkflowProposals';
 import { useWorkflowPermissions } from '@/hooks/useWorkflowPermissions';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -41,20 +47,21 @@ export default function WorkflowApprovals() {
   const permissions = useWorkflowPermissions();
   
   const [selectedTab, setSelectedTab] = useState('schedules');
-  const [selectedProposal, setSelectedProposal] = useState<null>(null);
+  type AnyProposal = ScheduleProposal | InvoiceProposal | PayrollProposal;
+  const [selectedProposal, setSelectedProposal] = useState<AnyProposal | null>(null);
   const [showApprovalSheet, setShowApprovalSheet] = useState(false);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject' | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [proposalType, setProposalType] = useState<ProposalType>('schedule');
 
-  const handleApprove = (proposal: unknown, type: ProposalType) => {
+  const handleApprove = (proposal: AnyProposal, type: ProposalType) => {
     setSelectedProposal(proposal);
     setProposalType(type);
     setApprovalAction('approve');
     setShowApprovalSheet(true);
   };
 
-  const handleReject = (proposal: unknown, type: ProposalType) => {
+  const handleReject = (proposal: AnyProposal, type: ProposalType) => {
     setSelectedProposal(proposal);
     setProposalType(type);
     setApprovalAction('reject');

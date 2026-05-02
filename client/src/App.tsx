@@ -384,6 +384,7 @@ const AIBrainDashboard = lazy(() => import("@/pages/ai-brain-dashboard"));
 const SupportAIConsole = lazy(() => import("@/pages/support-ai-console"));
 const AssistedOnboarding = lazy(() => import("@/pages/assisted-onboarding"));
 const WorkspaceOnboarding = lazy(() => import("@/pages/workspace-onboarding"));
+const SubOrgsPage = lazy(() => import("@/pages/sub-orgs"));
 const OnboardingHub = lazy(() => import("@/pages/onboarding-hub"));
 const OnboardingEmailIntro = lazy(() => import("@/pages/onboarding-email-intro"));
 const AcceptHandoff = lazy(() => import("@/pages/accept-handoff"));
@@ -1018,6 +1019,7 @@ function AppContent() {
                 <Route path="/my-tickets"><ErrorBoundary><MyTickets /></ErrorBoundary></Route>
                 <Route path="/support/assisted-onboarding"><ErrorBoundary><AssistedOnboarding /></ErrorBoundary></Route>
                 <Route path="/workspace-onboarding"><ErrorBoundary><WorkspaceOnboarding /></ErrorBoundary></Route>
+                <Route path="/sub-orgs"><ErrorBoundary componentName="Sub-Organizations"><SubOrgsPage /></ErrorBoundary></Route>
                 <Route path="/trinity/self-edit">
                   <RBACRoute require="platform_staff">
                     <ErrorBoundary><TrinitySelfEditGovernancePage /></ErrorBoundary>
@@ -1587,6 +1589,7 @@ function AppContent() {
                 <Route path="/my-tickets"><ErrorBoundary><MyTickets /></ErrorBoundary></Route>
                 <Route path="/support/assisted-onboarding"><ErrorBoundary><AssistedOnboarding /></ErrorBoundary></Route>
                 <Route path="/workspace-onboarding"><ErrorBoundary><WorkspaceOnboarding /></ErrorBoundary></Route>
+                <Route path="/sub-orgs"><ErrorBoundary componentName="Sub-Organizations"><SubOrgsPage /></ErrorBoundary></Route>
                 <Route path="/trinity/self-edit">
                   <RBACRoute require="platform_staff">
                     <ErrorBoundary><TrinitySelfEditGovernancePage /></ErrorBoundary>
