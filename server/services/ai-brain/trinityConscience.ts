@@ -2,7 +2,7 @@
  * TRINITY CONSCIENCE MODULE
  * ==========================
  * Pre-execution conscience gate that evaluates every Trinity action against
- * 7 operational principles before the governance layer runs.
+ * 8 operational principles before the governance layer runs.
  *
  * Principle 1 — WORKSPACE_ISOLATION:   Actions must never access data outside their workspace.
  * Principle 2 — ROLE_AUTHORITY:         Financial/admin mutations require sufficient role.
@@ -11,6 +11,11 @@
  * Principle 5 — FINANCIAL_THRESHOLD:   Large financial operations flagged for confirmation.
  * Principle 6 — BOT_SCOPE:             Bot actors restricted to their designated categories.
  * Principle 7 — ACTIVE_WORKSPACE:      Mutating actions require an active (non-suspended) workspace.
+ * Principle 8 — PUBLIC_SAFETY_BOUNDARY: Trinity/HelpAI never call 911, dispatch
+ *                                       responders, or guarantee safety. A
+ *                                       human supervisor is always required.
+ *                                       (See publicSafetyGuard.ts for the
+ *                                       language-layer enforcement.)
  */
 
 import { db } from '../../db';
@@ -134,6 +139,54 @@ const SUFFICIENT_PRIVACY_ROLES = new Set([
 const FINANCIAL_AMOUNT_THRESHOLD = 10_000; // $10,000
 
 // ============================================================================
+// PRINCIPLE 8 — PUBLIC SAFETY BOUNDARY
+// Trinity / HelpAI never call 911, dispatch emergency responders, or
+// guarantee anyone's safety. A licensed human supervisor is always required.
+// This block enumerates action IDs that, by their semantics, would imply
+// Trinity is acting as an emergency-services dispatcher. Any such action is
+// REFUSED outright at the conscience layer — no flag, no confirmation, no
+// queue. The matching language-layer enforcement lives in publicSafetyGuard.ts.
+// Change only with written legal approval.
+// ============================================================================
+
+const PUBLIC_SAFETY_BLOCKED_ACTIONS = new Set([
+  'safety.call_911',
+  'safety.dispatch_911',
+  'emergency.call_911',
+  'emergency.dispatch',
+  'emergency.dispatch_responders',
+  'emergency.contact_police',
+  'emergency.contact_fire',
+  'emergency.contact_ems',
+  'dispatch.911',
+  'dispatch.police',
+  'dispatch.fire',
+  'dispatch.ems',
+  'panic.call_911',
+  'panic.dispatch',
+  'safety.guarantee',
+]);
+
+// Action-ID prefix patterns that should also be refused. Catches any
+// downstream action that uses one of these verbs even if not explicitly
+// listed above (defense in depth — additions to the action surface should
+// not silently bypass this principle).
+const PUBLIC_SAFETY_BLOCKED_PATTERNS: RegExp[] = [
+  /^(?:safety|emergency|dispatch|panic)\.(?:call_?911|dispatch_?911|contact_?911)/i,
+  /\.guarantee_safety$/i,
+];
+
+function isPublicSafetyBoundaryViolation(actionId: string): boolean {
+  if (PUBLIC_SAFETY_BLOCKED_ACTIONS.has(actionId)) return true;
+  return PUBLIC_SAFETY_BLOCKED_PATTERNS.some((re) => re.test(actionId));
+}
+
+const PUBLIC_SAFETY_REFUSAL_REASON =
+  'Trinity does not call 911, dispatch emergency responders, or guarantee ' +
+  'anyone\'s safety — a human supervisor is always required. If anyone is ' +
+  'in immediate danger, call 9-1-1 directly.';
+
+// ============================================================================
 // PRINCIPLE 6 — BOT SCOPE
 // Bots are only authorized for their designated action categories.
 // ============================================================================
@@ -210,6 +263,13 @@ async function getWorkspaceStatus(workspaceId: string): Promise<string> {
 
 export async function evaluateConscience(ctx: ConscienceContext): Promise<ConscienceResult> {
   const { actionId, workspaceId, userRole, payload, callerType, botName } = ctx;
+
+  // ── PRINCIPLE 8: PUBLIC SAFETY BOUNDARY ──────────────────────────────────
+  // Hard refusal — runs FIRST. No role, no payload.confirmed flag, no caller
+  // type can override. This is a categorical refusal, not a confirmation gate.
+  if (isPublicSafetyBoundaryViolation(actionId)) {
+    return block('PUBLIC_SAFETY_BOUNDARY', PUBLIC_SAFETY_REFUSAL_REASON);
+  }
 
   // ── PRINCIPLE 1: WORKSPACE ISOLATION ──────────────────────────────────────
   // If the payload references a workspaceId that differs from the request workspace, block.

@@ -744,6 +744,18 @@ These are documented gaps where code is *intentionally* incomplete or where a do
 10. New route: add to correct domain file — not routes.ts directly
 11. New service: check this map for existing service before creating new
 12. Trinity legal advice: never — hard-coded refusal in all legally-adjacent outputs
+13. PUBLIC SAFETY BOUNDARY (non-negotiable):
+    - Trinity/HelpAI never call 911, dispatch police/fire/EMS, or guarantee safety
+    - Human supervisor is ALWAYS required for safety-critical decisions
+    - Enforced at 3 layers:
+        action  → trinityConscience.ts Principle 8 (hard block)
+        intent  → trinityActionDispatcher.ts PUBLIC_SAFETY_REFUSAL_PATTERNS
+        language → publicSafetyGuard.ts guardOutbound() (rewrite + disclaimer)
+    - Approved phrasing: "Our role is to observe, deter, and report"
+    - Tests: tests/security/publicSafetyGuard.test.ts +
+            tests/security/trinityConsciencePublicSafety.test.ts
+    - See CLAUDE.md "LAW: Public Safety Boundary" for full text
+    - Change requires written legal approval
 ```
 
 ---

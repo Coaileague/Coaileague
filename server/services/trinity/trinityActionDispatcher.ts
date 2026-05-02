@@ -411,6 +411,24 @@ async function executeImmediate(
   return result;
 }
 
+// Categorical refusal patterns — Trinity is NOT a public-safety service.
+// These are matched BEFORE the regular intent-pattern table so no other
+// pattern (e.g. notify.send) can absorb a 911-dial request. The dispatcher
+// returns a "blocked" status with the canonical disclaimer; nothing is
+// queued, executed, or audited as an action attempt.
+const PUBLIC_SAFETY_REFUSAL_PATTERNS: RegExp[] = [
+  /\b(?:call|dial|contact|notify|page|alert)\s+(?:9-?1-?1|police|cops|sheriff|sapd|ambulance|paramedics?|ems|emts?|fire(?:fighters?| dept| department)?)\b/i,
+  /\bdispatch\s+(?:9-?1-?1|police|cops|sheriff|ambulance|paramedics?|ems|fire(?:fighters?)?|emergency|first responders?)\b/i,
+  /\b(?:guarantee|promise|assure|ensure)\s+(?:my|your|his|her|their|the\s+\w+'s?)\s+safety\b/i,
+];
+
+const PUBLIC_SAFETY_REFUSAL_MESSAGE =
+  '\n\n🚫 I cannot call 911, dispatch emergency services, or guarantee ' +
+  'anyone\'s safety. A human supervisor is always required. ' +
+  'If anyone is in immediate danger, call 9-1-1 directly. ' +
+  'If you want me to *notify* your on-call supervisor, ask me to do that ' +
+  'instead and I\'ll page them.';
+
 /**
  * Primary entrypoint for chat / voice / email intent dispatch.
  */
@@ -421,6 +439,20 @@ export async function dispatchFromChat(
 ): Promise<DispatchResult> {
   if (!message || !context.workspaceId) {
     return { detected: false, executed: false, queued: false, status: 'none' };
+  }
+
+  // PUBLIC SAFETY BOUNDARY — refuse 911-dial / safety-guarantee intents
+  // outright. This must run BEFORE detectIntent so a vague "tell everyone
+  // we'll keep them safe" doesn't get absorbed by the notify.send pattern.
+  if (PUBLIC_SAFETY_REFUSAL_PATTERNS.some((re) => re.test(message))) {
+    log.warn('[Dispatcher] Public-safety boundary refusal', { workspaceId: context.workspaceId });
+    return {
+      detected: true,
+      executed: false,
+      queued: false,
+      status: 'blocked',
+      appendToResponse: PUBLIC_SAFETY_REFUSAL_MESSAGE,
+    };
   }
 
   const intent = detectIntent(message);
