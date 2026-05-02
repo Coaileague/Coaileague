@@ -1,9 +1,32 @@
 # CoAIleague — Complete System Map
-**Last updated:** 2026-05-02 · **Author:** Architect Claude · **HEAD:** claude/verify-workflow-billing-FGdaj
+**Last updated:** 2026-05-02 · **Author:** Architect Claude (backend-routes audit) · **Branch:** claude/audit-backend-routes-erroW
 
 > **PURPOSE:** Single source of truth for all routes, mounts, middleware, services, and client pages.
 > Before adding ANY new code — route, component, service, or hook — check this map first.
 > Update this file in the same PR as your change.
+
+## Backend-Routes Audit Pass (2026-05-02)
+
+**Scope:** End-to-end verification of every backend route — mount order, middleware chain, race conditions, frontend wiring.
+
+**Result:** ✅ PASS — 3 fixes landed, 0 remaining hazards, build clean.
+
+| # | Finding | Location | Fix |
+|---|---|---|---|
+| 1 | `platformWorkspaceSeedLock` defined in routes.ts but never acquired — `seedPlatformWorkspace` is called from 3 places (routes.ts startup, ChatServerHub.seedHelpDeskRoom, supportRoutes HelpAI escalation) and could race the workspace_members INSERT under concurrent first-boot. | `server/seed-platform-workspace.ts`, `server/routes.ts`, `server/routes/supportRoutes.ts` | Lock moved into the seed module itself as a single-flight Promise (line 15-23). All callers now share it automatically. Dead lock + dead `let platformWorkspaceSeedingInProgress = false;` in supportRoutes.ts:211 removed. |
+| 2 | `server/routes/domains/routeMounting.ts` exported `mountRoutes` + `mountWorkspaceRoutes` helpers — never imported anywhere. 33 lines of dead code. | `server/routes/domains/routeMounting.ts` | File deleted. |
+| 3 | Stale doc entry: SYSTEM_MAP.md scheduling table listed `availabilityRoutes.ts` at `/api/availability` — actually mounted only in `workforce.ts:69`, not in scheduling. | `SYSTEM_MAP.md` (this file) | Stale row removed below. |
+
+**Verified clean (no fix needed):**
+- Mount order in `server/routes.ts` is canonical: bootstrap → CSRF → audit/IDS guards → public → webhooks → special mounts → 15 domains → trinity-thought-status bypass → mountTrinityRoutes → multi-company/etc → mountAuditRoutes → featureStubRouter (LAST).
+- Webhook routers (Resend, Twilio, message-bridge, voice/sms aliases, inbound-email) are all mounted BEFORE any domain that puts requireAuth on `/api/*`, so Twilio/Resend/Plaid POSTs reach their handlers without 401.
+- `/api/trinity/thought-status` and `/api/trinity/active-operations` are mounted BEFORE `mountTrinityRoutes` so workspace members bypass `requireTrinityAccess`.
+- Stripe webhook idempotency uses atomic `INSERT ... ON CONFLICT DO NOTHING RETURNING` — no race window. Plaid webhooks use the same pattern via `tryClaimWebhookEvent()`.
+- Financial mutations (invoice stage/finalize, payroll runs) use `pg_advisory_xact_lock` via `atomicFinancialLockService` — concurrent stage/finalize cannot interleave.
+- WebSocket startup: `setupWebSocket(server)` runs BEFORE any handler can broadcast; `notificationStateManager.setBroadcastFunction()` and `platformEventBus.setWebSocketHandler()` are set synchronously before domain mounts.
+- esbuild server build: 0 errors. Server bundles to `dist/index.js`.
+
+---
 
 ---
 
@@ -418,7 +441,6 @@ registerRoutes(app):
 | trinityStaffingRoutes (public) | /api/trinity/staffing/webhook | Staffing webhooks |
 | shiftChatroomRoutes.ts | /api/shift-chatrooms | Shift chat rooms |
 | postOrderRoutes.ts | /api/post-orders | Post orders |
-| availabilityRoutes.ts | /api/availability | Availability management |
 
 ---
 

@@ -7,7 +7,22 @@ import { PLATFORM_WORKSPACE_ID } from './services/billing/billingConstants';
 export const ROOT_USER_ID = 'root-user-00000000';
 export const PLATFORM_NAME = 'CoAIleague';
 
-export async function seedPlatformWorkspace() {
+// Module-level seeding lock — prevents concurrent runtime callers from racing
+// (routes.ts startup, ChatServerHub.seedHelpDeskRoom, supportRoutes HelpAI escalation)
+// from each running the workspace_members INSERT in parallel and violating the
+// (user_id, workspace_id) UNIQUE constraint between SELECT/INSERT or hammering
+// the row with redundant ON CONFLICT updates.
+let _platformWorkspaceSeedInFlight: Promise<{ success: true; workspaceId: string }> | null = null;
+
+export function seedPlatformWorkspace(): Promise<{ success: true; workspaceId: string }> {
+  if (_platformWorkspaceSeedInFlight) return _platformWorkspaceSeedInFlight;
+  _platformWorkspaceSeedInFlight = _seedPlatformWorkspaceImpl().finally(() => {
+    _platformWorkspaceSeedInFlight = null;
+  });
+  return _platformWorkspaceSeedInFlight;
+}
+
+async function _seedPlatformWorkspaceImpl() {
   console.log(`Creating ${PLATFORM_NAME} Support workspace for platform support operations...`);
 
   // Ensure root user exists (CRITICAL: Throw if missing to fail-fast)

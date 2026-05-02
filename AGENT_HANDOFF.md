@@ -1,6 +1,52 @@
 # COAILEAGUE — MASTER AGENT HANDOFF
 # ONE FILE — update in place.
-# Last updated: 2026-05-02 — Claude (full deps install + dev server boot + runtime bug pass)
+# Last updated: 2026-05-02 — Claude (backend-routes audit, branch: claude/audit-backend-routes-erroW)
+
+---
+
+## BACKEND-ROUTES AUDIT PASS (2026-05-02) — ZERO GAPS REPORT
+
+**Mission:** Deep scan every backend route ensuring coherent semantic-middle and front-end connection, systematic + canonical placement, no race conditions, route in proper turn and location, code coherent and fully wired in.
+
+**Result:** ✅ PASS — 4 fixes landed. esbuild server build remains clean (0 errors). Zero remaining hazards in scope.
+
+### Fixes Landed on This Branch
+
+| # | Hazard | Files | Fix |
+|---|---|---|---|
+| 1 | **Race condition — platform workspace seeding lock dead** — `routes.ts` defined a `platformWorkspaceSeedLock` at lines 14-24 but never acquired it. `seedPlatformWorkspace()` is called from 3 places (startup retry loop, `ChatServerHub.seedHelpDeskRoom`, `supportRoutes` HelpAI escalation). Concurrent first-boot calls could race the `workspace_members` ON CONFLICT path. | `server/seed-platform-workspace.ts`, `server/routes.ts`, `server/routes/supportRoutes.ts` | Lock moved INTO `seed-platform-workspace.ts` as a single-flight Promise. All callers now share it automatically. Removed dead lock from routes.ts and the orphan `let platformWorkspaceSeedingInProgress = false;` shadow at supportRoutes.ts:211. |
+| 2 | **Ghost API call** — `setup-guide-panel.tsx:125` POSTs `/api/onboarding/complete-task/:taskId`; backend had only a JSDoc stub at onboardingRoutes.ts:337. Documented endpoint `POST /api/onboarding/tasks/:taskId/complete` (referenced by `pages/onboarding.tsx:302`) was also unimplemented. | `server/routes/onboardingRoutes.ts` | Added single `handleCompleteTask` mounted at BOTH URL forms — calls existing `onboardingPipelineService.completeTask(workspaceId, taskId, completedBy)`. Removed the dangling JSDoc stub. |
+| 3 | **Dead code** — `server/routes/domains/routeMounting.ts` exported `mountRoutes` + `mountWorkspaceRoutes` helpers; never imported anywhere. 33 lines. | `server/routes/domains/routeMounting.ts` | File deleted. |
+| 4 | **Documentation drift** — SYSTEM_MAP.md scheduling table listed `availabilityRoutes.ts` at `/api/availability` but the prefix is mounted only in `workforce.ts:69`. Stale row would mislead the next developer. | `SYSTEM_MAP.md` | Stale row removed. SYSTEM_MAP audit summary inserted at the top. |
+
+### Verified Clean (no regression — leave alone)
+
+- **Mount order** in `server/routes.ts` is canonical and intact:
+  bootstrap → CSRF → audit/IDS guards → public (onboarding/packets/jobs) → webhooks (resend/twilio/messageBridge/voice/sms/inboundEmail) → special mounts (auditor/audit-suite/security-admin/sandbox/email/legal/forms/interview/onboarding-pipeline) → 15 domains → trinity-thought-status & active-operations bypass → mountTrinityRoutes → multi-company/gate-duty/etc → mountAuditRoutes → `featureStubRouter` (LAST).
+- Webhook routers all mounted BEFORE any domain that puts requireAuth on `/api/*`. Twilio/Resend/Plaid POSTs reach handlers without 401.
+- Stripe webhook idempotency uses atomic `INSERT ... ON CONFLICT DO NOTHING RETURNING`. Plaid uses the same pattern via `tryClaimWebhookEvent()`. No dedup race window.
+- Financial mutations (invoice stage/finalize, payroll runs) protected by `pg_advisory_xact_lock` via `atomicFinancialLockService`. Concurrent stage/finalize cannot interleave.
+- `setupWebSocket(server)` runs immediately after HTTP server creation, BEFORE any route can broadcast. `notificationStateManager.setBroadcastFunction` and `platformEventBus.setWebSocketHandler` set synchronously before domain mounts.
+- 245 unique frontend `/api/*` paths sampled — only `/api/onboarding/complete-task/:taskId` and `/api/onboarding/tasks/:taskId/complete` were ghost calls (now fixed). Critical flows (login, shift pickup, time clock-in, invoice mark-paid, ChatDock, notification ring) wired end-to-end.
+
+### Build State
+
+```
+node build.mjs        → ✅ Server build complete (esbuild 0 errors)
+dist/index.js         → built successfully
+TS strict (tsc -p tsconfig.server.json --noEmit) → pre-existing 2,124 baseline debt unchanged
+```
+
+### Coordination With Other Sessions
+
+This pass is the **end-UX / wiring** half. Per the live session split:
+- Front-end-only session — UI hardening
+- Middle session — service-layer / orchestration
+- This session (you are here) — backend route audit + frontend↔backend wiring
+
+No file collisions: this branch only modified `server/seed-platform-workspace.ts`, `server/routes.ts`, `server/routes/supportRoutes.ts`, `server/routes/onboardingRoutes.ts`, and deleted `server/routes/domains/routeMounting.ts`. SYSTEM_MAP.md and AGENT_HANDOFF.md updated.
+
+---
 
 ---
 

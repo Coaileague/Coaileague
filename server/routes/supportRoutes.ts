@@ -208,7 +208,6 @@ router.post('/helpos-chat', async (req, res) => {
     });
 
     if (response.shouldEscalate && response.escalationReason) {
-      let platformWorkspaceSeedingInProgress = false;
       if (workspaceId === PLATFORM_WORKSPACE_ID) {
         let existingWorkspace = await storage.getWorkspace(PLATFORM_WORKSPACE_ID);
         if (!existingWorkspace) {

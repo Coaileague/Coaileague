@@ -6,22 +6,10 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { isProduction as isProductionEnv } from "./lib/isProduction";
 
-// ============================================================================
-// PLATFORM WORKSPACE SEEDING LOCK
-// ============================================================================
-// Prevents concurrent runtime seeding attempts from racing and violating FK constraints
-let platformWorkspaceSeedingInProgress = false;
-const platformWorkspaceSeedLock = {
-  async acquire(): Promise<void> {
-    while (platformWorkspaceSeedingInProgress) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    platformWorkspaceSeedingInProgress = true;
-  },
-  release(): void {
-    platformWorkspaceSeedingInProgress = false;
-  }
-};
+// Platform workspace seeding concurrency is now enforced inside
+// `seed-platform-workspace.ts` via a single in-flight Promise. All callers
+// (this file's startup retry loop, ChatServerHub.seedHelpDeskRoom, and the
+// supportRoutes HelpAI escalation path) share that lock automatically.
 
 import { setupAuth, requireAuth } from "./auth";
 import { auditContextMiddleware } from "./middleware/audit";
