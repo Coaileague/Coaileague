@@ -1,3 +1,4 @@
+import type { Workspace } from '@shared/schema';
 import type { WorkspaceWithExtras } from '@shared/types/domainExtensions';
 import { db } from '../../db';
 import {

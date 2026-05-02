@@ -65,7 +65,8 @@ type SetupAction = {
 
 export default function OrgOwnerDashboard() {
 
-  const loadingTimedOut = useLoadingTimeout(4000); // 4s max skeleton  const [, setLocation] = useLocation();
+  const loadingTimedOut = useLoadingTimeout(4000); // 4s max skeleton
+  const [, setLocation] = useLocation();
   const { user } = useAuth();
 
   const {

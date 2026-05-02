@@ -7,7 +7,7 @@ import { incidentRoutingService } from '../incidentRoutingService';
 import { getComplianceReport } from '../timesheetReportService';
 import { createNotification } from '../notificationService';
 import { createLogger } from '../../lib/logger';
-import type { ClientWithExtras } from '@shared/types/domainExtensions';
+import type { ClientWithExtras, EmployeeWithStatus } from '@shared/types/domainExtensions';
 const log = createLogger('trinityComplianceIncidentActions');
 
 function mkAction(actionId: string, fn: (params: Record<string, unknown>) => Promise<unknown>): ActionHandler {

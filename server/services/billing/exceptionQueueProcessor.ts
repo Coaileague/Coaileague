@@ -19,6 +19,7 @@
  * - NEW_CLIENT: New client needs QuickBooks entity creation
  */
 
+import type { EmployeeWithStatus } from '@shared/types/domainExtensions';
 import { db } from '../../db';
 import { exceptionTriageQueue, users, workspaces, notifications, platformRoles } from '@shared/schema';
 import { eq, and, lt, isNull, desc, sql, inArray } from 'drizzle-orm';

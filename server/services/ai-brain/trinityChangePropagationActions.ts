@@ -12,6 +12,7 @@
  *   settings.propagate_license_expiry  — unassign officer from future shifts + create open replacements
  */
 
+import type { EmployeeWithStatus } from '@shared/types/domainExtensions';
 import { helpaiOrchestrator, type ActionHandler, type ActionRequest, type ActionResult } from '../helpai/platformActionHub';
 import { db } from '../../db';
 import { shifts, employees, payrollRuns, payrollEntries, invoices, invoiceLineItems, workspaceMembers, employeeDocuments } from '@shared/schema';

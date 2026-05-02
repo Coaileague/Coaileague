@@ -10,6 +10,7 @@
  * Guard: Checks for sentinel user to avoid duplicate runs
  */
 
+import type { EmployeeWithStatus } from '@shared/types/domainExtensions';
 import { db } from "../db";
 import { users, platformRoles, workspaces, employees, invoices, payrollEntries, orgLedger } from "@shared/schema";
 import { eq, sql, and, notInArray, ne, inArray } from "drizzle-orm";

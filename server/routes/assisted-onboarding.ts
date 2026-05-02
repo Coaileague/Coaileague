@@ -1,5 +1,4 @@
 import { type Response } from 'express';
-import type { AuthenticatedRequest } from '../rbac';
 /**
  * ASSISTED ONBOARDING ROUTES
  * ==========================

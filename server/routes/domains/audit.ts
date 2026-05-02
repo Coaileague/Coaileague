@@ -1,5 +1,4 @@
-import { type Response, type NextFunction } from 'express';
-import type { AuthenticatedRequest } from '../rbac';
+import { type Response } from 'express';
 // Domain Audit & Platform Ops — Route Mounts
 // THE LAW: No new routes without Bryan's approval.
 // Canonical prefixes: /api-docs, /api/audit/*, /api/dashboard, /api/analytics,

@@ -6,7 +6,6 @@ import { complianceReports, workspaces } from "@shared/schema";
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
 import { db } from "../db";
-import { complianceReports } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "../auth";
 import { requireManager, type AuthenticatedRequest } from "../rbac";

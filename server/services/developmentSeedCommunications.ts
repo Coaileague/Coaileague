@@ -18,6 +18,7 @@
  * PRODUCTION GUARD: never runs when isProduction() returns true
  */
 
+import type { EmployeeWithStatus } from '@shared/types/domainExtensions';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
 import { typedCount, typedExec, typedQuery } from '../lib/typedSql';

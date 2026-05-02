@@ -1,5 +1,4 @@
 import { type Response } from 'express';
-import type { AuthenticatedRequest } from '../rbac';
 /**
  * SPS 10-Step Employee Onboarding Routes — /api/sps/forms
  *

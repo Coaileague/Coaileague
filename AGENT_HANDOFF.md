@@ -1,6 +1,93 @@
 # COAILEAGUE — MASTER AGENT HANDOFF
 # ONE FILE — update in place.
-# Last updated: 2026-05-02 — Claude (full-stack validation pass, branch claude/audit-frontend-ui-Aho9f)
+# Last updated: 2026-05-02 — Claude (TS-debt reduction pass + full re-validation)
+
+---
+
+## TS-DEBT REDUCTION PASS — 2026-05-02 (third pass on branch)
+
+### Pipelines Re-Run on Fresh Install
+| Pipeline | Result |
+|---|---|
+| `npm install` | ✅ 1101 packages |
+| `npm run build` | ✅ vite 4670 modules, server build complete |
+| `npx vitest run` | ✅ **196/196 passed** (8 files / 55 tests skipped — need real DB/server) |
+| `npx tsx tests/integration/platform.test.ts` | ✅ **31/31 passing** |
+| `npx tsc --noEmit` | ⚠️ 23,954 errors (was 24,115 — **-161 fixed**) |
+
+### TS-Error Reduction by Category
+| Code | Before | After | Δ |
+|---|---|---|---|
+| TS2300 (duplicate identifier) | 124 | 12 | **-112** |
+| TS2304 (cannot find name) | 550 | 373 | **-177** |
+| TS18046 (X is unknown) | 7144 | 7152 | +8 |
+| TS2339 (no such property) | 5028 | 5078 | +50 |
+| TS2322 (not assignable) | 3053 | 3067 | +14 |
+| Other shifts | — | — | smaller drift |
+| **TOTAL** | **24,115** | **23,954** | **-161** |
+
+### Mechanical Fixes Landed
+| # | Pattern | Files | Impact |
+|---|---|---|---|
+| TS-1 | Add missing `EmployeeWithStatus` type import | 24 server files | -64 errors |
+| TS-2 | Add local `ProcessResult` result-bag type to `inboundOpportunityAgent.ts` | 1 file | -45 errors |
+| TS-3 | Rename stale `selectedClient` → `clientToEdit` in `clients-table.tsx` | 1 file | -24 errors |
+| TS-4 | Replace stale `members` → `dbParticipants` ref in two ChatDock files | 2 files | ~-3 errors |
+| TS-5 | Add `Workspace` type import to 3 server files | 3 files | -12 errors |
+| TS-6 | Fix smashed-line declarations of `setLocation` in 3 dashboards | 3 files | -16 errors |
+| TS-7 | Add `format` from `date-fns` import in 2 routes | 2 files | -6 errors |
+| TS-8 | Add `createLogger` import in `tierGuards.ts` | 1 file | -1 error |
+| TS-9 | Add `broadcastToWorkspace` import to `timeEntryRoutes.ts` | 1 file | -1 error |
+| TS-10 | Add `User` type import in `adminSupport.ts` | 1 file | -5 errors |
+| TS-11 | Strip duplicate `import React from 'react'` (44 files where `import * as React` already present) | 44 files | -88 errors (TS2300) |
+| TS-12 | Strip 6 duplicate `AuthenticatedRequest` imports + 2 `requireAuth` + 2 `z` + others | 12 files | -12 errors (TS2300) |
+
+### Files Touched
+```
+client/src/components/canvas-hub/{CanvasHubRegistry,LayerManager,ManagedDialog,
+  MobileResponsiveSheet,TransitionLoader}.tsx
+client/src/components/chatdock/{ChatDock,ConversationPane}.tsx
+client/src/components/clients-table.tsx
+client/src/components/ui/<all-44-shadcn-files>.tsx
+client/src/pages/dashboards/{ContractorDashboard,OrgOwnerDashboard,SupervisorDashboard}.tsx
+server/adminSupport.ts
+server/routes/{shiftRoutes,time-entry-routes,timeEntryRoutes,authCoreRoutes,
+  authRoutes,governanceInlineRoutes,hrInlineRoutes,mileageRoutes,
+  schedulesRoutes,assisted-onboarding,migration,spsFormsRoutes,
+  complianceReportsRoutes,featureStubRoutes}.ts
+server/routes/domains/audit.ts
+server/lib/businessRules.ts
+server/rbac.ts
+server/storage.ts
+server/tierGuards.ts
+server/services/ai-brain/{actionRegistry,aiBrainWorkflowExecutor,
+  intelligentScheduler/skills/intelligentScheduler,
+  trinityChangePropagationActions,trinityCommsProactiveActions,
+  trinityComplianceIncidentActions,trinityEmergencyStaffingActions,
+  trinityProactiveScanner,trinityShiftConfirmationActions,
+  trinityTimesheetPayrollCycleActions}.ts
+server/services/{autonomousScheduler,billing/exceptionQueueProcessor,
+  billing/accountState,onboardingPipelineService,bots/reportBotPdfService,
+  bots/shiftRoomBotOrchestrator,compliance/financialAuditService,
+  developmentSeedCommunications,identityService,
+  integrations/quickbooksLazySync,inboundOpportunityAgent,
+  productionSeed,sandbox/sandboxQuickBooksSimulator,
+  trinityStaffing/orchestrator}.ts
+server/scripts/export-for-production.ts
+server/utils/sensitiveFieldFilter.ts
+```
+
+### Why Not More?
+- **TS18046 (7,152 remaining)**: catch (e: unknown) → `e.message` patterns. Each call site needs context-specific handling (`(e as Error).message`, `String(e)`, `e instanceof Error ? e.message : String(e)`). Mass-sed is unsafe — would convert errors to runtime hazards.
+- **TS2339 (5,078 remaining)**: deep Drizzle type-inference issues + `Record<string, unknown>` casts that lose property knowledge. Need per-file type modeling.
+- **TS2322 / TS2345 / TS2769**: Drizzle ORM overload mismatches — typically inside `db.insert(table).values({...})` calls. Require schema refinement.
+- **Remaining TS2304 (373)**: mostly references to schema tables that don't exist (`partnerApiUsageEvents`, `aiResponses`, `clientContractTemplates`, `aiBrainJobQueue`). Fixing requires either adding the tables or removing the dead code — both are architectural decisions outside this pass.
+
+### What Did NOT Regress
+- vitest: still 196/196 passing
+- platform integration: still 31/31 passing
+- vite + esbuild build: still 0 errors
+- Frontend wiring (CoAuditorClaim, retry-keys, BANDAID-02, GC-01, WHY-01) — still in place
 
 ---
 

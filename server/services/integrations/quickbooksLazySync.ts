@@ -40,7 +40,7 @@ import { eq, and } from 'drizzle-orm';
 import { INTEGRATIONS } from '@shared/platformConfig';
 import { quickbooksOAuthService } from '../oauth/quickbooks';
 import { createLogger } from '../../lib/logger';
-import type { ClientWithExtras } from '@shared/types/domainExtensions';
+import type { ClientWithExtras, EmployeeWithStatus } from '@shared/types/domainExtensions';
 const log = createLogger('quickbooksLazySync');
 
 

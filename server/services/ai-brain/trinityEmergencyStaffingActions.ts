@@ -14,6 +14,7 @@
  *   emergency.resolve_incident    — close loop, summary, notify stakeholders
  */
 
+import type { EmployeeWithStatus } from '@shared/types/domainExtensions';
 import { helpaiOrchestrator, type ActionHandler, type ActionRequest, type ActionResult } from '../helpai/platformActionHub';
 import { db } from '../../db';
 import { 

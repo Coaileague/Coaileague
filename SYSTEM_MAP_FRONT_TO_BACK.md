@@ -417,17 +417,42 @@ Railway:
 
 ---
 
-## 9. Verified This Pass (2026-05-02)
+## 9. Verified This Pass (2026-05-02 — three iterations)
 
 | Check | Result |
 |---|---|
-| `npm install` | ✅ 1101 packages, 27s |
-| `npm run build` (vite + esbuild) | ✅ 4670 modules transformed, server+client bundles emitted |
-| `npx vitest run --project unit` | ✅ 157/157 passed (was 152/157 → fixed 5) |
-| `npx vitest run --project integration` | ✅ 39/39 passed (55 skipped — need real DB) |
-| `npx tsc --noEmit` | ⏳ in progress (large codebase) |
-| Frontend audit (orphans/handlers/forms/mutations/nav) | ✅ all clean (4 wiring fixes pushed earlier) |
+| `npm install` | ✅ 1101 packages |
+| `npm run build` (vite + esbuild) | ✅ 4670 modules transformed, 23.99s; server+client bundles emitted |
+| `npx vitest run` (full workspace) | ✅ **196/196 passed** (8 files / 55 tests skipped — need real DB/server) |
+| `npx tsx tests/integration/platform.test.ts` | ✅ **31/31 passing** (was 28/31) |
+| `npx tsc --noEmit` | ⚠️ **23,954 errors** (was 24,115 — **-161** in this pass) |
+| Frontend audit (orphans/handlers/forms/mutations/nav) | ✅ all clean (4 wiring fixes shipped) |
 | esbuild structural check (App.tsx + main.tsx) | ✅ 0 errors, 0 warnings |
+
+### TS Debt Status (per pass)
+| Pass | Errors | Δ | Notes |
+|---|---|---|---|
+| Baseline (entry) | 24,115 | — | post-feature freeze |
+| After audit fixes | 24,115 | 0 | wiring fixes only — no type changes |
+| After TS-debt sweep | **23,954** | **-161** | TS2300 down 124→12, TS2304 down 550→373 |
+
+### Top Remaining TS-Error Buckets (debt to chip away)
+| Code | Count | Fix path |
+|---|---|---|
+| TS18046 (`X is unknown`) | 7,152 | catch (e) → typed error access — per-file work |
+| TS2339 (no such property) | 5,078 | Drizzle type inference + `Record<string, unknown>` casts — per-file |
+| TS2322 (not assignable) | 3,067 | Drizzle insert/update value typings |
+| TS2345 (arg not assignable) | 2,693 | Same as above |
+| TS2769 (no overload matches) | 1,792 | Drizzle ORM overloads |
+| TS2352 (cast may be mistake) | 954 | `as` cast through `unknown` |
+| TS2571 (object is unknown) | 769 | Same as TS18046 family |
+| TS2304 (cannot find name) | 373 | Mostly missing schema tables (`partnerApiUsageEvents`, `aiResponses`, `clientContractTemplates`) — needs schema decision |
+| TS7006 (implicit any) | 307 | Add `: unknown` annotations |
+| TS18047 (`X is null`) | 213 | Null guards |
+| TS2353 (excess property) | 188 | Object literal trimming |
+| TS18048 (`X is undefined`) | 179 | Optional chaining |
+| TS2554 (wrong arg count) | 130 | Per-call review |
+| TS2300 (duplicate identifier) | 12 | Mostly `type` keyword conflicts in object literals |
 
 ---
 

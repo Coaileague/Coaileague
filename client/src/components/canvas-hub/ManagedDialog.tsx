@@ -1,6 +1,5 @@
 "use client"
 
-import React from 'react';
 import * as React from "react"
 import { useId, memo } from "react"
 import { UniversalModal, UniversalModalHeader, UniversalModalTitle, UniversalModalDescription, UniversalModalFooter, UniversalModalContent } from '@/components/ui/universal-modal'

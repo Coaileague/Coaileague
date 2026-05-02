@@ -17,6 +17,7 @@
  *   shift.scan_tomorrows_shifts      — batch confirmation sweep for all tomorrow's shifts
  */
 
+import type { EmployeeWithStatus } from '@shared/types/domainExtensions';
 import { helpaiOrchestrator, type ActionHandler, type ActionRequest, type ActionResult } from '../helpai/platformActionHub';
 import { db } from '../../db';
 import { shifts, employees, workspaceMembers, clients } from '@shared/schema';

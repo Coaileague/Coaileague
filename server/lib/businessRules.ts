@@ -1,5 +1,5 @@
 import type { Response } from 'express';
-import { Decimal , Response } from 'decimal.js';
+import { Decimal } from 'decimal.js';
 import { WORKSPACE_ROLE_HIERARCHY } from './rbac/roleDefinitions';
 
 // ─── PAY RATE RULES ───────────────────────────────────────────────────────────

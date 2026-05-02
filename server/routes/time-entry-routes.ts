@@ -1,6 +1,7 @@
 // Time Platform - Universal Time Tracking & Clock System
 // Comprehensive time tracking with clock in/out, break management, and approval workflow
 
+import type { EmployeeWithStatus } from '@shared/types/domainExtensions';
 import { Router } from 'express';
 import { db } from "../db";
 import { aiBrainService } from "../services/ai-brain/aiBrainService";
@@ -35,7 +36,7 @@ import { requireAuth } from "../auth";
 import { requireWorkspaceRole, type AuthenticatedRequest } from "../rbac";
 import { readLimiter, mutationLimiter } from "../middleware/rateLimiter";
 import { universalNotificationEngine } from "../services/universalNotificationEngine";
-import { db, pool } from '../db';
+import { pool } from '../db';
 import { checkSchedulingEligibility } from '../services/compliance/trinityComplianceEngine';
 import { storage } from '../storage';
 import { createLogger } from '../lib/logger';

@@ -14,6 +14,7 @@
  *   (d) Shift assignment in shiftRoutes.ts → auto-room creation
  */
 
+import type { EmployeeWithStatus } from '@shared/types/domainExtensions';
 import { db } from '../../db';
 import {
   chatConversations,

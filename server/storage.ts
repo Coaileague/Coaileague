@@ -255,7 +255,6 @@ import {
   employeeCertifications,
   employeeBehaviorScores,
   clientBillingSettings,
-  timeEntries,
   employeeInvitations,
   invoicePayments,
   payrollDeductions,
