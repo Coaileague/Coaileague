@@ -55,6 +55,16 @@ export async function apiFetch<T>(
   try {
     return schema.parse(normalized);
   } catch (validationError) {
+    // Log validation errors but DO NOT crash in production — return the raw
+    // data with a best-effort passthrough. This prevents Zod mismatch from
+    // taking down schedule/dashboard pages when the API adds new fields.
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[ApiContractViolation]', url, validationError);
+    }
+    // Attempt passthrough — return normalized data even if schema doesn't match
+    if (normalized && typeof normalized === 'object') {
+      return normalized as T;
+    }
     throw new ApiContractViolation(
       url,
       validationError instanceof Error

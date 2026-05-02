@@ -890,11 +890,19 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
   }, [weekStart, weekEnd]);
 
   // Fetch shifts for current week with date range filtering
+  // PERMANENT FIX: Must wait for workspaceId before firing — without it,
+  // the server returns 403 if currentWorkspaceId isn't in the session yet.
+  // Also explicitly pass workspaceId so the server doesn't have to guess.
   const shiftsQuery = useQuery<Shift[]>({
-    queryKey: ['/api/shifts', weekStart.toISOString(), weekEnd.toISOString()],
+    queryKey: ['/api/shifts', workspaceId, weekStart.toISOString(), weekEnd.toISOString()],
+    enabled: !!workspaceId,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+    retry: 1,
     queryFn: async () => {
+      const wsParam = workspaceId ? `&workspaceId=${workspaceId}` : '';
       const result = await apiFetch(
-        `/api/shifts?weekStart=${weekStart.toISOString()}&weekEnd=${weekEnd.toISOString()}&limit=500`,
+        `/api/shifts?weekStart=${weekStart.toISOString()}&weekEnd=${weekEnd.toISOString()}&limit=500${wsParam}`,
         PaginatedShiftListResponse
       );
       return result.data as unknown as Shift[];
