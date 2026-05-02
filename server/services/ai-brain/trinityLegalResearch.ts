@@ -128,7 +128,7 @@ class TrinityLegalResearchService {
       });
       const cleaned = resp.text.replace(/```json|```/g, '').trim();
       if (cleaned === 'null' || cleaned === '') return null;
-      const parsed: unknown = JSON.parse(cleaned);
+      const parsed = JSON.parse(cleaned) as Record<string, unknown>;
       if (!parsed?.statuteNumber || !parsed?.text) return null;
       return parsed;
     } catch (err) {

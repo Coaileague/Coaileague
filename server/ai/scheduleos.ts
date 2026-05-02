@@ -233,7 +233,7 @@ Respond with JSON containing: { valid: boolean, warnings: string[], recommendati
 
     log.info(`[AI Scheduling] Billed ${aiResult.tokensUsed} tokens to workspace ${wsId}`);
 
-    const validationResult: unknown = JSON.parse(aiResult.content || '{}');
+    const validationResult = JSON.parse(aiResult.content || '{}') as Record<string, unknown>;
 
     // FAIL FAST: If GPT-4 validation fails, reject the schedule
     if (validationResult.valid === false) {

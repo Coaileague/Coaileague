@@ -60,7 +60,7 @@ rfpEthicsRouter.post("/ethics/report", async (req: AuthenticatedRequest, res: Re
       const aiResult = await meteredGemini.generate({ workspaceId: workspaceId || "system", userId: "anonymous", feature: "ethics_triage", prompt });
       const jsonMatch = (aiResult as Record<string,unknown>)?.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const parsed: unknown = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
         aiCategory = parsed.category || aiCategory;
         aiSeverityScore = parsed.severity_score || aiSeverityScore;
         aiRouting = parsed.routing || aiRouting;

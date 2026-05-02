@@ -75,6 +75,20 @@ declare global {
       rawBody?: Buffer | string;
       requestId: string;
       auditContext?: AuditContext;
+      // Passport.js authentication
+      isAuthenticated(): boolean;
+      isUnauthenticated(): boolean;
+      login(user: unknown, done: (err: unknown) => void): void;
+      logout(done: (err: unknown) => void): void;
+      logIn(user: unknown, done: (err: unknown) => void): void;
+      logOut(done: (err: unknown) => void): void;
+      // Additional custom properties
+      serverAuth?: Record<string, unknown>;
+      breakGlassSession?: boolean;
+      elevationExpiresAt?: Date | string;
+      voiceCallSid?: string;
+      voiceUserId?: string;
+      voiceWorkspaceId?: string;
     }
   }
 }

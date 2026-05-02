@@ -309,7 +309,7 @@ Provide a refined recommendation in JSON:
         if (result.success) {
           const jsonMatch = result.text.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
-            const parsed: unknown = JSON.parse(jsonMatch[0]);
+            const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
             if (parsed.adjustedRate) suggestedRate = parsed.adjustedRate;
             if (parsed.reasoning) reasoning = parsed.reasoning;
             if (parsed.confidence) confidence = parsed.confidence;

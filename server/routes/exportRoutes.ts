@@ -285,7 +285,7 @@ router.post("/tenant-takeout", requireOwner, async (req: AuthenticatedRequest, r
 
     // Reuse the existing consolidated export for the core tables.
     const core = await exportAllData(workspaceId, { format: 'json' });
-    const parsed: unknown = JSON.parse(core.data);
+    const parsed = JSON.parse(core.data) as Record<string, unknown>;
 
     // Append tables introduced by this readiness-audit branch. Each query
     // is workspace-scoped (CLAUDE §G) via parameterized SQL; failure on

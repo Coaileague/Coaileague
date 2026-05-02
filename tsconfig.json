@@ -1,6 +1,15 @@
 {
-  "include": ["client/src/**/*", "shared/**/*", "server/**/*"],
-  "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
+  "include": [
+    "client/src/**/*",
+    "shared/**/*",
+    "server/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "build",
+    "dist",
+    "**/*.test.ts"
+  ],
   "compilerOptions": {
     "incremental": true,
     "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
@@ -8,7 +17,11 @@
     "target": "ES2020",
     "module": "ESNext",
     "strict": true,
-    "lib": ["ES2020", "dom", "dom.iterable"],
+    "lib": [
+      "ES2020",
+      "dom",
+      "dom.iterable"
+    ],
     "jsx": "preserve",
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -16,10 +29,26 @@
     "moduleResolution": "bundler",
     "ignoreDeprecations": "6.0",
     "baseUrl": ".",
-    "types": ["node"],
     "paths": {
-      "@/*": ["./client/src/*"],
-      "@shared/*": ["./shared/*"]
-    }
+      "@/*": [
+        "./client/src/*"
+      ],
+      "@shared/*": [
+        "./shared/*"
+      ],
+      "drizzle-orm": [
+        "./node_modules/drizzle-orm/index.d.cts"
+      ],
+      "drizzle-orm/*": [
+        "./node_modules/drizzle-orm/*.d.cts"
+      ],
+      "drizzle-orm/pg-core": [
+        "./node_modules/drizzle-orm/pg-core/index.d.cts"
+      ]
+    },
+    "typeRoots": [
+      "./node_modules/@types",
+      "./server/types"
+    ]
   }
 }

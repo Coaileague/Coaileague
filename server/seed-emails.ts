@@ -303,7 +303,7 @@ export async function seedEmails(workspaceId?: string) {
       emailCount++;
       
       // Create recipient records for the listed recipients
-      const recipients: unknown = JSON.parse(email.toAddresses as string);
+      const recipients = JSON.parse(email.toAddresses as string) as Record<string, unknown>;
       for (const recipientEmail of recipients) {
         const recipientMailboxId = createdMailboxes.get(recipientEmail);
         if (recipientMailboxId) {

@@ -388,7 +388,7 @@ Only include fields where data was found. Estimate confidence based on data clar
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       
       if (jsonMatch) {
-        const parsed: unknown = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
         return {
           employees: (parsed.employees || []).map((e: unknown) => ({ ...e, confidence: parsed.confidence || 0.7 })),
           schedules: (parsed.schedules || []).map((s: unknown) => ({ ...s, confidence: parsed.confidence || 0.7 })),

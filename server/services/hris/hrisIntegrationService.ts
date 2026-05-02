@@ -394,7 +394,7 @@ class HRISIntegrationService {
     const config = this.getProviderConfig(provider);
 
     try {
-      const statePayload: unknown = JSON.parse(Buffer.from(state, 'base64url').toString());
+      const statePayload = JSON.parse(Buffer.from(state, 'base64url').toString()) as Record<string, unknown>;
       const workspaceId = statePayload.workspaceId;
 
       const clientId = process.env[`${provider.toUpperCase()}_CLIENT_ID`] || '';

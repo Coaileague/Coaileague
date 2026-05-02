@@ -323,7 +323,7 @@ export class AutomationEngine {
       let reasoning = 'AI decision';
       
       try {
-        const parsed: unknown = JSON.parse(rawText);
+        const parsed = JSON.parse(rawText) as Record<string, unknown>;
         const validation = schema.safeParse(parsed);
         
         if (!validation.success) {
@@ -1084,7 +1084,7 @@ Return ONLY valid JSON (no markdown):
       }
 
       const text = aiResult.text || '{}';
-      const extracted: unknown = JSON.parse(text);
+      const extracted = JSON.parse(text) as Record<string, unknown>;
 
       // Log the migration action
       await auditLogger.logEvent(

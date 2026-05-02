@@ -101,7 +101,7 @@ If ANY criterion is not met, verified must be false. Err on the side of caution 
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return { verified: false, reasoning: 'Could not parse Trinity verification response.' };
 
-    const parsed: unknown = JSON.parse(jsonMatch[0]);
+    const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
     return {
       verified: Boolean(parsed.verified),
       reasoning: String(parsed.reasoning || ''),

@@ -256,7 +256,7 @@ Auto-termination applies ONLY to: arrests, law enforcement reports, confirmed cr
       const raw = (aiResponse?.text ?? '').trim();
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const parsed: unknown = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
         detectedSeverity = parsed.severity ?? detectedSeverity;
         trinitySummary = parsed.summary ?? '';
         legalFlags = parsed.legalExposureFlags ?? [];

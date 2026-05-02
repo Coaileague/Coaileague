@@ -144,7 +144,7 @@ async function qbPush(
     const text = await resp.text();
     let qbId: string | null = null;
     if (resp.ok) {
-      const data: unknown = JSON.parse(text).catch?.(() => ({})) ?? JSON.parse(text);
+      const data = JSON.parse(text).catch?.(() => ({})) ?? JSON.parse(text) as Record<string, unknown>;
       qbId = data?.Invoice?.Id ?? data?.TimeActivity?.Id ?? null;
     }
     // Converted to Drizzle ORM: ON CONFLICT

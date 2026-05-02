@@ -181,7 +181,7 @@ If any field cannot be determined, use null. Focus on accuracy over completeness
 
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const parsed: unknown = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
         return {
           success: true,
           merchant: parsed.merchant || null,
@@ -265,7 +265,7 @@ Rank by confidence (0-100). Be specific in reasoning.`;
 
       const jsonMatch = result.text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const parsed: unknown = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
         return parsed.suggestions || [];
       }
 

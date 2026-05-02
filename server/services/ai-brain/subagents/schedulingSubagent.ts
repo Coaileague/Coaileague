@@ -485,7 +485,7 @@ Generate a JSON schedule with format:
       // Parse AI response
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const parsed: unknown = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
         
         // Calculate metrics
         const schedule = parsed.schedule || [];

@@ -221,7 +221,7 @@ Trinity trusts your reasoning - don't let errors through.`;
         throw new Error('No JSON found in verification response');
       }
 
-      const parsed: unknown = JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
 
       return {
         approved: parsed.approved === true,

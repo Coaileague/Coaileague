@@ -994,7 +994,7 @@ Be concise, friendly, and genuinely helpful.`;
       
       const jsonMatch = response.text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const aiResponse: unknown = JSON.parse(jsonMatch[0]);
+        const aiResponse = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
         return {
           ...aiResponse,
           context: {

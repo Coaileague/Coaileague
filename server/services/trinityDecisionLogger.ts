@@ -193,7 +193,7 @@ ESCALATE = Too risky for AI, flag for human review`;
       try {
         const jsonMatch = response.content.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          const parsed: unknown = JSON.parse(jsonMatch[0]);
+          const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
           verdict = (['AFFIRM', 'OVERRIDE', 'ESCALATE'].includes(parsed.verdict))
             ? parsed.verdict : 'AFFIRM';
           judgeReasoning = parsed.reasoning || response.content;

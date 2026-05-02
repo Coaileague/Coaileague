@@ -135,7 +135,7 @@ To execute an action, respond with JSON in format:
         const actionMatch = response.match(/\{"action":\s*"([^"]+)",\s*"params":\s*(\{[^}]*\})\}/);
         if (actionMatch) {
           const actionId = actionMatch[1];
-          const params: unknown = JSON.parse(actionMatch[2]);
+          const params = JSON.parse(actionMatch[2]) as Record<string, unknown>;
           
           try {
             const result = await aiBrainMasterOrchestrator.executeActionWithNotification(

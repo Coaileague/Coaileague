@@ -266,7 +266,7 @@ async function runTrinityVisionAnalysis(
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return { status: 'flagged', confidenceScore: '0', reasoningText: 'Unparseable Trinity response.' };
 
-    const parsed: unknown = JSON.parse(jsonMatch[0]);
+    const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
     return {
       status: parsed.status === 'passed' ? 'passed' : 'flagged',
       confidenceScore: parseFloat(parsed.confidence_score) || 0,

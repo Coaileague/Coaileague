@@ -194,7 +194,7 @@ Deliberate. Return JSON:
     });
     const text = response.content || '';
     const cleaned = text.replace(/```json|```/g, '').trim();
-    const parsed: unknown = JSON.parse(cleaned);
+    const parsed = JSON.parse(cleaned) as Record<string, unknown>;
     return { ...parsed, dataPoints };
   } catch (err: unknown) {
     log.error('[Deliberation] AI reasoning failed:', (err instanceof Error ? err.message : String(err)));

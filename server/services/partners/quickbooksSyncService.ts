@@ -2444,7 +2444,7 @@ Respond in JSON format:
       
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const parsed: unknown = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
         
         // LLM Judge validation for retry decisions
         if (parsed.action === 'RETRY' && context.retryCount >= 2) {

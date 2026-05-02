@@ -2879,7 +2879,7 @@ Respond in JSON format:
       // Parse AI response
       const jsonMatch = (response as Record<string, unknown>).match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const parsed: unknown = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
         const recommendedIndex = parsed.recommendedIndex - 1;
         
         return {

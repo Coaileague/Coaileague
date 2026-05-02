@@ -278,7 +278,7 @@ Return a JSON object with a "subtasks" array.`;
       const text = result.text;
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const parsed: unknown = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
         if (!Array.isArray(parsed.subtasks)) {
           return { subtasks: [] };
         }
@@ -524,7 +524,7 @@ Synthesize these results into a coherent, actionable response for the user. Use 
       const text = result.text;
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const parsed: unknown = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
 
         // Format the synthesis with insights
         let synthesis = parsed.synthesis || '';

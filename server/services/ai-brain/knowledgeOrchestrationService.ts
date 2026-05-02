@@ -680,7 +680,7 @@ Think step-by-step and respond with JSON:
     const tokensUsed = meteredResult.tokensUsed.total;
 
     try {
-      const parsed: unknown = JSON.parse(text);
+      const parsed = JSON.parse(text) as Record<string, unknown>;
       return {
         steps: parsed.steps || [],
         conclusion: parsed.conclusion || 'Analysis complete',
