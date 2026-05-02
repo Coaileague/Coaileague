@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "jsx": "preserve",
+    "esModuleInterop": true,
+    "allowImportingTsExtensions": true,
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "lib": ["ES2020", "dom", "dom.iterable"],
+    "paths": {
+      "@/*": ["./client/src/*"],
+      "@shared/*": ["./shared/*"],
+      "drizzle-orm": ["./node_modules/drizzle-orm/index.d.cts"],
+      "drizzle-orm/*": ["./node_modules/drizzle-orm/*.d.cts"],
+      "drizzle-orm/pg-core": ["./node_modules/drizzle-orm/pg-core/index.d.cts"]
+    },
+    "typeRoots": ["./node_modules/@types", "./server/types"]
+  }
+}

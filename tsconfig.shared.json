@@ -1,0 +1,28 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "tsBuildInfoFile": "./node_modules/typescript/shared.tsbuildinfo",
+    "types": [
+      "node"
+    ],
+    "lib": [
+      "ES2020",
+      "dom",
+      "dom.iterable"
+    ]
+  },
+  "include": [
+    "shared/**/*",
+    "server/lib/logger.ts",
+    "server/config/platformConfig.ts",
+    "server/types/**/*",
+    "server/services/configRegistry.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "build",
+    "dist",
+    "**/*.test.ts"
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "tsBuildInfoFile": "./node_modules/typescript/client.tsbuildinfo",
+    "lib": [
+      "ES2020",
+      "dom",
+      "dom.iterable"
+    ]
+  },
+  "include": [
+    "client/src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "build",
+    "dist",
+    "**/*.test.ts"
+  ]
+}

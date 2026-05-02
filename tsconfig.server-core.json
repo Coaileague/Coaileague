@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "tsBuildInfoFile": "./node_modules/typescript/server-core.tsbuildinfo"
+  },
+  "include": [
+    "server/auth.ts",
+    "server/rbac.ts",
+    "server/db.ts",
+    "server/types/**/*",
+    "server/lib/**/*",
+    "server/config/**/*",
+    "server/middleware/**/*",
+    "shared/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "build",
+    "dist",
+    "**/*.test.ts"
+  ]
+}

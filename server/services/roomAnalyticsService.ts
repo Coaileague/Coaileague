@@ -70,7 +70,7 @@ export interface TimeSeriesPoint {
   ticketsCreated: number;
   ticketsResolved: number;
   avgResolutionTimeHours?: number;
-  aiResponses: number;
+  aiInsights: number;
   aiEscalations: number;
   sentimentPositive: number;
   sentimentNeutral: number;
@@ -386,7 +386,7 @@ export async function trackAiEscalation(
         workspaceId,
         conversationId,
         "hourly",
-        { aiResponses: 1, aiEscalations: 1 }
+        { aiInsights: 1, aiEscalations: 1 }
       );
     }
   } catch (error) {
@@ -432,7 +432,7 @@ export async function trackAiResponse(
         workspaceId,
         conversationId,
         "hourly",
-        { aiResponses: 1, aiEscalations: 0 }
+        { aiInsights: 1, aiEscalations: 0 }
       );
     }
   } catch (error) {
@@ -496,8 +496,8 @@ async function trackTimeseriesMetric(
       if (delta.ticketsResolved) {
         updateFields.ticketsResolved = sql`${roomAnalyticsTimeseries.ticketsResolved} + ${delta.ticketsResolved}`;
       }
-      if (delta.aiResponses) {
-        updateFields.aiResponses = sql`${roomAnalyticsTimeseries.aiResponses} + ${delta.aiResponses}`;
+      if (delta.aiInsights) {
+        updateFields.aiInsights = sql`${roomAnalyticsTimeseries.aiInsights} + ${delta.aiInsights}`;
       }
       if (delta.aiEscalations) {
         updateFields.aiEscalations = sql`${roomAnalyticsTimeseries.aiEscalations} + ${delta.aiEscalations}`;
@@ -524,7 +524,7 @@ async function trackTimeseriesMetric(
         newParticipants: delta.newParticipants || 0,
         ticketsCreated: delta.ticketsCreated || 0,
         ticketsResolved: delta.ticketsResolved || 0,
-        aiResponses: delta.aiResponses || 0,
+        aiInsights: delta.aiInsights || 0,
         aiEscalations: delta.aiEscalations || 0,
       });
     }

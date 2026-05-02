@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/typescript/strict-routes.tsbuildinfo"
+  },
+  "include": [
+    "server/routes/shiftRoutes.ts",
+    "server/routes/invoiceRoutes.ts",
+    "server/routes/employeeRoutes.ts",
+    "server/routes/timeEntryRoutes.ts",
+    "server/routes/payrollRoutes.ts",
+    "server/routes/clientRoutes.ts",
+    "server/routes/authCoreRoutes.ts",
+    "server/types/**/*",
+    "shared/**/*"
+  ],
+  "exclude": ["node_modules", "build", "dist", "**/*.test.ts"]
+}

@@ -876,9 +876,9 @@ export const aiBrainConfig = {
 
   // Helper functions
   isGuardrailViolated(ruleName: string, value: unknown): boolean {
-    const rules = guardrailsConfig as unknown;
+    const rules = guardrailsConfig as Record<string, unknown>;
     for (const category of Object.values(rules)) {
-      const categoryRules = category as unknown;
+      const categoryRules = category as Record<string, unknown>;
       for (const [key, limit] of Object.entries(categoryRules)) {
         if (key === ruleName && typeof limit === "number") {
           return value > limit;

@@ -8156,7 +8156,7 @@ export class DatabaseStorage implements IStorage {
 
   async createAiResponse(response: InsertAiResponse): Promise<AiResponse> {
     const [result] = await db
-      .insert(aiResponses)
+      .insert(aiInsights)
       .values(response)
       .returning();
     return result;
@@ -8165,8 +8165,8 @@ export class DatabaseStorage implements IStorage {
   async getAiResponse(id: string): Promise<AiResponse | undefined> {
     const [response] = await db
       .select()
-      .from(aiResponses)
-      .where(eq(aiResponses.id, id));
+      .from(aiInsights)
+      .where(eq(aiInsights.id, id));
     return response;
   }
 
@@ -8176,17 +8176,17 @@ export class DatabaseStorage implements IStorage {
   ): Promise<AiResponse[]> {
     let query = db
       .select()
-      .from(aiResponses)
-      .where(eq(aiResponses.workspaceId, workspaceId));
+      .from(aiInsights)
+      .where(eq(aiInsights.workspaceId, workspaceId));
 
     if (filters?.sourceType) {
-      query = (query as unknown).where(eq(aiResponses.sourceType, filters.sourceType));
+      query = (query as unknown).where(eq(aiInsights.sourceType, filters.sourceType));
     }
     if (filters?.feature) {
-      query = (query as unknown).where(eq(aiResponses.feature, filters.feature));
+      query = (query as unknown).where(eq(aiInsights.feature, filters.feature));
     }
 
-    query = query.orderBy(desc(aiResponses.createdAt));
+    query = query.orderBy(desc(aiInsights.createdAt));
 
     if (filters?.limit) {
       query = query.limit(filters.limit);
@@ -8205,23 +8205,23 @@ export class DatabaseStorage implements IStorage {
   ): Promise<AiResponse[]> {
     return await db
       .select()
-      .from(aiResponses)
+      .from(aiInsights)
       .where(and(
-        eq(aiResponses.workspaceId, workspaceId),
-        eq(aiResponses.sourceType, sourceType),
-        eq(aiResponses.sourceId, sourceId)
+        eq(aiInsights.workspaceId, workspaceId),
+        eq(aiInsights.sourceType, sourceType),
+        eq(aiInsights.sourceId, sourceId)
       ))
-      .orderBy(desc(aiResponses.createdAt));
+      .orderBy(desc(aiInsights.createdAt));
   }
 
   async updateAiResponse(id: string, workspaceId: string, data: Partial<InsertAiResponse>): Promise<AiResponse | undefined> {
     const [response] = await db
-      .update(aiResponses)
+      .update(aiInsights)
       .set({ ...data, updatedAt: new Date() })
       .where(
         and(
-          eq(aiResponses.id, id),
-          eq(aiResponses.workspaceId, workspaceId)
+          eq(aiInsights.id, id),
+          eq(aiInsights.workspaceId, workspaceId)
         )
       )
       .returning();
@@ -8230,7 +8230,7 @@ export class DatabaseStorage implements IStorage {
 
   async rateAiResponse(id: string, workspaceId: string, rating: number, feedback?: string): Promise<AiResponse | undefined> {
     const [response] = await db
-      .update(aiResponses)
+      .update(aiInsights)
       .set({
         userRating: rating,
         userFeedback: feedback,
@@ -8240,8 +8240,8 @@ export class DatabaseStorage implements IStorage {
       })
       .where(
         and(
-          eq(aiResponses.id, id),
-          eq(aiResponses.workspaceId, workspaceId)
+          eq(aiInsights.id, id),
+          eq(aiInsights.workspaceId, workspaceId)
         )
       )
       .returning();

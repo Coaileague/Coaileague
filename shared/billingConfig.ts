@@ -393,7 +393,7 @@ export const BILLING = {
       id: "addon_ai_tokens_5000",
       name: "Additional AI Tokens Pack",
       description: "5,000 tokens added immediately to account balance",
-      price: '5900', // $59 one-time
+      price: 5900, // $59 one-time
       tokens: 5000,
       isRecurring: false, // One-time purchase
       availableTiers: ["starter", "professional"],
@@ -402,7 +402,7 @@ export const BILLING = {
       id: "addon_claude_tokens_25",
       name: "Trinity Premium Tokens Pack (25)",
       description: "25 Trinity Premium tokens for RFPs, proposals, contract reviews",
-      price: '69900', // $699 one-time
+      price: 69900, // $699 one-time
       tokens: 25,
       isRecurring: false, // One-time purchase
       availableTiers: ["professional"],
@@ -697,7 +697,7 @@ export const BILLING = {
       id: "credits_ai_5000",
       name: "AI Tokens Pack",
       tokens: 5000,
-      price: '5900', // $59 in cents
+      price: 5900, // $59 in cents
       pricePerToken: 1.18, // cents per token ($0.0118)
       popular: true,
       neverExpire: true,
@@ -707,7 +707,7 @@ export const BILLING = {
       id: "credits_5000",
       name: "5,000 Tokens",
       tokens: 5000,
-      price: '4900', // $49 in cents
+      price: 4900, // $49 in cents
       pricePerToken: 0.98, // cents per token
       popular: false,
       description: "Light automation use",
@@ -716,7 +716,7 @@ export const BILLING = {
       id: "credits_25000",
       name: "25,000 Tokens",
       tokens: 25000,
-      price: '19900', // $199 in cents
+      price: 19900, // $199 in cents
       pricePerToken: 0.80,
       popular: true,
       description: "Standard business operations",
@@ -725,7 +725,7 @@ export const BILLING = {
       id: "credits_100000",
       name: "100,000 Tokens",
       tokens: 100000,
-      price: '64900', // $649 in cents
+      price: 64900, // $649 in cents
       pricePerToken: 0.65,
       popular: false,
       description: "Heavy AI usage for larger teams",
@@ -734,7 +734,7 @@ export const BILLING = {
       id: "credits_500000",
       name: "500,000 Tokens",
       tokens: 500000,
-      price: '249900', // $2,499 in cents
+      price: 249900, // $2,499 in cents
       pricePerToken: 0.50,
       popular: false,
       description: "Enterprise-scale automation",
@@ -880,7 +880,7 @@ export const BILLING = {
     starter: {
       id: "setup_starter",
       name: "Trinity Starter Setup",
-      price: '49900', // $499 one-time
+      price: 49900, // $499 one-time
       description: "Trinity configures basic scheduling, time tracking, and employee onboarding",
       includes: [
         "Organization setup & branding",
@@ -895,7 +895,7 @@ export const BILLING = {
     professional: {
       id: "setup_professional",
       name: "Trinity Professional Setup",
-      price: '149900', // $1,499 one-time
+      price: 149900, // $1,499 one-time
       description: "Full platform configuration with QuickBooks, payroll, and compliance",
       includes: [
         "Everything in Starter Setup",
@@ -913,7 +913,7 @@ export const BILLING = {
     enterprise: {
       id: "setup_enterprise",
       name: "Trinity Enterprise Setup",
-      price: '0', // Custom pricing - contact sales
+      price: 0, // Custom pricing - contact sales
       isContactSales: true,
       startsAt: 999900, // Starts at $9,999/mo base + $15/employee
       description: "White-glove setup with custom integrations and dedicated support",
