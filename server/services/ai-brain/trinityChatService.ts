@@ -1810,11 +1810,26 @@ Do NOT skip steps — decompose fully before concluding.`;
       log.warn('[TrinityChat] Dispatcher non-fatal error:', dispatchErr?.message);
     }
 
+    // PUBLIC SAFETY BOUNDARY — Trinity does not call 911, dispatch responders,
+    // or guarantee anyone's safety. A licensed human supervisor is always
+    // required. This guard rewrites any first-person 911 claim or safety
+    // guarantee that slipped through the model and appends the canonical
+    // disclaimer. Idempotent.
+    const composed = accConflict?.autoBlocked
+      ? `I need to pause before delivering that response. I detected a potential issue: ${accConflict.contradictionDescription}\n\nRecommended next step: ${accConflict.recommendedResolution}`
+      : (finalResponseText + dispatchAppend);
+    const { guardOutbound } = await import('./publicSafetyGuard');
+    const guarded = guardOutbound(composed);
+    if (guarded.rewrote) {
+      log.warn('[TrinityChat] publicSafetyGuard rewrote outbound response', {
+        sessionId: session.id,
+        flags: guarded.flags.map((f) => f.category),
+      });
+    }
+
     return {
       sessionId: session.id,
-      response: accConflict?.autoBlocked
-        ? `I need to pause before delivering that response. I detected a potential issue: ${accConflict.contradictionDescription}\n\nRecommended next step: ${accConflict.recommendedResolution}`
-        : (finalResponseText + dispatchAppend),
+      response: guarded.text,
       mode,
       usage,
       metadata: {
@@ -1827,6 +1842,11 @@ Do NOT skip steps — decompose fully before concluding.`;
           blocked: accConflict.autoBlocked,
         } : undefined,
         ...(dispatchMeta ? { dispatch: dispatchMeta } : {}),
+        publicSafetyGuard: guarded.rewrote ? {
+          rewrote: true,
+          flagCount: guarded.flags.length,
+          categories: [...new Set(guarded.flags.map((f) => f.category))],
+        } : undefined,
         thalamicSignalId: thalamicSignal?.signalId,
         thalamicPriority: thalamicSignal?.priorityScore,
       } as unknown,

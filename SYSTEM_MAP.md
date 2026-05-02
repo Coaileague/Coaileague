@@ -304,18 +304,32 @@ These are documented gaps where code is *intentionally* incomplete or where a do
 
 ## Statewide Protective Services — Live Test Readiness
 
-| Check | Status |
-|-------|--------|
-| Founder exemption wired | ✅ `founderExemption.ts` |
-| Enterprise tier granted | ✅ Permanent |
-| Login (cookie domain fixed) | ✅ |
-| Schedule loads | ✅ (React + enabled guard fixed) |
-| Employee list | ✅ |
-| Clock in/out | ✅ GPS + photo verification |
-| Invoice creation | ✅ |
-| ChatDock (Redis) | ✅ Single Redis shared across dev+prod |
-| Push notifications | ✅ Absolute icon URLs |
-| Trinity AI | ✅ (GEMINI_API_KEY required) |
+```
+1. featureStubRouter MUST stay LAST in routes.ts — never move it
+2. Trinity = ONE individual — no mode-switching, no personality toggles
+3. HelpAI = only bot field workers see
+4. Every workspace query: workspace_id predicate REQUIRED (no cross-tenant leaks)
+5. Financial writes: db.transaction() REQUIRED
+6. Money math: FinancialCalculator (decimal.js) REQUIRED — no floating-point
+7. Every document: branded PDF to tenant vault — never raw data response
+8. WebSocket: WsPayload type — never add data:any or shift?:any
+9. actionRegistry: keep < 300 total actions
+10. New route: add to correct domain file — not routes.ts directly
+11. New service: check this map for existing service before creating new
+12. Trinity legal advice: never — hard-coded refusal in all legally-adjacent outputs
+13. PUBLIC SAFETY BOUNDARY (non-negotiable):
+    - Trinity/HelpAI never call 911, dispatch police/fire/EMS, or guarantee safety
+    - Human supervisor is ALWAYS required for safety-critical decisions
+    - Enforced at 3 layers:
+        action  → trinityConscience.ts Principle 8 (hard block)
+        intent  → trinityActionDispatcher.ts PUBLIC_SAFETY_REFUSAL_PATTERNS
+        language → publicSafetyGuard.ts guardOutbound() (rewrite + disclaimer)
+    - Approved phrasing: "Our role is to observe, deter, and report"
+    - Tests: tests/security/publicSafetyGuard.test.ts +
+            tests/security/trinityConsciencePublicSafety.test.ts
+    - See CLAUDE.md "LAW: Public Safety Boundary" for full text
+    - Change requires written legal approval
+```
 
 ---
 

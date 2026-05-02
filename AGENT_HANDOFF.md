@@ -246,3 +246,24 @@ Build: 0 server + 0 client errors      ✅
 ### Follow-up cleanup in same branch
 - `vitest.workspace.ts` — added a `security` project so `tests/security/` runs by default (closes VD-05).
 - `tests/security/plaidEmployeeOwnership.test.ts` — `requireAuth` is exported from `server/auth`, not `server/rbac`; mock now covers both modules so the auth bypass actually applies.
+
+### Architecture Law added 2026-05-02 — PUBLIC SAFETY BOUNDARY
+Trinity/HelpAI **never** call 911, dispatch responders, or guarantee anyone's
+safety. A human supervisor is **always** required. This avoids public-duty /
+assumption-of-duty tort exposure and TX Occ. Code §1702 violation.
+
+Defense-in-depth enforcement landed in this branch:
+
+| Layer | File | New code |
+|---|---|---|
+| Action | `server/services/ai-brain/trinityConscience.ts` | Principle 8 — hard `block` verdict for `safety.call_911` / `emergency.dispatch` / `dispatch.911` / `*.guarantee_safety` etc. Runs FIRST so role + confirmation can't override. |
+| Intent | `server/services/trinity/trinityActionDispatcher.ts` | `PUBLIC_SAFETY_REFUSAL_PATTERNS` — chat/voice/email intents like "call 911", "dispatch police", "guarantee my safety" return `status: 'blocked'` with the canonical disclaimer before any action is queued. |
+| Language | `server/services/ai-brain/publicSafetyGuard.ts` (NEW) | `guardOutbound()` wraps every Trinity chat response. Rewrites first-person 911 claims ("I called 911", "help is on the way") and safety guarantees ("I'll keep you safe", "you're safe with me") with `[redacted: claim outside Trinity's authority]` and appends `PUBLIC_SAFETY_DISCLAIMER`. Idempotent. |
+| Tests | `tests/security/publicSafetyGuard.test.ts`, `tests/security/trinityConsciencePublicSafety.test.ts` | 30+ assertions across pattern matching, rewriting, idempotency, and conscience principle 8. |
+| Docs | `CLAUDE.md`, `SYSTEM_MAP.md` rule #13 | Full law statement with approved/prohibited phrasing tables and per-state legal basis. |
+
+Existing infrastructure was already aligned (no rewrites required):
+- `panicAlertService.ts:65-74` `PANIC_LIABILITY_NOTICE` — bundled with every panic API response.
+- `stateRegulatoryKnowledgeBase.ts` — per-state `prohibitedLanguage` lists already enumerate "Never say 'we guarantee your safety'."
+- `smsService.ts:25` already declares "Autonomous 911 contact removed by design."
+- `bots/shiftRoomBotOrchestrator.ts:1240` and `compliance/stateRegulatoryKnowledgeBase.ts` instruct the human to call 911 — that's approved phrasing, not Trinity claiming dispatch.
