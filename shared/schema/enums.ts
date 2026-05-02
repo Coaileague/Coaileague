@@ -188,6 +188,9 @@ export const employeeDocumentTypeEnum = pgEnum('employee_document_type', [
   'training_certificate_level_iii',// Level III armed course cert
   'firearm_proficiency_cert',      // Annual firearm proficiency (commissioned)
   'license_application_proof',     // Proof of pending TOPS application
+  // Veteran verification — gates the +4% veteran weight on the cross-tenant score.
+  // Self-attestation alone does NOT count; a DD-214 must be uploaded and reviewed.
+  'dd_214',                        // DD-214 (military discharge certificate)
 ]);
 
 // Guard card compliance status (5-tier system — Texas DPS / OC §1702.230)

@@ -204,6 +204,24 @@ router.post("/terminations", requireAuth, async (req: AuthenticatedRequest, res)
       }
     });
 
+    // Closing-score freeze — system-only, immutable. Bias firewall: this is
+    // the audit-of-record that follows the officer to any future tenant.
+    scheduleNonBlocking('termination.closing-score-freeze', async () => {
+      if (!validated.employeeId) return;
+      try {
+        const { onOfficerTerminated } = await import('../services/scoring/officerLinkageService');
+        const sepType = ((validated as Record<string, unknown>).terminationType as string | undefined)
+          ?? 'involuntary';
+        await onOfficerTerminated({
+          employeeId: validated.employeeId,
+          workspaceId: workspace.id,
+          separationType: sepType as 'voluntary' | 'involuntary' | 'layoff' | 'end_of_contract' | 'retirement' | 'other',
+        });
+      } catch (err: unknown) {
+        log.warn('[ClosingScore] Freeze failed (non-fatal):', (err instanceof Error ? err.message : String(err)));
+      }
+    });
+
     interface EquipmentChecklistItem { assignmentId: string; itemName: string; serialNumber: string | null; category: string; checkoutDate: string | null; expectedReturnDate: string | null; }
     let equipmentChecklist: EquipmentChecklistItem[] = [];
     try {

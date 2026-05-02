@@ -447,6 +447,14 @@ export default function UniversalMarketing() {
         >
           Pricing
         </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => { window.location.href = '/honor-roll'; }}
+          className="text-xs sm:text-sm"
+        >
+          Honor Roll
+        </Button>
       </div>
       </main>
 

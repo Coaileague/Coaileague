@@ -1,11 +1,17 @@
 /**
- * Employee Recognition - Gamification & Achievements Dashboard
- * 
- * Features:
- * - Customizable badges with categories
- * - Leaderboards for points and achievements
- * - Recognition feed showing recent awards
- * - Badge management for admins
+ * Employee Recognition — DEPRECATED gamification surface.
+ *
+ * The CoAIleague platform no longer uses gamification (badges, points,
+ * leaderboards, levels, streaks) for officers. There is a single objective
+ * 0-100 cross-tenant score per officer, computed by the system from work
+ * performance, attendance, paperwork, training, behavior, and Trinity
+ * interview signals. See server/services/scoring/scoreEngineService.ts.
+ *
+ * The underlying tables (achievements, employee_points, leaderboard_cache,
+ * employee_achievements) remain in place per the schema law (Zero DROP TABLE
+ * ever) but this page is no longer linked from the workspace navigation.
+ * For the new score surface, see /api/scoring/officer/me and the public
+ * /honor-roll page.
  */
 
 import { useState } from "react";

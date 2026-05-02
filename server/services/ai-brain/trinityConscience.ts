@@ -16,6 +16,15 @@
  *                                       human supervisor is always required.
  *                                       (See publicSafetyGuard.ts for the
  *                                       language-layer enforcement.)
+ * Principle 9 — CLOSING_SCORE_IMMUTABILITY: Once an officer's closing score
+ *                                       has been frozen for a tenant, it
+ *                                       cannot be modified or removed by
+ *                                       any actor. Only append-of-new-entry
+ *                                       is allowed. This is the bias
+ *                                       firewall — a manager cannot
+ *                                       retroactively rewrite a closing
+ *                                       score after a contentious
+ *                                       termination.
  */
 
 import { db } from '../../db';
@@ -187,6 +196,35 @@ const PUBLIC_SAFETY_REFUSAL_REASON =
   'in immediate danger, call 9-1-1 directly.';
 
 // ============================================================================
+// PRINCIPLE 9 — CLOSING SCORE IMMUTABILITY
+// Action IDs that touch the cross-tenant closing-score audit trail. Mutations
+// must be append-only — overwrites or deletions are categorically refused.
+// The score engine and closing-score service write through these action IDs;
+// every other path is treated as tampering.
+// ============================================================================
+
+const CLOSING_SCORE_ACTIONS = new Set([
+  'score.append_closing',           // ALLOWED — only mode of write
+  'score.modify_closing',           // BLOCKED — would rewrite history
+  'score.delete_closing',           // BLOCKED — would erase history
+  'score.recompute_closing',        // BLOCKED — closing score is frozen
+  'globalOfficers.update_closing_scores', // BLOCKED — direct table mutation
+]);
+
+const CLOSING_SCORE_BLOCKED = new Set([
+  'score.modify_closing',
+  'score.delete_closing',
+  'score.recompute_closing',
+  'globalOfficers.update_closing_scores',
+]);
+
+const CLOSING_SCORE_IMMUTABILITY_REASON =
+  'Closing scores are immutable once frozen. The bias firewall — established ' +
+  'so a future tenant sees an objective history of every prior employer — ' +
+  'allows append-only writes through score.append_closing. Modification or ' +
+  'deletion of an existing closing-score entry is categorically refused.';
+
+// ============================================================================
 // PRINCIPLE 6 — BOT SCOPE
 // Bots are only authorized for their designated action categories.
 // ============================================================================
@@ -269,6 +307,13 @@ export async function evaluateConscience(ctx: ConscienceContext): Promise<Consci
   // type can override. This is a categorical refusal, not a confirmation gate.
   if (isPublicSafetyBoundaryViolation(actionId)) {
     return block('PUBLIC_SAFETY_BOUNDARY', PUBLIC_SAFETY_REFUSAL_REASON);
+  }
+
+  // ── PRINCIPLE 9: CLOSING SCORE IMMUTABILITY ──────────────────────────────
+  // Categorical refusal — no role, no confirmation flag overrides. Append-only
+  // is the only path for closing-score writes (see closingScoreService).
+  if (CLOSING_SCORE_BLOCKED.has(actionId)) {
+    return block('CLOSING_SCORE_IMMUTABILITY', CLOSING_SCORE_IMMUTABILITY_REASON);
   }
 
   // ── PRINCIPLE 1: WORKSPACE ISOLATION ──────────────────────────────────────

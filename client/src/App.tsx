@@ -437,6 +437,8 @@ const RecruitmentPage = lazy(() => import("@/pages/recruitment"));
 const CandidateProfilePage = lazy(() => import("@/pages/candidate-profile"));
 const OnboardingTasksPage = lazy(() => import("@/pages/onboarding-tasks"));
 const PublicJobBoard = lazy(() => import("@/pages/public-job-board"));
+const HonorRoll = lazy(() => import("@/pages/honor-roll"));
+const TenantScoreDashboard = lazy(() => import("@/pages/tenant-score-dashboard"));
 const TrainingCompliancePage = lazy(() => import("@/pages/training-compliance"));
 const SubcontractorManagementPage = lazy(() => import("@/pages/subcontractor-management"));
 const ClientSatisfactionPage = lazy(() => import("@/pages/client-satisfaction"));
@@ -717,6 +719,7 @@ function AppContent() {
     "/universal-marketing",
     "/client-status-lookup",
     "/go-live",
+    "/honor-roll",
   ]);
   
   const isPublicRoute = PUBLIC_ROUTES.has(currentPath) ||
@@ -858,6 +861,7 @@ function AppContent() {
               <Route path="/packet-portal/:token"><ErrorBoundary><Suspense fallback={<PageLoader />}><EmployeePacketPortal /></Suspense></ErrorBoundary></Route>
               <Route path="/client-signup"><ErrorBoundary><Suspense fallback={<PageLoader />}><ClientSignup /></Suspense></ErrorBoundary></Route>
               <Route path="/jobs/:workspaceId"><ErrorBoundary><Suspense fallback={<PageLoader />}><PublicJobBoard /></Suspense></ErrorBoundary></Route>
+              <Route path="/honor-roll"><ErrorBoundary><Suspense fallback={<PageLoader />}><HonorRoll /></Suspense></ErrorBoundary></Route>
               <Route path="/forms/:token"><ErrorBoundary><Suspense fallback={<PageLoader />}><PublicFormPage /></Suspense></ErrorBoundary></Route>
               <Route path="/interview/:token"><ErrorBoundary><Suspense fallback={<PageLoader />}><InterviewChatroomPage /></Suspense></ErrorBoundary></Route>
               <Route path="/onboarding/progress/:id"><ErrorBoundary><Suspense fallback={<PageLoader />}><OnboardingProgressPage /></Suspense></ErrorBoundary></Route>
@@ -1045,6 +1049,11 @@ function AppContent() {
                 <Route path="/owner-analytics">
                   <OwnerRoute>
                     <ErrorBoundary><OwnerAnalytics /></ErrorBoundary>
+                  </OwnerRoute>
+                </Route>
+                <Route path="/tenant-score">
+                  <OwnerRoute>
+                    <ErrorBoundary><Suspense fallback={<PageLoader />}><TenantScoreDashboard /></Suspense></ErrorBoundary>
                   </OwnerRoute>
                 </Route>
 
@@ -1637,6 +1646,11 @@ function AppContent() {
                 <Route path="/owner-analytics">
                   <OwnerRoute>
                     <ErrorBoundary><OwnerAnalytics /></ErrorBoundary>
+                  </OwnerRoute>
+                </Route>
+                <Route path="/tenant-score">
+                  <OwnerRoute>
+                    <ErrorBoundary><Suspense fallback={<PageLoader />}><TenantScoreDashboard /></Suspense></ErrorBoundary>
                   </OwnerRoute>
                 </Route>
 

@@ -36,6 +36,7 @@ import performanceNoteRouter from "../performanceNoteRoutes";
 import disciplinaryRecordRouter from "../disciplinaryRecordRoutes";
 import onboardingTaskRouter from "../onboardingTaskRoutes";
 import recognitionRouter from "../recognitionRoutes";
+import scoringRouter, { publicRouter as scoringPublicRouter } from "../scoringRoutes";
 import { clockinPinRouter } from "../clockinPinRoutes";
 import { identityPinRouter } from "../identityPinRoutes";
 import { employmentVerifyRouter } from "../employmentVerifyRoutes";
@@ -98,6 +99,12 @@ export function mountWorkforceRoutes(app: Express): void {
   app.use("/api/onboarding-tasks", requireAuth, ensureWorkspaceAccess, onboardingTaskRouter);
   // Phase 35T: Officer Recognition, Awards & Culture Building
   app.use("/api/recognition", requireAuth, ensureWorkspaceAccess, recognitionRouter);
+  // Cross-tenant scoring system — officer score, tenant score, move-up recs.
+  // The scoring router handles its own auth per-route (some endpoints are
+  // workspace-scoped, some are owner-only). The public sub-router serves the
+  // /api/public/honor-roll endpoint with no auth.
+  app.use(scoringPublicRouter);
+  app.use(requireAuth, ensureWorkspaceAccess, scoringRouter);
   app.use("/api/invitations", requireAuth, ensureWorkspaceAccess, inviteRouter);
   // Phase 57: Clock-in PIN management (set/verify/clear/status per employee)
   app.use("/api/employees", requireAuth, ensureWorkspaceAccess, clockinPinRouter);

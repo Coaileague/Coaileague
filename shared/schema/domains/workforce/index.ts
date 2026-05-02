@@ -1440,6 +1440,11 @@ export const employees = pgTable("employees", {
   ssnHash: varchar("ssn_hash"),
   ssnLast4: varchar("ssn_last4", { length: 4 }),
 
+  // Cross-tenant identity link → global_officers.id. Set on hire when the
+  // SSN fingerprint resolves an existing global officer or creates a new one.
+  // The cross-tenant composite score and closing-score history live there.
+  globalOfficerId: varchar("global_officer_id"),
+
   // Compliance pay classification — drives W-4 vs W-9 routing in onboarding wizard
   // Separate from payType ('hourly'/'salary') which is payroll-side
   compliancePayType: varchar("compliance_pay_type"), // 'w2' | '1099'
@@ -2035,5 +2040,164 @@ export const insertEmployeeTerminationSchema = createInsertSchema(employeeTermin
 
 export type InsertEmployeeTermination = z.infer<typeof insertEmployeeTerminationSchema>;
 export type EmployeeTermination = typeof employeeTerminations.$inferSelect;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// global_officers
+// Cross-tenant officer identity. One row per real human, keyed by a deterministic
+// HMAC fingerprint of their SSN. Survives termination at any single tenant. The
+// composite score, veteran/bilingual flags, and the immutable closing-score
+// history live here so they follow the officer to any tenant on the platform.
+//
+// Per-tenant employees row stays the source of truth for employment context;
+// employees.global_officer_id (added separately) joins back here.
+// ─────────────────────────────────────────────────────────────────────────────
+export const globalOfficers = pgTable("global_officers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+
+  // Identity — HMAC-SHA256(SSN, platform pepper). Deterministic and searchable
+  // across tenants. The bcrypt ssn_hash on employees stays for verify-only use.
+  ssnFingerprint: varchar("ssn_fingerprint").notNull().unique(),
+
+  legalFirstName: varchar("legal_first_name").notNull(),
+  legalLastName: varchar("legal_last_name").notNull(),
+  dateOfBirth: date("date_of_birth"),
+
+  // Score weights inputs that survive cross-tenant
+  veteranStatus: boolean("veteran_status").default(false),
+  veteranVerifiedAt: timestamp("veteran_verified_at"),    // requires DD-214 upload review
+  veteranDocumentId: varchar("veteran_document_id"),       // employeeDocuments row that proves it
+  primaryLanguages: text("primary_languages").array().default(sql`ARRAY['en']::text[]`),
+  bilingualVerified: boolean("bilingual_verified").default(false),
+
+  // The single composite score, 0-100. Replaces every points/badges/level surface.
+  currentScore: integer("current_score").default(75),
+  currentTier: varchar("current_tier").default("favorable"),
+  // highly_favorable | favorable | less_favorable | low_priority | minimum_priority | hard_blocked
+  scoreFactorBreakdown: jsonb("score_factor_breakdown"), // weighted dimension contributions
+
+  // Closing-score history — append-only, immutable per row (enforced via Conscience).
+  // Each entry: { tenantId, tenantName, score, tier, computedAt, factorBreakdown, separationType }
+  closingScores: jsonb("closing_scores").default(sql`'[]'::jsonb`).notNull(),
+
+  // Public recognition consent — required to appear on the public honor roll.
+  // Captured separately from any tenant relationship.
+  publicRecognitionConsent: boolean("public_recognition_consent").default(false),
+  publicRecognitionConsentAt: timestamp("public_recognition_consent_at"),
+
+  // Lifecycle
+  firstSeenAt: timestamp("first_seen_at").defaultNow(),
+  lastUpdatedAt: timestamp("last_updated_at").defaultNow(),
+  lastScoreRecomputeAt: timestamp("last_score_recompute_at"),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("global_officers_fingerprint_idx").on(table.ssnFingerprint),
+  index("global_officers_score_idx").on(table.currentScore),
+  index("global_officers_tier_idx").on(table.currentTier),
+  index("global_officers_consent_idx").on(table.publicRecognitionConsent),
+]);
+
+export const insertGlobalOfficerSchema = createInsertSchema(globalOfficers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertGlobalOfficer = z.infer<typeof insertGlobalOfficerSchema>;
+export type GlobalOfficer = typeof globalOfficers.$inferSelect;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// tenant_scores
+// System-computed score per workspace (tenant company). Snapshot per period —
+// never overwritten — so trend over time is readable. Inputs: turnover, pay vs.
+// platform peers, shift availability, role diversity, internal mobility,
+// license upkeep, payroll reliability, aggregate officer compliance.
+// ─────────────────────────────────────────────────────────────────────────────
+export const tenantScores = pgTable("tenant_scores", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+
+  periodType: varchar("period_type").notNull(), // 'monthly' | 'quarterly'
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+
+  // Composite 0-100
+  overallScore: integer("overall_score").notNull(),
+  tier: varchar("tier").notNull(), // 'excellent' | 'strong' | 'fair' | 'weak' | 'critical'
+
+  // Weighted dimension scores (each 0-100)
+  turnoverScore: integer("turnover_score"),
+  payCompetitivenessScore: integer("pay_competitiveness_score"),
+  workAvailabilityScore: integer("work_availability_score"),
+  roleDiversityScore: integer("role_diversity_score"),
+  internalMobilityScore: integer("internal_mobility_score"),
+  licenseUpkeepScore: integer("license_upkeep_score"),
+  payrollReliabilityScore: integer("payroll_reliability_score"),
+  aggregateComplianceScore: integer("aggregate_compliance_score"),
+
+  // Raw inputs preserved for audit
+  rawInputs: jsonb("raw_inputs"),
+
+  // Computed by which engine version
+  engineVersion: varchar("engine_version").default("v1.0"),
+
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("tenant_scores_workspace_idx").on(table.workspaceId),
+  index("tenant_scores_period_idx").on(table.workspaceId, table.periodEnd),
+  index("tenant_scores_score_idx").on(table.overallScore),
+]);
+
+export const insertTenantScoreSchema = createInsertSchema(tenantScores).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTenantScore = z.infer<typeof insertTenantScoreSchema>;
+export type TenantScore = typeof tenantScores.$inferSelect;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// honor_roll_selections
+// Append-only ledger of CoAIleague Officer of the Month / Year picks, made by
+// the system (no human voting) once per period. The public honor-roll page
+// reads from here. Selection requires globalOfficers.publicRecognitionConsent.
+// ─────────────────────────────────────────────────────────────────────────────
+export const honorRollSelections = pgTable("honor_roll_selections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  globalOfficerId: varchar("global_officer_id").notNull(),
+
+  awardType: varchar("award_type").notNull(), // 'officer_of_month' | 'officer_of_year'
+  periodLabel: varchar("period_label").notNull(), // e.g. '2026-04', '2026'
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+
+  // Snapshot of qualifying state at the moment of selection
+  scoreAtSelection: integer("score_at_selection").notNull(),
+  tierAtSelection: varchar("tier_at_selection"),
+  monthsAboveThreshold: integer("months_above_threshold"),
+
+  // For tenant marketing — workspace at time of selection
+  featuredWorkspaceId: varchar("featured_workspace_id"),
+  featuredWorkspaceName: varchar("featured_workspace_name"),
+
+  // Public payload (intentionally PII-light)
+  displayFirstName: varchar("display_first_name").notNull(), // first name only
+  displayLastInitial: varchar("display_last_initial", { length: 1 }).notNull(),
+  photoConsent: boolean("photo_consent").default(false),
+  photoUrl: text("photo_url"),
+
+  publishedAt: timestamp("published_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("honor_roll_period_award_idx").on(table.awardType, table.periodLabel),
+  index("honor_roll_officer_idx").on(table.globalOfficerId),
+  index("honor_roll_period_idx").on(table.periodStart, table.periodEnd),
+]);
+
+export const insertHonorRollSelectionSchema = createInsertSchema(honorRollSelections).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertHonorRollSelection = z.infer<typeof insertHonorRollSelectionSchema>;
+export type HonorRollSelection = typeof honorRollSelections.$inferSelect;
 
 export * from './extended';
