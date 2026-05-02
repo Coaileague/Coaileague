@@ -1,3 +1,4 @@
+import type { EmployeeWithStatus } from '@shared/types/domainExtensions';
 import { db } from '../../db';
 import { 
   clients, employees, invoices, invoiceLineItems, payrollRuns, payrollEntries,

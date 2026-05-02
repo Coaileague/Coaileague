@@ -46,7 +46,7 @@ export type StepAction =
   | { type: 'shell'; command: string; cwd?: string }
   | { type: 'http_request'; url: string; method: string; body?: unknown; headers?: Record<string, string> }
   | { type: 'db_query'; query: string; params?: unknown[] }
-  | { type: 'notify'; title: string; message: string; type: 'info' | 'success' | 'warning' | 'error' }
+  | { type: 'notify'; title: string; message: string; severity: 'info' | 'success' | 'warning' | 'error' }
   | { type: 'wait'; duration: number }
   | { type: 'custom'; handler: string; params?: Record<string, unknown> };
 

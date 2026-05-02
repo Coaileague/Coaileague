@@ -10,6 +10,7 @@
  * - Stripe coupon integration for discount application
  */
 
+import type { Workspace } from '@shared/schema';
 import crypto from 'crypto';
 import { db } from '../db';
 import { eq, and, desc, sql, count } from 'drizzle-orm';

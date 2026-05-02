@@ -10,6 +10,7 @@
  * - Tamper-evident logging with checksums
  */
 
+import type { EmployeeWithStatus } from '@shared/types/domainExtensions';
 import crypto from 'crypto';
 import { db } from '../../db';
 import { auditLogs, invoices, payrollRuns } from '@shared/schema';

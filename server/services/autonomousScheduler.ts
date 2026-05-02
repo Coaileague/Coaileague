@@ -8,6 +8,7 @@
  * All automation activities are logged for compliance tracking.
  */
 
+import type { EmployeeWithStatus } from '@shared/types/domainExtensions';
 import { NotificationDeliveryService } from './notificationDeliveryService';
 import cron from 'node-cron';
 import { CRON } from '../config/platformConfig';

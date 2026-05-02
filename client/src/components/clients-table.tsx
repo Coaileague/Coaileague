@@ -783,30 +783,30 @@ export function ClientsTable({ workspaceId }: ClientsTableProps) {
   }
 
   const handleClose = () => {
-    if (editFormData.firstName !== (selectedClient?.firstName || "") ||
-        editFormData.lastName !== (selectedClient?.lastName || "") ||
-        editFormData.companyName !== (selectedClient?.companyName || "") ||
-        editFormData.category !== (selectedClient?.category || "other") ||
-        editFormData.email !== (selectedClient?.email || "") ||
-        editFormData.phone !== (selectedClient?.phone || "") ||
-        editFormData.address !== (selectedClient?.address || "") ||
-        editFormData.addressLine2 !== (selectedClient?.addressLine2 || "") ||
-        editFormData.city !== (selectedClient?.city || "") ||
-        editFormData.state !== (selectedClient?.state || "") ||
-        editFormData.postalCode !== (selectedClient?.postalCode || "") ||
-        editFormData.notes !== (selectedClient?.notes || "") ||
-        editFormData.billableRate !== (selectedClient?.billableRate?.toString() || "") ||
-        editFormData.billingCycle !== (selectedClient?.billingCycle || "monthly") ||
-        editFormData.paymentTermsDays !== (selectedClient?.paymentTermsDays?.toString() || "") ||
-        editFormData.preferredPaymentMethod !== (selectedClient?.preferredPaymentMethod || "check") ||
-        editFormData.autoSendInvoice !== (selectedClient?.autoSendInvoice ?? true) ||
-        editFormData.pocName !== (selectedClient?.pocName || "") ||
-        editFormData.pocTitle !== (selectedClient?.pocTitle || "") ||
-        editFormData.pocPhone !== (selectedClient?.pocPhone || "") ||
-        editFormData.pocEmail !== (selectedClient?.pocEmail || "") ||
-        editFormData.apContactName !== (selectedClient?.apContactName || "") ||
-        editFormData.apContactEmail !== (selectedClient?.apContactEmail || "") ||
-        editFormData.apContactPhone !== (selectedClient?.apContactPhone || "")) {
+    if (editFormData.firstName !== (clientToEdit?.firstName || "") ||
+        editFormData.lastName !== (clientToEdit?.lastName || "") ||
+        editFormData.companyName !== (clientToEdit?.companyName || "") ||
+        editFormData.category !== (clientToEdit?.category || "other") ||
+        editFormData.email !== (clientToEdit?.email || "") ||
+        editFormData.phone !== (clientToEdit?.phone || "") ||
+        editFormData.address !== (clientToEdit?.address || "") ||
+        editFormData.addressLine2 !== (clientToEdit?.addressLine2 || "") ||
+        editFormData.city !== (clientToEdit?.city || "") ||
+        editFormData.state !== (clientToEdit?.state || "") ||
+        editFormData.postalCode !== (clientToEdit?.postalCode || "") ||
+        editFormData.notes !== (clientToEdit?.notes || "") ||
+        editFormData.billableRate !== (clientToEdit?.billableRate?.toString() || "") ||
+        editFormData.billingCycle !== (clientToEdit?.billingCycle || "monthly") ||
+        editFormData.paymentTermsDays !== (clientToEdit?.paymentTermsDays?.toString() || "") ||
+        editFormData.preferredPaymentMethod !== (clientToEdit?.preferredPaymentMethod || "check") ||
+        editFormData.autoSendInvoice !== (clientToEdit?.autoSendInvoice ?? true) ||
+        editFormData.pocName !== (clientToEdit?.pocName || "") ||
+        editFormData.pocTitle !== (clientToEdit?.pocTitle || "") ||
+        editFormData.pocPhone !== (clientToEdit?.pocPhone || "") ||
+        editFormData.pocEmail !== (clientToEdit?.pocEmail || "") ||
+        editFormData.apContactName !== (clientToEdit?.apContactName || "") ||
+        editFormData.apContactEmail !== (clientToEdit?.apContactEmail || "") ||
+        editFormData.apContactPhone !== (clientToEdit?.apContactPhone || "")) {
       if (!confirm('You have unsaved changes. Discard them?')) return;
     }
     setEditDialogOpen(false);

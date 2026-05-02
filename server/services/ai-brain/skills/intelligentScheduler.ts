@@ -1,3 +1,4 @@
+import type { EmployeeWithStatus } from '@shared/types/domainExtensions';
 import { BaseSkill } from './base-skill';
 import type {
   SkillManifest,

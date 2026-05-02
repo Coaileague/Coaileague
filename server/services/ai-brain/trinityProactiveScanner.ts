@@ -25,7 +25,7 @@ import { complianceEnforcementService } from '../compliance/complianceEnforcemen
 import { createNotification } from '../notificationService';
 import { briefingChannelService } from '../briefingChannelService';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
-import type { ClientWithExtras } from '@shared/types/domainExtensions';
+import type { ClientWithExtras, EmployeeWithStatus } from '@shared/types/domainExtensions';
 
 export interface BriefItem {
   rank?: number;

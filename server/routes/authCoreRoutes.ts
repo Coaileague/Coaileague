@@ -82,7 +82,6 @@ import {
   resetPassword,
   validatePassword,
   verifyEmailToken,
-  requireAuth,
 } from "../auth";
 import { checkWorkspacePaymentStatus, hasPlatformWideAccess, getUserPlatformRole , type AuthenticatedRequest} from "../rbac";
 import { emailService } from "../services/emailService";

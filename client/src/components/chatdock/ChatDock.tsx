@@ -2552,8 +2552,8 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
               { id: '@Trinity', name: 'Trinity', role: 'AI Brain', badge: 'AI', color: 'hsl(271 81% 56%)' },
               { id: '@HelpAI', name: 'HelpAI', role: 'Field Supervisor', badge: 'BOT', color: 'hsl(38 92% 50%)' },
             ];
-            const memberMentions = (members ?? []).map((m) => ({
-              id: `@${m.firstName}${m.lastName}`,
+            const memberMentions = (dbParticipants ?? []).map((m: { firstName?: string; lastName?: string; workspaceRole?: string }) => ({
+              id: `@${m.firstName ?? ''}${m.lastName ?? ''}`,
               name: `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim(),
               role: m.workspaceRole || 'Member',
               badge: null as string | null,

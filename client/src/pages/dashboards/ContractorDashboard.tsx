@@ -21,7 +21,8 @@ const pageConfig: CanvasPageConfig = {
 
 export default function ContractorDashboard() {
 
-  const loadingTimedOut = useLoadingTimeout(4000); // 4s max skeleton  const [, setLocation] = useLocation();
+  const loadingTimedOut = useLoadingTimeout(4000); // 4s max skeleton
+  const [, setLocation] = useLocation();
   const { user } = useAuth();
 
   const { data: earningsData, isLoading: earningsLoading, isError: earningsIsError, error: earningsError, refetch: refetchEarnings } = useQuery<{

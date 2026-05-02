@@ -8,6 +8,7 @@
  * PDF is WORM-locked on save (immutable via metadata flag).
  */
 
+import type { EmployeeWithStatus } from '@shared/types/domainExtensions';
 import PDFDocument from 'pdfkit';
 import { db } from '../../db';
 import {

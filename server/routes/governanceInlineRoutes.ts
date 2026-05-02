@@ -1,7 +1,6 @@
 import { sanitizeError } from '../middleware/errorHandler';
 import { Router } from "express";
 import { requireAuth } from "../auth";
-import { requireAuth } from "../auth";
 import { requireOwner, requireManager, requirePlatformStaff, attachWorkspaceId, type AuthenticatedRequest } from "../rbac";
 import { requireProfessional } from "../tierGuards";
 import { storage } from "../storage";

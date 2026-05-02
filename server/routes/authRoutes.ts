@@ -1,5 +1,4 @@
 import { type Response } from 'express';
-import type { AuthenticatedRequest } from '../rbac';
 import { Router, Request } from "express";
 import crypto from 'crypto';
 import { storage } from "../storage";

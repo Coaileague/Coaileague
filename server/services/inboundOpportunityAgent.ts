@@ -41,6 +41,15 @@ import { emailService } from './emailService';
 import { clientProspectService } from './clientProspectService';
 import { staffingClaimService } from './staffingClaimService';
 
+// Local result-bag type for the multi-stage mutate() callback. Used in
+// (processResult as ProcessResult) casts where the runtime accumulates
+// stage-specific fields (createdOffers, offerExpiresAt, offer, etc.).
+type ProcessResult = Record<string, unknown> & {
+  createdOffers?: unknown[];
+  offerExpiresAt?: Date;
+  offer?: { id: string };
+};
+
 // ============================================================================
 // TYPES
 // ============================================================================

@@ -34,6 +34,7 @@
  * - Integration with ExecutionPipeline billing
  */
 
+import type { EmployeeWithStatus } from '@shared/types/domainExtensions';
 import crypto from 'crypto';
 import { db } from '../../db';
 import { shifts, employees, clients, workspaces } from '@shared/schema';

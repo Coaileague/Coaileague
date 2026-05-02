@@ -5,6 +5,9 @@ import { universalAudit } from './services/universalAuditService';
 import { GRANDFATHERED_TENANT_ID } from './lib/tiers/tierDefinitions';
 import { getUpgradeUrl } from './lib/tiers/tierDefinitions';
 import { PLATFORM_WORKSPACE_ID } from './services/billing/billingConstants';
+import { createLogger } from './lib/logger';
+
+const log = createLogger('tierGuards');
 
 export type SubscriptionTier = 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise' | 'strategic';
 

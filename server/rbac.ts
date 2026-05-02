@@ -1147,7 +1147,6 @@ export async function reactivateWorkspace(workspaceId: string): Promise<boolean>
 // Controls cross-org admin access with audit logging and org freeze capability
 // ============================================================================
 
-import { storage } from './storage';
 import { createLogger } from './lib/logger';
 const log = createLogger('rbac');
 

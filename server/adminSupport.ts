@@ -1,6 +1,7 @@
 // Admin Support Service - Platform-level customer support tools
 // For non-technical support staff to help customers
 
+import type { Workspace } from '@shared/schema';
 import { createLogger } from './lib/logger';
 const log = createLogger('adminSupport');
 import { eq, like, or, desc, and, isNull, sql } from "drizzle-orm";
@@ -23,6 +24,7 @@ import {
   type Invoice,
   type TimeEntry,
   type Shift,
+  type User,
 } from '@shared/schema';
 import { getUncachableResendClient } from "./services/emailCore";
 

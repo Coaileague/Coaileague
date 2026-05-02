@@ -72,8 +72,7 @@ import { employeeDocumentOnboardingService } from "../services/employeeDocumentO
 import { checkSchedulingEligibility, checkRequiredCertifications } from "../services/compliance/trinityComplianceEngine";
 import { shiftRoomBotOrchestrator } from "../services/bots/shiftRoomBotOrchestrator";
 import { createLogger } from '../lib/logger';
-import type { ShiftWithJoins } from '@shared/types/domainExtensions';
-import type { WorkspaceWithExtras } from '@shared/types/domainExtensions';
+import type { ShiftWithJoins, EmployeeWithStatus, WorkspaceWithExtras } from '@shared/types/domainExtensions';
 const log = createLogger('ShiftRoutes');
 
 

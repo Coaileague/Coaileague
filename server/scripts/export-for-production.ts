@@ -13,6 +13,7 @@
  * 4. employees - Employee records linked to users and workspaces
  */
 
+import type { EmployeeWithStatus } from '@shared/types/domainExtensions';
 import { db } from "../db";
 import { users, platformRoles, workspaces, employees } from "@shared/schema";
 import { sql } from "drizzle-orm";
