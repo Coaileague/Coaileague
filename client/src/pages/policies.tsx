@@ -104,10 +104,7 @@ export default function PoliciesPage() {
     };
     return <Badge variant={variants[status] || 'outline'}>{status}</Badge>;
   };
-
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const publishedPolicies = policies.filter((p) => p.status === 'published');
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const draftPolicies = policies.filter((p) => p.status === 'draft');
 
   if (isLoading) {

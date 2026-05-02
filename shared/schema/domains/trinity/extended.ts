@@ -70,17 +70,13 @@ export const aiCostConfig = pgTable("ai_cost_config", {
   modelId: varchar("model_id").notNull(),
   provider: varchar("provider").notNull(),
   displayName: varchar("display_name"),
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   inputCostPer_1kTokens: decimal("input_cost_per_1k_tokens").notNull().default(0),
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   outputCostPer_1kTokens: decimal("output_cost_per_1k_tokens").notNull().default(0),
   markupMultiplier: decimal("markup_multiplier").notNull().default('1.5'),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),
 });
-
-// @ts-expect-error — TS migration: fix in refactoring sprint
 export const insertAiCostConfigSchema = createInsertSchema(aiCostConfig).omit({ id: true });
 export type InsertAiCostConfig = z.infer<typeof insertAiCostConfigSchema>;
 export type AiCostConfig = typeof aiCostConfig.$inferSelect;
@@ -116,8 +112,6 @@ export const counterfactualSimulations = pgTable("counterfactual_simulations", {
   appliedByTrinity: boolean("applied_by_trinity").default(false),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
-
-// @ts-expect-error — TS migration: fix in refactoring sprint
 export const insertCounterfactualSimulationsSchema = createInsertSchema(counterfactualSimulations).omit({ id: true });
 export type InsertCounterfactualSimulations = z.infer<typeof insertCounterfactualSimulationsSchema>;
 export type CounterfactualSimulations = typeof counterfactualSimulations.$inferSelect;
@@ -137,8 +131,6 @@ export const curiosityQueue = pgTable("curiosity_queue", {
   triggeredAt: timestamp("triggered_at").default(sql`now()`),
   investigatedAt: timestamp("investigated_at"),
 });
-
-// @ts-expect-error — TS migration: fix in refactoring sprint
 export const insertCuriosityQueueSchema = createInsertSchema(curiosityQueue).omit({ id: true });
 export type InsertCuriosityQueue = z.infer<typeof insertCuriosityQueueSchema>;
 export type CuriosityQueue = typeof curiosityQueue.$inferSelect;
@@ -158,8 +150,6 @@ export const incubationQueue = pgTable("incubation_queue", {
   breakthroughAt: timestamp("breakthrough_at"),
   cyclesAttempted: integer("cycles_attempted").default(0),
 });
-
-// @ts-expect-error — TS migration: fix in refactoring sprint
 export const insertIncubationQueueSchema = createInsertSchema(incubationQueue).omit({ id: true });
 export type InsertIncubationQueue = z.infer<typeof insertIncubationQueueSchema>;
 export type IncubationQueue = typeof incubationQueue.$inferSelect;
@@ -177,8 +167,6 @@ export const socialEntities = pgTable("social_entities", {
   informalRole: varchar("informal_role").default('follower'),
   lastAssessed: timestamp("last_assessed").default(sql`now()`),
 });
-
-// @ts-expect-error — TS migration: fix in refactoring sprint
 export const insertSocialEntitiesSchema = createInsertSchema(socialEntities).omit({ id: true });
 export type InsertSocialEntities = z.infer<typeof insertSocialEntitiesSchema>;
 export type SocialEntities = typeof socialEntities.$inferSelect;
@@ -190,14 +178,11 @@ export const socialRelationships = pgTable("social_relationships", {
   toEntity: varchar("to_entity").notNull(),
   relationshipStrength: integer("relationship_strength").default(50),
   relationshipType: varchar("relationship_type").default('peer'),
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   interactionFrequencyWeekly: decimal("interaction_frequency_weekly").default(0),
   sentimentScore: integer("sentiment_score").default(50),
   trustLevel: integer("trust_level").default(50),
   lastInteractionAt: timestamp("last_interaction_at"),
 });
-
-// @ts-expect-error — TS migration: fix in refactoring sprint
 export const insertSocialRelationshipsSchema = createInsertSchema(socialRelationships).omit({ id: true });
 export type InsertSocialRelationships = z.infer<typeof insertSocialRelationshipsSchema>;
 export type SocialRelationships = typeof socialRelationships.$inferSelect;
@@ -213,8 +198,6 @@ export const somaticPatternLibrary = pgTable("somatic_pattern_library", {
   lastConfirmedAt: timestamp("last_confirmed_at").default(sql`now()`),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
-
-// @ts-expect-error — TS migration: fix in refactoring sprint
 export const insertSomaticPatternLibrarySchema = createInsertSchema(somaticPatternLibrary).omit({ id: true });
 export type InsertSomaticPatternLibrary = z.infer<typeof insertSomaticPatternLibrarySchema>;
 export type SomaticPatternLibrary = typeof somaticPatternLibrary.$inferSelect;
@@ -235,8 +218,6 @@ export const temporalEntityArcs = pgTable("temporal_entity_arcs", {
   lastAssessedAt: timestamp("last_assessed_at").default(sql`now()`),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
-
-// @ts-expect-error — TS migration: fix in refactoring sprint
 export const insertTemporalEntityArcsSchema = createInsertSchema(temporalEntityArcs).omit({ id: true });
 export type InsertTemporalEntityArcs = z.infer<typeof insertTemporalEntityArcsSchema>;
 export type TemporalEntityArcs = typeof temporalEntityArcs.$inferSelect;
@@ -254,11 +235,8 @@ export const trinityAiUsageLog = pgTable("trinity_ai_usage_log", {
   inputTokens: integer("input_tokens").default(0),
   outputTokens: integer("output_tokens").default(0),
   totalTokens: integer("total_tokens").default(0),
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   costBasisUsd: decimal("cost_basis_usd").default(0),
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   markupRate: decimal("markup_rate").default(0),
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   billedAmountUsd: decimal("billed_amount_usd").default(0),
   creditsDeducted: integer("credits_deducted").default(0),
   responseTimeMs: integer("response_time_ms").default(0),
@@ -312,8 +290,6 @@ export const trinityCognitiveState = pgTable("trinity_cognitive_state", {
   autonomousTaskThrottled: boolean("autonomous_task_throttled").default(false),
   lastAssessedAt: timestamp("last_assessed_at").default(sql`now()`),
 });
-
-// @ts-expect-error — TS migration: fix in refactoring sprint
 export const insertTrinityCognitiveStateSchema = createInsertSchema(trinityCognitiveState).omit({ id: true });
 export type InsertTrinityCognitiveState = z.infer<typeof insertTrinityCognitiveStateSchema>;
 export type TrinityCognitiveState = typeof trinityCognitiveState.$inferSelect;
@@ -348,8 +324,6 @@ export const trinityMemoryService = pgTable("trinity_memory_service", {
   memoryValue: text("memory_value").notNull(),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
-
-// @ts-expect-error — TS migration: fix in refactoring sprint
 export const insertTrinityMemoryServiceSchema = createInsertSchema(trinityMemoryService).omit({ id: true });
 export type InsertTrinityMemoryService = z.infer<typeof insertTrinityMemoryServiceSchema>;
 export type TrinityMemoryService = typeof trinityMemoryService.$inferSelect;
@@ -366,8 +340,6 @@ export const trinityNarrative = pgTable("trinity_narrative", {
   growthAreas: jsonb("growth_areas").default('[]'),
   lastUpdated: timestamp("last_updated").default(sql`now()`),
 });
-
-// @ts-expect-error — TS migration: fix in refactoring sprint
 export const insertTrinityNarrativeSchema = createInsertSchema(trinityNarrative).omit({ id: true });
 export type InsertTrinityNarrative = z.infer<typeof insertTrinityNarrativeSchema>;
 export type TrinityNarrative = typeof trinityNarrative.$inferSelect;

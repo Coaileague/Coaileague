@@ -43,8 +43,6 @@ export const orgCreationProgress = pgTable("org_creation_progress", {
   updatedAt: timestamp("updated_at").default(sql`now()`),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
-
-// @ts-expect-error — TS migration: fix in refactoring sprint
 export const insertOrgCreationProgressSchema = createInsertSchema(orgCreationProgress).omit({ id: true });
 export type InsertOrgCreationProgress = z.infer<typeof insertOrgCreationProgressSchema>;
 export type OrgCreationProgress = typeof orgCreationProgress.$inferSelect;
@@ -123,8 +121,6 @@ export const workspaceCreditBalance = pgTable("workspace_credit_balance", {
   monthlyCreditAllocation: integer("monthly_credit_allocation"),
   subscriptionTier: varchar("subscription_tier"),
 });
-
-// @ts-expect-error — TS migration: fix in refactoring sprint
 export const insertWorkspaceCreditBalanceSchema = createInsertSchema(workspaceCreditBalance).omit({ id: true });
 export type InsertWorkspaceCreditBalance = z.infer<typeof insertWorkspaceCreditBalanceSchema>;
 export type WorkspaceCreditBalance = typeof workspaceCreditBalance.$inferSelect;

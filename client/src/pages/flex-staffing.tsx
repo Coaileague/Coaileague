@@ -232,7 +232,6 @@ export default function FlexStaffing() {
 
   const gigs: FlexGig[] = gigsData?.data || [];
   const contractors = contractorsData?.data || [];
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const applications: GigApplication[] = applicationsData?.data?.map((a) => ({
     ...a.application,
     contractor: a.contractor,

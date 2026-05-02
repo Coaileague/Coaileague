@@ -625,7 +625,6 @@ export function useChatroomWebSocket(
 
             case 'irc:typing':
               if (data.roomId && data.userId !== userIdRef.current) {
-                // @ts-expect-error — TS migration: fix in refactoring sprint
                 setTypingUsers((prev) => {
                   const key = `${data.roomId}:${data.conversationId || data.roomId}`;
                   const current = prev instanceof Map ? (prev.get(key) || new Set()) : new Set();

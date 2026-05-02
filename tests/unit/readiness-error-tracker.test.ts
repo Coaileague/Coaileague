@@ -39,7 +39,6 @@ describe('errorTracker adapter', () => {
     process.env.ERROR_TRACKING_WEBHOOK_URL = 'https://example.invalid/ingest';
     __resetErrorTrackerForTest();
     const fetchSpy = vi.fn(async () => new Response(null, { status: 200 }));
-    // @ts-expect-error — test-only global stub
     globalThis.fetch = fetchSpy;
 
     captureError({
@@ -60,7 +59,6 @@ describe('errorTracker adapter', () => {
   it('capture never throws even when the fetch itself throws', async () => {
     process.env.ERROR_TRACKING_WEBHOOK_URL = 'https://example.invalid/ingest';
     __resetErrorTrackerForTest();
-    // @ts-expect-error — test-only global stub
     globalThis.fetch = () => { throw new Error('network dead'); };
 
     expect(() =>

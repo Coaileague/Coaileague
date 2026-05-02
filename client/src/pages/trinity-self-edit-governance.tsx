@@ -697,8 +697,6 @@ export default function TrinitySelfEditGovernancePage() {
                     Apply Changes
                   </Button>
                 )}
-
-                // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
                 {(selectedProposal as Record<string,unknown>).rollbackHash && (
                   <Button
                     variant="outline"

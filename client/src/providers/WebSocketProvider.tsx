@@ -1,3 +1,4 @@
+import React from 'react';
 import { createContext, useContext, useEffect, useRef, useCallback, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 

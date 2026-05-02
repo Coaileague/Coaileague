@@ -1908,7 +1908,6 @@ export default function QuickBooksImportPage() {
         <UniversalModalContent 
           size="lg"
           className="bg-gradient-to-b from-background to-muted/50 border-2 border-primary/20"
-          // @ts-expect-error — TS migration: fix in refactoring sprint
           onPointerDownOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >

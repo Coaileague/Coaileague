@@ -481,11 +481,8 @@ function SwapRequestCard({
           </Avatar>
         </div>
       </div>
-
-      // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
       {(request as Record<string,unknown>).notes && (
         <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-          // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
           "{(request as Record<string,unknown>).notes}"
         </p>
       )}

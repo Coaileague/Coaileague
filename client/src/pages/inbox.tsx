@@ -108,8 +108,6 @@ export default function InboxPage() {
     queryKey: ["/api/internal-email/folders"],
     enabled: !!mailbox,
   });
-
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const folders = (foldersData?.folders || []) as Folder[];
 
   const { data: emailsData, isLoading: emailsLoading, refetch: refetchEmails, isFetching } = useQuery({

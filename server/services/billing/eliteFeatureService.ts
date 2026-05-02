@@ -50,7 +50,6 @@ export function getEliteMonthlyIncluded(
 ): number {
   const feature = PREMIUM_FEATURES[featureId];
   if (!feature) return 0;
-  // @ts-expect-error — monthlyLimits may not declare every tier key
   const limit = feature.monthlyLimits[tier];
   return typeof limit === 'number' ? limit : 0;
 }

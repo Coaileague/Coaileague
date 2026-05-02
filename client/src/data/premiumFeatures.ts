@@ -1,3 +1,4 @@
+import React from 'react';
 import { Zap, DollarSign, Palette, FileText, Users, Calendar, TrendingUp, Shield, Briefcase, ArrowRightLeft } from "lucide-react";
 
 export interface PremiumFeature {

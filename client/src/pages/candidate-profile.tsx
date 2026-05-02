@@ -497,7 +497,6 @@ export default function CandidateProfilePage() {
               </div>
               {parsedResume && Object.keys(parsedResume).length > 0 && (
                 <div className="space-y-2">
-                  // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
                   {(parsedResume as Record<string,unknown>).summary && (
                     <p className="text-xs text-muted-foreground">{String(parsedResume.summary)}</p>
                   )}

@@ -631,7 +631,6 @@ function CandidateDetailSheet({
 
                 {parsedResume && Object.keys(parsedResume).length > 0 && (
                   <div className="mt-3 rounded-md border p-3 space-y-1 text-xs">
-                    // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
                     {(parsedResume as Record<string,unknown>).summary && (
                       <p className="text-muted-foreground">{String(parsedResume.summary)}</p>
                     )}

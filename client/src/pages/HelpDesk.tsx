@@ -607,7 +607,6 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  });
 
  // Transform promotional banners to match BannerManager format
- // @ts-expect-error — TS migration: fix in refactoring sprint
  const promotionalBanners = promotionalBannersRaw.map((banner) =>({
  id: banner.id,
  text: banner.message,
@@ -804,7 +803,6 @@ export function HelpDesk(props?: HelpDeskProps & any) {
 
  useEffect(() =>{
  if (roomListData?.rooms && conversationToJoin) {
- // @ts-expect-error — TS migration: fix in refactoring sprint
  const room = roomListData.rooms.find((r) =>
  r.roomId === conversationToJoin || r.id === conversationToJoin
  );
@@ -3120,7 +3118,6 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  showHomeButton={true}
  homeButtonPath="/pricing"
  isGuest={true}
- // @ts-expect-error — TS migration: fix in refactoring sprint
  onPointerDownOutside={(e) =>{
  // Prevent closing by clicking outside dialog if form is incomplete
  if (!isFormComplete()) {
@@ -3371,7 +3368,6 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  <QueueManagerPanel
  isOpen={showQueuePanel}
  onClose={() =>setShowQueuePanel(false)}
- // @ts-expect-error — TS migration: fix in refactoring sprint
  queueUsers={queueData?.map((q) =>({
  id: q.userId,
  name: q.userName,

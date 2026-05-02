@@ -91,7 +91,6 @@ export async function getOnCallChain(
   // No primary — escalate to workspace owner
   const owner = await db.query.users.findFirst({
     where: and(
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       eq(users.workspaceId, workspaceId),
       eq(users.role, 'owner'),
     ),
@@ -243,7 +242,6 @@ export async function getEmergencyChain(workspaceId: string): Promise<{
 
   if (!ownerId) {
     const owner = await db.query.users.findFirst({
-      // @ts-expect-error — TS migration: fix in refactoring sprint
       where: and(eq(users.workspaceId, workspaceId), eq(users.role, 'owner')),
     });
     ownerId = owner?.id ?? '';

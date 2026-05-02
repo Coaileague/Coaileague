@@ -95,8 +95,6 @@ export function NavigationOverlay({
     isPlatformStaff = false,
     positionCapabilities,
   } = useWorkspaceAccess() || {};
-
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const families = selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff, positionCapabilities);
   const [selectedFamily, setSelectedFamily] = useState<string | null>(null);
   const firstFocusableRef = useRef<HTMLButtonElement | null>(null);

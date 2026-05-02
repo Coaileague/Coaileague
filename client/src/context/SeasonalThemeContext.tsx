@@ -8,6 +8,7 @@
  * - Provides mascot positioning hints
  */
 
+import React from 'react';
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 // useQuery removed — seasonal state is static (no API call)
 import { useAuth } from '@/hooks/useAuth';

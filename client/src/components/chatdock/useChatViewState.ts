@@ -73,7 +73,6 @@ function reducer(state: ChatViewState, action: Action): ChatViewState {
     const next: ChatViewState = { ...state, [key]: value };
     for (const k of EXCLUSIVE_KEYS) {
       if (k === key) continue;
-      // @ts-expect-error key is a valid keyof
       next[k] = INITIAL[k];
     }
     return next;
@@ -98,7 +97,6 @@ function makeSetter<T>(
 ): Dispatch<SetStateAction<T>> {
   return (next: SetStateAction<T>) => {
     const value = typeof next === 'function'
-      // @ts-expect-error functional setter API
       ? (next as (prev: T) => T)(state[key] as T)
       : next;
     dispatch({ type: 'SET', key, value });

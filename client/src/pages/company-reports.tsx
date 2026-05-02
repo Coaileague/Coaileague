@@ -265,7 +265,6 @@ export default function CompanyReports() {
           <CardContent>
             <div className="text-2xl font-bold">{(reportData as Record<string,unknown>)?.totalHours?.toFixed(1) || '0.0'}</div>
             <p className="text-xs text-muted-foreground">
-              // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
               Across {(reportData as Record<string,unknown>)?.activeEmployees || 0} employees
             </p>
           </CardContent>

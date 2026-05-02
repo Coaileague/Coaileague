@@ -286,7 +286,6 @@ router.get('/thought-stream', attachWorkspaceId, requireTrinityAccess, async (re
       .limit(8);
 
     const mostRecent = rows[0] ?? null;
-    // @ts-expect-error — context is jsonb
     const currentPhase: string | null = mostRecent?.context?.phase ?? null;
 
     return res.json({

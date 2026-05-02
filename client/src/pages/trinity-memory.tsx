@@ -226,7 +226,6 @@ export default function TrinityMemoryPage() {
                         { label: "Last Updated", value: knowledge.lastUpdated ? new Date(knowledge.lastUpdated).toLocaleDateString() : "--" },
                       ].map(item => (
                         <div key={item.label} className="text-center p-3 rounded-md border">
-                          // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
                           <p className="text-xl font-bold" data-testid={`text-knowledge-${item.label.toLowerCase().replace(/\s+/g, '-')}`}>{(item as Record<string,unknown>).value}</p>
                           <p className="text-xs text-muted-foreground">{item.label}</p>
                         </div>
@@ -234,20 +233,16 @@ export default function TrinityMemoryPage() {
                     </div>
                   </CardContent>
                 </Card>
-
-                // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
                 {(knowledge as Record<string,unknown>).topCategories && (knowledge as Record<string,unknown>).topCategories.length > 0 && (
                   <Card>
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base">Top Categories</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                      // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
                       {(knowledge as Record<string,unknown>).topCategories.map((cat: unknown, idx: number) => (
                         <div key={idx} className="flex items-center justify-between gap-3" data-testid={`row-category-${idx}`}>
                           <span className="text-sm truncate min-w-0">{cat.name}</span>
                           <div className="flex items-center gap-2 shrink-0">
-                            // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
                             <Progress value={(cat.count / ((knowledge as Record<string,unknown>).totalEntities || 1)) * 100} className="w-24 sm:w-32" />
                             <Badge variant="secondary">{cat.count}</Badge>
                           </div>
@@ -345,7 +340,6 @@ export default function TrinityMemoryPage() {
                       { label: "Status", value: chatDiagQuery.data.status || "unknown" },
                     ].map(item => (
                       <div key={item.label} className="text-center">
-                        // @ts-expect-error — TS migration: fix in refactoring sprint — TS migration: fix in refactoring sprint
                         <p className="text-xl font-bold" data-testid={`text-chat-${item.label.toLowerCase().replace(/\s+/g, '-')}`}>{(item as Record<string,unknown>).value}</p>
                         <p className="text-xs text-muted-foreground">{item.label}</p>
                       </div>

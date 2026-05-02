@@ -78,8 +78,6 @@ function ActionLogCard({ log, onReview }: { log: AiBrainActionLog; onReview: (id
   const resultConfig = getResultConfig(log.result);
   const ResultIcon = resultConfig?.icon ?? CheckCircle2;
   const domainColor = getDomainColor(log.actorType);
-
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const actionData = log.actionData as Record<string, unknown> | null;
   const createdAt = new Date(log.createdAt);
   const timeAgo = getTimeAgo(createdAt);

@@ -1115,7 +1115,6 @@ function NotificationDetailModal({
             const showApprove = t.includes('approval') || t.includes('timesheet') || title.includes('approval') || title.includes('approve');
             const showDeny = showApprove;
             const showReview = !showApprove && (notification.metadata?.requiresAction || title.includes('action required') || title.includes('review'));
-            // @ts-expect-error — TS migration: fix in refactoring sprint
             const navTarget = notification.metadata?.actionUrl || '/';
             return (
               <>
@@ -1248,14 +1247,12 @@ function getNotificationBadgeInfo(notification: UNSNotification): {
   type: NotificationBadgeType;
   className: string;
 } {
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const t = (notification.type || '').toLowerCase();
   const title = (notification.title || '').toLowerCase();
   const meta = notification.metadata || {};
 
   // TRINITY ADVISORY — AI decisions requiring human verification
   if (
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     meta.aiBrainDecisionId ||
     t === 'ai_decision' ||
     t === 'trinity_autonomous_alert' ||

@@ -6,6 +6,7 @@
  * Uses unified WebSocketProvider instead of creating its own connection.
  */
 
+import React from 'react';
 import { useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';

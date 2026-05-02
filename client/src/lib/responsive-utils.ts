@@ -49,7 +49,6 @@ export function isTouchDevice(): boolean {
   return (
     'ontouchstart' in window ||
     navigator.maxTouchPoints > 0 ||
-    // @ts-expect-error — TS migration: typed in refactoring sprint
     navigator.msMaxTouchPoints > 0
   );
 }

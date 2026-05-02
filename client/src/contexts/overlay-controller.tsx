@@ -216,8 +216,7 @@ export function OverlayControllerProvider({ children }: { children: ReactNode })
           isLoading={true}
           message={activeOverlay.title || (
             activeOverlay.status === "success" ? "Success!" : 
-            activeOverlay.status === "error" ? "Error" : 
-            // @ts-expect-error — TS migration: fix in refactoring sprint
+            activeOverlay.status === "error" ? "Error" :
             activeOverlay.status === "denied" ? "Access Denied" :
             "Processing..."
           )}

@@ -416,8 +416,7 @@ export function ClientsTable({ workspaceId }: ClientsTableProps) {
   const { 
     sortKey, 
     sortDir, 
-    toggleSort 
-  // @ts-expect-error — TS migration: fix in refactoring sprint
+    toggleSort
   } = useTableSort<ClientWithInvoiceCount>((data?.clients || []) as ClientWithInvoiceCount[], 'companyName', 'asc');
 
   // SECURITY: Use server-authoritative user.workspaceRole for authorization

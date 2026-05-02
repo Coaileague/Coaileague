@@ -537,7 +537,7 @@ export default function ModuleLearningPage() {
           })}
           {finalExamQuestions.length > 0 && (
             <div
-              className={['flex items-center gap-2 rounded-md px-2 py-2 text-sm', // @ts-expect-error — TS migration: fix in refactoring sprint
+              className={['flex items-center gap-2 rounded-md px-2 py-2 text-sm',
                 step === 'final_exam' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground/60'].join(' ')}
             >
               <ClipboardList className="w-4 h-4 shrink-0" />

@@ -636,9 +636,6 @@ export default function DocumentLibrary() {
       });
     },
   });
-
-
-  // @ts-expect-error — TS migration: fix in refactoring sprint
   const documents: OrgDocument[] = docsData?.data?.map((d) => ({ ...d.document, uploadedByUser: d.uploadedByUser })) || [];
   const signatures: Signature[] = signaturesData?.data?.map((s) => ({ ...s.signature, signer: s.signer })) || [];
 

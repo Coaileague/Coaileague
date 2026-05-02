@@ -1,5 +1,6 @@
 // Multi-tenant SaaS Scheduling Platform
 
+import React from 'react';
 import './i18n';
 import { setLanguage } from './i18n';
 import { TrinityArrowMark } from "@/components/trinity-logo";

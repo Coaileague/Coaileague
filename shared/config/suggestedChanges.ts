@@ -348,12 +348,10 @@ export function listAllSuggestions(options?: {
   }
   
   if (options?.tag) {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     suggestions = suggestions.filter(s => s.tags.includes(options.tag));
   }
   
   if (options?.priority && options.priority > 0) {
-    // @ts-expect-error — TS migration: fix in refactoring sprint
     suggestions = suggestions.filter(s => s.priority <= options.priority);
   }
   
