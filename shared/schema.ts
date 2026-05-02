@@ -102,8 +102,6 @@ import {
   integrationConnections,
   webhookSubscriptions,
   promotionalBanners,
-  onboardingTemplates,
-  onboardingTasks,
   organizationOnboarding,
   organizationRoomOnboarding,
   workspaceAddons,
@@ -118,6 +116,8 @@ import {
   orgFeatures,
   workspaces,
   onboardingChecklists,
+  onboardingFlow,
+  onboardingStep,
   orgOnboardingTasks,
   orgRewards,
 } from './schema/domains/orgs';
@@ -2663,20 +2663,8 @@ export type AutoReport = typeof autoReports.$inferSelect;
 
 // Active onboarding sessions for new hires
 
-export const insertOnboardingTemplateSchema = createInsertSchema(onboardingTemplates).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
 
-export const insertOnboardingTaskSchema = createInsertSchema(onboardingTasks).omit({
-  id: true,
-  createdAt: true,
-});
 
-export type OnboardingTemplate = typeof onboardingTemplates.$inferSelect;
-export type InsertOnboardingTask = z.infer<typeof insertOnboardingTaskSchema>;
-export type OnboardingTask = typeof onboardingTasks.$inferSelect;
 // ============================================================================
 // OFFBOARDING SYSTEM - EXIT INTERVIEWS & OFFBOARDING WORKFLOWS
 // ============================================================================

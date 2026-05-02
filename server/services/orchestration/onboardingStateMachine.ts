@@ -462,14 +462,8 @@ class OnboardingStateMachine {
     try {
       // Converted to Drizzle ORM: ON CONFLICT
       const stateJson = JSON.stringify(state);
-      await db.insert(workspaceOnboardingStates).values({
-        workspaceId: state.workspaceId,
-        stateData: stateJson,
-        updatedAt: sql`now()`,
-      }).onConflictDoUpdate({
-        target: workspaceOnboardingStates.workspaceId,
-        set: { stateData: stateJson, updatedAt: sql`now()` },
-      });
+      // workspaceOnboardingStates removed (Wave 1) — use onboardingFlow
+        // TODO: port to onboardingFlow table
     } catch (error) {
       log.warn('[OnboardingStateMachine] Failed to persist state (table may not exist):', error);
     }
