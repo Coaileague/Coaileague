@@ -8,7 +8,7 @@ import { requireManager, requireOwner, type AuthenticatedRequest } from "../rbac
 import {
   integrationMarketplace,
   integrationConnections,
-  integrationApiKeys,
+  apiKeys,
   webhookSubscriptions,
   webhookDeliveries,
   partnerConnections,
@@ -173,24 +173,24 @@ router.get('/health', requireAuth, async (req: AuthenticatedRequest, res) => {
       
       const apiKeys = await db
         .select({
-          id: integrationApiKeys.id,
-          name: integrationApiKeys.name,
-          description: integrationApiKeys.description,
-          keyPrefix: integrationApiKeys.keyPrefix,
-          scopes: integrationApiKeys.scopes,
-          ipWhitelist: integrationApiKeys.ipWhitelist,
-          rateLimit: integrationApiKeys.rateLimit,
-          rateLimitWindow: integrationApiKeys.rateLimitWindow,
-          lastUsedAt: integrationApiKeys.lastUsedAt,
-          totalRequests: integrationApiKeys.totalRequests,
-          totalErrors: integrationApiKeys.totalErrors,
-          isActive: integrationApiKeys.isActive,
-          expiresAt: integrationApiKeys.expiresAt,
-          createdAt: integrationApiKeys.createdAt,
+          id: apiKeys.id,
+          name: apiKeys.name,
+          description: apiKeys.description,
+          keyPrefix: apiKeys.keyPrefix,
+          scopes: apiKeys.scopes,
+          ipWhitelist: apiKeys.ipWhitelist,
+          rateLimit: apiKeys.rateLimit,
+          rateLimitWindow: apiKeys.rateLimitWindow,
+          lastUsedAt: apiKeys.lastUsedAt,
+          totalRequests: apiKeys.totalRequests,
+          totalErrors: apiKeys.totalErrors,
+          isActive: apiKeys.isActive,
+          expiresAt: apiKeys.expiresAt,
+          createdAt: apiKeys.createdAt,
         })
-        .from(integrationApiKeys)
-        .where(eq(integrationApiKeys.workspaceId, workspaceId))
-        .orderBy(desc(integrationApiKeys.createdAt));
+        .from(apiKeys)
+        .where(eq(apiKeys.workspaceId, workspaceId))
+        .orderBy(desc(apiKeys.createdAt));
       
       res.json(apiKeys);
     } catch (error: unknown) {
@@ -220,7 +220,7 @@ router.get('/health', requireAuth, async (req: AuthenticatedRequest, res) => {
       const keyPrefix = apiKeyValue.substring(0, 12);
       
       const [apiKey] = await db
-        .insert(integrationApiKeys)
+        .insert(apiKeys)
         .values({
           workspaceId,
           name,
@@ -250,14 +250,14 @@ router.get('/health', requireAuth, async (req: AuthenticatedRequest, res) => {
       const { id } = req.params;
       
       await db
-        .update(integrationApiKeys)
+        .update(apiKeys)
         .set({ 
           isActive: false,
           updatedAt: new Date(),
         })
         .where(and(
-          eq(integrationApiKeys.id, id),
-          eq(integrationApiKeys.workspaceId, workspaceId)
+          eq(apiKeys.id, id),
+          eq(apiKeys.workspaceId, workspaceId)
         ));
       
       res.json({ message: "API key revoked" });

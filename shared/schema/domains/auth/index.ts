@@ -4,7 +4,7 @@
 // THE LAW: No new tables without Bryan's explicit approval. Zero DROP TABLE ever.
 // Tables: 23
 
-import { pgTable, varchar, text, integer, boolean, timestamp, jsonb, decimal, time, doublePrecision, index, uniqueIndex, primaryKey, unique } from 'drizzle-orm/pg-core';
+import { pgTable, pgEnum, varchar, text, integer, boolean, timestamp, jsonb, decimal, time, doublePrecision, index, uniqueIndex, primaryKey, unique } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import {
   actorTypeEnum,
@@ -20,28 +20,6 @@ import {
   tokenTypeEnum,
 } from '../../enums';
 
-export const apiKeys = pgTable("api_keys", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  workspaceId: varchar("workspace_id").notNull(),
-
-  name: varchar("name").notNull(),
-  keyHash: varchar("key_hash").notNull().unique(), // Hashed API key
-  keyPrefix: varchar("key_prefix").notNull(), // First 8 chars for display
-
-  scopes: text("scopes").array(), // ['read:employees', 'write:shifts', etc.]
-  isActive: boolean("is_active").default(true),
-
-  lastUsedAt: timestamp("last_used_at"),
-  expiresAt: timestamp("expires_at"),
-
-  createdBy: varchar("created_by"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-  revokedAt: timestamp("revoked_at"),
-
-  keyType: varchar("key_type"),
-  usageData: jsonb("usage_data").default('{}'),
-});
 
 export const platformRoles = pgTable("platform_roles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -111,44 +89,6 @@ export const roleTemplates = pgTable("role_templates", {
   levelIndex: index("role_templates_level_idx").on(table.roleLevel),
 }));
 
-export const integrationApiKeys = pgTable("integration_api_keys", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  workspaceId: varchar("workspace_id").notNull(),
-
-  // Key identity
-  name: varchar("name").notNull(), // "Production API Key", "Mobile App Key"
-  description: text("description"),
-  keyPrefix: varchar("key_prefix").notNull(), // "wfos_prod_" for display
-  keyHash: text("key_hash").notNull(), // Hashed full key for verification
-
-  // Permissions
-  scopes: jsonb("scopes").$type<string[]>().default(sql`'[]'`), // ['read:employees', 'write:shifts', 'webhooks:manage']
-  ipWhitelist: jsonb("ip_whitelist").$type<string[]>().default(sql`'[]'`),
-
-  // Rate limiting
-  rateLimit: integer("rate_limit").default(1000), // Requests per hour
-  rateLimitWindow: varchar("rate_limit_window").default('hour'), // 'minute', 'hour', 'day'
-
-  // Usage tracking
-  lastUsedAt: timestamp("last_used_at"),
-  totalRequests: integer("total_requests").default(0),
-  totalErrors: integer("total_errors").default(0),
-
-  // Status
-  isActive: boolean("is_active").default(true),
-  expiresAt: timestamp("expires_at"),
-
-  // Audit
-  createdByUserId: varchar("created_by_user_id"),
-  ipAddress: varchar("ip_address"),
-  userAgent: text("user_agent"),
-
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => ({
-  workspaceActiveIndex: index("integration_api_keys_workspace_active_idx").on(table.workspaceId, table.isActive),
-  keyHashIndex: uniqueIndex("integration_api_keys_key_hash_idx").on(table.keyHash),
-}));
 
 export const idempotencyKeys = pgTable("idempotency_keys", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -427,26 +367,6 @@ export const accessControlEvents = pgTable("access_control_events", {
   index("access_control_events_created_idx").on(table.createdAt),
 ]);
 
-export const workspaceApiKeys = pgTable("workspace_api_keys", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  workspaceId: varchar("workspace_id").notNull(),
-  name: varchar("name").notNull(),
-  keyHash: varchar("key_hash").notNull(),
-  keyPrefix: varchar("key_prefix", { length: 8 }).notNull(),
-  permissions: text("permissions").array(),
-  rateLimit: integer("rate_limit").default(1000),
-  rateLimitWindow: varchar("rate_limit_window").default("hour"),
-  totalRequests: integer("total_requests").default(0),
-  lastUsedAt: timestamp("last_used_at"),
-  expiresAt: timestamp("expires_at"),
-  isActive: boolean("is_active").default(true),
-  createdBy: varchar("created_by"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("api_key_ws_idx").on(table.workspaceId),
-  index("api_key_hash_idx").on(table.keyHash),
-]);
 
 export const apiKeyUsageLogs = pgTable("api_key_usage_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -465,27 +385,6 @@ export const apiKeyUsageLogs = pgTable("api_key_usage_logs", {
   index("api_usage_ws_idx").on(table.workspaceId),
 ]);
 
-export const managedApiKeys = pgTable("managed_api_keys", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  workspaceId: varchar("workspace_id").notNull(),
-  keyName: varchar("key_name").notNull(),
-  keyHash: varchar("key_hash").notNull(),
-  keyPrefix: varchar("key_prefix"),
-  scopes: text("scopes").array(),
-  isActive: boolean("is_active").default(true),
-  lastUsedAt: timestamp("last_used_at"),
-  expiresAt: timestamp("expires_at"),
-  createdBy: varchar("created_by"),
-  metadata: jsonb("metadata"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-
-  name: varchar("name"),
-  keyType: varchar("key_type"),
-  status: varchar("status"),
-  rotationCount: integer("rotation_count").default(0),
-  lastRotatedAt: timestamp("last_rotated_at", { withTimezone: true }),
-});
 
 export const sessions = pgTable(
   "sessions",
@@ -643,3 +542,36 @@ export const keyRotationHistory = pgTable("key_rotation_history", {
 // Re-exported from Orgs domain (moved in Wave 1 cleanup)
 export { sessionCheckpoints, sessionRecoveryRequests } from '../orgs';
 export { checkpointSyncStateEnum } from '../../enums';
+
+// ─── Unified API Keys (consolidated from 4 tables in Wave 1 cleanup) ─────────
+export const apiKeyScope = pgEnum('api_key_scope', [
+  'integration',   // Third-party integration API keys
+  'workspace',     // Workspace-scoped API keys (with rate limits)
+  'managed',       // Platform-managed API keys
+  'platform',      // Root platform keys
+]);
+
+export const apiKeys = pgTable('api_keys', {
+  id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  workspaceId: varchar('workspace_id', { length: 255 }).notNull(),
+  scope: apiKeyScope('scope').notNull().default('workspace'),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  keyHash: varchar('key_hash', { length: 255 }).notNull(),
+  keyPrefix: varchar('key_prefix', { length: 20 }).notNull(),
+  scopes: jsonb('scopes').$type<string[]>().default([]),
+  permissions: jsonb('permissions').$type<string[]>().default([]),
+  rateLimit: integer('rate_limit'),
+  rateLimitWindow: integer('rate_limit_window'),
+  totalRequests: integer('total_requests').default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  lastUsedAt: timestamp('last_used_at'),
+  expiresAt: timestamp('expires_at'),
+  createdBy: varchar('created_by', { length: 36 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  index('api_keys_workspace_idx').on(table.workspaceId),
+  index('api_keys_scope_idx').on(table.scope),
+  index('api_keys_prefix_idx').on(table.keyPrefix),
+]);

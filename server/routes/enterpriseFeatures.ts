@@ -24,7 +24,7 @@ import {
   employeeBackgroundChecks,
   insertBgCheckProviderSchema,
   insertBgCheckSchema,
-  workspaceApiKeys,
+  apiKeys,
   insertWorkspaceApiKeySchema,
   apiKeyUsageLogs,
   users
@@ -578,20 +578,20 @@ enterpriseRouter.get('/api-keys', async (req: AuthenticatedRequest, res: Respons
     const wsId = requireWorkspace(req, res);
     if (!wsId) return;
     const keys = await db.select({
-      id: workspaceApiKeys.id,
-      name: workspaceApiKeys.name,
-      keyPrefix: workspaceApiKeys.keyPrefix,
-      permissions: workspaceApiKeys.permissions,
-      rateLimit: workspaceApiKeys.rateLimit,
-      rateLimitWindow: workspaceApiKeys.rateLimitWindow,
-      totalRequests: workspaceApiKeys.totalRequests,
-      lastUsedAt: workspaceApiKeys.lastUsedAt,
-      expiresAt: workspaceApiKeys.expiresAt,
-      isActive: workspaceApiKeys.isActive,
-      createdAt: workspaceApiKeys.createdAt,
-    }).from(workspaceApiKeys)
-      .where(eq(workspaceApiKeys.workspaceId, wsId))
-      .orderBy(desc(workspaceApiKeys.createdAt));
+      id: apiKeys.id,
+      name: apiKeys.name,
+      keyPrefix: apiKeys.keyPrefix,
+      permissions: apiKeys.permissions,
+      rateLimit: apiKeys.rateLimit,
+      rateLimitWindow: apiKeys.rateLimitWindow,
+      totalRequests: apiKeys.totalRequests,
+      lastUsedAt: apiKeys.lastUsedAt,
+      expiresAt: apiKeys.expiresAt,
+      isActive: apiKeys.isActive,
+      createdAt: apiKeys.createdAt,
+    }).from(apiKeys)
+      .where(eq(apiKeys.workspaceId, wsId))
+      .orderBy(desc(apiKeys.createdAt));
     res.json(keys);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch API keys' });
@@ -605,7 +605,7 @@ enterpriseRouter.post('/api-keys', async (req: AuthenticatedRequest, res: Respon
     const rawKey = `coa_${randomBytes(32).toString('hex')}`;
     const keyHash = createHash('sha256').update(rawKey).digest('hex');
     const keyPrefix = rawKey.substring(0, 8);
-    const [created] = await db.insert(workspaceApiKeys).values({
+    const [created] = await db.insert(apiKeys).values({
       workspaceId: wsId,
       name: req.body.name || 'API Key',
       keyHash,
@@ -633,9 +633,9 @@ enterpriseRouter.patch('/api-keys/:id', async (req: AuthenticatedRequest, res: R
     if (permissions !== undefined) safeKeyUpdates.permissions = permissions;
     if (rateLimit !== undefined) safeKeyUpdates.rateLimit = rateLimit;
     if (keyExpiry !== undefined) safeKeyUpdates.expiresAt = keyExpiry;
-    const [updated] = await db.update(workspaceApiKeys)
+    const [updated] = await db.update(apiKeys)
       .set(safeKeyUpdates)
-      .where(and(eq(workspaceApiKeys.id, req.params.id), eq(workspaceApiKeys.workspaceId, wsId)))
+      .where(and(eq(apiKeys.id, req.params.id), eq(apiKeys.workspaceId, wsId)))
       .returning();
     if (!updated) return res.status(404).json({ message: 'API key not found' });
     res.json(updated);
@@ -648,9 +648,9 @@ enterpriseRouter.delete('/api-keys/:id', async (req: AuthenticatedRequest, res: 
   try {
     const wsId = requireWorkspace(req, res);
     if (!wsId) return;
-    await db.update(workspaceApiKeys)
+    await db.update(apiKeys)
       .set({ isActive: false, updatedAt: new Date() })
-      .where(and(eq(workspaceApiKeys.id, req.params.id), eq(workspaceApiKeys.workspaceId, wsId)));
+      .where(and(eq(apiKeys.id, req.params.id), eq(apiKeys.workspaceId, wsId)));
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ message: 'Failed to revoke API key' });

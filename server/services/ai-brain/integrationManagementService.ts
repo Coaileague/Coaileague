@@ -2,13 +2,13 @@ import { db } from '../../db';
 import { 
   integrationMarketplace, 
   integrationConnections, 
-  integrationApiKeys,
+  apiKeys,
   systemAuditLogs,
   InsertIntegrationConnection,
-  InsertIntegrationApiKey,
+  InsertApiKey,
   IntegrationMarketplace,
   IntegrationConnection,
-  IntegrationApiKey
+  ApiKey
 } from '@shared/schema';
 import { eq, and, desc, sql, isNull, or, inArray, gte, lte, count } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
@@ -327,7 +327,7 @@ class IntegrationManagementService {
       const keyPrefix = rawKey.substring(0, 12);
       const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
 
-      const [apiKeyRecord] = await db.insert(integrationApiKeys).values({
+      const [apiKeyRecord] = await db.insert(apiKeys).values({
         workspaceId: context.workspaceId,
         name,
         keyPrefix,
@@ -362,15 +362,15 @@ class IntegrationManagementService {
     }
   }
 
-  async listApiKeys(context: IntegrationAccessContext): Promise<IntegrationApiKey[]> {
+  async listApiKeys(context: IntegrationAccessContext): Promise<ApiKey[]> {
     if (!this.canViewIntegrations(context.accessLevel)) {
       throw new Error('Insufficient permissions to view API keys');
     }
 
     return db.select()
-      .from(integrationApiKeys)
-      .where(eq(integrationApiKeys.workspaceId, context.workspaceId))
-      .orderBy(desc(integrationApiKeys.createdAt));
+      .from(apiKeys)
+      .where(eq(apiKeys.workspaceId, context.workspaceId))
+      .orderBy(desc(apiKeys.createdAt));
   }
 
   async revokeApiKey(
@@ -383,10 +383,10 @@ class IntegrationManagementService {
 
     try {
       const key = await db.select()
-        .from(integrationApiKeys)
+        .from(apiKeys)
         .where(and(
-          eq(integrationApiKeys.id, keyId),
-          eq(integrationApiKeys.workspaceId, context.workspaceId)
+          eq(apiKeys.id, keyId),
+          eq(apiKeys.workspaceId, context.workspaceId)
         ))
         .limit(1);
 
@@ -394,12 +394,12 @@ class IntegrationManagementService {
         return { success: false, error: 'API key not found' };
       }
 
-      await db.update(integrationApiKeys)
+      await db.update(apiKeys)
         .set({
           isActive: false,
           updatedAt: new Date(),
         })
-        .where(eq(integrationApiKeys.id, keyId));
+        .where(eq(apiKeys.id, keyId));
 
       await this.logAudit(context.userId, context.workspaceId, 'revoke_api_key', {
         keyId,

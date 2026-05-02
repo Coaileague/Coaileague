@@ -14,7 +14,7 @@
  */
 
 import { db } from '../../db';
-import { systemAuditLogs, managedApiKeys, keyRotationHistory } from '@shared/schema';
+import { systemAuditLogs, apiKeys, keyRotationHistory } from '@shared/schema';
 import { sql, eq, and, inArray } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 import crypto from 'crypto';
@@ -230,7 +230,7 @@ class ApiKeyRotationService {
 
     try {
       // CATEGORY C — Raw SQL retained: ::jsonb | Tables: managed_api_keys | Verified: 2026-03-23
-      await db.insert(managedApiKeys).values({
+      await db.insert(apiKeys).values({
         id: keyId,
         name: params.name,
         keyType: params.keyType,
@@ -294,10 +294,10 @@ class ApiKeyRotationService {
     try {
       // Converted to Drizzle ORM: IN subquery → inArray()
       const resultRows = await db.select()
-        .from(managedApiKeys)
+        .from(apiKeys)
         .where(and(
-          eq(managedApiKeys.keyHash, keyHash),
-          inArray(managedApiKeys.status, ['active', 'expiring_soon'])
+          eq(apiKeys.keyHash, keyHash),
+          inArray(apiKeys.status, ['active', 'expiring_soon'])
         ));
       
       const row = resultRows[0];
@@ -316,7 +316,7 @@ class ApiKeyRotationService {
   async rotateKey(keyId: string, performedBy?: string, reason?: string): Promise<RotationResult> {
     try {
       // Get existing key
-      const result = await db.select().from(managedApiKeys).where(eq(managedApiKeys.id, keyId));
+      const result = await db.select().from(apiKeys).where(eq(apiKeys.id, keyId));
       
       const oldKey = ((result as Record<string, unknown>).rows as unknown[][])[0];
       if (!oldKey) {
@@ -334,14 +334,14 @@ class ApiKeyRotationService {
       const now = new Date();
       const newExpiresAt = new Date(now.getTime() + expiresInDays * 24 * 60 * 60 * 1000);
 
-      await db.update(managedApiKeys).set({
+      await db.update(apiKeys).set({
         keyPrefix: newKeyPrefix,
         keyHash: newKeyHash,
         status: 'active',
         lastRotatedAt: now,
         expiresAt: newExpiresAt,
-        rotationCount: sql`${managedApiKeys.rotationCount} + 1`,
-      }).where(eq(managedApiKeys.id, keyId));
+        rotationCount: sql`${apiKeys.rotationCount} + 1`,
+      }).where(eq(apiKeys.id, keyId));
 
       // Log rotation
       await this.logRotationAction(keyId, 'rotated', oldKey.key_hash, newKeyHash, reason, performedBy);
@@ -393,9 +393,9 @@ class ApiKeyRotationService {
    */
   async revokeKey(keyId: string, performedBy?: string, reason?: string): Promise<boolean> {
     try {
-      await db.update(managedApiKeys).set({
+      await db.update(apiKeys).set({
         status: 'revoked',
-      }).where(eq(managedApiKeys.id, keyId));
+      }).where(eq(apiKeys.id, keyId));
 
       await this.logRotationAction(keyId, 'revoked', undefined, undefined, reason, performedBy);
 
@@ -419,20 +419,20 @@ class ApiKeyRotationService {
       for (const [keyType, policy] of this.policies) {
         const warningDate = new Date(Date.now() + policy.warningDays * 24 * 60 * 60 * 1000);
         
-        await db.update(managedApiKeys).set({
+        await db.update(apiKeys).set({
           status: 'expiring_soon',
         }).where(and(
-          eq(managedApiKeys.keyType, keyType),
-          eq(managedApiKeys.status, 'active'),
-          sql`${managedApiKeys.expiresAt} <= ${warningDate}`
+          eq(apiKeys.keyType, keyType),
+          eq(apiKeys.status, 'active'),
+          sql`${apiKeys.expiresAt} <= ${warningDate}`
         ));
 
-        await db.update(managedApiKeys).set({
+        await db.update(apiKeys).set({
           status: 'expired',
         }).where(and(
-          eq(managedApiKeys.keyType, keyType),
-          inArray(managedApiKeys.status, ['active', 'expiring_soon']),
-          sql`${managedApiKeys.expiresAt} <= NOW()`
+          eq(apiKeys.keyType, keyType),
+          inArray(apiKeys.status, ['active', 'expiring_soon']),
+          sql`${apiKeys.expiresAt} <= NOW()`
         ));
       }
 

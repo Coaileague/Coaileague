@@ -65,9 +65,11 @@ import { z } from 'zod';
 // auth tables (used in insert schema definitions below)
 import {
   apiKeys,
+  apiKeyScope,
   platformRoles,
   roleTemplates,
-  integrationApiKeys,
+  apiKeys,
+  apiKeyScope,
   idempotencyKeys,
   oauthStates,
   externalIdentifiers,
@@ -78,9 +80,11 @@ import {
   sessionRecoveryRequests,
   userAutomationConsents,
   accessPolicies,
-  workspaceApiKeys,
+  apiKeys,
+  apiKeyScope,
   apiKeyUsageLogs,
-  managedApiKeys,
+  apiKeys,
+  apiKeyScope,
   sessions,
   users,
   passwordResetAuditLog,
@@ -2554,14 +2558,14 @@ export type IntegrationConnection = typeof integrationConnections.$inferSelect;
 
 // Integration API keys - Public API keys for developer access
 
-export const insertIntegrationApiKeySchema = createInsertSchema(integrationApiKeys).omit({
+export const insertIntegrationApiKeySchema = createInsertSchema(apiKeys).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
 
-export type InsertIntegrationApiKey = z.infer<typeof insertIntegrationApiKeySchema>;
-export type IntegrationApiKey = typeof integrationApiKeys.$inferSelect;
+export type InsertApiKey = z.infer<typeof insertIntegrationApiKeySchema>;
+export type ApiKey = typeof apiKeys.$inferSelect;
 
 // Webhook subscriptions - User-configured event listeners
 
@@ -6720,11 +6724,11 @@ export type InsertBgCheck = z.infer<typeof insertBgCheckSchema>;
 export type EmployeeBackgroundCheck = typeof employeeBackgroundChecks.$inferSelect;
 
 
-export const insertWorkspaceApiKeySchema = createInsertSchema(workspaceApiKeys).omit({
+export const insertWorkspaceApiKeySchema = createInsertSchema(apiKeys).omit({
   id: true, createdAt: true, updatedAt: true,
 });
-export type InsertWorkspaceApiKey = z.infer<typeof insertWorkspaceApiKeySchema>;
-export type WorkspaceApiKey = typeof workspaceApiKeys.$inferSelect;
+export type InsertApiKey = z.infer<typeof insertWorkspaceApiKeySchema>;
+export type ApiKey = typeof apiKeys.$inferSelect;
 
 
 export const insertApiKeyUsageSchema = createInsertSchema(apiKeyUsageLogs).omit({
@@ -7174,7 +7178,7 @@ export type DurableJob = typeof durableJobQueue.$inferSelect;
 // ============================================================================
 // MANAGED API KEYS TABLE
 // ============================================================================
-export type ManagedApiKey = typeof managedApiKeys.$inferSelect;
+export type ApiKey = typeof apiKeys.$inferSelect;
 
 // ============================================================================
 // ERROR TRACKING TABLES
