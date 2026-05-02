@@ -7,3 +7,10 @@ vite.config.ts.*
 *.tar.gz.parta*
 *.tar.gz.partb*
 workforceos-platform.tar.gz.*
+
+# Local env files — only .env.example is checked in; real .env stays local
+.env
+.env.local
+.env.development
+.env.test
+.env.*.local
