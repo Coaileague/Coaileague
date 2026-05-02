@@ -308,83 +308,8 @@ export const userDeviceProfiles = pgTable("user_device_profiles", {
   index("device_profiles_type_idx").on(table.deviceType),
   index("device_profiles_fingerprint_idx").on(table.deviceFingerprint),
 ]);
-
-export const sessionCheckpoints = pgTable("session_checkpoints", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(),
-  workspaceId: varchar("workspace_id"),
-  sessionId: varchar("session_id").notNull(), // Browser session fingerprint
-  
-  // Phase tracking
-  phaseKey: varchar("phase_key", { length: 100 }).notNull(), // e.g., 'form_editing', 'report_building', 'data_entry'
-  phaseNumber: integer("phase_number").default(1),
-  
-  // State payload (encrypted for sensitive data)
-  payload: jsonb("payload").notNull(), // Current user state/form data
-  payloadChecksum: varchar("payload_checksum", { length: 64 }), // SHA-256 for integrity verification
-  payloadVersion: integer("payload_version").default(1),
-  
-  // Context for Trinity AI Brain
-  contextSummary: text("context_summary"), // AI-readable summary of what user was doing
-  pageRoute: varchar("page_route", { length: 255 }), // Current page/route
-  actionHistory: jsonb("action_history"), // Recent user actions for context
-  
-  // AI Sync State
-  aiSyncState: checkpointSyncStateEnum("ai_sync_state").default("pending"),
-  aiSyncedAt: timestamp("ai_synced_at"),
-  trinityContextId: varchar("trinity_context_id", { length: 100 }), // Reference ID in Trinity's context
-  
-  // Lifecycle
-  isFinal: boolean("is_final").default(false), // True when session ended gracefully
-  isRecovered: boolean("is_recovered").default(false), // True if this was used for recovery
-  expiresAt: timestamp("expires_at"), // Auto-cleanup after this time
-  
-  // Folded audit trail (from session_checkpoint_events)
-  checkpointEvents: jsonb("checkpoint_events").default([]),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-  savedAt: timestamp("saved_at").defaultNow(),
-}, (table) => [
-  index("session_checkpoints_user_idx").on(table.userId),
-  index("session_checkpoints_workspace_idx").on(table.workspaceId),
-  index("session_checkpoints_session_idx").on(table.sessionId),
-  index("session_checkpoints_phase_idx").on(table.phaseKey),
-  index("session_checkpoints_final_idx").on(table.isFinal),
-  index("session_checkpoints_expires_idx").on(table.expiresAt),
-]);
-
-export const sessionRecoveryRequests = pgTable("session_recovery_requests", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  workspaceId: varchar("workspace_id"),
-  userId: varchar("user_id").notNull(),
-  checkpointId: varchar("checkpoint_id").notNull(),
-  sessionId: varchar("session_id").notNull(), // Original session that was lost
-  newSessionId: varchar("new_session_id"), // New session where recovery happened
-  
-  // Request details
-  requestSource: varchar("request_source", { length: 50 }).notNull(), // 'auto_prompt', 'user_initiated', 'trinity_suggested'
-  status: varchar("status", { length: 30 }).default("pending"), // 'pending', 'accepted', 'declined', 'expired', 'completed'
-  
-  // Recovery outcome
-  recoveredData: jsonb("recovered_data"), // What was restored
-  recoveryNotes: text("recovery_notes"), // AI-generated summary of recovery
-  userFeedback: varchar("user_feedback", { length: 30 }), // 'helpful', 'partial', 'not_needed'
-  
-  // Timing
-  promptedAt: timestamp("prompted_at").defaultNow(),
-  respondedAt: timestamp("responded_at"),
-  completedAt: timestamp("completed_at"),
-  expiresAt: timestamp("expires_at"), // Recovery offer expires after this
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("recovery_requests_user_idx").on(table.userId),
-  index("recovery_requests_checkpoint_idx").on(table.checkpointId),
-  index("recovery_requests_status_idx").on(table.status),
-  index("recovery_requests_created_idx").on(table.createdAt),
-]);
+;
+;
 
 export const userAutomationConsents = pgTable("user_automation_consents", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -714,3 +639,7 @@ export const keyRotationHistory = pgTable("key_rotation_history", {
   index("key_rotation_history_created_idx").on(table.createdAt),
 ]);
 
+
+// Re-exported from Orgs domain (moved in Wave 1 cleanup)
+export { sessionCheckpoints, sessionRecoveryRequests } from '../orgs';
+export { checkpointSyncStateEnum } from '../../enums';
