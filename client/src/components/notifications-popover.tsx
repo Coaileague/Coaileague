@@ -8,6 +8,7 @@ import { TrinityLogo } from "@/components/ui/coaileague-logo-mark";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger,  } from "@/components/ui/popover";
 import { UniversalModal, UniversalModalContent } from '@/components/ui/universal-modal'
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,  } from "@/components/ui/alert-dialog";
 ;
 import { Button } from "@/components/ui/button";
@@ -2544,17 +2545,47 @@ function NotificationsPopoverInner({ user }: { user: any }) {
     );
   };
 
+  const handleAskTrinityFromUNS = () => {
+    setOpen(false);
+    openTrinityModal();
+  };
+
   if (isMobile) {
+    // Mobile bell opens a bottom sheet over the current page. The sheet's
+    // built-in chrome (Home + Close at top-right) is suppressed because the
+    // notification panel renders its own gradient header with controls, and
+    // we don't want the stacked-duplicate-buttons regression we just fixed.
     return (
       <>
-        {/* Notification Bell Trigger */}
-        <div onClick={() => { chatDock?.closeBubble(); setOpen(true); }}>
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label={totalUnread > 0 ? `Notifications — ${totalUnread} unread` : 'Notifications'}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          onClick={() => { chatDock?.closeBubble(); setOpen(true); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); chatDock?.closeBubble(); setOpen(true); } }}
+          data-testid="button-notification-bell-mobile"
+        >
           <Bell className="h-5 w-5 text-foreground" />
         </div>
-        
-        {/* No title so we control our own header; showCloseButton=false hides the built-in sheet buttons */}
-        
-        {/* Notification Detail Modal - Shows structured breakdown */}
+
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetContent
+            side="bottom"
+            hideBuiltInClose
+            className="p-0 max-h-[92dvh] flex flex-col overflow-hidden"
+            data-testid="notification-sheet-mobile"
+          >
+            <div className="flex flex-col h-full min-h-0">
+              <div className="flex-1 min-h-0 overflow-hidden">
+                {MobileNotificationsContent}
+              </div>
+              <Footer compact onAskTrinity={handleAskTrinityFromUNS} />
+            </div>
+          </SheetContent>
+        </Sheet>
+
         <NotificationDetailModal
           notification={selectedNotification}
           isOpen={!!selectedNotification}
@@ -2566,11 +2597,6 @@ function NotificationsPopoverInner({ user }: { user: any }) {
       </>
     );
   }
-
-  const handleAskTrinityFromUNS = () => {
-    setOpen(false);
-    openTrinityModal();
-  };
 
   return (
     <>
@@ -2587,16 +2613,15 @@ function NotificationsPopoverInner({ user }: { user: any }) {
             <Bell className="h-5 w-5" />
           </div>
         </PopoverTrigger>
-        <PopoverContent 
-          className="w-auto p-0 border-0 bg-transparent shadow-none overflow-visible" 
-          style={{ overflow: 'visible' }}
+        <PopoverContent
+          className="w-[420px] max-w-[92vw] p-0 overflow-hidden border bg-background shadow-lg"
           align="end"
           sideOffset={8}
           data-testid="notification-popover-content"
           data-trinity-avoid="true"
           onInteractOutside={(e) => {
             const target = e.target as HTMLElement;
-            const isMascotInteraction = target.closest('[data-mascot]') || 
+            const isMascotInteraction = target.closest('[data-mascot]') ||
                                          target.closest('[data-trinity]') ||
                                          target.closest('.mascot-container');
             if (isMascotInteraction) {
@@ -2604,17 +2629,15 @@ function NotificationsPopoverInner({ user }: { user: any }) {
             }
           }}
         >
-          <UNSCommandCenter 
-            isOpen={true}
-            onClose={() => setOpen(false)}
-            onAskTrinity={handleAskTrinityFromUNS}
-            platformRole={accessPlatformRole || userPlatformRole || undefined}
-            workspaceRole={workspaceRole || undefined}
-          />
+          <div className="flex flex-col max-h-[80vh] min-h-0">
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {DesktopNotificationsContent}
+            </div>
+            <Footer compact={false} onAskTrinity={handleAskTrinityFromUNS} />
+          </div>
         </PopoverContent>
       </Popover>
-      
-      {/* Notification Detail Modal - Shows structured breakdown */}
+
       <NotificationDetailModal
         notification={selectedNotification}
         isOpen={!!selectedNotification}

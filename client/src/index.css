@@ -1998,8 +1998,10 @@ body[data-public-route="true"] .fixed [data-testid*="banner"] {
   --card-gap-mobile: 0.75rem;     /* 12px between elements */
   --panel-padding-mobile: 1rem;   /* 16px page padding */
 
-  /* Mobile bottom nav height — used by MobilePageWrapper scroll container */
-  --bottom-nav-height: 64px;
+  /* Mobile bottom nav height — published by MobileBottomNav while it is
+     mounted (set on documentElement). Defaults to 0 so routes that hide the
+     nav (chatrooms, public marketing pages) don't reserve empty space. */
+  --bottom-nav-height: 0px;
 
   /* Z-Index Scale for Layering (Unified — matches component z-values) */
   /* ═══════════════════════════════════════════════════════
