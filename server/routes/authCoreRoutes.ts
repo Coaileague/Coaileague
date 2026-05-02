@@ -125,11 +125,17 @@ router.post("/api/auth/register", async (req, res) => {
       return res.status(429).json({ message: "Suspicious activity detected. Please try again later." });
     }
 
-    // Check if email already exists
+    // Normalize email to match the case-insensitive lookup used by /login.
+    // Without this, an account registered as "John@Example.com" is stored
+    // verbatim and every case-sensitive lookup (password reset, admin tools,
+    // authService) fails to find it.
+    const normalizedEmail = data.email.toLowerCase().trim();
+
+    // Check if email already exists (case-insensitive — login lookup uses lower())
     const [existingUser] = await db
       .select()
       .from(users)
-      .where(eq(users.email, data.email))
+      .where(sql`lower(${users.email}) = ${normalizedEmail}`)
       .limit(1);
 
     if (existingUser) {
@@ -153,7 +159,7 @@ router.post("/api/auth/register", async (req, res) => {
     const [newUser] = await db
       .insert(users)
       .values({
-        email: data.email,
+        email: normalizedEmail,
         passwordHash,
         firstName: data.firstName,
         lastName: data.lastName,

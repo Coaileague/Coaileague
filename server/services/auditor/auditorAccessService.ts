@@ -538,11 +538,14 @@ export async function authenticateAuditor(email: string): Promise<{
   await ensureTables();
   try {
     const { pool } = await import('../../db');
+    // Case-insensitive lookup — the auditor route accepts the email as the
+    // user typed it, so the DB compare must lowercase both sides.
+    const normalizedEmail = email.toLowerCase().trim();
     const r = await pool.query(
       `SELECT id, status, password_hash, last_auth_at
          FROM auditor_accounts
-        WHERE email = $1 LIMIT 1`,
-      [email]
+        WHERE LOWER(email) = $1 LIMIT 1`,
+      [normalizedEmail]
     );
     if (!r.rows.length) return { ok: false, reason: 'not_found' };
 

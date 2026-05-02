@@ -8,7 +8,7 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { db, isDbCircuitOpen } from "./db";
 import { users, authSessions } from "@shared/schema";
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, sql } from "drizzle-orm";
 import "./types";
 import { trinityOrchestration } from "./services/trinity/trinityOrchestrationAdapter";
 import { createLogger } from './lib/logger';
@@ -971,10 +971,13 @@ export async function verifyEmailToken(
 export async function createPasswordResetToken(
   email: string
 ): Promise<{ success: boolean; token?: string; user?: typeof users.$inferSelect; message?: string; code?: string }> {
+  // Case-insensitive lookup — must match the login flow's normalization or
+  // password reset will fail silently for emails with different casing.
+  const normalizedEmail = email.toLowerCase().trim();
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.email, email))
+    .where(sql`lower(${users.email}) = ${normalizedEmail}`)
     .limit(1);
 
   if (!user) {
