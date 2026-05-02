@@ -1,4 +1,4 @@
-import type { Response, Request } from 'express';
+import type { Response, Request, NextFunction } from 'express';
 /**
  * CDN/Edge Caching Service - Q4 2026 Infrastructure
  * ==================================================
@@ -333,7 +333,7 @@ class CDNCachingService {
    * Cache middleware for Express routes
    */
   cacheMiddleware(ttl?: number) {
-    return (req: Request, res: Response, next: unknown) => {
+    return (req: Request, res: Response, next: NextFunction) => {
       const cacheKey = `route:${req.method}:${req.originalUrl}`;
       const cached = this.get(cacheKey);
       

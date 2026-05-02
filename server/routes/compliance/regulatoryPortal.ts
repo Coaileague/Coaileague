@@ -35,7 +35,7 @@ import { AuthenticatedRequest } from '../../rbac';
  */
 
 import { sanitizeError } from '../../middleware/errorHandler';
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { PLATFORM } from '../../config/platformConfig';
 import crypto from 'crypto';
 import multer from 'multer';
@@ -99,7 +99,7 @@ router.use(readLimiter);
 // ── Phase 30 Tier Enforcement ──────────────────────────────────────────────────
 // Auditor dashboard routes verify the *audited workspace* is on Business+ tier.
 // This prevents orgs on lower tiers from inadvertently exposing auditor portals.
-router.use('/dashboard', async (req: AuthenticatedRequest, res: Response, next: unknown) => {
+router.use('/dashboard', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     // Extract workspaceId from path: /dashboard/:workspaceId/...
     const workspaceId = req.path.split('/').filter(Boolean)[0];

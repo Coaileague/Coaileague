@@ -42,7 +42,7 @@ import { AuthenticatedRequest } from '../rbac';
  * TRINITY.md §U  — LAW P3: multer.memoryStorage() only.
  */
 
-import { Router, type Response } from 'express';
+import { Router, type Response, type NextFunction } from 'express';
 import multer from 'multer';
 import { createLogger } from '../lib/logger';
 
@@ -101,7 +101,7 @@ const upload = multer({
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
 
-function requireAuditorSession(req: AuthenticatedRequest, res: Response, next: unknown): void {
+function requireAuditorSession(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
   if (!req.session?.auditorId) {
     res.status(401).json({ ok: false, error: 'Auditor session required' });
     return;
@@ -109,7 +109,7 @@ function requireAuditorSession(req: AuthenticatedRequest, res: Response, next: u
   next();
 }
 
-function requireUserAuth(req: AuthenticatedRequest, res: Response, next: unknown): void {
+function requireUserAuth(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
   if (!req.user?.id && !req.session?.userId) {
     res.status(401).json({ ok: false, error: 'Authentication required' });
     return;
@@ -118,7 +118,7 @@ function requireUserAuth(req: AuthenticatedRequest, res: Response, next: unknown
 }
 
 // Accept either a logged-in tenant user OR an auditor session
-function requireEitherAuth(req: AuthenticatedRequest, res: Response, next: unknown): void {
+function requireEitherAuth(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
   if (req.user?.id || req.session?.userId || req.session?.auditorId) {
     return next();
   }

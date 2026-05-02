@@ -11,7 +11,7 @@ import { AuthenticatedRequest } from '../rbac';
  * - Audit trail and event history
  */
 
-import { Router, Response} from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { db } from '../db';
 import { 
   agentIdentities, 
@@ -33,7 +33,7 @@ const log = createLogger('UacpRoutes');
 const router = Router();
 
 // Middleware to check admin access
-const requireAdminAccess = (req: AuthenticatedRequest, res: Response, next: unknown) => {
+const requireAdminAccess = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const user = req.user;
   const allowedRoles = ['org_owner', 'co_owner', 'org_admin', 'root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
   

@@ -1,4 +1,4 @@
-import { type Response } from 'express';
+import { type Response, type NextFunction } from 'express';
 import type { AuthenticatedRequest } from '../rbac';
 // Domain Audit & Platform Ops — Route Mounts
 // THE LAW: No new routes without Bryan's approval.
@@ -211,7 +211,7 @@ export function mountAuditRoutes(app: Express): void {
   app.use("/api/kpi-alerts", kpiAlertRouter);
   app.use("/api/insights", requireAuth, ensureWorkspaceAccess, insightsRouter);
   // Predict & patterns routes have full /api/predict/*, /api/patterns/* paths inside insightsRouter
-  app.use((req: AuthenticatedRequest, res: Response, next: unknown) => {
+  app.use((req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (req.path.startsWith("/api/predict") || req.path.startsWith("/api/patterns")) {
       return insightsRouter(req, res, next);
     }

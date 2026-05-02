@@ -1,4 +1,4 @@
-import { type Response } from 'express';
+import { type Response, type NextFunction } from 'express';
 /**
  * AI Brain Workboard Routes
  * 
@@ -14,7 +14,7 @@ import { createLogger } from '../lib/logger';
 const log = createLogger('WorkboardRoutes');
 
 
-export function registerWorkboardRoutes(app: Router, requireAuth: (req: AuthenticatedRequest, res: Response, next: unknown) => void) {
+export function registerWorkboardRoutes(app: Router, requireAuth: (req: AuthenticatedRequest, res: Response, next: NextFunction) => void) {
   /**
    * Submit a new task to the AI Brain Workboard
    * Central entry point for all AI orchestration requests

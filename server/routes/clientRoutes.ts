@@ -2,7 +2,7 @@ import { sanitizeError } from '../middleware/errorHandler';
 import { formatZodIssues } from '../middleware/validateRequest';
 import { isValidIANATimezone } from '../services/holidayService';
 import { validateBillingRate, businessRuleResponse } from '../lib/businessRules';
-import { Router } from "express";
+import { Router, type Response, type NextFunction } from "express";
 import { NotificationDeliveryService } from '../services/notificationDeliveryService';
 import { storage } from "../storage";
 import { trimStrings } from "../utils/sanitize";
@@ -1034,7 +1034,7 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000).unref();
 
-function dockChatRateLimit(req: AuthenticatedRequest, res: Response, next: unknown) {
+function dockChatRateLimit(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const ip = req.ip || req.connection?.remoteAddress || 'unknown';
   const now = Date.now();
   const windowMs = 60_000;

@@ -1,4 +1,4 @@
-import type { Response, Request } from 'express';
+import type { Response, Request, NextFunction } from 'express';
 /**
  * Concurrency Guard — Per-workspace mutex for critical operations
  * Prevents race conditions on payroll runs, invoice generation, credit purchases.
@@ -94,7 +94,7 @@ export function storeIdempotencyResult(
  * If X-Idempotency-Key header present and matches a cached result, return 200 immediately.
  */
 export function idempotencyMiddleware(workspaceIdExtractor?: (req: unknown) => string | undefined) {
-  return (req: Request, res: Response, next: unknown) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     const idempotencyKey = req.headers['x-idempotency-key'] as string | undefined;
     if (!idempotencyKey) { next(); return; }
 
