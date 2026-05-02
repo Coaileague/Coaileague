@@ -15,7 +15,7 @@
  */
 
 import { db } from '../../db';
-import { workspaceOnboardingStates } from '@shared/schema';
+import { } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 import { helpaiOrchestrator } from '../helpai/platformActionHub';
@@ -462,7 +462,7 @@ class OnboardingStateMachine {
     try {
       // Converted to Drizzle ORM: ON CONFLICT
       const stateJson = JSON.stringify(state);
-      // workspaceOnboardingStates removed (Wave 1) — use onboardingFlow
+      // removed (Wave 1) — use onboardingFlow
         // TODO: port to onboardingFlow table
     } catch (error) {
       log.warn('[OnboardingStateMachine] Failed to persist state (table may not exist):', error);

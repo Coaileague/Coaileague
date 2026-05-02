@@ -466,56 +466,7 @@ export const promotionalBanners = pgTable("promotional_banners", {
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   activeIndex: index("promotional_banners_active_idx").on(table.isActive, table.priority),
-}));
-
-export const onboardingTemplates = pgTable("onboarding_templates", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  workspaceId: varchar("workspace_id").notNull(),
-
-  // Template details
-  name: varchar("name").notNull(),
-  description: text("description"),
-  departmentName: varchar("department_name"), // Department name (no FK)
-  roleTemplateId: varchar("role_template_id"),
-
-  // Timeline
-  durationDays: integer("duration_days").default(30), // Typical onboarding length
-
-  // Status
-  isActive: boolean("is_active").default(true),
-  createdBy: varchar("created_by"),
-
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const onboardingTasks = pgTable("onboarding_tasks", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  workspaceId: varchar("workspace_id").notNull(),
-  templateId: varchar("template_id").notNull(),
-
-  // Task details
-  title: varchar("title").notNull(),
-  description: text("description"),
-  taskType: varchar("task_type").notNull(), // 'document', 'training', 'meeting', 'equipment', 'access', 'orientation'
-
-  // Assignment
-  assignedTo: varchar("assigned_to"), // 'new_hire', 'manager', 'hr', 'it', specific_user_id
-  dayOffset: integer("day_offset").default(0), // Day # in onboarding (0 = first day)
-
-  // Requirements
-  isRequired: boolean("is_required").default(true),
-  requiresDocument: boolean("requires_document").default(false),
-  requiresSignature: boolean("requires_signature").default(false),
-
-  // Ordering
-  sortOrder: integer("sort_order").default(0),
-
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const organizationOnboarding = pgTable("organization_onboarding", {
+}));export const organizationOnboarding = pgTable("organization_onboarding", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar("workspace_id").notNull().unique(),
   
@@ -1596,22 +1547,7 @@ export const workspaceRoleLabels = pgTable("workspace_role_labels", {
 
 // ── workspace_onboarding_states ─────────────────────────────────────────────
 // Persists step-by-step onboarding state for each workspace.
-// Written by onboardingStateMachine.ts with graceful fallback.
-export const workspaceOnboardingStates = pgTable("workspace_onboarding_states", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  workspaceId: varchar("workspace_id").notNull().unique(),
-  currentStep: varchar("current_step", { length: 100 }),
-  completedSteps: jsonb("completed_steps").$type<string[]>().default(sql`'[]'::jsonb`),
-  stateData: jsonb("state_data"),
-  isComplete: boolean("is_complete").default(false),
-  completedAt: timestamp("completed_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("ws_onboarding_workspace_idx").on(table.workspaceId),
-]);
-
-// ── tos_agreements ──────────────────────────────────────────────────────────
+// Written by onboardingStateMachine.ts with graceful fallback.// ── tos_agreements ──────────────────────────────────────────────────────────
 // Immutable record of every Terms of Service + AI Disclaimer acknowledgment.
 // These records are LEGALLY PROTECTED — they must never be deleted or altered
 // once signed. Only CoAIleague support staff may view/download/print them.
@@ -1754,3 +1690,50 @@ export const sessionRecoveryRequests = pgTable("session_recovery_requests", {
   index("recovery_requests_status_idx").on(table.status),
   index("recovery_requests_created_idx").on(table.createdAt),
 ])
+
+
+// ─── Canonical Onboarding Tables (Wave 1 + Wave 2 consolidation) ─────────────
+export const onboardingFlow = pgTable('onboarding_flows', {
+  id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  workspaceId: varchar('workspace_id', { length: 255 }).notNull(),
+  userId: varchar('user_id', { length: 36 }),
+  flowType: varchar('flow_type', { length: 50 }).notNull().default('workspace'),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  status: varchar('status', { length: 50 }).notNull().default('pending'),
+  currentPhase: varchar('current_phase', { length: 100 }),
+  completionPercentage: integer('completion_percentage').default(0),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>().default({}),
+  startedAt: timestamp('started_at'),
+  completedAt: timestamp('completed_at'),
+  dueAt: timestamp('due_at'),
+  createdBy: varchar('created_by', { length: 36 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  index('onboarding_flows_workspace_idx').on(table.workspaceId),
+  index('onboarding_flows_user_idx').on(table.userId),
+  index('onboarding_flows_status_idx').on(table.status),
+]);
+
+export const onboardingStep = pgTable('onboarding_steps', {
+  id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  flowId: varchar('flow_id', { length: 36 }).notNull().references(() => onboardingFlow.id, { onDelete: 'cascade' }),
+  workspaceId: varchar('workspace_id', { length: 255 }).notNull(),
+  stepKey: varchar('step_key', { length: 100 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  stepOrder: integer('step_order').notNull().default(0),
+  isRequired: boolean('is_required').notNull().default(true),
+  status: varchar('status', { length: 50 }).notNull().default('pending'),
+  assignedTo: varchar('assigned_to', { length: 36 }),
+  completedAt: timestamp('completed_at'),
+  completedBy: varchar('completed_by', { length: 36 }),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>().default({}),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  index('onboarding_steps_flow_idx').on(table.flowId),
+  index('onboarding_steps_workspace_idx').on(table.workspaceId),
+  index('onboarding_steps_key_idx').on(table.stepKey),
+]);

@@ -9,7 +9,7 @@ import {
 } from '../../emailTemplateBase';
 import { PLATFORM } from '@shared/platformConfig';
 
-export const /* onboardingTemplates removed - use onboardingFlow/onboardingStep */ = {
+export const onboardingEmailTemplates = {
   managerOnboardingNotification: (data: {
     managerName: string;
     employeeName: string;

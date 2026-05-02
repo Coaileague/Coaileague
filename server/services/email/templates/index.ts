@@ -14,14 +14,14 @@
 import { accountTemplates } from './account';
 import { billingTemplates } from './billing';
 import { supportTemplates } from './support';
-import { /* onboardingTemplates removed - use onboardingFlow/onboardingStep */ } from './onboarding';
+import { onboardingEmailTemplates } from './onboarding';
 import { schedulingTemplates } from './scheduling';
 
 export const emailTemplates = {
   ...accountTemplates,
   ...billingTemplates,
   ...supportTemplates,
-  .../* onboardingTemplates removed - use onboardingFlow/onboardingStep */,
+  ...onboardingEmailTemplates,
   ...schedulingTemplates,
 };
 
@@ -31,6 +31,6 @@ export {
   accountTemplates,
   billingTemplates,
   supportTemplates,
-  /* onboardingTemplates removed - use onboardingFlow/onboardingStep */,
+  onboardingEmailTemplates,
   schedulingTemplates,
 };

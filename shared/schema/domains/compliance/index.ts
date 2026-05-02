@@ -9,6 +9,8 @@ import { sql } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
 import {
+  complianceEnrollmentStatusEnum,
+  operatorCredentialTypeEnum,
   complianceApprovalStatusEnum,
   complianceDocImageTypeEnum,
   complianceDocStatusEnum,
@@ -1829,3 +1831,32 @@ export type InsertPostRequirement = z.infer<typeof insertPostRequirementSchema>;
 export type PostRequirement = typeof postRequirements.$inferSelect;
 
 export * from './extended';
+
+
+export const complianceEnrollments = pgTable("compliance_enrollments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  employeeId: varchar("employee_id").notNull(),
+  userId: varchar("user_id"),
+  credentialType: operatorCredentialTypeEnum("credential_type"),
+  documentId: varchar("document_id"),
+  fileUrl: varchar("file_url"),
+  cardNumber: varchar("card_number"),
+  issuingState: varchar("issuing_state").default("TX"),
+  issuingAgency: varchar("issuing_agency").default("TX DPS"),
+  expirationDate: timestamp("expiration_date"),
+  status: complianceEnrollmentStatusEnum("status").notNull().default("pending"),
+  deadline: timestamp("deadline").notNull(),
+  submittedAt: timestamp("submitted_at"),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: varchar("reviewed_by"),
+  rejectionReason: text("rejection_reason"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("ce_workspace_idx").on(table.workspaceId),
+  index("ce_employee_idx").on(table.employeeId),
+  index("ce_status_idx").on(table.status),
+  uniqueIndex("ce_workspace_employee_idx").on(table.workspaceId, table.employeeId),
+])

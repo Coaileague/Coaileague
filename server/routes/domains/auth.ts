@@ -4,8 +4,9 @@
 import type { Express } from "express";
 import { requireAuth } from "../../auth";
 import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
-import authRoutesFromRoot from "../authCoreRoutes";
+// Merged: authCoreRoutes → authRoutes (Wave 2)
 import authRouter from "../authRoutes";
+const authRoutesFromRoot = authRouter;
 import { sessionCheckpointRouter } from "../sessionCheckpointRoutes";
 import endUserControlRouter from "../endUserControlRoutes";
 import devRouter from "../devRoutes";
