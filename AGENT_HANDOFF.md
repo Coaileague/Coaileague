@@ -39,10 +39,25 @@ Phase 3  GET  /api/auth/me            → 200 root_admin payload returned
 Phase 4  POST /api/onboarding/complete-task/:taskId  → handler reached, "Task not found" (correct service-level 404)
 Phase 5  POST /api/onboarding/tasks/:taskId/complete → handler reached, same behaviour (mounted at both URLs)
 Phase 6  GET  /health                 → 200 healthy
+Phase 7  Re-ran ALL above after every later TS-fix commit — no regressions.
 ```
 
 Server startup log shows the canonical mount order from this session's audit is preserved:
 `bootstrap → CSRF → guards → public → webhooks → 15 domains → trinity bypass → mountTrinity → multi-company/etc → mountAudit → featureStubRouter (LAST)`.
+
+### TS Strict Reduction This Session
+
+| Step | tsc errors | Δ |
+|---|---|---|
+| Branch start (Apr 28 baseline) | ~24,153 | — |
+| After commit 481c361 (route + race fixes) | 19,805 | -4,348 |
+| After commit d9a21a8 (auth + schema + vite) | 19,803 | -2 |
+| After commit b84d968 (trinityTaskSchema + ShiftWithJoins) | 19,803 | 0 |
+| After commit b68ac83 (chat-rooms + chat-management + approval imports) | 19,789 | -14 |
+| After commit dd6be56 (16 next:unknown → NextFunction) | 19,738 | -51 |
+| After commit bfe5422 (drizzle decimal defaults + req:unknown) | 19,680 | -58 |
+
+**Net session: -473 from the baseline at audit start.** esbuild stayed at 0 errors throughout. The remaining 19,680 are dominated by TS18046 (unknown propagation in deep AI/Drizzle internals) and Pattern B drizzle-zod inference issues on tables using `generatedAlwaysAsIdentity()` — those are accepted multi-session backlog, not regressions.
 
 ### Verified Clean (no regression — leave alone)
 

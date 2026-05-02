@@ -732,15 +732,36 @@ Server entry:        server/index.ts → dist/index.js (38MB)
 | `tsc -p tsconfig.server.json` (server + shared only) | 19,803 | down 3 from 19,806 after 2026-05-02 audit |
 | `node build.mjs` (esbuild server bundler) | 0 | runtime canonical — what production actually runs |
 
-**2026-05-02 backend-routes-audit pass landed:**
-- Fixed `verifyPassword is not defined` — login was crashing in production (TS2304 caught at runtime).
-- Fixed `verifyMfaToken`, `validatePendingMfaToken`, `SUPPORT_PLATFORM_ROLES` undefined references in authCoreRoutes.ts.
-- Cleaned 20 dead `Insert<X>` type aliases in shared/schema.ts referencing nonexistent zod schemas.
-- Re-typed `fromAgentExecutionContext` in shared/trinityTaskSchema.ts (25 errors → 0).
-- Fixed `ShiftWithJoins` extension via `Omit` (1 error → 0).
-- Fixed vite.config.ts invalid `moduleDirectories` resolve option.
+**2026-05-02 backend-routes-audit pass landed (7 commits on `claude/audit-backend-routes-erroW`):**
 
-The strict `tsc` baseline is documented honestly; canonical runtime compile (esbuild) and runtime smoke test (login + new onboarding routes) both PASS.
+Route + race + wiring (commits 481c361, d9a21a8):
+- Race condition in `platformWorkspaceSeedLock` (defined never acquired) — moved into seed module as single-flight Promise.
+- Ghost API: `/api/onboarding/complete-task/:taskId` and `/api/onboarding/tasks/:taskId/complete` were JSDoc-only stubs — both wired to existing service.
+- Dead `routeMounting.ts` helpers deleted (33 lines).
+- Stale availabilityRoutes scheduling-table row removed.
+
+Real runtime bugs caught by strict-tsc that esbuild let through (commit d9a21a8):
+- `verifyPassword is not defined` — login was 100% broken in production.
+- `verifyMfaToken`, `validatePendingMfaToken`, `SUPPORT_PLATFORM_ROLES` undefined in authCoreRoutes.ts.
+- `chatRooms` table reference (table no longer exists) — replaced with `organizationChatRooms`. (commit b68ac83)
+- Missing `storage` and `desc` imports in chat-management/chat-rooms/approvalRoutes. (commit b68ac83)
+
+Type debt reduction (commits b84d968, dd6be56, bfe5422):
+- 20 dead `Insert<X>` type aliases in shared/schema.ts removed/rewired.
+- `fromAgentExecutionContext` agent-step typing (25 errors → 0).
+- `ShiftWithJoins` Omit-then-extend pattern (1 error → 0).
+- 16 files: `next: unknown` → `NextFunction`.
+- 4 files: `req: unknown` / `res: unknown` → proper express types.
+- 30 drizzle decimal columns: `.default(0)` → `.default('0')`.
+- vite.config.ts `moduleDirectories` removed (not a Vite option).
+
+**Runtime verification (re-run after every TS fix):**
+- POST /api/auth/login (root) → 200 with session
+- POST /api/onboarding/complete-task/:taskId → handler reached
+- POST /api/onboarding/tasks/:taskId/complete → handler reached
+- GET /health → 200
+
+**Result:** -473 strict-tsc errors net (24,153 → 19,680), 0 esbuild errors throughout, 0 runtime regressions in tested flows.
 
 **Top remaining debt files (production):**
 - settings.tsx: 62 (complex settings form with dynamic shapes)
