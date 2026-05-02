@@ -10,7 +10,7 @@ import { db, isDbCircuitOpen } from "./db";
 import { users, authSessions } from "@shared/schema";
 import { eq, and, gt, sql } from "drizzle-orm";
 import "./types";
-import { trinityOrchestration } from "./services/trinity/trinityOrchestrationAdapter";
+import { authEvents } from "./lib/authEvents";
 import { createLogger } from './lib/logger';
 import { AUTH } from './config/platformConfig';
 import { isProduction as isProductionEnv } from './lib/isProduction';
@@ -681,7 +681,7 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
   }
 
   if (!authenticatedUserId) {
-    trinityOrchestration.auth.requestUnauthenticated(endpoint, method, 'no_session', ipAddress);
+    authEvents.emit('login.failed', { endpoint, method, reason: 'no_session', ipAddress });
     return res.status(401).json({ message: "Unauthorized - Please login" });
   }
 
@@ -715,7 +715,7 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     .limit(1);
 
   if (!user) {
-    trinityOrchestration.auth.requestUnauthenticated(endpoint, method, 'user_not_found', ipAddress);
+    authEvents.emit('login.failed', { endpoint, method, reason: 'user_not_found', ipAddress });
     req.session.destroy(() => {});
     return res.status(401).json({ message: "User not found" });
   }
@@ -723,11 +723,11 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
   // Check if account is locked
   const lockStatus = await checkAccountLocked(user.id);
   if (lockStatus.locked) {
-    trinityOrchestration.auth.requestUnauthenticated(endpoint, method, 'account_locked', ipAddress);
+    authEvents.emit('login.failed', { endpoint, method, reason: 'account_locked', ipAddress });
     return res.status(403).json({ message: lockStatus.message });
   }
 
-  trinityOrchestration.auth.requestAuthenticated(user.id, endpoint, method, user.currentWorkspaceId || null);
+  authEvents.emit('login.success', { userId: user.id, endpoint, method, workspaceId: user.currentWorkspaceId || null });
 
   // Attach user to request
   req.user = user as typeof req.user;

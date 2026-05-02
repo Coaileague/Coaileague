@@ -1,3 +1,4 @@
+import { NOTIFICATION_DEDUP_WINDOW_MS } from '@shared/config/notificationConfig';
 import { createLogger } from '../lib/logger';
 const log = createLogger('NDS');
 
@@ -190,7 +191,7 @@ export interface SendNotificationPayload {
 }
 
 export class NotificationDeliveryService {
-  private static readonly DEFAULT_DEDUP_WINDOW_MS = 30 * 60 * 1000; // 30 min dedup (was 5 min — prevents spam)
+  private static readonly DEFAULT_DEDUP_WINDOW_MS = NOTIFICATION_DEDUP_WINDOW_MS; // 6h — shared constant from notificationConfig
   private static readonly EMPTY_BODY_FALLBACK = 'Notification received. Please log in for details.';
   private static readonly SIMPLE_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

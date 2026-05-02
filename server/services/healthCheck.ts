@@ -1,3 +1,4 @@
+import { PLATFORM_WORKSPACE_ID } from '../config/platformConfig';
 // Health Check Service - Monitor critical platform services
 
 import type { ServiceHealth, ServiceStatus, HealthSummary } from '../../shared/healthTypes';
@@ -17,7 +18,7 @@ const log = createLogger('healthCheck');
 
 // Platform workspace ID for system-level support tickets
 // This should be configured during platform initialization
-const PLATFORM_WORKSPACE_ID = process.env.PLATFORM_WORKSPACE_ID || 'platform';
+
 
 // Cache health check results to prevent thrashing
 // Don't cache failures so recovery is detected quickly

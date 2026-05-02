@@ -611,3 +611,8 @@ export function getSeverityOptions() {
     color: config.color,
   }));
 }
+// ─── Notification dedup window ────────────────────────────────────────────────
+// All notification channels (push, in-app, email) use this window to prevent
+// duplicate sends. Trinity action callers key by Math.floor(Date.now()/window).
+// The delivery service enforces this as a secondary guard.
+export const NOTIFICATION_DEDUP_WINDOW_MS = 6 * 60 * 60 * 1000; // 6 hours

@@ -8,6 +8,22 @@
  * For MVP, these routes return success but indicate features are disabled.
  * Platform staff can still access full functionality.
  */
+/**
+ * infrastructureRoutes.ts — Platform Infrastructure API (78 routes)
+ *
+ * LOGICAL SECTIONS (candidates for future split into separate files):
+ *   § Health & Readiness    — /health, /metrics, /readiness, /launch*
+ *   § Job Queue             — /jobs/*, /chaos, /backups, /disaster-recovery
+ *   § Security & Keys       — /keys/*, /errors/*, /tracing/*, /rate-limit/*
+ *   § Pool & SLA            — /pool/*, /sla/*, /cdn/*, /monitoring/*
+ *
+ * All routes are gated by requirePlatformRole('platform_staff') unless
+ * explicitly noted as public (e.g. /health endpoint).
+ *
+ * @see server/lib/jobQueue.ts for canonical job queue import
+ * @see server/middleware/rateLimiting/ for unified rate limiter
+ */
+
 
 import { sanitizeError } from '../middleware/errorHandler';
 import { pool } from '../db';

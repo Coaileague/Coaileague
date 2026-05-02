@@ -1,3 +1,14 @@
+/**
+ * authRoutes.ts — Authentication supplementary endpoints
+ *
+ * SCOPE: Password management, email verification, MFA setup, OAuth flows,
+ *        session checkpoints, and user profile updates.
+ *
+ * Mount: server/routes/domains/auth.ts → mounted with authLimiter
+ *
+ * NOTE: Core login/register/logout lives in authCoreRoutes.ts
+ *       These two files are candidates for merger in Wave 2 polish.
+ */
 import { type Response } from 'express';
 import { Router, Request } from "express";
 import crypto from 'crypto';

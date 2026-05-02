@@ -34,7 +34,6 @@ export const DOMAIN_CONTRACT = {
       'accessControlEvents',
       'workspaceApiKeys',
       'apiKeyUsageLogs',
-      'expressSessions',
       'managedApiKeys',
       'sessions',
       'users',

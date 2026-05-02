@@ -1,3 +1,14 @@
+/**
+ * authCoreRoutes.ts — Core authentication endpoints
+ *
+ * SCOPE: Login, register, logout, MFA verification, dev bypass endpoints,
+ *        CSRF token issuance, and session management.
+ *
+ * Mount: server/routes/domains/auth.ts → mounted with authLimiter
+ *
+ * NOTE: Supplementary auth (password reset, email verify) lives in authRoutes.ts
+ *       Merger target: consolidate both into authRoutes.ts in Wave 2.
+ */
 // Authentication API routes - registration, login, password reset
 import { Router } from "express";
 import { z } from "zod";

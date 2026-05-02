@@ -376,3 +376,9 @@ export const CRON = {
   shiftEscalation: process.env.CRON_SHIFT_ESCALATION || '*/30 * * * *',
   collectionsOutreach: process.env.CRON_COLLECTIONS_OUTREACH || '0 9 * * *',
 };
+
+// Platform workspace — the root workspace owned by CoAIleague itself
+export const PLATFORM_WORKSPACE_ID = process.env.PLATFORM_WORKSPACE_ID || 'coaileague-platform-workspace';
+
+// Session store timeout — how long to wait for pg session store before failing open
+export const SESSION_STORE_TIMEOUT_MS = parseInt(process.env.SESSION_STORE_TIMEOUT_MS || '2000', 10);

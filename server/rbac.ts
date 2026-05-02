@@ -1107,41 +1107,10 @@ export const enforcePaymentStatus: RequestHandler = async (req, res, next) => {
  * Deactivate a workspace (for testing or admin use)
  * Sets subscriptionStatus to 'suspended' or 'cancelled'
  */
-export async function deactivateWorkspace(
-  workspaceId: string, 
-  status: 'suspended' | 'cancelled' = 'suspended'
-): Promise<boolean> {
-  try {
-    await db
-      .update(workspaces)
-      .set({ subscriptionStatus: status })
-      .where(eq(workspaces.id, workspaceId));
-    log.info(`[PaymentEnforcement] Workspace ${workspaceId} set to ${status}`);
-    return true;
-  } catch (error) {
-    log.error('[PaymentEnforcement] Failed to deactivate workspace:', error);
-    return false;
-  }
-}
-
 /**
  * Reactivate a workspace after payment
  * Sets subscriptionStatus back to 'active'
  */
-export async function reactivateWorkspace(workspaceId: string): Promise<boolean> {
-  try {
-    await db
-      .update(workspaces)
-      .set({ subscriptionStatus: 'active' })
-      .where(eq(workspaces.id, workspaceId));
-    log.info(`[PaymentEnforcement] Workspace ${workspaceId} reactivated`);
-    return true;
-  } catch (error) {
-    log.error('[PaymentEnforcement] Failed to reactivate workspace:', error);
-    return false;
-  }
-}
-
 // ============================================================================
 // SUPPORT SESSION ENFORCEMENT
 // Controls cross-org admin access with audit logging and org freeze capability
@@ -1149,6 +1118,9 @@ export async function reactivateWorkspace(workspaceId: string): Promise<boolean>
 
 import { createLogger } from './lib/logger';
 const log = createLogger('rbac');
+import { deactivateWorkspace, reactivateWorkspace } from './services/workspaceLifecycleService';
+export { deactivateWorkspace, reactivateWorkspace };
+
 
 
 // Extended request with support session context

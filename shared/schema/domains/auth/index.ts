@@ -540,17 +540,6 @@ export const apiKeyUsageLogs = pgTable("api_key_usage_logs", {
   index("api_usage_ws_idx").on(table.workspaceId),
 ]);
 
-export const expressSessions = pgTable("sessions", {
-  sid: varchar("sid").primaryKey(),
-  sess: jsonb("sess").notNull(),
-  expire: timestamp("expire").notNull(),
-
-  createdAt: timestamp("created_at").defaultNow(),
-
-  checkpointData: jsonb("checkpoint_data").default('{}'),
-  recoveryData: jsonb("recovery_data").default('{}'),
-});
-
 export const managedApiKeys = pgTable("managed_api_keys", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar("workspace_id").notNull(),
