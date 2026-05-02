@@ -145,9 +145,13 @@ vi.mock('@shared/schema', () => {
   };
 });
 
-// Bypass the production auth middleware — we install our own auth context per request
-vi.mock('../../server/rbac', () => ({
+// Bypass the production auth middleware — we install our own auth context per
+// request. plaidRoutes imports requireAuth from ../auth and the *Owner/*Manager
+// guards from ../rbac, so we have to mock both modules.
+vi.mock('../../server/auth', () => ({
   requireAuth: (_req: Request, _res: Response, next: () => void) => next(),
+}));
+vi.mock('../../server/rbac', () => ({
   requireOwner: (_req: Request, _res: Response, next: () => void) => next(),
   requireManager: (_req: Request, _res: Response, next: () => void) => next(),
 }));

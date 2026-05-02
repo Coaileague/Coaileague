@@ -236,11 +236,13 @@ Build: 0 server + 0 client errors      ✅
 - `proactiveOrchestrator.registerProactiveMonitors` is wired through `autonomousScheduler.ts:4667`. `registerProactiveActions` is called from `actionRegistry.ts:271`. Both already start at boot.
 - Stripe `paymentIntents.create` calls in `stripeInlineRoutes.ts:196`, `invoiceRoutes.ts:2029`, `billing-api.ts:696` already have idempotency keys.
 
-### Cannot run locally
-- `node_modules` only contains `typescript` — no `@types/node`, no project deps. Typecheck would need `npm install` first.
-- Tests likewise require deps.
+### Verification results (after `npm install`)
+- `npx tsc --noEmit -p tsconfig.server.json` → **exit 0, zero errors.**
+- `npx vitest run --project security` → **6/6 pass** (Plaid ownership IDOR guards).
+- `npx vitest run --project integration` → **39 pass / 0 fail / 55 skipped.**
+- `npx vitest run --project unit` → **152 pass / 5 fail.**
+  The 5 failures are in `tests/unit/trinity-workflows-17c.test.ts` (`billing.invoice_add_line_items` / `billing.invoice_create` handlers return undefined under that test's mock setup). Confirmed pre-existing — they fail identically against `git stash`'d HEAD. Not caused by this branch.
 
-### Next agent
-- Run `npm install && npx tsc --noEmit -p tsconfig.server.json` to confirm zero TS regression.
-- Run `npx vitest run tests/security` to confirm Plaid ownership tests pass.
-- Consider adding `tests/security` as a project in `vitest.workspace.ts` so these tests run by default.
+### Follow-up cleanup in same branch
+- `vitest.workspace.ts` — added a `security` project so `tests/security/` runs by default (closes VD-05).
+- `tests/security/plaidEmployeeOwnership.test.ts` — `requireAuth` is exported from `server/auth`, not `server/rbac`; mock now covers both modules so the auth bypass actually applies.

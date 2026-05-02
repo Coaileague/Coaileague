@@ -22,4 +22,14 @@ export default defineWorkspace([
       hookTimeout: 30000,
     },
   },
+  {
+    extends: './vitest.config.ts',
+    test: {
+      name: 'security',
+      include: ['tests/security/**/*.test.ts'],
+      environment: 'node',
+      testTimeout: 30000,
+      hookTimeout: 30000,
+    },
+  },
 ]);
