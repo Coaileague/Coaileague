@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useCallback, useRef, useState, useEffect, useMemo } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { triggerHaptic } from "@/hooks/use-touch-swipe"
 import {
   AlertDialog,
@@ -21,10 +21,10 @@ interface ModalGuardContextValue {
   forceClose: () => void
 }
 
-const ModalGuardContext = React.createContext<ModalGuardContextValue | null>(null)
+const ModalGuardContext = createContext<ModalGuardContextValue | null>(null)
 
 export function useModalGuard() {
-  const context = React.useContext(ModalGuardContext)
+  const context = useContext(ModalGuardContext)
   if (!context) {
     return {
       hasUnsavedChanges: false,
@@ -185,7 +185,7 @@ export function SwipeToCloseSheet({
 
   const progress = Math.min((swipeDistance / threshold) * 100, 100)
   
-  const transformStyle = React.useMemo(() => {
+  const transformStyle = useMemo(() => {
     if (swipeDistance === 0) return {}
     
     if (direction === 'down') {
