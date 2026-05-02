@@ -117,7 +117,7 @@ export async function run1099JanuaryScan(taxYear: number): Promise<{
               skipped++;
             }
           } catch (empErr: unknown) {
-            log.warn('Failed to calculate 1099 total for contractor', { employeeId: contractor.id, error: empErr.message });
+            log.warn('Failed to calculate 1099 total for contractor', { employeeId: contractor.id, error: empErr instanceof Error ? empErr.message : String(empErr) });
           }
         }
 
@@ -151,7 +151,7 @@ export async function run1099JanuaryScan(taxYear: number): Promise<{
           log.info('1099 filing notification sent', { workspaceId: ws.id, count: filingCandidates.length });
         }
       } catch (wsErr: unknown) {
-        log.warn('1099 scan failed for workspace', { workspaceId: ws.id, error: wsErr.message });
+        log.warn('1099 scan failed for workspace', { workspaceId: ws.id, error: wsErr instanceof Error ? wsErr.message : String(wsErr) });
       }
     }
   } catch (err: unknown) {

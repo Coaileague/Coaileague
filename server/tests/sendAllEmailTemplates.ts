@@ -66,14 +66,14 @@ async function send(
       results.push({ name, error: msg });
       failed++;
     } else {
-      const id = (result as Record<string, unknown>).data?.id ?? '?';
+      const id = (result as {data: unknown}).data?.id ?? '?';
       console.log(`  ✅ [${name}] Sent — id=${id}`);
       results.push({ name, id });
       passed++;
     }
   } catch (e: unknown) {
-    console.error(`  ❌ [${name}] Exception: ${e.message}`);
-    results.push({ name, error: e.message });
+    console.error(`  ❌ [${name}] Exception: ${e instanceof Error ? e.message : String(e)}`);
+    results.push({ name, error: e instanceof Error ? e.message : String(e) });
     failed++;
   }
 }

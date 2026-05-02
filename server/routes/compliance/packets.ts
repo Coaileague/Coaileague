@@ -198,7 +198,7 @@ router.post("/generate", requireAuth, mutationLimiter, async (req: Request, res:
             overallScore: officerTrainingCertificates.overallScore,
             isValid: officerTrainingCertificates.isValid,
             expiresAt: officerTrainingCertificates.expiresAt,
-            createdAt: (officerTrainingCertificates as Record<string, unknown>).createdAt,
+            createdAt: (officerTrainingCertificates as {createdAt: Date}).createdAt,
             moduleTitle: trainingModules.title,
           })
           .from(officerTrainingCertificates)

@@ -311,7 +311,7 @@ export class StripeWebhookService {
       description: `Workspace ${workspaceId} subscription created with ${tier} tier`,
       workspaceId,
       metadata: { tier, billingCycle, stripeSubscriptionId: subscription.id, status: 'active' },
-    }).catch((err: unknown) => log.warn('[stripeWebhooks] publish subscription_created failed:', err.message));
+    }).catch((err: unknown) => log.warn('[stripeWebhooks] publish subscription_created failed:', err instanceof Error ? err.message : String(err)));
 
     return { success: true, handled: true, message: 'Subscription created successfully' };
   }
@@ -389,19 +389,19 @@ export class StripeWebhookService {
             metadata: { previousTier, newTier: tier, isUpgrade },
           });
         }
-      } catch (notifErr: unknown) { log.warn('Notification failed on subscription.updated', { error: notifErr.message }); }
+      } catch (notifErr: unknown) { log.warn('Notification failed on subscription.updated', { error: notifErr instanceof Error ? notifErr.message : String(notifErr) }); }
 
       // WebSocket broadcast for live billing widget update
       try {
         broadcastToWorkspace(workspaceId, { type: 'subscription_updated', tier, status, previousTier, isUpgrade });
-      } catch (wsErr: unknown) { log.warn('WebSocket failed on subscription.updated', { error: wsErr.message }); }
+      } catch (wsErr: unknown) { log.warn('WebSocket failed on subscription.updated', { error: wsErr instanceof Error ? wsErr.message : String(wsErr) }); }
 
       // GAP-78 FIX: Ensure account is active after upgrade
       try {
         const { accountStateService } = await import('./accountState');
         await accountStateService.reactivateAccount(workspaceId, 'system', 'Subscription upgraded');
       } catch (err: unknown) {
-        log.warn('[stripeWebhooks] Failed to reactivate account after upgrade (non-fatal):', err.message);
+        log.warn('[stripeWebhooks] Failed to reactivate account after upgrade (non-fatal):', err instanceof Error ? err.message : String(err));
       }
 
       // Trinity publish — subscription tier change must be visible in event stream
@@ -412,7 +412,7 @@ export class StripeWebhookService {
         description: `Workspace ${workspaceId} subscription changed from ${previousTier} to ${tier}`,
         workspaceId,
         metadata: { previousTier, newTier: tier, status, isUpgrade },
-      }).catch((err: unknown) => log.warn('[stripeWebhooks] publish subscription_updated failed:', err.message));
+      }).catch((err: unknown) => log.warn('[stripeWebhooks] publish subscription_updated failed:', err instanceof Error ? err.message : String(err)));
     }
     
     return { success: true, handled: true, message: 'Subscription updated successfully' };
@@ -463,11 +463,11 @@ export class StripeWebhookService {
           metadata: { previousSubscriptionId: subscription.id },
         });
       }
-    } catch (notifErr: unknown) { log.warn('Notification failed on subscription.deleted', { error: notifErr.message }); }
+    } catch (notifErr: unknown) { log.warn('Notification failed on subscription.deleted', { error: notifErr instanceof Error ? notifErr.message : String(notifErr) }); }
 
     try {
       broadcastToWorkspace(workspaceId, { type: 'subscription_cancelled', tier: 'free', status: 'cancelled' });
-    } catch (wsErr: unknown) { log.warn('WebSocket failed on subscription.deleted', { error: wsErr.message }); }
+    } catch (wsErr: unknown) { log.warn('WebSocket failed on subscription.deleted', { error: wsErr instanceof Error ? wsErr.message : String(wsErr) }); }
 
     // DUAL-EMIT LAW: publish so TrinitySubscriptionCancelledHandler fires (email to all org owners)
     platformEventBus.publish({
@@ -539,14 +539,14 @@ export class StripeWebhookService {
         },
       });
     } catch (ledgerErr: unknown) {
-      log.error('Ledger entry failed on invoice.payment_succeeded', { error: ledgerErr.message });
+      log.error('Ledger entry failed on invoice.payment_succeeded', { error: ledgerErr instanceof Error ? ledgerErr.message : String(ledgerErr) });
     }
 
     // 3. Email notification to org_owner
     await this.sendSubscriptionEmail(workspaceId, 'payment_succeeded', {
       amount: amountPaid,
       invoiceNumber: invoice.number,
-    }).catch((emailErr: unknown) => log.warn('Email failed on invoice.payment_succeeded', { error: emailErr.message }));
+    }).catch((emailErr: unknown) => log.warn('Email failed on invoice.payment_succeeded', { error: emailErr instanceof Error ? emailErr.message : String(emailErr) }));
 
     // 4. In-platform notification
     try {
@@ -562,7 +562,7 @@ export class StripeWebhookService {
           metadata: { stripeInvoiceId: invoice.id, invoiceNumber: invoice.number, amount: amountPaid },
         });
       }
-    } catch (notifErr: unknown) { log.warn('Notification failed on invoice.payment_succeeded', { error: notifErr.message }); }
+    } catch (notifErr: unknown) { log.warn('Notification failed on invoice.payment_succeeded', { error: notifErr instanceof Error ? notifErr.message : String(notifErr) }); }
 
     // 5. WebSocket broadcast so billing widget reflects active status immediately
     try {
@@ -572,7 +572,7 @@ export class StripeWebhookService {
         invoiceNumber: invoice.number,
         status: 'active',
       });
-    } catch (wsErr: unknown) { log.warn('WebSocket failed on invoice.payment_succeeded', { error: wsErr.message }); }
+    } catch (wsErr: unknown) { log.warn('WebSocket failed on invoice.payment_succeeded', { error: wsErr instanceof Error ? wsErr.message : String(wsErr) }); }
 
     // 6. Dual-emit law: publish to platformEventBus so Trinity + automations hear Stripe payment
     platformEventBus.publish({
@@ -688,7 +688,7 @@ export class StripeWebhookService {
           });
         }
       } catch (notifErr: unknown) {
-        log.warn('In-platform notification failed on invoice.payment_failed', { error: notifErr.message });
+        log.warn('In-platform notification failed on invoice.payment_failed', { error: notifErr instanceof Error ? notifErr.message : String(notifErr) });
       }
 
       // GAP-43 FIX: Notify platform admins about payment failures.
@@ -730,7 +730,7 @@ export class StripeWebhookService {
           log.info('Platform admin notified of payment failure', { workspaceId, adminCount: adminRoleRows.length, attemptCount });
         }
       } catch (adminNotifErr: unknown) {
-        log.warn('Failed to notify platform admins of payment failure', { error: adminNotifErr.message, workspaceId });
+        log.warn('Failed to notify platform admins of payment failure', { error: adminNotifErr instanceof Error ? adminNotifErr.message : String(adminNotifErr), workspaceId });
       }
     }
 
@@ -823,7 +823,7 @@ export class StripeWebhookService {
           metadata: { stripePaymentIntentId: paymentIntent.id, source: 'stripe_webhook' },
         });
       } catch (ledgerErr: unknown) {
-        log.error('Revenue ledger write failed on payment_intent.succeeded', { error: ledgerErr.message });
+        log.error('Revenue ledger write failed on payment_intent.succeeded', { error: ledgerErr instanceof Error ? ledgerErr.message : String(ledgerErr) });
       }
 
       // Write transaction fee to orgLedger so it appears in the finance dashboard
@@ -849,7 +849,7 @@ export class StripeWebhookService {
           });
         }
       } catch (feeErr: unknown) {
-        log.warn('Transaction fee ledger write failed on payment_intent.succeeded', { error: feeErr.message });
+        log.warn('Transaction fee ledger write failed on payment_intent.succeeded', { error: feeErr instanceof Error ? feeErr.message : String(feeErr) });
       }
 
       // Notify org_owner in-platform
@@ -869,7 +869,7 @@ export class StripeWebhookService {
           });
         }
       } catch (notifErr: unknown) {
-        log.warn('Org owner notification failed on payment_intent.succeeded', { error: notifErr.message });
+        log.warn('Org owner notification failed on payment_intent.succeeded', { error: notifErr instanceof Error ? notifErr.message : String(notifErr) });
       }
 
       // Broadcast dashboard update
@@ -885,7 +885,7 @@ export class StripeWebhookService {
           paidAt: new Date().toISOString(),
         });
       } catch (wsErr: unknown) {
-        log.warn('WebSocket broadcast failed on payment_intent.succeeded', { error: wsErr.message });
+        log.warn('WebSocket broadcast failed on payment_intent.succeeded', { error: wsErr instanceof Error ? wsErr.message : String(wsErr) });
       }
 
       // ISSUE-2 FIX: Charge middleware processing fee for online Stripe payments.
@@ -951,7 +951,7 @@ export class StripeWebhookService {
           }
         }
       } catch (emailErr: unknown) {
-        log.warn('Client payment receipt email failed on payment_intent.succeeded', { error: emailErr.message });
+        log.warn('Client payment receipt email failed on payment_intent.succeeded', { error: emailErr instanceof Error ? emailErr.message : String(emailErr) });
       }
     }
 
@@ -1047,7 +1047,7 @@ export class StripeWebhookService {
           metadata: { stripeChargeId: charge.id, paymentIntentId, source: 'stripe_webhook_charge_succeeded' },
         });
       } catch (ledgerErr: unknown) {
-        log.error('Revenue ledger write failed on charge.succeeded', { error: ledgerErr.message });
+        log.error('Revenue ledger write failed on charge.succeeded', { error: ledgerErr instanceof Error ? ledgerErr.message : String(ledgerErr) });
       }
 
       // Write transaction fee to orgLedger.
@@ -1071,7 +1071,7 @@ export class StripeWebhookService {
           });
         }
       } catch (feeErr: unknown) {
-        log.warn('Transaction fee ledger write failed on charge.succeeded', { error: feeErr.message });
+        log.warn('Transaction fee ledger write failed on charge.succeeded', { error: feeErr instanceof Error ? feeErr.message : String(feeErr) });
       }
 
       // Notify org_owner in-platform.
@@ -1091,7 +1091,7 @@ export class StripeWebhookService {
           });
         }
       } catch (notifErr: unknown) {
-        log.warn('Org owner notification failed on charge.succeeded', { error: notifErr.message });
+        log.warn('Org owner notification failed on charge.succeeded', { error: notifErr instanceof Error ? notifErr.message : String(notifErr) });
       }
 
       // Broadcast dashboard update.
@@ -1107,7 +1107,7 @@ export class StripeWebhookService {
           paidAt: new Date().toISOString(),
         });
       } catch (wsErr: unknown) {
-        log.warn('WebSocket broadcast failed on charge.succeeded', { error: wsErr.message });
+        log.warn('WebSocket broadcast failed on charge.succeeded', { error: wsErr instanceof Error ? wsErr.message : String(wsErr) });
       }
 
       platformEventBus.publish({
@@ -1117,7 +1117,7 @@ export class StripeWebhookService {
         description: `Invoice ${paidInvoice.invoiceNumber} paid — $${amountPaid.toFixed(2)}`,
         workspaceId,
         metadata: { chargeId: charge.id, invoiceId: paidInvoice.id, invoiceNumber: paidInvoice.invoiceNumber, amountPaid },
-      }).catch((err: unknown) => log.warn('[stripeWebhooks] publish invoice_paid failed on charge.succeeded:', err.message));
+      }).catch((err: unknown) => log.warn('[stripeWebhooks] publish invoice_paid failed on charge.succeeded:', err instanceof Error ? err.message : String(err)));
     }
 
     return { success: true, handled: true, message: 'charge.succeeded — invoice marked paid, ledger updated' };
@@ -1225,7 +1225,7 @@ export class StripeWebhookService {
           tier,
           billingCycle: session.metadata?.billingCycle || 'monthly',
         }).catch((emailErr: unknown) =>
-          log.warn('Welcome email failed on checkout.session.completed', { error: emailErr.message })
+          log.warn('Welcome email failed on checkout.session.completed', { error: emailErr instanceof Error ? emailErr.message : String(emailErr) })
         );
 
         // 4. In-platform notification so org_owner sees confirmation even if email is delayed
@@ -1242,7 +1242,7 @@ export class StripeWebhookService {
               metadata: { tier, billingCycle: session.metadata?.billingCycle || 'monthly', sessionId: session.id },
             });
           }
-        } catch (notifErr: unknown) { log.warn('Notification failed on checkout.session.completed', { error: notifErr.message }); }
+        } catch (notifErr: unknown) { log.warn('Notification failed on checkout.session.completed', { error: notifErr instanceof Error ? notifErr.message : String(notifErr) }); }
 
         // 5. WebSocket broadcast so billing widget updates in real-time
         try {
@@ -1252,7 +1252,7 @@ export class StripeWebhookService {
             status: 'active',
             stripeSubscriptionId: session.subscription,
           });
-        } catch (wsErr: unknown) { log.warn('WebSocket failed on checkout.session.completed', { error: wsErr.message }); }
+        } catch (wsErr: unknown) { log.warn('WebSocket failed on checkout.session.completed', { error: wsErr instanceof Error ? wsErr.message : String(wsErr) }); }
 
         // Trinity publish — checkout activation must be visible in event stream
         platformEventBus.publish({
@@ -1262,10 +1262,10 @@ export class StripeWebhookService {
           description: `Workspace ${workspaceId} activated ${tier} plan via checkout`,
           workspaceId,
           metadata: { tier, billingCycle: session.metadata?.billingCycle || 'monthly', sessionId: session.id, stripeSubscriptionId: session.subscription },
-        }).catch((err: unknown) => log.warn('[stripeWebhooks] publish subscription_activated failed:', err.message));
+        }).catch((err: unknown) => log.warn('[stripeWebhooks] publish subscription_activated failed:', err instanceof Error ? err.message : String(err)));
 
       } catch (activateErr: unknown) {
-        log.error('Failed to activate workspace', { error: activateErr.message });
+        log.error('Failed to activate workspace', { error: activateErr instanceof Error ? activateErr.message : String(activateErr) });
       }
     }
 
@@ -1339,7 +1339,7 @@ export class StripeWebhookService {
           metadata: { chargeId: charge.id, isFullRefund, originalAmount: chargeTotal, refundedAmount, source: 'stripe_webhook' },
         });
       } catch (ledgerErr: unknown) {
-        log.error('Revenue ledger reversal failed on charge.refunded', { error: ledgerErr.message });
+        log.error('Revenue ledger reversal failed on charge.refunded', { error: ledgerErr instanceof Error ? ledgerErr.message : String(ledgerErr) });
       }
 
       // 5. Notify org_owner in-platform
@@ -1360,7 +1360,7 @@ export class StripeWebhookService {
           });
         }
       } catch (notifErr: unknown) {
-        log.warn('Org owner notification failed on charge.refunded', { error: notifErr.message });
+        log.warn('Org owner notification failed on charge.refunded', { error: notifErr instanceof Error ? notifErr.message : String(notifErr) });
       }
 
       // 6. Broadcast dashboard update
@@ -1374,7 +1374,7 @@ export class StripeWebhookService {
           isFullRefund,
         });
       } catch (wsErr: unknown) {
-        log.warn('WebSocket broadcast failed on charge.refunded', { error: wsErr.message });
+        log.warn('WebSocket broadcast failed on charge.refunded', { error: wsErr instanceof Error ? wsErr.message : String(wsErr) });
       }
 
       // Trinity publish — refund must be visible in financial event stream (dual-emit: canonical + legacy)
@@ -1385,7 +1385,7 @@ export class StripeWebhookService {
         description: `${isFullRefund ? 'Full' : 'Partial'} refund of $${refundedAmount.toFixed(2)} processed for invoice ${refundedInvoice.invoiceNumber}`,
         workspaceId,
         metadata: { chargeId: charge.id, invoiceId: refundedInvoice.id, invoiceNumber: refundedInvoice.invoiceNumber, refundedAmount, isFullRefund, newStatus: newInvoiceStatus },
-      }).catch((err: unknown) => log.warn('[stripeWebhooks] publish refund_issued failed:', err.message));
+      }).catch((err: unknown) => log.warn('[stripeWebhooks] publish refund_issued failed:', err instanceof Error ? err.message : String(err)));
       platformEventBus.publish({
         type: 'payment_refunded',
         category: 'billing',
@@ -1393,7 +1393,7 @@ export class StripeWebhookService {
         description: `${isFullRefund ? 'Full' : 'Partial'} refund of $${refundedAmount.toFixed(2)} processed for invoice ${refundedInvoice.invoiceNumber}`,
         workspaceId,
         metadata: { chargeId: charge.id, invoiceId: refundedInvoice.id, invoiceNumber: refundedInvoice.invoiceNumber, refundedAmount, isFullRefund, newStatus: newInvoiceStatus },
-      }).catch((err: unknown) => log.warn('[stripeWebhooks] publish payment_refunded failed:', err.message));
+      }).catch((err: unknown) => log.warn('[stripeWebhooks] publish payment_refunded failed:', err instanceof Error ? err.message : String(err)));
     }
 
     return { success: true, handled: true, message: `Refund processed — invoice status reverted to '${newInvoiceStatus}', ledger reversed, owner notified` };
@@ -1445,7 +1445,7 @@ export class StripeWebhookService {
           });
         }
       } catch (notifErr: unknown) {
-        log.warn('Org owner notification failed on charge.dispute.created', { error: notifErr.message });
+        log.warn('Org owner notification failed on charge.dispute.created', { error: notifErr instanceof Error ? notifErr.message : String(notifErr) });
       }
 
       // Trinity publish — chargeback must be visible for escalation
@@ -1465,7 +1465,7 @@ export class StripeWebhookService {
           disputeStatus: dispute.status,
         },
         visibility: 'org_leadership',
-      }).catch((err: unknown) => log.warn('[stripeWebhooks] publish chargeback_received failed:', err.message));
+      }).catch((err: unknown) => log.warn('[stripeWebhooks] publish chargeback_received failed:', err instanceof Error ? err.message : String(err)));
 
       // Broadcast dashboard alert
       try {
@@ -1477,7 +1477,7 @@ export class StripeWebhookService {
           disputeReason,
         });
       } catch (wsErr: unknown) {
-        log.warn('WebSocket broadcast failed on charge.dispute.created', { error: wsErr.message });
+        log.warn('WebSocket broadcast failed on charge.dispute.created', { error: wsErr instanceof Error ? wsErr.message : String(wsErr) });
       }
     }
 
@@ -1666,7 +1666,7 @@ export class StripeWebhookService {
       const billingUrl = `${process.env.BASE_URL || process.env.APP_BASE_URL || ''}/settings?tab=billing`;
       const template = buildBillingEventEmail({
         recipientName:  owner.firstName || owner.email.split('@')[0],
-        workspaceName:  (workspace as Record<string, unknown>).name || PLATFORM.name,
+        workspaceName:  (workspace as {name: string}).name || PLATFORM.name,
         planName:       data.tier || data.newTier || undefined,
         event:          billingEvent,
         actionUrl:      billingUrl,
@@ -1757,7 +1757,7 @@ export class StripeWebhookService {
         });
       }
     } catch (notifErr: unknown) {
-      log.warn('Notification failed on trial_will_end', { error: notifErr.message });
+      log.warn('Notification failed on trial_will_end', { error: notifErr instanceof Error ? notifErr.message : String(notifErr) });
     }
 
     // Email
@@ -1818,7 +1818,7 @@ export class StripeWebhookService {
         });
       }
     } catch (notifErr: unknown) {
-      log.warn('Notification failed on subscription.paused', { error: notifErr.message });
+      log.warn('Notification failed on subscription.paused', { error: notifErr instanceof Error ? notifErr.message : String(notifErr) });
     }
 
     await this.sendSubscriptionEmail(workspaceId, 'subscription_suspended', {});
@@ -1876,7 +1876,7 @@ export class StripeWebhookService {
         });
       }
     } catch (notifErr: unknown) {
-      log.warn('Notification failed on subscription.resumed', { error: notifErr.message });
+      log.warn('Notification failed on subscription.resumed', { error: notifErr instanceof Error ? notifErr.message : String(notifErr) });
     }
 
     try {
@@ -1939,7 +1939,7 @@ export class StripeWebhookService {
         });
       }
     } catch (notifErr: unknown) {
-      log.warn('Notification failed on invoice.upcoming', { error: notifErr.message });
+      log.warn('Notification failed on invoice.upcoming', { error: notifErr instanceof Error ? notifErr.message : String(notifErr) });
     }
 
     return { success: true, handled: true, message: `Upcoming invoice notification sent — $${amountDue.toFixed(2)} due ${dueDate}` };

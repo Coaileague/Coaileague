@@ -622,7 +622,7 @@ class ExceptionTriageAgent {
     recommendedAction: string;
     inboxItemId?: string;
   }> {
-    const errorMessage = error.message.toLowerCase();
+    const errorMessage = error instanceof Error ? error.message : String(error).toLowerCase();
     let errorType: ErrorType = 'validation';
     let recommendedAction = 'manual_review';
 
@@ -648,7 +648,7 @@ class ExceptionTriageAgent {
         workspaceId,
         realmId,
         errorType,
-        errorMessage: error.message,
+        errorMessage: error instanceof Error ? error.message : String(error),
         errorContext: context,
         sourceWorkflow: context.sourceWorkflow,
         sourceCycleKey: context.sourceCycleKey,

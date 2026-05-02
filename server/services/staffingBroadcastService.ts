@@ -339,7 +339,7 @@ export async function fireCallOffSequence(params: CallOffParams): Promise<{
         .set({ employeeId: null, status: 'draft' })
         .where(and(eq(shifts.id, params.shiftId), eq(shifts.workspaceId, workspaceId)));
     } catch (vacateErr: unknown) {
-      log.warn('[StaffingBroadcast] Failed to vacate shift (continuing):', vacateErr.message);
+      log.warn('[StaffingBroadcast] Failed to vacate shift (continuing):', vacateErr instanceof Error ? vacateErr.message : String(vacateErr));
     }
   }
 
@@ -369,7 +369,7 @@ export async function fireCallOffSequence(params: CallOffParams): Promise<{
 
     coverageRequestId = coverageRecord?.id;
   } catch (coverageErr: unknown) {
-    log.warn('[StaffingBroadcast] Failed to create coverage request record:', coverageErr.message);
+    log.warn('[StaffingBroadcast] Failed to create coverage request record:', coverageErr instanceof Error ? coverageErr.message : String(coverageErr));
   }
 
   // GAP-SCHED-10: Write audit log for the calloff event at the shift level
@@ -390,7 +390,7 @@ export async function fireCallOffSequence(params: CallOffParams): Promise<{
       },
     });
   } catch (auditErr: unknown) {
-    log.warn('[StaffingBroadcast] Calloff audit log failed (non-blocking):', auditErr.message);
+    log.warn('[StaffingBroadcast] Calloff audit log failed (non-blocking):', auditErr instanceof Error ? auditErr.message : String(auditErr));
   }
 
   // Fetch officer user data
@@ -439,7 +439,7 @@ export async function fireCallOffSequence(params: CallOffParams): Promise<{
       });
     }
   } catch (sortErr: unknown) {
-    log.warn('[StaffingBroadcast] Candidate tier-sort failed, using original order:', sortErr.message);
+    log.warn('[StaffingBroadcast] Candidate tier-sort failed, using original order:', sortErr instanceof Error ? sortErr.message : String(sortErr));
     sortedCandidates = [...replacementCandidateEmployeeIds];
   }
 
@@ -600,7 +600,7 @@ export async function sendReplacementAssignmentEmail(params: {
       },
     });
   } catch (storeErr: unknown) {
-    log.warn('[StaffingBroadcast] Failed to persist replacement tokens (email will still send):', storeErr.message);
+    log.warn('[StaffingBroadcast] Failed to persist replacement tokens (email will still send):', storeErr instanceof Error ? storeErr.message : String(storeErr));
   }
 
   try {
@@ -697,7 +697,7 @@ export async function resolveReplacementToken(
       })
       .where(eq(broadcastRecipients.id, match.id));
   } catch (updateErr: unknown) {
-    log.warn('[StaffingBroadcast] Failed to mark replacement token resolved:', updateErr.message);
+    log.warn('[StaffingBroadcast] Failed to mark replacement token resolved:', updateErr instanceof Error ? updateErr.message : String(updateErr));
   }
 
   return {

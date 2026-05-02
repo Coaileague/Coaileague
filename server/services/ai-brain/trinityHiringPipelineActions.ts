@@ -93,7 +93,7 @@ const createHiringRecord = mkAction('hiring.create_record', async (req) => {
       `Hiring record created for ${firstName} ${lastName}. PERC pipeline initiated. Next step: initiate background check.`,
       { applicationId: application.id, inviteId: invite.id, email, status: 'applied' }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -125,7 +125,7 @@ const updateHiringStatus = mkAction('hiring.update_status', async (req) => {
       `Hiring status updated to "${status}". ${NEXT_STEPS[status] || ''}`,
       { applicationId, newStatus: status, nextStep: NEXT_STEPS[status] || null }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -159,7 +159,7 @@ const initiateBackgroundCheck = mkAction('hiring.initiate_background_check', asy
       nextStep: 'Schedule Level II 6-hour pre-assignment training while awaiting results.',
     }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -188,7 +188,7 @@ const schedulePERCTraining = mkAction('hiring.schedule_perc_training', async (re
       status: 'training_scheduled',
     }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -211,7 +211,7 @@ const trackDPSApplication = mkAction('hiring.track_dps_application', async (req)
       { applicationId, dpsApplicationNumber, submittedDate, estimatedCompletion, status: 'dps_application_submitted',
         warning: 'SCHEDULING BLOCKED until license_received status confirmed.' }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -263,7 +263,7 @@ const confirmLicenseReceived = mkAction('hiring.confirm_license_received', async
       `PERC/Guard Card confirmed. Officer is now schedule-eligible. License record created. Compliance tracking started.`,
       { applicationId, employeeId, percCardNumber, licenseLevel: licenseLevel || 'Level II', expirationDate, scheduleEligible: true }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -302,7 +302,7 @@ const getHiringPipelineStatus = mkAction('hiring.pipeline_status', async (req) =
       `Hiring pipeline: ${applications.length} active candidates. ${Object.entries(byStatus).map(([s, c]) => `${s}: ${c}`).join(', ')}. ${dpsAlert}`,
       { pipeline: applications, byStatus, dpsAlert, totalActive: applications.length }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -357,7 +357,7 @@ const checkMultiStateLicenseEligibility = mkAction('hiring.check_multistate_lice
 
     return createResult(req.actionId, true, stateReq.notes, { employeeId, targetState, eligible: stateReq.transfersFromTX }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -404,7 +404,7 @@ const getExpiringLicensesAlert = mkAction('hiring.expiring_licenses_alert', asyn
       `${expiring.length} security license(s) expiring within ${daysAhead} days. DPS renewal takes 2-6 weeks — notify officers NOW.`,
       { expiring: withDays, count: expiring.length, daysAhead }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 

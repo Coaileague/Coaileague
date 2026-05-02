@@ -341,7 +341,7 @@ export async function seedDefaultQuestionBank(): Promise<{ seeded: number; skipp
       });
       seeded++;
     } catch (err: unknown) {
-      console.warn('[QuestionBankSeeder] Failed to insert question:', err.message);
+      console.warn('[QuestionBankSeeder] Failed to insert question:', err instanceof Error ? err.message : String(err));
       skipped++;
     }
   }

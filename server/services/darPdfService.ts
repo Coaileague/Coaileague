@@ -832,7 +832,7 @@ async function uploadPdfBuffer(buffer: Buffer, darId: string, workspaceId: strin
     recordStorageUsage(workspaceId, 'documents', buffer.length).catch(() => null);
     return objectPath;
   } catch (uploadErr: unknown) {
-    log.error('[DarPDF] Object storage upload failed:', uploadErr.message);
+    log.error('[DarPDF] Object storage upload failed:', uploadErr instanceof Error ? uploadErr.message : String(uploadErr));
     return null;
   }
 }
@@ -883,7 +883,7 @@ async function resolveClientName(workspaceId: string, clientId?: string | null, 
 export async function generateDarPdf(darId: string, workspaceId: string): Promise<string | null> {
   const darRows = await q(`SELECT * FROM daily_activity_reports WHERE id=$1 AND workspace_id=$2`, [darId, workspaceId]);
   if (!darRows.length) return null;
-  const dar = darRows[0] as unknown as DarData;
+  const dar = darRows[0] as DarData;
 
   const wsRows = await q(`SELECT name FROM workspaces WHERE id=$1`, [workspaceId]);
   const orgName = (wsRows[0] as unknown)?.name || 'Security Organization';
@@ -903,7 +903,7 @@ export async function generateDarPdf(darId: string, workspaceId: string): Promis
       visitors = (await q(
         `SELECT * FROM visitor_logs WHERE workspace_id=$1 AND site_id=$2 AND checked_in_at >= $3 AND checked_in_at <= $4 ORDER BY checked_in_at ASC`,
         [workspaceId, dar.site_id, dayStart.toISOString(), dayEnd.toISOString()]
-      )) as unknown as VisitorRecord[];
+      )) as VisitorRecord[];
     } catch (err) {
       log.error('[DarPDF] visitors fetch failed:', err);
     }
@@ -1049,7 +1049,7 @@ export async function generateDarPdf(darId: string, workspaceId: string): Promis
 export async function generateShiftTransparencyPdf(darId: string, workspaceId: string): Promise<string | null> {
   const darRows = await q(`SELECT * FROM dar_reports WHERE id=$1 AND workspace_id=$2`, [darId, workspaceId]);
   if (!darRows.length) return null;
-  const dar = darRows[0] as unknown as ShiftDarData;
+  const dar = darRows[0] as ShiftDarData;
 
   const wsRows = await q(`SELECT name FROM workspaces WHERE id=$1`, [workspaceId]);
   const orgName = (wsRows[0] as unknown)?.name || 'Security Organization';
@@ -1088,7 +1088,7 @@ export async function generateShiftTransparencyPdf(darId: string, workspaceId: s
        ORDER BY created_at ASC`,
       [dar.chatroom_id]
     );
-    chatMessages = msgRows as unknown as ChatMessage[];
+    chatMessages = msgRows as ChatMessage[];
   }
 
   // Build photo manifest — prefer stored manifest, supplement with chatroom messages
@@ -1201,7 +1201,7 @@ export async function generateShiftTransparencyPdf(darId: string, workspaceId: s
         visitors = (await q(
           `SELECT * FROM visitor_logs WHERE workspace_id=$1 AND site_id=$2 AND checked_in_at >= $3 AND checked_in_at <= $4 ORDER BY checked_in_at ASC`,
           [workspaceId, siteIdForLookup, dayStart.toISOString(), dayEnd.toISOString()]
-        )) as unknown as VisitorRecord[];
+        )) as VisitorRecord[];
       }
     } catch (err) {
       log.error('[DarPDF] transparency visitors fetch failed:', err);
@@ -1257,7 +1257,7 @@ export async function generateShiftTransparencyPdf(darId: string, workspaceId: s
         shiftStart ? shiftStart.toISOString() : null,
         shiftEnd ? shiftEnd.toISOString() : null,
       ]
-    ) as unknown as IncidentRecord[];
+    ) as IncidentRecord[];
   } catch (err) {
     log.error('[DarPDF] incidents fetch failed:', err);
   }
@@ -1277,7 +1277,7 @@ export async function generateShiftTransparencyPdf(darId: string, workspaceId: s
           ORDER BY checked_out_at ASC
           LIMIT 100`,
         [workspaceId, siteIdForLookup, shiftStart.toISOString(), shiftEnd.toISOString()]
-      ) as unknown as KeyControlRecord[];
+      ) as KeyControlRecord[];
       lostFoundItems = await q(
         `SELECT item_number, item_description, status, found_by_name, found_at, stored_location
            FROM lost_found_items
@@ -1286,7 +1286,7 @@ export async function generateShiftTransparencyPdf(darId: string, workspaceId: s
           ORDER BY found_at ASC
           LIMIT 100`,
         [workspaceId, siteIdForLookup, shiftStart.toISOString(), shiftEnd.toISOString()]
-      ) as unknown as LostFoundRecord[];
+      ) as LostFoundRecord[];
     } catch (err) {
       log.error('[DarPDF] key/lost-found fetch failed:', err);
     }

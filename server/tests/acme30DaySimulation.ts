@@ -104,7 +104,7 @@ async function phase0_preflight() {
     await db.execute(sql`SELECT 1`);
     rec({ name: 'DB Connection', phase: 'PREFLIGHT', passed: true, details: 'Connected', severity: 'CRITICAL' });
   } catch (e: unknown) {
-    rec({ name: 'DB Connection', phase: 'PREFLIGHT', passed: false, details: e.message, severity: 'CRITICAL' });
+    rec({ name: 'DB Connection', phase: 'PREFLIGHT', passed: false, details: e instanceof Error ? e.message : String(e), severity: 'CRITICAL' });
     throw new Error('Cannot continue without DB');
   }
 
@@ -510,7 +510,7 @@ async function phase6_routes() {
     } catch (e: unknown) {
       // Server not running locally — skip route tests
       rec({ name: route.label, phase: 'ROUTES', passed: false,
-        details: `Server not reachable: ${e.message}`, severity: 'MEDIUM',
+        details: `Server not reachable: ${e instanceof Error ? e.message : String(e)}`, severity: 'MEDIUM',
         value: 'OFFLINE' });
     }
   }
@@ -572,7 +572,7 @@ async function phase7_stripe() {
       passed: true, details: 'Test customer deleted', severity: 'INFO' });
   } catch (e: unknown) {
     rec({ name: 'Stripe Test Transaction', phase: 'STRIPE',
-      passed: false, details: e.message, severity: 'HIGH' });
+      passed: false, details: e instanceof Error ? e.message : String(e), severity: 'HIGH' });
   }
 }
 
@@ -620,7 +620,7 @@ async function phase8_plaid() {
     }
   } catch (e: unknown) {
     rec({ name: 'Plaid Sandbox', phase: 'PLAID', passed: false,
-      details: e.message, severity: 'MEDIUM' });
+      details: e instanceof Error ? e.message : String(e), severity: 'MEDIUM' });
   }
 }
 
@@ -668,7 +668,7 @@ async function phase9_email() {
       severity: 'INFO' });
   } catch (e: unknown) {
     rec({ name: 'Email Send', phase: 'EMAIL', passed: false,
-      details: e.message, severity: 'HIGH' });
+      details: e instanceof Error ? e.message : String(e), severity: 'HIGH' });
   }
 }
 
@@ -860,9 +860,9 @@ async function main() {
     await phase11_trinity_math();
     await phase12_cleanup();
   } catch (e: unknown) {
-    console.error('\n💀 SIMULATION ABORTED:', e.message);
+    console.error('\n💀 SIMULATION ABORTED:', e instanceof Error ? e.message : String(e));
     rec({ name: 'Simulation Abort', phase: 'FATAL', passed: false,
-      details: e.message, severity: 'CRITICAL' });
+      details: e instanceof Error ? e.message : String(e), severity: 'CRITICAL' });
   }
 
   return finalReport();

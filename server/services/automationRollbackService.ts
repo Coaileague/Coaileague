@@ -317,7 +317,7 @@ class AutomationRollbackService {
         entityType,
         entityId,
         restoredFields: [],
-        error: `Rollback failed: ${error.message}`,
+        error: `Rollback failed: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }

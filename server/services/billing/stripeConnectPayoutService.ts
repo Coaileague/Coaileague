@@ -496,7 +496,7 @@ class StripeConnectPayoutService {
               metadata: { method: 'stripe_connect', entriesProcessed: results.processed, source: 'stripeConnectPayoutService' },
             });
           } catch (ledgerErr: unknown) {
-            log.error(`[StripeConnect] payroll_disbursed ledger write failed for run ${payrollRunId}:`, ledgerErr.message);
+            log.error(`[StripeConnect] payroll_disbursed ledger write failed for run ${payrollRunId}:`, ledgerErr instanceof Error ? ledgerErr.message : String(ledgerErr));
           }
 
           platformEventBus.publish({

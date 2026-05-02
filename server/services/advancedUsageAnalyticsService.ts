@@ -323,7 +323,7 @@ class AdvancedUsageAnalyticsService {
     return history.map(t => ({
       id: t.id,
       type: (t as Record<string, unknown>).transactionType || 'deduction',
-      credits: (t as Record<string, unknown>).amount ?? 0,
+      credits: (t as {amount: string}).amount ?? 0,
       balanceAfter: (t as Record<string, unknown>).balanceAfter ?? 0,
       description: (t as Record<string, unknown>).description || '',
       actionType: (t as Record<string, unknown>).featureKey,

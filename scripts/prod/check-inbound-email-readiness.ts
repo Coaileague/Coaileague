@@ -67,7 +67,7 @@ async function main() {
     results.push({
       name: `Wildcard MX lookup`,
       pass: false,
-      detail: `DNS lookup failed: ${err.message}`,
+      detail: `DNS lookup failed: ${err instanceof Error ? err.message : String(err)}`,
       blocker: true,
     });
   }
@@ -151,7 +151,7 @@ async function main() {
     results.push({
       name: 'DB: internal_email_folders table accessible',
       pass: false,
-      detail: `DB error: ${err.message}`,
+      detail: `DB error: ${err instanceof Error ? err.message : String(err)}`,
     });
   }
 
@@ -248,6 +248,6 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error('Script failed:', err.message);
+  console.error('Script failed:', err instanceof Error ? err.message : String(err));
   process.exit(1);
 });

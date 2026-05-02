@@ -184,7 +184,7 @@ export const voiceSupportAgents = pgTable("voice_support_agents", {
   email: varchar("email"),
   phone: varchar("phone"),
   role: varchar("role").notNull().default("support_agent"),
-  notificationChannels: jsonb("notification_channels").notNull().default(["email"] as unknown as string[]),
+  notificationChannels: jsonb("notification_channels").notNull().default(["email"] as string[]),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => [

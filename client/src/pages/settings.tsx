@@ -262,7 +262,7 @@ function ProfileTabContent() {
       });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error', description: error instanceof Error ? error.message : String(error), variant: 'destructive' });
     },
   });
 
@@ -288,7 +288,7 @@ function ProfileTabContent() {
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update profile",
+        description: error instanceof Error ? error instanceof Error ? error.message : String(error) : "Failed to update profile",
         variant: "destructive",
       });
     },
@@ -342,7 +342,7 @@ function ProfileTabContent() {
       toast({ title: 'PIN Updated', description: 'Your clock-in PIN has been saved.' });
     },
     onError: (error: Error) => {
-      toast({ title: 'PIN Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'PIN Error', description: error instanceof Error ? error.message : String(error), variant: 'destructive' });
     },
   });
 
@@ -799,7 +799,7 @@ function ChangePasswordCard() {
     onError: (error: Error) => {
       toast({
         title: "Password Change Failed",
-        description: error.message || "Please check your current password and try again.",
+        description: error instanceof Error ? error.message : String(error) || "Please check your current password and try again.",
         variant: "destructive",
       });
     },
@@ -2059,7 +2059,7 @@ export default function Settings() {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to update org code');
+        throw new Error(error instanceof Error ? error.message : String(error) || 'Failed to update org code');
       }
       return response.json();
     },
@@ -2080,7 +2080,7 @@ export default function Settings() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update org code",
+        description: error instanceof Error ? error.message : String(error) || "Failed to update org code",
         variant: "destructive",
       });
     },
@@ -2095,7 +2095,7 @@ export default function Settings() {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to claim generic staffing email');
+        throw new Error(error instanceof Error ? error.message : String(error) || 'Failed to claim generic staffing email');
       }
       return response.json();
     },
@@ -2109,7 +2109,7 @@ export default function Settings() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to claim generic staffing email",
+        description: error instanceof Error ? error.message : String(error) || "Failed to claim generic staffing email",
         variant: "destructive",
       });
     },
@@ -2124,7 +2124,7 @@ export default function Settings() {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to release generic staffing email');
+        throw new Error(error instanceof Error ? error.message : String(error) || 'Failed to release generic staffing email');
       }
       return response.json();
     },
@@ -2138,7 +2138,7 @@ export default function Settings() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to release generic staffing email",
+        description: error instanceof Error ? error.message : String(error) || "Failed to release generic staffing email",
         variant: "destructive",
       });
     },
@@ -2163,7 +2163,7 @@ export default function Settings() {
       toast({ title: 'Forwarding Email Updated', description: 'Inbound emails will be forwarded to the new address.' });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error', description: error instanceof Error ? error.message : String(error), variant: 'destructive' });
     },
   });
 
@@ -2245,7 +2245,7 @@ export default function Settings() {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to update break compliance settings');
+        throw new Error(error instanceof Error ? error.message : String(error) || 'Failed to update break compliance settings');
       }
       return response.json();
     },
@@ -2260,7 +2260,7 @@ export default function Settings() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update break compliance settings",
+        description: error instanceof Error ? error.message : String(error) || "Failed to update break compliance settings",
         variant: "destructive",
       });
     },
@@ -2288,7 +2288,7 @@ export default function Settings() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update notification preferences",
+        description: error instanceof Error ? error.message : String(error) || "Failed to update notification preferences",
         variant: "destructive",
       });
     },
@@ -2305,7 +2305,7 @@ export default function Settings() {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to send test SMS');
+        throw new Error(error instanceof Error ? error.message : String(error) || 'Failed to send test SMS');
       }
       return response.json();
     },
@@ -2318,7 +2318,7 @@ export default function Settings() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to send test SMS",
+        description: error instanceof Error ? error.message : String(error) || "Failed to send test SMS",
         variant: "destructive",
       });
     },
@@ -2504,7 +2504,7 @@ export default function Settings() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update workspace",
+        description: error instanceof Error ? error.message : String(error) || "Failed to update workspace",
         variant: "destructive",
       });
     },
@@ -2530,7 +2530,7 @@ export default function Settings() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to seed form templates",
+        description: error instanceof Error ? error.message : String(error) || "Failed to seed form templates",
         variant: "destructive",
       });
     },
@@ -2547,7 +2547,7 @@ export default function Settings() {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to update invoicing automation');
+        throw new Error(error instanceof Error ? error.message : String(error) || 'Failed to update invoicing automation');
       }
       return response.json();
     },
@@ -2561,7 +2561,7 @@ export default function Settings() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update invoicing automation",
+        description: error instanceof Error ? error.message : String(error) || "Failed to update invoicing automation",
         variant: "destructive",
       });
     },
@@ -2578,7 +2578,7 @@ export default function Settings() {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to update payroll automation');
+        throw new Error(error instanceof Error ? error.message : String(error) || 'Failed to update payroll automation');
       }
       return response.json();
     },
@@ -2592,7 +2592,7 @@ export default function Settings() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update payroll automation",
+        description: error instanceof Error ? error.message : String(error) || "Failed to update payroll automation",
         variant: "destructive",
       });
     },
@@ -2609,7 +2609,7 @@ export default function Settings() {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to update scheduling automation');
+        throw new Error(error instanceof Error ? error.message : String(error) || 'Failed to update scheduling automation');
       }
       return response.json();
     },
@@ -2623,7 +2623,7 @@ export default function Settings() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update scheduling automation",
+        description: error instanceof Error ? error.message : String(error) || "Failed to update scheduling automation",
         variant: "destructive",
       });
     },
@@ -5405,7 +5405,7 @@ function CalendarIntegrationCard() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to create subscription",
+        description: error instanceof Error ? error.message : String(error) || "Failed to create subscription",
         variant: "destructive",
       });
     },
@@ -5425,7 +5425,7 @@ function CalendarIntegrationCard() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to revoke subscription",
+        description: error instanceof Error ? error.message : String(error) || "Failed to revoke subscription",
         variant: "destructive",
       });
     },
@@ -5445,7 +5445,7 @@ function CalendarIntegrationCard() {
     onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to regenerate token",
+        description: error instanceof Error ? error.message : String(error) || "Failed to regenerate token",
         variant: "destructive",
       });
     },

@@ -147,7 +147,7 @@ class PanicAlertService {
     });
 
     const rows = await db.select().from(panicAlerts).where(eq(panicAlerts.id, id)).limit(1);
-    const alert = rows[0] as unknown as PanicAlert;
+    const alert = rows[0] as PanicAlert;
     if (!alert) {
       throw new Error(`Panic alert ${id} failed to persist`);
     }
@@ -206,7 +206,7 @@ class PanicAlertService {
       if (!existing) throw Object.assign(new Error('Alert not found'), { code: 'NOT_FOUND' });
       throw Object.assign(new Error(`Alert already ${(existing as Record<string,unknown>).status}`), { code: 'CONFLICT' });
     }
-    const alert = updated as unknown as PanicAlert;
+    const alert = updated as PanicAlert;
 
     await platformEventBus.publish({
       type: 'panic_alert_acknowledged',
@@ -236,10 +236,10 @@ class PanicAlertService {
       const [existing] = await db.select().from(panicAlerts)
         .where(and(eq(panicAlerts.id, alertId), eq(panicAlerts.workspaceId, workspaceId))).limit(1);
       if (!existing) throw Object.assign(new Error('Alert not found'), { code: 'NOT_FOUND' });
-      if ((existing as Record<string,unknown>).status === 'resolved') return existing as unknown as PanicAlert; // idempotent
+      if ((existing as Record<string,unknown>).status === 'resolved') return existing as PanicAlert; // idempotent
       throw Object.assign(new Error(`Cannot resolve alert with status: ${(existing as Record<string,unknown>).status}`), { code: 'CONFLICT' });
     }
-    const alert = updated as unknown as PanicAlert;
+    const alert = updated as PanicAlert;
 
     await platformEventBus.publish({
       type: 'panic_alert_resolved',

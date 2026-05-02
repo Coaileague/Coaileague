@@ -44,7 +44,7 @@ const sendShiftOffersAction: ActionHandler = {
       });
       return ok(request.actionId, `Shift offers sent to ${result.offered} officers`, result, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed to send shift offers: ${err.message}`, start);
+      return fail(request.actionId, `Failed to send shift offers: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -71,7 +71,7 @@ const outboundWelfareCheckAction: ActionHandler = {
       if (!result.success) return fail(request.actionId, result.error || 'Call failed', start);
       return ok(request.actionId, 'Welfare check call placed', result, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed to place welfare check: ${err.message}`, start);
+      return fail(request.actionId, `Failed to place welfare check: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -97,7 +97,7 @@ const outboundCallAction: ActionHandler = {
       if (!result.success) return fail(request.actionId, result.error || 'Call failed', start);
       return ok(request.actionId, 'Outbound call placed', result, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed to place outbound call: ${err.message}`, start);
+      return fail(request.actionId, `Failed to place outbound call: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };

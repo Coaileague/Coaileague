@@ -123,7 +123,7 @@ export function requirePlan(minimumTier: SubscriptionTier): RequestHandler {
     next();
   };
   
-  return middleware as unknown as RequestHandler;
+  return middleware as RequestHandler;
 }
 
 // ── Convenience guards ─────────────────────────────────────────────────────────

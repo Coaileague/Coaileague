@@ -74,7 +74,7 @@ class RecurringScheduleTemplateService {
 
     log.info(`[RecurringTemplates] Created template "${name}" with ${templateShifts.length} shifts`);
 
-    return template as unknown as ScheduleTemplate;
+    return template as ScheduleTemplate;
   }
 
   /**
@@ -186,7 +186,7 @@ class RecurringScheduleTemplateService {
     }
 
     // Generate shifts from template
-    for (const templateShift of (template.shiftPatterns || []) as unknown as TemplateShift[]) {
+    for (const templateShift of (template.shiftPatterns || []) as TemplateShift[]) {
       // Calculate the actual date for this shift
       const shiftDate = new Date(weekStart);
       const daysToAdd = templateShift.dayOfWeek === 0 ? 6 : templateShift.dayOfWeek - 1; // Monday = 0 offset
@@ -265,7 +265,7 @@ class RecurringScheduleTemplateService {
     const results = await db.select()
       .from(templatesTable)
       .where(eq(templatesTable.workspaceId, workspaceId));
-    return results as unknown as ScheduleTemplate[];
+    return results as ScheduleTemplate[];
   }
 
   /**
@@ -276,7 +276,7 @@ class RecurringScheduleTemplateService {
       .from(templatesTable)
       .where(eq(templatesTable.id, templateId))
       .limit(1);
-    return template as unknown as ScheduleTemplate | undefined;
+    return template as ScheduleTemplate | undefined;
   }
 
   /**
@@ -304,7 +304,7 @@ class RecurringScheduleTemplateService {
       .where(eq(templatesTable.id, templateId))
       .returning();
     
-    return (updated as unknown as ScheduleTemplate) || null;
+    return (updated as ScheduleTemplate) || null;
   }
 
   /**

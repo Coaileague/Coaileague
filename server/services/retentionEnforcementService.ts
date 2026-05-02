@@ -48,7 +48,7 @@ async function enforceSearchQueryLogs(retentionDays: number): Promise<SweepResul
       result.records_affected = del.rowCount ?? 0;
     }
   } catch (e: unknown) {
-    result.errors.push(e.message);
+    result.errors.push(e instanceof Error ? e.message : String(e));
   }
   return result;
 }
@@ -64,7 +64,7 @@ async function enforceSupportTickets(retentionDays: number): Promise<SweepResult
       result.records_affected = del.rowCount ?? 0;
     }
   } catch (e: unknown) {
-    result.errors.push(e.message);
+    result.errors.push(e instanceof Error ? e.message : String(e));
   }
   return result;
 }
@@ -88,11 +88,11 @@ async function enforceIncidentReports(retentionDays: number): Promise<SweepResul
         );
         result.records_affected++;
       } catch (e: unknown) {
-        result.errors.push(`Incident ${row.id}: ${e.message}`);
+        result.errors.push(`Incident ${row.id}: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
   } catch (e: unknown) {
-    result.errors.push(e.message);
+    result.errors.push(e instanceof Error ? e.message : String(e));
   }
   return result;
 }
@@ -164,7 +164,7 @@ export async function runRetentionSweep(): Promise<SweepResult[]> {
     }
 
   } catch (err: unknown) {
-    log.error('[RetentionEnforcement] Fatal sweep error:', err.message);
+    log.error('[RetentionEnforcement] Fatal sweep error:', err instanceof Error ? err.message : String(err));
     await universalAudit.log({
       workspaceId: 'platform',
       actorType: 'system',
@@ -172,7 +172,7 @@ export async function runRetentionSweep(): Promise<SweepResult[]> {
       entityType: 'system',
       entityId: 'daily_retention',
       changeType: 'action',
-      metadata: { error: err.message, ran_at: new Date().toISOString() },
+      metadata: { error: err instanceof Error ? err.message : String(err), ran_at: new Date().toISOString() },
     });
   }
 

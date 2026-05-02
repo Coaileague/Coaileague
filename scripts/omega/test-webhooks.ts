@@ -190,7 +190,7 @@ async function runStripeTests(): Promise<void> {
       result(`STRIPE:${tc.name}`, pass, `HTTP ${r.status}${pass ? '' : ` — ${r.body.slice(0, 100)}`}`);
       if (pass) stripeEventsPassed++;
     } catch (err : unknown) {
-      result(`STRIPE:${tc.name}`, false, `Network error: ${err.message}`);
+      result(`STRIPE:${tc.name}`, false, `Network error: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -205,7 +205,7 @@ async function runStripeTests(): Promise<void> {
         pass ? 'Replay returned 200 — idempotent' : `HTTP ${r.status} — may have re-processed`);
     } catch (err : unknown) {
       stripeIdempotent = 'FAIL';
-      result('STRIPE:idempotency', false, `Network error: ${err.message}`);
+      result('STRIPE:idempotency', false, `Network error: ${err instanceof Error ? err.message : String(err)}`);
     }
   } else if (DRY_RUN) {
     stripeIdempotent = 'PASS';
@@ -253,7 +253,7 @@ async function runResendTests(): Promise<void> {
         `HTTP ${r.status} — ${pass ? tc.expect : r.body.slice(0, 100)}`);
       if (pass) resendEventsPassed++;
     } catch (err : unknown) {
-      result(`RESEND:${tc.name}`, false, `Network error: ${err.message}`);
+      result(`RESEND:${tc.name}`, false, `Network error: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 }
@@ -307,7 +307,7 @@ async function runTwilioTests(): Promise<void> {
     result('TWILIO:voice-inbound', pass, `HTTP ${r.status}${pass ? ' — TwiML response returned' : ` — ${r.body.slice(0, 100)}`}`);
   } catch (err : unknown) {
     twilioVoice = 'FAIL';
-    result('TWILIO:voice-inbound', false, `Network error: ${err.message}`);
+    result('TWILIO:voice-inbound', false, `Network error: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   // SMS inbound
@@ -319,7 +319,7 @@ async function runTwilioTests(): Promise<void> {
     result('TWILIO:sms-inbound', pass, `HTTP ${r.status}`);
   } catch (err : unknown) {
     twilioSms = 'FAIL';
-    result('TWILIO:sms-inbound', false, `Network error: ${err.message}`);
+    result('TWILIO:sms-inbound', false, `Network error: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   // Invalid signature test — MUST return 403
@@ -341,7 +341,7 @@ async function runTwilioTests(): Promise<void> {
     }
   } catch (err : unknown) {
     twilioSigEnforced = 'FAIL';
-    result('TWILIO:sig-enforced', false, `Network error: ${err.message}`);
+    result('TWILIO:sig-enforced', false, `Network error: ${err instanceof Error ? err.message : String(err)}`);
   }
 }
 
@@ -396,7 +396,7 @@ async function runEmailRoutingTests(): Promise<void> {
         `HTTP 200 — routed to ${tc.address} → expected ${tc.folder} folder`);
       emailRoutingPassed++;
     } catch (err : unknown) {
-      result(`EMAIL:route-${tc.alias}`, false, `Network error: ${err.message}`);
+      result(`EMAIL:route-${tc.alias}`, false, `Network error: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 }

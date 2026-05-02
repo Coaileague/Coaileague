@@ -39,7 +39,7 @@ const sandboxDevBypass = (req: Request, res: Response, next: NextFunction) => {
       id: 'sandbox-dev-user', 
       platformRole: 'root_admin',
       email: 'sandbox@dev.local'
-    } as unknown as NonNullable<AuthenticatedRequest['user']>);
+    } as NonNullable<AuthenticatedRequest['user']>);
     return next();
   }
   return requirePlatformRole(['root_admin', 'sysop'])(req as AuthenticatedRequest, res, next);
@@ -738,7 +738,7 @@ router.post('/e2e-quickbooks-test', sandboxDevBypass, async (req: Request, res: 
     const isProd = isProduction();
     addLog('ERROR', 'failed', {
       error: sanitizeError(error),
-      stack: isProd ? undefined : error.stack?.split('\n').slice(0, 5)
+      stack: isProd ? undefined : error instanceof Error ? error.stack : undefined?.split('\n').slice(0, 5)
     });
     res.status(500).json({ success: false, testLog, error: sanitizeError(error) });
   }

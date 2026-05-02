@@ -228,7 +228,7 @@ RECOMMENDATION LOGIC:
       liabilityIndicators: Array.isArray(parsed.liability_indicators) ? parsed.liability_indicators : [],
     };
   } catch (err: unknown) {
-    log.warn('[TrinityScreening] Screening error:', err.message);
+    log.warn('[TrinityScreening] Screening error:', err instanceof Error ? err.message : String(err));
     return {
       score: 0,
       reasoning: 'AI screening temporarily unavailable — manual review required.',

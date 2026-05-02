@@ -189,7 +189,7 @@ export async function getAccountBalance(accessToken: string): Promise<{
       mask: primary.mask ?? null,
     };
   } catch (err) {
-    log.warn('[Plaid] getAccountBalance failed (non-fatal):', err instanceof Error ? err.message : err);
+    log.warn('[Plaid] getAccountBalance failed (non-fatal):', err instanceof Error ? err instanceof Error ? err.message : String(err) : err);
     return null;
   }
 }

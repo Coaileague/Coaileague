@@ -151,7 +151,7 @@ class E2ECrawlRunner {
           const data = await res.json().catch(() => ({}));
           return { ok: res.ok, status: res.status, message: data.message || '' };
         } catch (err: unknown) {
-          return { ok: false, status: 0, message: err.message };
+          return { ok: false, status: 0, message: err instanceof Error ? err.message : String(err) };
         }
       }, { email, password });
 

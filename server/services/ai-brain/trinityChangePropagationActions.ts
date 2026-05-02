@@ -53,7 +53,7 @@ async function notifyManagers(
     await createNotification({ workspaceId, userId: mgr.userId, type: 'settings_change_impact', title, message, priority,
       idempotencyKey: `settings_change_impact-${String(Date.now())}-${mgr.userId}`,
     })
-      .catch((err: Error) => log.warn(`[TrinityChangePropagation] Notification persist failed for manager ${mgr.userId}:`, err.message));
+      .catch((err: Error) => log.warn(`[TrinityChangePropagation] Notification persist failed for manager ${mgr.userId}:`, err instanceof Error ? err.message : String(err)));
   }
   return managers.length;
 }

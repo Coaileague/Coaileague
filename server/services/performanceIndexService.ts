@@ -141,8 +141,8 @@ export async function ensurePerformanceIndexes(): Promise<void> {
       created++;
     } catch (err: unknown) {
       // Silently skip errors — column may not exist in older schema versions
-      if (!err.message?.includes('column') && !err.message?.includes('does not exist')) {
-        log.warn(`[PerformanceIndex] ${idx.name}: ${err.message?.substring(0, 80)}`);
+      if (!err instanceof Error ? err.message : String(err)?.includes('column') && !err instanceof Error ? err.message : String(err)?.includes('does not exist')) {
+        log.warn(`[PerformanceIndex] ${idx.name}: ${err instanceof Error ? err.message : String(err)?.substring(0, 80)}`);
       }
       errors++;
     }

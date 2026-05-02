@@ -104,7 +104,7 @@ export async function runShiftCompletionBridge(): Promise<ShiftBridgeResult> {
           try {
             await processWorkspace(workspace, cutoff, result);
           } catch (wsErr : unknown) {
-            const msg = `[ShiftBridge] Workspace ${workspace.id} error: ${wsErr.message}`;
+            const msg = `[ShiftBridge] Workspace ${workspace.id} error: ${wsErr instanceof Error ? wsErr.message : String(wsErr)}`;
             log.error(msg);
             result.errors.push(msg);
           }
@@ -264,7 +264,7 @@ async function processWorkspace(
         approvedEntryIds.push(inserted.id);
       }
     } catch (shiftErr : unknown) {
-      const msg = `[ShiftBridge] Failed to create entry for shift ${shift.id}: ${shiftErr.message}`;
+      const msg = `[ShiftBridge] Failed to create entry for shift ${shift.id}: ${shiftErr instanceof Error ? shiftErr.message : String(shiftErr)}`;
       log.error(msg);
       result.errors.push(msg);
     }
@@ -286,7 +286,7 @@ async function processWorkspace(
         metadata: { source: 'ShiftCompletionBridge', actionUrl: '/time-tracking' },
       });
     } catch (notifyErr : unknown) {
-      log.warn(`[ShiftBridge] Notification event failed for workspace ${workspace.id}:`, notifyErr.message);
+      log.warn(`[ShiftBridge] Notification event failed for workspace ${workspace.id}:`, notifyErr instanceof Error ? notifyErr.message : String(notifyErr));
     }
   }
 
@@ -308,7 +308,7 @@ async function processWorkspace(
         metadata: { source: 'ShiftCompletionBridge' },
       });
     } catch (eventErr : unknown) {
-      log.warn(`[ShiftBridge] Event publish failed for workspace ${workspace.id}:`, eventErr.message);
+      log.warn(`[ShiftBridge] Event publish failed for workspace ${workspace.id}:`, eventErr instanceof Error ? eventErr.message : String(eventErr));
     }
   }
 }

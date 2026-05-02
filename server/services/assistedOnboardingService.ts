@@ -157,7 +157,7 @@ class AssistedOnboardingService {
 
       try {
         const { provisionWorkspace } = await import('./workspaceProvisioningService');
-        await provisionWorkspace({ workspaceId: workspace.id, ownerId: supportUserId, workspaceName: (workspace as Record<string, unknown>).name });
+        await provisionWorkspace({ workspaceId: workspace.id, ownerId: supportUserId, workspaceName: (workspace as {name: string}).name });
       } catch (provError: unknown) {
         log.warn('[AssistedOnboarding] Workspace provisioning failed (non-blocking):', (provError as Record<string,unknown>)?.message);
       }
@@ -367,7 +367,7 @@ class AssistedOnboardingService {
 
         return { 
           success: false, 
-          error: `Failed to send handoff email: ${emailError.message}` 
+          error: `Failed to send handoff email: ${emailError instanceof Error ? emailError.message : String(emailError)}` 
         };
       }
 

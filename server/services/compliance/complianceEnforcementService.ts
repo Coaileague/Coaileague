@@ -641,7 +641,7 @@ class ComplianceEnforcementService {
         affectedWindows.push(win.id);
 
         // ── Notify workspace manager + emit Trinity event ─────────────────
-        const wsId = (win as Record<string, unknown>).workspaceId as string | undefined;
+        const wsId = (win as {workspaceId: string}).workspaceId as string | undefined;
         if (wsId) {
           const expiredTypes = approvedDocs.filter(d => !updatedApproved.includes(d));
           universalNotificationEngine.sendNotification({

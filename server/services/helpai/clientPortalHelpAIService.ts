@@ -598,7 +598,7 @@ export class ClientPortalHelpAIService {
       title: title || `${session.reportType.replace(/_/g, ' ')} — ${new Date().toLocaleDateString()}`,
       description,
       evidenceText,
-      sentimentScore: parseFloat(sentiment.score.toFixed(3)) as unknown as string,
+      sentimentScore: parseFloat(sentiment.score.toFixed(3)) as string,
       sentimentLabel: sentiment.label,
       frustrationSignals: sentiment.frustrationSignals,
       satisfactionSignals: sentiment.satisfactionSignals,
@@ -607,7 +607,7 @@ export class ClientPortalHelpAIService {
       conversationTurns: allMessages.length,
       creditsUsed: 10,
       status: 'open',
-    } as unknown as InsertClientPortalReport).returning();
+    } as InsertClientPortalReport).returning();
 
     // Update helpai session state
     await db.update(helpaiSessions)

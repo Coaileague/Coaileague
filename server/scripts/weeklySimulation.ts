@@ -271,7 +271,7 @@ export async function runWeeklySimulation(): Promise<WeeklySimulationReport> {
           seededEntries++;
           totalHoursSeeded += hours;
         } catch (err: unknown) {
-          step2Warnings.push(`Failed to seed entry for ${employee.firstName} ${employee.lastName}: ${err.message}`);
+          step2Warnings.push(`Failed to seed entry for ${employee.firstName} ${employee.lastName}: ${err instanceof Error ? err.message : String(err)}`);
         }
       }
     }
@@ -336,9 +336,9 @@ export async function runWeeklySimulation(): Promise<WeeklySimulationReport> {
       criticalIssues.push('Entries exist but total billable amount is $0 - missing billing rates');
     }
   } catch (err: unknown) {
-    step3Errors.push(`Billable hours aggregation failed: ${err.message}`);
-    criticalIssues.push(`Invoice pipeline broken: ${err.message}`);
-    console.error(`  ERROR: ${err.message}`);
+    step3Errors.push(`Billable hours aggregation failed: ${err instanceof Error ? err.message : String(err)}`);
+    criticalIssues.push(`Invoice pipeline broken: ${err instanceof Error ? err.message : String(err)}`);
+    console.error(`  ERROR: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   steps.push({
@@ -410,9 +410,9 @@ export async function runWeeklySimulation(): Promise<WeeklySimulationReport> {
       step4Warnings.push(...weeklyResult.warnings.slice(0, 5));
     }
   } catch (err: unknown) {
-    step4Errors.push(`Invoice generation failed: ${err.message}`);
-    criticalIssues.push(`Invoice generation broken: ${err.message}`);
-    console.error(`  ERROR: ${err.message}`);
+    step4Errors.push(`Invoice generation failed: ${err instanceof Error ? err.message : String(err)}`);
+    criticalIssues.push(`Invoice generation broken: ${err instanceof Error ? err.message : String(err)}`);
+    console.error(`  ERROR: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   steps.push({
@@ -460,9 +460,9 @@ export async function runWeeklySimulation(): Promise<WeeklySimulationReport> {
       gaps.push('Payroll hours aggregation returned 0 entries');
     }
   } catch (err: unknown) {
-    step5Errors.push(`Payroll hours aggregation failed: ${err.message}`);
-    criticalIssues.push(`Payroll pipeline broken: ${err.message}`);
-    console.error(`  ERROR: ${err.message}`);
+    step5Errors.push(`Payroll hours aggregation failed: ${err instanceof Error ? err.message : String(err)}`);
+    criticalIssues.push(`Payroll pipeline broken: ${err instanceof Error ? err.message : String(err)}`);
+    console.error(`  ERROR: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   steps.push({
@@ -603,8 +603,8 @@ export async function runWeeklySimulation(): Promise<WeeklySimulationReport> {
       console.log(`  Cleaned up ${generatedInvoices.length} simulated invoices`);
     }
   } catch (err: unknown) {
-    step7Warnings.push(`Cleanup partially failed: ${err.message}`);
-    console.warn(`  WARNING: ${err.message}`);
+    step7Warnings.push(`Cleanup partially failed: ${err instanceof Error ? err.message : String(err)}`);
+    console.warn(`  WARNING: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   steps.push({

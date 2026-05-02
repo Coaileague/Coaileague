@@ -282,7 +282,7 @@ export async function runPayrollReadinessScanForWorkspace(workspaceId: string): 
         });
       }
     } catch (notifErr: unknown) {
-      log.warn('Owner notification failed (non-blocking)', { error: notifErr.message });
+      log.warn('Owner notification failed (non-blocking)', { error: notifErr instanceof Error ? notifErr.message : String(notifErr) });
     }
   }
 

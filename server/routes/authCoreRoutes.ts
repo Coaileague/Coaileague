@@ -178,7 +178,7 @@ router.post("/api/auth/register", async (req, res) => {
       );
     } catch (emailError: unknown) {
       // Log but don't fail registration - user can request resend later
-      log.warn(`[Registration] Verification email failed for ${newUser.email}:`, emailError.message);
+      log.warn(`[Registration] Verification email failed for ${newUser.email}:`, emailError instanceof Error ? emailError.message : String(emailError));
     }
 
     // Auto-login after registration - CRITICAL: Rotate session ID and explicitly save to database
@@ -450,7 +450,7 @@ router.post("/api/auth/resend-verification", async (req, res) => {
         undefined
       );
     } catch (emailError: unknown) {
-      log.warn(`[ResendVerification] Email send failed for ${user.email}:`, emailError.message);
+      log.warn(`[ResendVerification] Email send failed for ${user.email}:`, emailError instanceof Error ? emailError.message : String(emailError));
     }
 
     res.json({ message: "If an unverified account exists, a verification link has been sent" });
@@ -845,7 +845,7 @@ router.post("/api/auth/login", async (req, res) => {
       });
     }
     const errMsg = error instanceof Error ? error.message : String(error);
-    const errStack = error instanceof Error ? error.stack?.split('\n').slice(0,5).join(' >> ') : '';
+    const errStack = error instanceof Error ? error instanceof Error ? error.stack : undefined?.split('\n').slice(0,5).join(' >> ') : '';
     log.error("Login error:", errMsg, errStack);
     res.status(500).json({ 
       message: "Login failed",
@@ -1044,7 +1044,7 @@ router.post("/api/mfa/admin-reset", requireAuth, async (req: AuthenticatedReques
     await adminResetUserMfa(targetUserId, actorId, role, workspaceId);
     return res.json({ success: true, message: `2FA reset for user ${targetUserId}. They will need to re-enroll.` });
   } catch (err: unknown) {
-    log.error('[MFA AdminReset] error:', err.message);
+    log.error('[MFA AdminReset] error:', err instanceof Error ? err.message : String(err));
     return res.status(500).json({ error: 'Failed to reset MFA. Please try again.' });
   }
 });
@@ -1790,7 +1790,7 @@ router.post("/api/auth/change-password", requireAuth, mutationLimiter, async (re
       const { authService: _authSvc } = await import('../services/authService');
       await _authSvc.logoutAllSessions(user.id);
     } catch (sessionErr: unknown) {
-      log.error('[AuthCoreRoutes] Failed to invalidate sessions after password change:', sessionErr.message);
+      log.error('[AuthCoreRoutes] Failed to invalidate sessions after password change:', sessionErr instanceof Error ? sessionErr.message : String(sessionErr));
     }
     // Destroy the current session last (after persisting the password update)
     req.session.destroy(() => {});

@@ -179,7 +179,7 @@ export default function RootAdminDashboard() {
   const { data: stats, isLoading: statsLoading } = useQuery<PlatformStats>({
     queryKey: ["/api/platform/stats", refreshKey],
     refetchInterval: 10000,
-    queryFn: async () => (await apiFetch('/api/platform/stats', AnyResponse)) as unknown as PlatformStats,
+    queryFn: async () => (await apiFetch('/api/platform/stats', AnyResponse)) as PlatformStats,
   });
 
   const { data: supportStats } = useQuery({
@@ -276,7 +276,7 @@ export default function RootAdminDashboard() {
   const { data: personalData } = useQuery<PersonalData>({
     queryKey: ["/api/platform/personal-data", refreshKey],
     refetchInterval: 10000,
-    queryFn: async () => (await apiFetch('/api/platform/personal-data', AnyResponse)) as unknown as PersonalData,
+    queryFn: async () => (await apiFetch('/api/platform/personal-data', AnyResponse)) as PersonalData,
   });
 
   // Format uptime

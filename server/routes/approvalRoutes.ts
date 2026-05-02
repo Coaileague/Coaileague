@@ -302,7 +302,7 @@ router.get('/pending', requireAuth, async (req: AuthenticatedRequest, res) => { 
       .limit(50);
     res.json(pending);
   } catch (err: unknown) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
 });
 
@@ -325,7 +325,7 @@ router.put('/:id/review', requireAuth, async (req: AuthenticatedRequest, res) =>
     if (!updated) return res.status(404).json({ error: 'Edit request not found' });
     res.json({ success: true, request: updated });
   } catch (err: unknown) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
 });
 

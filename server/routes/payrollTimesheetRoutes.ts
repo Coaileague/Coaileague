@@ -546,7 +546,7 @@ router.post("/:id/submit", async (req: AuthenticatedRequest, res) => {
     return res.json(updated);
   } catch (err: unknown) {
     if (err?.code === 'CONFLICT' || err?.message?.startsWith('CONFLICT:')) {
-      const status = err.message.split(':')[1] || 'unknown';
+      const status = err instanceof Error ? err.message : String(err).split(':')[1] || 'unknown';
       return res.status(409).json({ message: `Timesheet is already ${status} — cannot submit`, code: 'CONFLICT' });
     }
     log.error("Error submitting timesheet", { error: err instanceof Error ? err.message : String(err) });
@@ -628,7 +628,7 @@ router.post("/:id/approve", async (req: AuthenticatedRequest, res) => {
     return res.json(updated);
   } catch (err: unknown) {
     if (err?.code === 'CONFLICT' || err?.message?.startsWith('CONFLICT:')) {
-      const status = err.message.split(':')[1] || 'unknown';
+      const status = err instanceof Error ? err.message : String(err).split(':')[1] || 'unknown';
       return res.status(409).json({ message: `Timesheet is already ${status} — cannot approve`, code: 'CONFLICT' });
     }
     log.error("Error approving timesheet", { error: err instanceof Error ? err.message : String(err) });
@@ -719,7 +719,7 @@ router.post("/:id/reject", async (req: AuthenticatedRequest, res) => {
     return res.json(updated);
   } catch (err: unknown) {
     if (err?.code === 'CONFLICT' || err?.message?.startsWith('CONFLICT:')) {
-      const status = err.message.split(':')[1] || 'unknown';
+      const status = err instanceof Error ? err.message : String(err).split(':')[1] || 'unknown';
       return res.status(409).json({ message: `Timesheet is already ${status} — cannot reject`, code: 'CONFLICT' });
     }
     log.error("Error rejecting timesheet", { error: err instanceof Error ? err.message : String(err) });

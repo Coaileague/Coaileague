@@ -315,7 +315,7 @@ class AutonomousSchedulingDaemonService {
             log.info(`[SchedulingDaemon] No shifts generated for ${workspace.id} (no clients with contract rates, or all slots already filled)`);
           }
         } catch (genErr : unknown) {
-          log.error(`[SchedulingDaemon] Shift generation failed for ${workspace.id}:`, genErr.message);
+          log.error(`[SchedulingDaemon] Shift generation failed for ${workspace.id}:`, genErr instanceof Error ? genErr.message : String(genErr));
         }
       }
 

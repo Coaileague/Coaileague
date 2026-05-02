@@ -298,7 +298,7 @@ export class TrinityEmailProcessor {
           ]
         );
       } catch (e: unknown) {
-        log.warn('create_candidate insert failed:', e.message);
+        log.warn('create_candidate insert failed:', e instanceof Error ? e.message : String(e));
       }
     }
 

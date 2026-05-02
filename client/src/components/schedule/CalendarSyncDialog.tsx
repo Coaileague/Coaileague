@@ -123,7 +123,7 @@ export function CalendarSyncDialog({ open, onOpenChange, employeeId }: CalendarS
     onError: (error) => {
       toast({
         title: 'Failed to create subscription',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     },
@@ -143,7 +143,7 @@ export function CalendarSyncDialog({ open, onOpenChange, employeeId }: CalendarS
     onError: (error) => {
       toast({
         title: 'Failed to revoke subscription',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     },
@@ -164,7 +164,7 @@ export function CalendarSyncDialog({ open, onOpenChange, employeeId }: CalendarS
     onError: (error) => {
       toast({
         title: 'Failed to regenerate token',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     },
@@ -194,7 +194,7 @@ export function CalendarSyncDialog({ open, onOpenChange, employeeId }: CalendarS
     onError: (error) => {
       toast({
         title: 'Import failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     },

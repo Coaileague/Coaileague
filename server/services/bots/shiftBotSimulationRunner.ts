@@ -113,7 +113,7 @@ export async function runShiftBotSimulation(): Promise<{
     shiftId = shift.id;
     results.push({ scenario: '1. Create Test Shift', passed: true, details: `Shift ${shiftId} created for ${officer.name}`, data: { shiftId } });
   } catch (e: unknown) {
-    results.push({ scenario: '1. Create Test Shift', passed: false, details: `Failed: ${e.message}` });
+    results.push({ scenario: '1. Create Test Shift', passed: false, details: `Failed: ${e instanceof Error ? e.message : String(e)}` });
     return summarize(results, conversationId);
   }
 
@@ -140,7 +140,7 @@ export async function runShiftBotSimulation(): Promise<{
       data: roomResult
     });
   } catch (e: unknown) {
-    results.push({ scenario: '2. Shift Room Auto-Creation', passed: false, details: `Failed: ${e.message}` });
+    results.push({ scenario: '2. Shift Room Auto-Creation', passed: false, details: `Failed: ${e instanceof Error ? e.message : String(e)}` });
     await cleanup(shiftId);
     return summarize(results, conversationId);
   }
@@ -159,7 +159,7 @@ export async function runShiftBotSimulation(): Promise<{
       details: reportBotMsg ? `ReportBot entered: "${reportBotMsg.message?.substring(0, 80)}..."` : 'No ReportBot message found',
     });
   } catch (e: unknown) {
-    results.push({ scenario: '3. ReportBot Auto-Entry', passed: false, details: `Check failed: ${e.message}` });
+    results.push({ scenario: '3. ReportBot Auto-Entry', passed: false, details: `Check failed: ${e instanceof Error ? e.message : String(e)}` });
   }
 
   // ─── 5. Simulate @HelpAI mention ────────────────────────────────────────
@@ -184,7 +184,7 @@ export async function runShiftBotSimulation(): Promise<{
       details: helpReply ? `HelpAI responded: "${helpReply.message?.substring(0, 80)}..."` : 'HelpAI did not respond',
     });
   } catch (e: unknown) {
-    results.push({ scenario: '4. @HelpAI Mention Response', passed: false, details: `Failed: ${e.message}` });
+    results.push({ scenario: '4. @HelpAI Mention Response', passed: false, details: `Failed: ${e instanceof Error ? e.message : String(e)}` });
   }
 
   // ─── 6. Simulate @ClockBot summon ───────────────────────────────────────
@@ -209,7 +209,7 @@ export async function runShiftBotSimulation(): Promise<{
       details: clockReply ? `ClockBot responded: "${clockReply.message?.substring(0, 80)}..."` : 'ClockBot did not respond',
     });
   } catch (e: unknown) {
-    results.push({ scenario: '5. @ClockBot Summon', passed: false, details: `Failed: ${e.message}` });
+    results.push({ scenario: '5. @ClockBot Summon', passed: false, details: `Failed: ${e instanceof Error ? e.message : String(e)}` });
   }
 
   // ─── 7. Simulate CONFIRM for ClockBot ───────────────────────────────────
@@ -235,7 +235,7 @@ export async function runShiftBotSimulation(): Promise<{
         details: confirmReply ? `ClockBot response: "${confirmReply.message?.substring(0, 80)}..."` : 'No pending CONFIRM found (TTL may have expired or manager === officer)',
       });
     } catch (e: unknown) {
-      results.push({ scenario: '6. ClockBot CONFIRM Flow', passed: false, details: `Failed: ${e.message}` });
+      results.push({ scenario: '6. ClockBot CONFIRM Flow', passed: false, details: `Failed: ${e instanceof Error ? e.message : String(e)}` });
     }
   } else {
     results.push({ scenario: '6. ClockBot CONFIRM Flow', passed: false, details: 'No manager found in Acme workspace' });
@@ -263,7 +263,7 @@ export async function runShiftBotSimulation(): Promise<{
       details: incidentMsg ? `Bot detected incident: "${incidentMsg.message?.substring(0, 80)}..."` : 'Incident not flagged by bot (may require AI)',
     });
   } catch (e: unknown) {
-    results.push({ scenario: '7. Incident Keyword Detection', passed: false, details: `Failed: ${e.message}` });
+    results.push({ scenario: '7. Incident Keyword Detection', passed: false, details: `Failed: ${e instanceof Error ? e.message : String(e)}` });
   }
 
   // ─── 9. MeetingBot action item tracking ─────────────────────────────────
@@ -299,7 +299,7 @@ export async function runShiftBotSimulation(): Promise<{
     // Clean up meeting room
     await db.delete(chatConversations).where(eq(chatConversations.id, meetingConv.id));
   } catch (e: unknown) {
-    results.push({ scenario: '8. MeetingBot Action Item', passed: false, details: `Failed: ${e.message}` });
+    results.push({ scenario: '8. MeetingBot Action Item', passed: false, details: `Failed: ${e instanceof Error ? e.message : String(e)}` });
   }
 
   // ─── 10. End-of-Shift PDF trigger (non-blocking check) ──────────────────
@@ -318,7 +318,7 @@ export async function runShiftBotSimulation(): Promise<{
       data: { documentId: pdfResult.documentId }
     });
   } catch (e: unknown) {
-    results.push({ scenario: '9. End-of-Shift PDF Report', passed: false, details: `Failed: ${e.message}` });
+    results.push({ scenario: '9. End-of-Shift PDF Report', passed: false, details: `Failed: ${e instanceof Error ? e.message : String(e)}` });
   }
 
   // ─── Cleanup ─────────────────────────────────────────────────────────────

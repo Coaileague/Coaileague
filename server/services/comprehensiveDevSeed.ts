@@ -296,8 +296,8 @@ export async function runComprehensiveDevSeed(): Promise<{ success: boolean; log
     return { success: true, log, counts };
 
   } catch (err: unknown) {
-    info('FAILED: ' + err.message);
-    console.error(err.stack);
+    info('FAILED: ' + err instanceof Error ? err.message : String(err));
+    console.error(err instanceof Error ? err.stack : undefined);
     return { success: false, log, counts };
   }
 }

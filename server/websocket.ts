@@ -1986,7 +1986,7 @@ export function setupWebSocket(server: Server) {
                   source: 'websocket',
                 });
               } catch (err: unknown) {
-                log.warn('Failed to register participant in DB', { error: err.message });
+                log.warn('Failed to register participant in DB', { error: err instanceof Error ? err.message : String(err) });
               }
             }
 
@@ -3970,7 +3970,7 @@ export function setupWebSocket(server: Server) {
                       helpaiMsg = aiGreet.text;
                     }
                   } catch (aiErr: unknown) {
-                    log.error('HelpAI AI generation failed, using fallback', { error: aiErr.message });
+                    log.error('HelpAI AI generation failed, using fallback', { error: aiErr instanceof Error ? aiErr.message : String(aiErr) });
                     helpaiMsg = helpaiQuestion
                       ? `You asked: "${helpaiQuestion}"\n\nI'm HelpAI, your support assistant. I can help with:\n- Account issues and verification\n- Password resets\n- General platform questions\n- Connecting you with support staff\n\nLet me look into that for you. A support agent will be notified if needed.`
                       : `Hi! I'm HelpAI, your support assistant.\n\nHow can I help you today? I can assist with:\n- Account issues and verification\n- Password resets and access problems\n- General platform questions\n- Connecting you with live support staff\n\nJust type your question and I'll do my best to help!`;
@@ -4010,7 +4010,7 @@ export function setupWebSocket(server: Server) {
                     success: true,
                     workspaceId: ws.workspaceId || null,
                     userId: ws.userId || null,
-                  }).catch(e => log.warn('HelpAI action log insert failed (non-fatal)', { error: e.message }));
+                  }).catch(e => log.warn('HelpAI action log insert failed (non-fatal)', { error: e instanceof Error ? e.message : String(e) }));
 
                   break;
                 }
@@ -5385,7 +5385,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                     if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: botMsg })); }); }
                     // Update room metadata
                     await db.update(chatConversations).set({ metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({ meetingActive: true, meetingTitle, meetingStartedAt: new Date().toISOString(), meetingStartedBy: ws.userId })}::jsonb` }).where(eq(chatConversations.id, ws.conversationId));
-                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `MeetingBot error: ${e.message}` })); }
+                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `MeetingBot error: ${e instanceof Error ? e.message : String(e)}` })); }
                   break;
                 }
 
@@ -5430,7 +5430,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                         log.warn('[MeetingBot] PDF generation failed (non-blocking):', { error: pdfErr instanceof Error ? pdfErr.message : String(pdfErr) });
                       }
                     })();
-                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `MeetingBot error: ${e.message}` })); }
+                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `MeetingBot error: ${e instanceof Error ? e.message : String(e)}` })); }
                   break;
                 }
 
@@ -5517,7 +5517,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                     });
                     if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: reportStartMsg })); }); }
                     await db.update(chatConversations).set({ metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({ reportActive: true, reportStartedBy: ws.userId })}::jsonb` }).where(eq(chatConversations.id, ws.conversationId));
-                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `ReportBot error: ${e.message}` })); }
+                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `ReportBot error: ${e instanceof Error ? e.message : String(e)}` })); }
                   break;
                 }
 
@@ -5551,7 +5551,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                     });
                     if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: endReportMsg })); }); }
                     await db.update(chatConversations).set({ metadata: sql`COALESCE(metadata, '{}'::jsonb) || '{"reportActive": false}'::jsonb` }).where(eq(chatConversations.id, ws.conversationId));
-                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `ReportBot error: ${e.message}` })); }
+                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `ReportBot error: ${e instanceof Error ? e.message : String(e)}` })); }
                   break;
                 }
 
@@ -5581,7 +5581,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                       messageType: 'text', metadata: { botCommand: 'analyzereports', filter, requestedBy: ws.userId },
                     });
                     if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: analyzeMsg })); }); }
-                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `ReportBot error: ${e.message}` })); }
+                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `ReportBot error: ${e instanceof Error ? e.message : String(e)}` })); }
                   break;
                 }
 
@@ -5605,7 +5605,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                       messageType: 'text', metadata: { botCommand: 'clockme', clockAction, reason: clockReason, userId: ws.userId, timestamp: new Date().toISOString() },
                     });
                     if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: clockMsg })); }); }
-                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `ClockBot error: ${e.message}` })); }
+                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `ClockBot error: ${e instanceof Error ? e.message : String(e)}` })); }
                   break;
                 }
 
@@ -5634,7 +5634,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                       messageType: 'text', metadata: { botCommand: 'forceclock', targetEmployee: targetEmp, clockAction: forceAction, reason: forceReason, authorizedBy: ws.userId, timestamp: new Date().toISOString() },
                     });
                     if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: forceClockMsg })); }); }
-                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `ClockBot error: ${e.message}` })); }
+                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `ClockBot error: ${e instanceof Error ? e.message : String(e)}` })); }
                   break;
                 }
 
@@ -5656,7 +5656,7 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
                       messageType: 'text', metadata: { botCommand: 'clockstatus', target: statusTarget },
                     });
                     if (clients) { clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ type: 'new_message', message: clockStatusMsg })); }); }
-                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `ClockBot error: ${e.message}` })); }
+                  } catch (e: unknown) { ws.send(JSON.stringify({ type: 'error', message: `ClockBot error: ${e instanceof Error ? e.message : String(e)}` })); }
                   break;
                 }
 

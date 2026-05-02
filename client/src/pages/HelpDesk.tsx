@@ -1003,7 +1003,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
  try { sessionStorage.setItem('helpai_session_id', session.sessionId); } catch {}
  }
  }).catch((err) => {
-   const isOffline = !navigator.onLine || (err instanceof TypeError && err.message === 'Failed to fetch');
+   const isOffline = !navigator.onLine || (err instanceof TypeError && err instanceof Error ? err.message : String(err) === 'Failed to fetch');
    if (isOffline) {
      toast({
        title: "HelpAI is offline",

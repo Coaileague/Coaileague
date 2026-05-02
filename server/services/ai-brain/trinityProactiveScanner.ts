@@ -708,7 +708,7 @@ class TrinityProactiveScannerService {
       schedulingCycleTriggered = true;
       alerts.push('Next month scheduling cycle triggered');
     } catch (e: unknown) {
-      errors.push(`Scheduling cycle error: ${e.message}`);
+      errors.push(`Scheduling cycle error: ${e instanceof Error ? e.message : String(e)}`);
     }
 
     // STEP 2: Trigger payroll cycle for current period
@@ -724,7 +724,7 @@ class TrinityProactiveScannerService {
       payrollCycleTriggered = true;
       alerts.push('Payroll cycle triggered for current period');
     } catch (e: unknown) {
-      errors.push(`Payroll cycle error: ${e.message}`);
+      errors.push(`Payroll cycle error: ${e instanceof Error ? e.message : String(e)}`);
     }
 
     // STEP 2.5: Sync payroll runs to QuickBooks
@@ -736,7 +736,7 @@ class TrinityProactiveScannerService {
         errors.push(`QB payroll sync: ${qbPayrollResult.failed} run(s) failed to sync — review QuickBooks connection`);
       }
     } catch (e: unknown) {
-      errors.push(`QB payroll sync error: ${e.message}`);
+      errors.push(`QB payroll sync error: ${e instanceof Error ? e.message : String(e)}`);
     }
 
     // STEP 3: Trigger invoice cycle for all clients
@@ -745,7 +745,7 @@ class TrinityProactiveScannerService {
       invoiceCycleTriggered = true;
       alerts.push('Invoice cycle triggered for all clients');
     } catch (e: unknown) {
-      errors.push(`Invoice cycle error: ${e.message}`);
+      errors.push(`Invoice cycle error: ${e instanceof Error ? e.message : String(e)}`);
     }
 
     // STEP 4: Run compliance audit
@@ -758,7 +758,7 @@ class TrinityProactiveScannerService {
       complianceAuditRun = true;
       alerts.push('Compliance audit complete');
     } catch (e: unknown) {
-      errors.push(`Compliance audit error: ${e.message}`);
+      errors.push(`Compliance audit error: ${e instanceof Error ? e.message : String(e)}`);
     }
 
     // STEP 5: Revenue forecast & client health
@@ -821,7 +821,7 @@ class TrinityProactiveScannerService {
       executiveSummaryGenerated = true;
       alerts.push('Executive summary sent to workspace owner(s)');
     } catch (e: unknown) {
-      errors.push(`Executive summary error: ${e.message}`);
+      errors.push(`Executive summary error: ${e instanceof Error ? e.message : String(e)}`);
     }
 
     log.info(`[TrinityProactiveScanner] Monthly cycle complete: ws=${workspaceId}, scheduling=${schedulingCycleTriggered}, payroll=${payrollCycleTriggered}, qbPayrollSync=${qbPayrollSynced}, invoices=${invoiceCycleTriggered}, errors=${errors.length}`);
@@ -1632,7 +1632,7 @@ class TrinityProactiveScannerService {
         const scanResult = await helpaiOrchestrator.executeAction('shift.scan_tomorrows_shifts', { workspaceId: ws.id }).catch(() => null);
         log.info(`[TrinityProactiveScanner] Night-before confirmation: ws=${ws.id}, result=${JSON.stringify(scanResult?.data || {})}`);
       } catch (e: unknown) {
-        log.error(`[TrinityProactiveScanner] Night-before confirmation failed for ${ws.id}: ${e.message}`);
+        log.error(`[TrinityProactiveScanner] Night-before confirmation failed for ${ws.id}: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
     log.info('[TrinityProactiveScanner] Night-before confirmation sweep complete');
@@ -1683,8 +1683,8 @@ class TrinityProactiveScannerService {
     log.info(`[TrinityProactiveScanner] Running daily scan for ${activeWorkspaces.length} workspaces...`);
     for (const ws of activeWorkspaces) {
       await this.runDailyScan(ws.id).catch(async (e: Error) => {
-        log.error(`[TrinityProactiveScanner] Daily scan failed for ${ws.id}: ${e.message}`);
-        await this.notifyScanFailure(ws.id, 'daily', e.message);
+        log.error(`[TrinityProactiveScanner] Daily scan failed for ${ws.id}: ${e instanceof Error ? e.message : String(e)}`);
+        await this.notifyScanFailure(ws.id, 'daily', e instanceof Error ? e.message : String(e));
       });
     }
     log.info('[TrinityProactiveScanner] Daily scan complete for all workspaces');
@@ -1698,8 +1698,8 @@ class TrinityProactiveScannerService {
     log.info(`[TrinityProactiveScanner] Running weekly scan for ${activeWorkspaces.length} workspaces...`);
     for (const ws of activeWorkspaces) {
       await this.runWeeklyScan(ws.id).catch(async (e: Error) => {
-        log.error(`[TrinityProactiveScanner] Weekly scan failed for ${ws.id}: ${e.message}`);
-        await this.notifyScanFailure(ws.id, 'weekly', e.message);
+        log.error(`[TrinityProactiveScanner] Weekly scan failed for ${ws.id}: ${e instanceof Error ? e.message : String(e)}`);
+        await this.notifyScanFailure(ws.id, 'weekly', e instanceof Error ? e.message : String(e));
       });
     }
     log.info('[TrinityProactiveScanner] Weekly scan complete for all workspaces');
@@ -1713,8 +1713,8 @@ class TrinityProactiveScannerService {
     log.info(`[TrinityProactiveScanner] Running monthly cycle for ${activeWorkspaces.length} workspaces...`);
     for (const ws of activeWorkspaces) {
       await this.runMonthlyCycle(ws.id).catch(async (e: Error) => {
-        log.error(`[TrinityProactiveScanner] Monthly cycle failed for ${ws.id}: ${e.message}`);
-        await this.notifyScanFailure(ws.id, 'monthly', e.message);
+        log.error(`[TrinityProactiveScanner] Monthly cycle failed for ${ws.id}: ${e instanceof Error ? e.message : String(e)}`);
+        await this.notifyScanFailure(ws.id, 'monthly', e instanceof Error ? e.message : String(e));
       });
     }
     log.info('[TrinityProactiveScanner] Monthly cycle complete for all workspaces');

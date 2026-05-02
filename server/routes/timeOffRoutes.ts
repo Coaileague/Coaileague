@@ -93,10 +93,10 @@ router.post("/api/pto", requireAuth, async (req: AuthenticatedRequest, res) => {
         .limit(1);
 
       if (benefit) {
-        const accrued = parseFloat(benefit.ptoHoursAccrued as unknown as string ?? '0');
-        const used = parseFloat(benefit.ptoHoursUsed as unknown as string ?? '0');
+        const accrued = parseFloat(benefit.ptoHoursAccrued as string ?? '0');
+        const used = parseFloat(benefit.ptoHoursUsed as string ?? '0');
         const available = accrued - used;
-        const requested = parseFloat(validated.totalHours as unknown as string);
+        const requested = parseFloat(validated.totalHours as string);
         if (requested > available) {
           return res.status(422).json({
             message: `Insufficient PTO balance. Available: ${available.toFixed(2)}h, Requested: ${requested.toFixed(2)}h`,

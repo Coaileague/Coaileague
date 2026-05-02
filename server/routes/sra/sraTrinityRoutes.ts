@@ -194,7 +194,7 @@ AUDIT CONTEXT:
     // Store updated context in DB (keep last 40 messages)
     const trimmedContext = contextMessages.slice(-40);
     await db.update(sraAuditSessions).set({
-      trinityContext: { messages: trimmedContext, sections: currentSections } as unknown as TrinityContextData,
+      trinityContext: { messages: trimmedContext, sections: currentSections } as TrinityContextData,
     }).where(eq(sraAuditSessions.id, sraSession.sessionId));
 
     // Log Trinity interaction
@@ -267,7 +267,7 @@ router.patch('/sections/:index/verify', requireSRAAuth, async (req: SRARequest, 
     sections[sectionIndex].verified = !!verified;
 
     await db.update(sraAuditSessions).set({
-      trinityContext: { ...context, sections } as unknown as TrinityContextData,
+      trinityContext: { ...context, sections } as TrinityContextData,
     }).where(eq(sraAuditSessions.id, sraSession.sessionId));
 
     return res.json({ success: true, sections });

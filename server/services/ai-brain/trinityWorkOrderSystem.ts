@@ -818,8 +818,8 @@ class SolutionDiscoveryLoop {
                                
           log.info(`[SolutionDiscovery] Reflection: ${reflectionResult.passed ? 'PASSED' : 'FAILED'}, confidence: ${(reflectionResult.confidenceScore * 100).toFixed(0)}%`);
         } catch (reflectionError: unknown) {
-          log.error('[SolutionDiscovery] Reflection failed:', reflectionError.message);
-          attempt.issues.push(`Self-reflection failed: ${reflectionError.message}`);
+          log.error('[SolutionDiscovery] Reflection failed:', reflectionError instanceof Error ? reflectionError.message : String(reflectionError));
+          attempt.issues.push(`Self-reflection failed: ${reflectionError instanceof Error ? reflectionError.message : String(reflectionError)}`);
           attempt.confidenceScore = 0.5;
           attempt.shouldCommit = false;
           attempt.shouldRetry = attemptNumber < this.MAX_ATTEMPTS;
@@ -882,7 +882,7 @@ class SolutionDiscoveryLoop {
           };
         } catch (e: unknown) {
           task.durationMs = Date.now() - startTime;
-          return { success: false, error: e.message };
+          return { success: false, error: e instanceof Error ? e.message : String(e) };
         }
 
       case 'read_file':
@@ -898,7 +898,7 @@ class SolutionDiscoveryLoop {
           return { success: true, output: { path: filePath, content: content.substring(0, 5000), lineCount: content.split('\n').length } };
         } catch (e: unknown) {
           task.durationMs = Date.now() - startTime;
-          return { success: false, error: e.message };
+          return { success: false, error: e instanceof Error ? e.message : String(e) };
         }
 
       case 'write_file':
@@ -937,7 +937,7 @@ class SolutionDiscoveryLoop {
           };
         } catch (e: unknown) {
           task.durationMs = Date.now() - startTime;
-          return { success: false, error: e.message };
+          return { success: false, error: e instanceof Error ? e.message : String(e) };
         }
 
       case 'analyze':
@@ -959,7 +959,7 @@ class SolutionDiscoveryLoop {
           };
         } catch (e: unknown) {
           task.durationMs = Date.now() - startTime;
-          return { success: false, error: e.message };
+          return { success: false, error: e instanceof Error ? e.message : String(e) };
         }
 
       case 'run_test':
@@ -974,7 +974,7 @@ class SolutionDiscoveryLoop {
           };
         } catch (e: unknown) {
           task.durationMs = Date.now() - startTime;
-          return { success: false, error: `Test execution failed: ${e.message}` };
+          return { success: false, error: `Test execution failed: ${e instanceof Error ? e.message : String(e)}` };
         }
 
       case 'commit':
@@ -998,7 +998,7 @@ class SolutionDiscoveryLoop {
           };
         } catch (e: unknown) {
           task.durationMs = Date.now() - startTime;
-          return { success: false, error: e.message };
+          return { success: false, error: e instanceof Error ? e.message : String(e) };
         }
 
       case 'ask_user':
@@ -1024,7 +1024,7 @@ class SolutionDiscoveryLoop {
           return { success: true, output: dbResult.text };
         } catch (e: unknown) {
           task.durationMs = Date.now() - startTime;
-          return { success: false, error: e.message };
+          return { success: false, error: e instanceof Error ? e.message : String(e) };
         }
 
       case 'summarize':
@@ -1040,7 +1040,7 @@ class SolutionDiscoveryLoop {
           return { success: true, output: summaryResult.text };
         } catch (e: unknown) {
           task.durationMs = Date.now() - startTime;
-          return { success: false, error: e.message };
+          return { success: false, error: e instanceof Error ? e.message : String(e) };
         }
 
       default:

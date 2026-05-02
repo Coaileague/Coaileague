@@ -790,7 +790,7 @@ export function initializeTrinityEventSubscriptions(): void {
             reason: 'shift_deleted',
             startTime: metadata.startTime,
           },
-        }).catch((err: unknown) => log.warn('[TrinityEvents] shift_cancelled publish from shift_deleted failed:', err.message));
+        }).catch((err: unknown) => log.warn('[TrinityEvents] shift_cancelled publish from shift_deleted failed:', err instanceof Error ? err.message : String(err)));
       }
     },
   });
@@ -934,7 +934,7 @@ export function initializeTrinityEventSubscriptions(): void {
                 });
               }
             } catch (notifErr: unknown) {
-              log.warn('[TrinityEvents] QB sync failure notification failed (non-blocking):', notifErr.message);
+              log.warn('[TrinityEvents] QB sync failure notification failed (non-blocking):', notifErr instanceof Error ? notifErr.message : String(notifErr));
             }
           }
         } catch (err: unknown) {
@@ -1025,7 +1025,7 @@ export function initializeTrinityEventSubscriptions(): void {
                 });
               }
             } catch (notifErr: unknown) {
-              log.warn('[TrinityEvents] QB payroll sync failure notification failed (non-blocking):', notifErr.message);
+              log.warn('[TrinityEvents] QB payroll sync failure notification failed (non-blocking):', notifErr instanceof Error ? notifErr.message : String(notifErr));
             }
           }
         } catch (err: unknown) {
@@ -1106,7 +1106,7 @@ export function initializeTrinityEventSubscriptions(): void {
           });
         }
       } catch (notifErr: unknown) {
-        log.warn('[TrinityEvents] payroll_run_voided notification failed (non-blocking):', notifErr.message);
+        log.warn('[TrinityEvents] payroll_run_voided notification failed (non-blocking):', notifErr instanceof Error ? notifErr.message : String(notifErr));
       }
     },
   });
@@ -1376,7 +1376,7 @@ export function initializeTrinityEventSubscriptions(): void {
                 },
               });
             } catch (ledgerErr: unknown) {
-              log.warn(`[TrinityEvents] payroll_disbursed ledger write failed for transfer ${metadata?.transferId}:`, ledgerErr.message);
+              log.warn(`[TrinityEvents] payroll_disbursed ledger write failed for transfer ${metadata?.transferId}:`, ledgerErr instanceof Error ? ledgerErr.message : String(ledgerErr));
             }
           }
         } catch (err: unknown) {
@@ -1730,7 +1730,7 @@ export function initializeTrinityEventSubscriptions(): void {
               }).catch(() => null);
             }
           } catch (clientErr: unknown) {
-            log.warn('[TrinityEvents] contract_executed — auto-create client failed (non-blocking):', clientErr.message);
+            log.warn('[TrinityEvents] contract_executed — auto-create client failed (non-blocking):', clientErr instanceof Error ? clientErr.message : String(clientErr));
           }
         }
 

@@ -1114,7 +1114,7 @@ router.get('/agreement/check/:roomSlug', async (req: AuthenticatedRequest, res) 
       acceptedAt: acceptance?.acceptedAt || null
     });
   } catch (error: unknown) {
-    if (error.code === '42P01' || sanitizeError(error)?.includes('does not exist')) {
+    if ((error as NodeJS.ErrnoException).code === '42P01' || sanitizeError(error)?.includes('does not exist')) {
       return res.json({ hasAccepted: false, acceptedAt: null });
     }
     log.error("Error checking agreement acceptance:", error);

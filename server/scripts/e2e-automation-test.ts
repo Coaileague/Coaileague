@@ -351,7 +351,7 @@ function testEmailDelivery(): void {
     logValue('Service Instantiated', 'Yes');
     logValue('Service Type', typeof emailServiceInstance);
   } catch (error : unknown) {
-    instantiationError = error.message;
+    instantiationError = error instanceof Error ? error.message : String(error);
     console.log('\n  Email Service Status:');
     logValue('Service Instantiated', 'No');
     logValue('Error', instantiationError);
@@ -611,8 +611,8 @@ async function main(): Promise<void> {
     process.exit(passedTests === totalTests ? 0 : 1);
   } catch (error : unknown) {
     console.error('\n  ❌ FATAL ERROR during test execution:');
-    console.error(`     ${error.message}`);
-    console.error(error.stack);
+    console.error(`     ${error instanceof Error ? error.message : String(error)}`);
+    console.error(error instanceof Error ? error.stack : undefined);
     process.exit(1);
   }
 }

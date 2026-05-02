@@ -78,7 +78,7 @@ export function TrinityKnowledgePanel() {
       toast({ title: "Knowledge base reseeded", description: `${data.moduleCount} modules loaded.` });
     },
     onError: (err) => {
-      toast({ title: "Reseed failed", description: err.message, variant: "destructive" });
+      toast({ title: "Reseed failed", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     },
   });
 

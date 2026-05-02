@@ -982,7 +982,7 @@ class ContractPipelineService {
         title: contract.title,
       },
       metadata: { source: 'ContractPipelineService' },
-    }).catch((err: unknown) => log.warn('[ContractPipeline] Failed to publish contract_executed:', err.message));
+    }).catch((err: unknown) => log.warn('[ContractPipeline] Failed to publish contract_executed:', err instanceof Error ? err.message : String(err)));
 
     // Trinity notification — inform the contract owner
     if (contract.createdBy) {
@@ -1027,7 +1027,7 @@ class ContractPipelineService {
       });
       log.info(`[ContractPipeline] Executed PDF stored to GCS: ${gcsObjectPath}`);
     } catch (pdfErr: unknown) {
-      log.warn(`[ContractPipeline] Executed PDF generation/upload failed (non-fatal): ${pdfErr.message}`);
+      log.warn(`[ContractPipeline] Executed PDF generation/upload failed (non-fatal): ${pdfErr instanceof Error ? pdfErr.message : String(pdfErr)}`);
     }
 
     // ── Bridge to org_documents library ──────────────────────────────────────
@@ -1088,7 +1088,7 @@ class ContractPipelineService {
           }).catch((emailErr: unknown) => log.warn(`[ContractPipeline] Executed copy email failed for ${signer.signerEmail}: ${emailErr?.message}`));
         }
       } catch (emailErr: unknown) {
-        log.warn(`[ContractPipeline] Failed to send executed copy emails: ${emailErr.message}`);
+        log.warn(`[ContractPipeline] Failed to send executed copy emails: ${emailErr instanceof Error ? emailErr.message : String(emailErr)}`);
       }
     })();
 
@@ -1173,7 +1173,7 @@ class ContractPipelineService {
             }
           }, 0);
         } catch (invErr: unknown) {
-          log.warn(`[ContractPipeline] Auto-invoice creation failed (non-fatal): ${invErr.message}`);
+          log.warn(`[ContractPipeline] Auto-invoice creation failed (non-fatal): ${invErr instanceof Error ? invErr.message : String(invErr)}`);
         }
       })();
     }

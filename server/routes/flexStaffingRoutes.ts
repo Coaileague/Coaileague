@@ -77,7 +77,7 @@ export function registerFlexStaffingRoutes(app: Express, requireAuth: (req: unkn
       try {
         const { broadcastToWorkspace } = await import('../websocket');
         broadcastToWorkspace(workspaceId, { type: 'employees_updated' });
-      } catch (e: unknown) { log.warn('[FlexStaffing] Broadcast failed:', e.message); }
+      } catch (e: unknown) { log.warn('[FlexStaffing] Broadcast failed:', e instanceof Error ? e.message : String(e)); }
 
       res.json({ success: true, data: contractor });
     } catch (error: unknown) {
@@ -111,7 +111,7 @@ export function registerFlexStaffingRoutes(app: Express, requireAuth: (req: unkn
       try {
         const { broadcastToWorkspace } = await import('../websocket');
         broadcastToWorkspace(workspaceId, { type: 'employees_updated' });
-      } catch (e: unknown) { log.warn('[FlexStaffing] Broadcast failed:', e.message); }
+      } catch (e: unknown) { log.warn('[FlexStaffing] Broadcast failed:', e instanceof Error ? e.message : String(e)); }
 
       res.json({ success: true, data: updated });
     } catch (error: unknown) {
@@ -250,7 +250,7 @@ export function registerFlexStaffingRoutes(app: Express, requireAuth: (req: unkn
       try {
         const { broadcastToWorkspace } = await import('../websocket');
         broadcastToWorkspace(workspaceId, { type: 'schedules_updated' });
-      } catch (e: unknown) { log.warn('[FlexStaffing] Broadcast failed:', e.message); }
+      } catch (e: unknown) { log.warn('[FlexStaffing] Broadcast failed:', e instanceof Error ? e.message : String(e)); }
 
       platformEventBus.emit('flex.gig_created', {
         workspaceId,
@@ -457,7 +457,7 @@ export function registerFlexStaffingRoutes(app: Express, requireAuth: (req: unkn
       try {
         const { broadcastToWorkspace } = await import('../websocket');
         broadcastToWorkspace(workspaceId, { type: 'schedules_updated' });
-      } catch (e: unknown) { log.warn('[FlexStaffing] Broadcast failed:', e.message); }
+      } catch (e: unknown) { log.warn('[FlexStaffing] Broadcast failed:', e instanceof Error ? e.message : String(e)); }
 
       res.json({ success: true, data: updated });
     } catch (error: unknown) {

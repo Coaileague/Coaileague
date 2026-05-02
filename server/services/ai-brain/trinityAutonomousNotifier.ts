@@ -346,7 +346,7 @@ ${alert.autoFixAvailable ? `**Auto-fix Available:** Yes (Risk: ${alert.autoFixRi
         }
       } catch (govError: unknown) {
         // If governance service unavailable, default to conservative (no auto-fix)
-        log.warn(`[TrinityNotifier] Governance check failed, skipping auto-fix:`, govError.message);
+        log.warn(`[TrinityNotifier] Governance check failed, skipping auto-fix:`, govError instanceof Error ? govError.message : String(govError));
         log.info(`[AUDIT] Hotpatch SKIPPED due to governance error - Alert: ${alert.id}`);
         return null;
       }

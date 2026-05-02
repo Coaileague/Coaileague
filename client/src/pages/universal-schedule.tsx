@@ -21,7 +21,7 @@ import { markCoreActionPerformed } from "@/lib/pushNotifications";
 /** Parse compliance / eligibility block errors into a user-readable string */
 function parseScheduleError(error: unknown): string {
   if (!error) return 'An unexpected error occurred';
-  const raw: string = error.message || String(error);
+  const raw: string = error instanceof Error ? error.message : String(error) || String(error);
   // Strip leading "NNN: " status prefix from ApiError
   const body = raw.replace(/^\d{3}:\s*/, '');
   try {
@@ -435,7 +435,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       toast({
         variant: 'destructive',
         title: 'Failed to toggle automation',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -479,7 +479,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
         title: isCredits ? 'Insufficient Credits' : 'Scheduling Session Failed',
         description: isCredits 
           ? 'You need more AI credits to run this operation.'
-          : error.message,
+          : error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -500,7 +500,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       toast({
         variant: 'destructive',
         title: 'Failed to delete shift',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -545,7 +545,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       toast({
         variant: 'destructive',
         title: 'Failed to reassign shift',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
       });
     },
   });
@@ -589,7 +589,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       toast({
         variant: 'destructive',
         title: 'Failed to publish schedule',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -626,7 +626,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
         title: isCredits ? 'Insufficient Credits' : 'Failed to generate schedule',
         description: isCredits
           ? 'You need more AI credits to generate a schedule.'
-          : error.message,
+          : error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -905,7 +905,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
         `/api/shifts?weekStart=${weekStart.toISOString()}&weekEnd=${weekEnd.toISOString()}&limit=500${wsParam}`,
         PaginatedShiftListResponse
       );
-      return result.data as unknown as Shift[];
+      return result.data as Shift[];
     },
   });
   const {
@@ -1130,7 +1130,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       toast({
         variant: 'destructive',
         title: 'Failed to create shift',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1168,7 +1168,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
         title: isCredits ? 'Monthly Token Limit Reached' : 'AI fill failed',
         description: isCredits
           ? 'Your workspace has hit its monthly AI token allowance. Upgrade your plan or wait for the next billing period.'
-          : error.message,
+          : error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1193,7 +1193,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       toast({
         variant: 'destructive',
         title: 'Failed to assign shift',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1262,7 +1262,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
         title: isCredits ? 'Monthly Token Limit Reached' : 'AI auto-fill failed',
         description: isCredits
           ? 'Your workspace has hit its monthly AI token allowance. Upgrade your plan or wait for the next billing period.'
-          : error.message,
+          : error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1416,7 +1416,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       toast({
         variant: 'destructive',
         title: 'Failed to duplicate week',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1486,7 +1486,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       toast({
         variant: 'destructive',
         title: 'Failed to duplicate shift',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1517,7 +1517,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       toast({
         variant: 'destructive',
         title: 'Failed to update shift',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1546,7 +1546,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       toast({
         variant: 'destructive',
         title: 'Failed to request swap',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1568,7 +1568,7 @@ export default function UniversalSchedule({ defaultViewMode }: { defaultViewMode
       toast({
         variant: 'destructive',
         title: 'Failed to create recurring shifts',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
       });
     }
   });

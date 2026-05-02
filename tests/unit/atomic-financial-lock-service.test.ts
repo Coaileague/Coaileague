@@ -178,7 +178,7 @@ describe('AtomicFinancialLockService', () => {
     function fakeTx(row: { invoice_id: string | null; invoice_status: string | null; payroll_run_id: string | null; payroll_status: string | null; } | null) {
       return {
         execute: vi.fn().mockResolvedValue({ rows: row ? [row] : [] }),
-      } as unknown as Parameters<typeof AtomicFinancialLockService.assertCanModify>[1];
+      } as Parameters<typeof AtomicFinancialLockService.assertCanModify>[1];
     }
 
     it('passes when entry has no invoice and no payroll attachment', async () => {

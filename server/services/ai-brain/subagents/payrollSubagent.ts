@@ -159,7 +159,7 @@ class CircuitBreaker {
     if (this.state.state === 'half-open') {
       this.state.state = 'open';
       this.state.nextRetry = new Date(Date.now() + this.recoveryTimeMs);
-      log.info(`[PayrollSubagent] Circuit breaker reopened after half-open failure: ${error.message}`);
+      log.info(`[PayrollSubagent] Circuit breaker reopened after half-open failure: ${error instanceof Error ? error.message : String(error)}`);
     } else if (this.state.failures >= this.failureThreshold) {
       this.state.state = 'open';
       this.state.nextRetry = new Date(Date.now() + this.recoveryTimeMs);
@@ -404,14 +404,14 @@ class PayrollSubagentService {
       });
       log.info(`[PayrollSubagent] Session fee charged: ${sessionFee} credits for workspace ${workspaceId}`);
     } catch (feeErr : unknown) {
-      log.error(`[PayrollSubagent] Session fee deduction failed for workspace ${workspaceId}:`, feeErr.message);
-      this.tracer.endTrace(trace, 'failed', { error: 'billing_failed', message: feeErr.message });
+      log.error(`[PayrollSubagent] Session fee deduction failed for workspace ${workspaceId}:`, feeErr instanceof Error ? feeErr.message : String(feeErr));
+      this.tracer.endTrace(trace, 'failed', { error: 'billing_failed', message: feeErr instanceof Error ? feeErr.message : String(feeErr) });
       return {
         success: false,
         payrollRunId: `billing-failed-${Date.now()}`,
         summary: { totalEmployees: 0, processedCount: 0, failedCount: 0, totalGrossPay: '0', totalNetPay: '0', totalDeductions: '0', totalTaxes: '0' },
         employees: [],
-        errors: [{ employeeId: 'billing', error: `Insufficient credits or billing error: ${feeErr.message}` }],
+        errors: [{ employeeId: 'billing', error: `Insufficient credits or billing error: ${feeErr instanceof Error ? feeErr.message : String(feeErr)}` }],
         metadata: { startTime: new Date().toISOString(), endTime: new Date().toISOString(), processingTimeMs: 0, retryCount: 0 },
       };
     }
@@ -493,7 +493,7 @@ class PayrollSubagentService {
             });
             log.info(`[PayrollSubagent] Per-employee fee charged: ${totalPerEmp}cr (${result.employeeCount} × ${perEmpRate}cr) for workspace ${workspaceId}`);
           } catch (empErr : unknown) {
-            log.warn(`[PayrollSubagent] Per-employee billing error (non-blocking):`, empErr.message);
+            log.warn(`[PayrollSubagent] Per-employee billing error (non-blocking):`, empErr instanceof Error ? empErr.message : String(empErr));
           }
         }
 
@@ -636,7 +636,7 @@ class PayrollSubagentService {
           stateWithholding = taxes.stateWithholding;
           totalEmployeeTax = taxes.totalDeductions;
         } catch (taxErr : unknown) {
-          log.warn(`[PayrollSubagent] Tax calc error for employee ${emp.id}, using 22% estimate: ${taxErr.message}`);
+          log.warn(`[PayrollSubagent] Tax calc error for employee ${emp.id}, using 22% estimate: ${taxErr instanceof Error ? taxErr.message : String(taxErr)}`);
           totalEmployeeTax = Number(multiplyFinancialValues(toFinancialString(gross), toFinancialString(0.22)));
         }
       }
@@ -792,8 +792,8 @@ class PayrollSubagentService {
         });
       }
     } catch (riskError : unknown) {
-      log.error('[PayrollSubagent] LLM Judge evaluation failed, proceeding with caution:', riskError.message);
-      this.tracer.endSpan(riskSpan, 'failed', { error: riskError.message });
+      log.error('[PayrollSubagent] LLM Judge evaluation failed, proceeding with caution:', riskError instanceof Error ? riskError.message : String(riskError));
+      this.tracer.endSpan(riskSpan, 'failed', { error: riskError instanceof Error ? riskError.message : String(riskError) });
     }
 
     // Step 5: Create payroll run (if not validate only and approved by LLM Judge)
@@ -984,7 +984,7 @@ class PayrollSubagentService {
         .limit(1);
 
       if (existing && existing.resultId) {
-        return existing.resultId as unknown as PayrollExecutionResult;
+        return existing.resultId as PayrollExecutionResult;
       }
     } catch (error) {
       // Idempotency check failed, proceed with new execution

@@ -364,7 +364,7 @@ router.post('/dev/simulate-week', async (req: Request, res: Response) => {
           createdEntryIds.push(inserted.id);
         }
       } catch (entryErr: unknown) {
-        log.error(`[TrinityRevenue] Failed to create entry for shift ${shift.id}:`, entryErr.message);
+        log.error(`[TrinityRevenue] Failed to create entry for shift ${shift.id}:`, entryErr instanceof Error ? entryErr.message : String(entryErr));
         entriesSkipped++;
       }
     }
@@ -376,8 +376,8 @@ router.post('/dev/simulate-week', async (req: Request, res: Response) => {
     try {
       billingResult = await generateWeeklyInvoices(workspaceId, weekEnd, 7);
     } catch (billErr: unknown) {
-      log.error('[TrinityRevenue] Billing failed after simulation:', billErr.message);
-      billingResult = { error: billErr.message };
+      log.error('[TrinityRevenue] Billing failed after simulation:', billErr instanceof Error ? billErr.message : String(billErr));
+      billingResult = { error: billErr instanceof Error ? billErr.message : String(billErr) };
     }
 
     // Run payroll for the week period
@@ -390,8 +390,8 @@ router.post('/dev/simulate-week', async (req: Request, res: Response) => {
         weekEnd,
       );
     } catch (prErr: unknown) {
-      log.error('[TrinityRevenue] Payroll failed after simulation:', prErr.message);
-      payrollResult = { error: prErr.message };
+      log.error('[TrinityRevenue] Payroll failed after simulation:', prErr instanceof Error ? prErr.message : String(prErr));
+      payrollResult = { error: prErr instanceof Error ? prErr.message : String(prErr) };
     }
 
     res.json({

@@ -576,7 +576,7 @@ router.post('/auto-generate', async (req: AuthenticatedRequest, res) => {
       // ── WRITE-PROTECT: Closed invoices cannot be re-sent ──────────────────────
       // GAP-31 FIX: Added 'refunded' — a refunded invoice must not be re-sent to client.
       const SEND_BLOCKED_STATUSES = ['paid', 'void', 'cancelled', 'refunded', 'disputed'] as const;
-      if (SEND_BLOCKED_STATUSES.includes((invoice as Record<string, unknown>).status)) {
+      if (SEND_BLOCKED_STATUSES.includes((invoice as {status: string}).status)) {
         return res.status(403).json({
           message: "This record has been closed and cannot be modified",
           code: 'RECORD_CLOSED',

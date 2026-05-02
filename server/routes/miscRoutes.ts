@@ -369,7 +369,7 @@ router.post("/api/voice-command", requireAuth, async (req: AuthenticatedRequest,
           }
         }
       } catch (execErr: unknown) {
-        log.error('[VoiceCommand] clock_in execution error:', execErr.message);
+        log.error('[VoiceCommand] clock_in execution error:', execErr instanceof Error ? execErr.message : String(execErr));
         parsed.executed = false;
         parsed.naturalResponse = "I understood 'clock in' but couldn't execute it. Please use the clock-in button.";
       }
@@ -404,7 +404,7 @@ router.post("/api/voice-command", requireAuth, async (req: AuthenticatedRequest,
           }
         }
       } catch (execErr: unknown) {
-        log.error('[VoiceCommand] clock_out execution error:', execErr.message);
+        log.error('[VoiceCommand] clock_out execution error:', execErr instanceof Error ? execErr.message : String(execErr));
         parsed.executed = false;
         parsed.naturalResponse = "I understood 'clock out' but couldn't execute it. Please use the clock-out button.";
       }
@@ -442,7 +442,7 @@ router.post("/api/voice-command", requireAuth, async (req: AuthenticatedRequest,
           parsed.scheduleData = upcoming;
         }
       } catch (execErr: unknown) {
-        log.error('[VoiceCommand] schedule_lookup error:', execErr.message);
+        log.error('[VoiceCommand] schedule_lookup error:', execErr instanceof Error ? execErr.message : String(execErr));
         parsed.naturalResponse = "I couldn't retrieve your schedule. Please check the Schedule page.";
       }
     } else if (parsed.action === 'calloff' && parsed.confidence >= 0.65 && userId) {
@@ -476,7 +476,7 @@ router.post("/api/voice-command", requireAuth, async (req: AuthenticatedRequest,
           parsed.executed = true;
         }
       } catch (execErr: unknown) {
-        log.error('[VoiceCommand] calloff error:', execErr.message);
+        log.error('[VoiceCommand] calloff error:', execErr instanceof Error ? execErr.message : String(execErr));
         parsed.naturalResponse = "I couldn't process your calloff. Please contact your supervisor directly.";
       }
     } else if (parsed.action === 'incident_report' && parsed.confidence >= 0.6) {
@@ -512,7 +512,7 @@ router.post("/api/voice-command", requireAuth, async (req: AuthenticatedRequest,
         }
         parsed.executed = true;
       } catch (execErr: unknown) {
-        log.error('[VoiceCommand] post_orders error:', execErr.message);
+        log.error('[VoiceCommand] post_orders error:', execErr instanceof Error ? execErr.message : String(execErr));
         parsed.naturalResponse = "I couldn't retrieve post orders. Please check the Site Briefing page.";
       }
     } else if (parsed.action === 'message_supervisor' && parsed.confidence >= 0.6 && userId) {
@@ -539,7 +539,7 @@ router.post("/api/voice-command", requireAuth, async (req: AuthenticatedRequest,
           parsed.naturalResponse = "Could not find your employee record. Please contact your supervisor directly.";
         }
       } catch (execErr: unknown) {
-        log.error('[VoiceCommand] message_supervisor error:', execErr.message);
+        log.error('[VoiceCommand] message_supervisor error:', execErr instanceof Error ? execErr.message : String(execErr));
         parsed.naturalResponse = "Message could not be sent. Please contact your supervisor directly.";
       }
     } else if (parsed.action === 'call_for_backup' && parsed.confidence >= 0.7) {
@@ -587,7 +587,7 @@ router.post("/api/voice-command", requireAuth, async (req: AuthenticatedRequest,
         parsed.navigateTo = '/safety';
         parsed.naturalResponse = `Emergency alert sent. Your supervisors and managers have been notified immediately. Stay on the line and follow your safety protocol.`;
       } catch (execErr: unknown) {
-        log.error('[VoiceCommand] call_for_backup error:', execErr instanceof Error ? execErr.message : execErr);
+        log.error('[VoiceCommand] call_for_backup error:', execErr instanceof Error ? execErr instanceof Error ? execErr.message : String(execErr) : execErr);
         parsed.executed = false;
         parsed.naturalResponse = "Alert could not be sent automatically. Call your supervisor immediately and use the panic button in the Safety Hub.";
       }
@@ -1872,7 +1872,7 @@ router.delete("/api/shift-templates/:id", requireAuth, async (req: Authenticated
     if (!deleted) return res.status(404).json({ message: 'Template not found' });
     res.json({ success: true });
   } catch (err: unknown) {
-    res.status(500).json({ message: err.message || 'Failed to delete template' });
+    res.status(500).json({ message: err instanceof Error ? err.message : String(err) || 'Failed to delete template' });
   }
 });
 

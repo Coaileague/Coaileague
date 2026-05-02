@@ -101,7 +101,7 @@ class HistoricalScheduleImporterService {
         try {
           return this.mapCSVRecord(record, options);
         } catch (e: unknown) {
-          errors.push(`Row ${index + 1}: ${e.message}`);
+          errors.push(`Row ${index + 1}: ${e instanceof Error ? e.message : String(e)}`);
           return null;
         }
       }).filter(Boolean);

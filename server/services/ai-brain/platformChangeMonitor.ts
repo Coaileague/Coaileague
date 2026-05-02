@@ -409,7 +409,7 @@ class PlatformChangeMonitorService {
         const content = fs.readFileSync(routesPath, 'utf-8');
         routeCount = (content.match(/app\.(get|post|put|patch|delete)\(/gi) || []).length;
       }
-    } catch (e: unknown) { log.warn('[PlatformChangeMonitor] Route scan failed:', e.message); }
+    } catch (e: unknown) { log.warn('[PlatformChangeMonitor] Route scan failed:', e instanceof Error ? e.message : String(e)); }
 
     return {
       codebaseHash: combinedHash,
@@ -431,7 +431,7 @@ class PlatformChangeMonitorService {
       .limit(1);
 
     if (lastScan?.snapshotData) {
-      return lastScan.snapshotData as unknown as PlatformSnapshot;
+      return lastScan.snapshotData as PlatformSnapshot;
     }
 
     return this.lastSnapshot;

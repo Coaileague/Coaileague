@@ -415,7 +415,7 @@ class CommitmentManagerService {
       await this.commit(commitment.id, { originalState: result });
       return result;
     } catch (error) {
-      await this.rollback(commitment.id, error instanceof Error ? error.message : 'Unknown error');
+      await this.rollback(commitment.id, error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Unknown error');
       if (compensate) {
         await compensate(error instanceof Error ? error : new Error('Unknown error'));
       }

@@ -30,7 +30,7 @@ async function run() {
     const dbModule = await import('../../server/db');
     db = dbModule.db;
   } catch (err : unknown) {
-    console.error('Cannot connect to DB:', err.message);
+    console.error('Cannot connect to DB:', err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
 
@@ -85,7 +85,7 @@ async function run() {
       );
       console.log(`✅ Cleared ${table}: ${result.rowCount ?? 'ok'} rows`);
     } catch (err : unknown) {
-      console.warn(`⚠ Could not clear ${table}: ${err.message}`);
+      console.warn(`⚠ Could not clear ${table}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 

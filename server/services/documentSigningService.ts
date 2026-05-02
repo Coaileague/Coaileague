@@ -311,7 +311,7 @@ class DocumentSigningService {
             });
             log.info(`[DocumentSigning] Created notification for internal user ${recipient.userId}`);
           } catch (notifErr: unknown) {
-            log.warn(`[DocumentSigning] Failed to create notification for ${recipient.userId}: ${notifErr.message}`);
+            log.warn(`[DocumentSigning] Failed to create notification for ${recipient.userId}: ${notifErr instanceof Error ? notifErr.message : String(notifErr)}`);
           }
         }
 
@@ -484,7 +484,7 @@ class DocumentSigningService {
             },
           });
         } catch (notifErr: unknown) {
-          log.warn(`[DocumentSigning] Owner notification failed: ${notifErr.message}`);
+          log.warn(`[DocumentSigning] Owner notification failed: ${notifErr instanceof Error ? notifErr.message : String(notifErr)}`);
         }
       }
 
@@ -619,8 +619,8 @@ class DocumentSigningService {
 
       return { success: true };
     } catch (err: unknown) {
-      log.error(`[DocumentSigning] Error processing internal signature: \${err.message}`);
-      return { success: false, error: err.message };
+      log.error(`[DocumentSigning] Error processing internal signature: \${err instanceof Error ? err.message : String(err)}`);
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
     }
   }
 
@@ -656,7 +656,7 @@ class DocumentSigningService {
         }
       }
     } catch (err: unknown) {
-      log.error(`[DocumentSigning] Failed to distribute final copies: \${err.message}`);
+      log.error(`[DocumentSigning] Failed to distribute final copies: \${err instanceof Error ? err.message : String(err)}`);
     }
   }
 }

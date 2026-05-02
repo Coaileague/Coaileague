@@ -423,7 +423,7 @@ async function ensureCustomer(clientId: string, workspaceId: string): Promise<La
       if (recovered) return recovered;
     }
     log.error(`[QBLazySync] Failed to provision customer "${displayName}":`, (err instanceof Error ? err.message : String(err)));
-    return { success: false, qbId: null, created: false, matched: false, error: err.message, retryable: err instanceof QBApiError && err.retryable };
+    return { success: false, qbId: null, created: false, matched: false, error: err instanceof Error ? err.message : String(err), retryable: err instanceof QBApiError && err.retryable };
   }
 }
 
@@ -492,7 +492,7 @@ async function ensureEmployee(employeeId: string, workspaceId: string): Promise<
       if (recovered) return recovered;
     }
     log.error(`[QBLazySync] Failed to provision employee "${displayName}":`, (err instanceof Error ? err.message : String(err)));
-    return { success: false, qbId: null, created: false, matched: false, error: err.message, retryable: err instanceof QBApiError && err.retryable };
+    return { success: false, qbId: null, created: false, matched: false, error: err instanceof Error ? err.message : String(err), retryable: err instanceof QBApiError && err.retryable };
   }
 }
 
@@ -561,7 +561,7 @@ async function ensureVendor(employeeId: string, workspaceId: string): Promise<La
       if (recovered) return recovered;
     }
     log.error(`[QBLazySync] Failed to provision vendor "${displayName}":`, (err instanceof Error ? err.message : String(err)));
-    return { success: false, qbId: null, created: false, matched: false, error: err.message, retryable: err instanceof QBApiError && err.retryable };
+    return { success: false, qbId: null, created: false, matched: false, error: err instanceof Error ? err.message : String(err), retryable: err instanceof QBApiError && err.retryable };
   }
 }
 

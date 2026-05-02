@@ -2346,7 +2346,7 @@ class SubagentSupervisor {
         confidenceScore: 0,
       }).catch(err => log.error('[SubagentSupervisor] Failed to record failure confidence:', err));
       
-      return this.createFailureResult('unexpected_error', error.message, startTime);
+      return this.createFailureResult('unexpected_error', error instanceof Error ? error.message : String(error), startTime);
     }
   }
 
@@ -2940,19 +2940,19 @@ class SubagentSupervisor {
   // ============================================================================
 
   private async runDiagnostics(context: SubagentExecutionContext, subagent: AiSubagentDefinition, error: unknown): Promise<DiagnosticResult> {
-    log.info(`[DrHolmes] Running diagnostics for ${subagent.name} error:`, error.message);
+    log.info(`[DrHolmes] Running diagnostics for ${subagent.name} error:`, error instanceof Error ? error.message : String(error));
     
     const knownPatterns = (subagent.knownPatterns as string[]) || [];
     const fixStrategies = (subagent.fixStrategies as Record<string, string>) || {};
     
     // Try to match error to known patterns
     let matchedPattern: string | undefined;
-    let diagnosis = error.message || 'Unknown error';
+    let diagnosis = error instanceof Error ? error.message : String(error) || 'Unknown error';
     let riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'medium';
     
     for (const pattern of knownPatterns) {
-      if (error.message?.toLowerCase().includes(pattern.replace(/_/g, ' ')) ||
-          error.code === pattern) {
+      if (error instanceof Error ? error.message : String(error)?.toLowerCase().includes(pattern.replace(/_/g, ' ')) ||
+          (error as NodeJS.ErrnoException).code === pattern) {
         matchedPattern = pattern;
         break;
       }
@@ -4404,7 +4404,7 @@ class SubagentSupervisor {
         domain: subagent.domain,
         status: 'failed',
         output: { error: `AI execution failed: ${(error instanceof Error ? error.message : String(error))}` },
-        fallbackReason: error.message,
+        fallbackReason: error instanceof Error ? error.message : String(error),
         modelTier: modelConfig.preferredTier,
         executionTimeMs: executionTime,
         circuitBreakerTracked: true,
@@ -4530,7 +4530,7 @@ class SubagentSupervisor {
         results: coordinationManager.getAggregatedResults(batch),
         totalDurationMs: Date.now() - startTime,
         totalTokensUsed: batch.totalTokensUsed,
-        summary: `Job failed: ${error.message}`,
+        summary: `Job failed: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }

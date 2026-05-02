@@ -625,7 +625,7 @@ class HRISIntegrationService {
           }
 
         } catch (entityError : unknown) {
-          result.errors.push(`${entityType}: ${entityError.message}`);
+          result.errors.push(`${entityType}: ${entityError instanceof Error ? entityError.message : String(entityError)}`);
         }
       }
 

@@ -217,7 +217,7 @@ class DocumentUnderstandingPipelineService {
             overallConfidence += docResult.confidence;
             warnings.push(...docResult.warnings);
           } catch (docError: unknown) {
-            errors.push(`Failed to process ${doc.fileName}: ${docError.message}`);
+            errors.push(`Failed to process ${doc.fileName}: ${docError instanceof Error ? docError.message : String(docError)}`);
           }
         }
 
@@ -595,7 +595,7 @@ Only include fields where data was found. Estimate confidence based on data clar
             });
             createdRecords.employees++;
           } catch (err: unknown) {
-            if (err.code === '23505') {
+            if ((err as NodeJS.ErrnoException).code === '23505') {
               skippedRecords++;
             } else {
               errors.push(`Failed to create employee ${emp.firstName} ${emp.lastName}: ${(err instanceof Error ? err.message : String(err))}`);

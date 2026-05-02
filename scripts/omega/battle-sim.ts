@@ -33,7 +33,7 @@ async function step(name: string, fn: () => Promise<{ pass: boolean; detail: str
     return result.pass;
   } catch (err : unknown) {
     const duration = Date.now() - start;
-    const detail = `THREW: ${err.message}`;
+    const detail = `THREW: ${err instanceof Error ? err.message : String(err)}`;
     log(`  ❌ ${detail} (${duration}ms)`);
     stepResults.push({ step: n, name, pass: false, detail, duration });
     return false;

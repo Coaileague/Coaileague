@@ -1026,8 +1026,8 @@ class AIBrainActionRegistry {
           });
         } catch (txErr: unknown) {
           // Transaction rolled back — return semantic error code
-          const code = txErr.code || 'BATCH_TRANSACTION_FAILED';
-          return createResult(request.actionId, false, txErr.message || 'Batch publish failed — transaction rolled back', { code }, start);
+          const code = (txErr as NodeJS.ErrnoException).code || 'BATCH_TRANSACTION_FAILED';
+          return createResult(request.actionId, false, txErr instanceof Error ? txErr.message : String(txErr) || 'Batch publish failed — transaction rolled back', { code }, start);
         }
 
         // PAYLOAD CHAIN 1: Real-time WebSocket broadcast to all clients
@@ -1724,7 +1724,7 @@ class AIBrainActionRegistry {
               entityType: 'time_entry', entityId: entryId,
               success: false, errorMessage: `Financial lock: ${err.reason}`, durationMs: Date.now() - start,
             });
-            return createResult(request.actionId, false, err.message, { code: 'FINANCIAL_LOCK', reason: err.reason }, start);
+            return createResult(request.actionId, false, err instanceof Error ? err.message : String(err), { code: 'FINANCIAL_LOCK', reason: err.reason }, start);
           }
           throw err;
         }
@@ -1975,7 +1975,7 @@ class AIBrainActionRegistry {
             recentFailures,
           }, start);
         } catch (err: unknown) {
-          return createResult(request.actionId, false, `Failed to query delivery stats: ${err.message}`, null, start);
+          return createResult(request.actionId, false, `Failed to query delivery stats: ${err instanceof Error ? err.message : String(err)}`, null, start);
         }
       },
     };
@@ -2172,7 +2172,7 @@ class AIBrainActionRegistry {
         } catch (lockErr: unknown) {
           if (lockErr instanceof FinancialLockConflict) {
             return createResult(request.actionId, false,
-              `FINANCIAL_LOCK: ${lockErr.message}`, null, start);
+              `FINANCIAL_LOCK: ${lockErr instanceof Error ? lockErr.message : String(lockErr)}`, null, start);
           }
           throw lockErr;
         }
@@ -2527,7 +2527,7 @@ class AIBrainActionRegistry {
           return createResult(request.actionId, false, 'Invoice not found in this workspace', null, start);
         }
 
-        if ((invoice as Record<string, unknown>).status !== 'draft') {
+        if ((invoice as {status: string}).status !== 'draft') {
           await logActionAudit({
             actionId: request.actionId,
             workspaceId: request.workspaceId,
@@ -2535,14 +2535,14 @@ class AIBrainActionRegistry {
             entityType: 'invoice',
             entityId: invoiceId,
             success: false,
-            errorMessage: `Cannot add line items to invoice in status '${(invoice as Record<string, unknown>).status}'. Only drafts accept new line items.`,
+            errorMessage: `Cannot add line items to invoice in status '${(invoice as {status: string}).status}'. Only drafts accept new line items.`,
             payload: { items },
             durationMs: Date.now() - start,
           });
           return createResult(
             request.actionId,
             false,
-            `Cannot add line items to invoice in status '${(invoice as Record<string, unknown>).status}'. Only drafts accept new line items.`,
+            `Cannot add line items to invoice in status '${(invoice as {status: string}).status}'. Only drafts accept new line items.`,
             null,
             start,
           );
@@ -2574,7 +2574,7 @@ class AIBrainActionRegistry {
         try {
           const inserted = await db.transaction(async (tx) => {
             const out = await tx.insert(invoiceLineItems).values(rows as Record<string, unknown>).returning();
-            const newTotalCents = Math.round(parseFloat(String((invoice as Record<string, unknown>).total ?? '0')) * 100) + appendedTotalCents;
+            const newTotalCents = Math.round(parseFloat(String((invoice as {total: string}).total ?? '0')) * 100) + appendedTotalCents;
             await tx.update(invoices)
               .set({ total: (newTotalCents / 100).toFixed(2), updatedAt: new Date() } as Record<string, unknown>)
               .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, request.workspaceId!)));
@@ -4962,7 +4962,7 @@ export function registerUniversalIdActions(): void {
         }
         return createResult(request.actionId, true, `Found ${entity.type}: ${entity.displayName} (${entity.humanId})`, entity, start);
       } catch (error: unknown) {
-        return createResult(request.actionId, false, error.message, null, start);
+        return createResult(request.actionId, false, error instanceof Error ? error.message : String(error), null, start);
       }
     },
   };
@@ -5005,7 +5005,7 @@ export function registerUniversalIdActions(): void {
           `Found ${entity.type}: **${entity.displayName}** (${entity.humanId})${deepLink ? ` — [View →](${deepLink})` : ''}`,
           { ...entity, deepLink }, start);
       } catch (error: unknown) {
-        return createResult(request.actionId, false, error.message, null, start);
+        return createResult(request.actionId, false, error instanceof Error ? error.message : String(error), null, start);
       }
     },
   };
@@ -5038,7 +5038,7 @@ export function registerUniversalIdActions(): void {
         });
         return createResult(request.actionId, true, summary, { orgs, clients, employees, users }, start);
       } catch (error: unknown) {
-        return createResult(request.actionId, false, error.message, null, start);
+        return createResult(request.actionId, false, error instanceof Error ? error.message : String(error), null, start);
       }
     },
   };
@@ -5067,7 +5067,7 @@ export function registerUniversalIdActions(): void {
         }
         return createResult(request.actionId, true, `Resolved ${entity.type}: ${entity.displayName} (${entity.humanId})`, entity, start);
       } catch (error: unknown) {
-        return createResult(request.actionId, false, error.message, null, start);
+        return createResult(request.actionId, false, error instanceof Error ? error.message : String(error), null, start);
       }
     },
   };

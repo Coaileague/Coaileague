@@ -62,7 +62,7 @@ export function usePushNotifications(options: PushNotificationOptions = {}) {
     onError: (error: Error) => {
       toast({
         title: "Subscription Failed",
-        description: error.message || "Could not enable push notifications.",
+        description: error instanceof Error ? error.message : String(error) || "Could not enable push notifications.",
         variant: "destructive",
       });
     },
@@ -82,7 +82,7 @@ export function usePushNotifications(options: PushNotificationOptions = {}) {
     onError: (error: Error) => {
       toast({
         title: "Unsubscribe Failed",
-        description: error.message || "Could not disable push notifications.",
+        description: error instanceof Error ? error.message : String(error) || "Could not disable push notifications.",
         variant: "destructive",
       });
     },
@@ -103,7 +103,7 @@ export function usePushNotifications(options: PushNotificationOptions = {}) {
     onError: (error: Error) => {
       toast({
         title: "Test Failed",
-        description: error.message || "Could not send test notification.",
+        description: error instanceof Error ? error.message : String(error) || "Could not send test notification.",
         variant: "destructive",
       });
     },

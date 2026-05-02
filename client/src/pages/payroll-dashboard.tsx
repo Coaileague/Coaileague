@@ -67,7 +67,7 @@ export default function PayrollDashboard() {
   const runsQuery = useQuery<PayrollRun[]>({
     queryKey: ['/api/payroll/runs', workspaceId],
     enabled: !!workspaceId,
-    queryFn: () => apiFetch('/api/payroll/runs', PayrollRunListResponse) as unknown as Promise<PayrollRun[]>,
+    queryFn: () => apiFetch('/api/payroll/runs', PayrollRunListResponse) as Promise<PayrollRun[]>,
     retry: (failureCount, error: unknown) => error?.status >= 500 && failureCount < 2,
   });
   const {
@@ -82,7 +82,7 @@ export default function PayrollDashboard() {
   const { data: runDetails, isLoading: isLoadingDetails, isError: isErrorDetails, error: errorDetails } = useQuery<PayrollRunDetail>({
     queryKey: ['/api/payroll/runs', workspaceId, selectedRun],
     enabled: !!selectedRun,
-    queryFn: () => apiFetch(`/api/payroll/runs/${selectedRun}`, PayrollRunDetailResponse) as unknown as Promise<PayrollRunDetail>,
+    queryFn: () => apiFetch(`/api/payroll/runs/${selectedRun}`, PayrollRunDetailResponse) as Promise<PayrollRunDetail>,
     retry: (failureCount, error: unknown) => error?.status >= 500 && failureCount < 2,
   });
 

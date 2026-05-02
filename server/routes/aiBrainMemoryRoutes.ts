@@ -36,7 +36,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: unknown) 
       res.json({ success: true, profile });
     } catch (error: unknown) {
       console.error("[Memory API] Error getting profile:", error);
-      res.status(500).json({ success: false, error: error.message });
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -54,7 +54,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: unknown) 
       res.json({ success: true, context });
     } catch (error: unknown) {
       console.error("[Memory API] Error building context:", error);
-      res.status(500).json({ success: false, error: error.message });
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -83,7 +83,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: unknown) 
       res.json({ success: true, tools, count: tools.length });
     } catch (error: unknown) {
       console.error("[Memory API] Error getting tool catalog:", error);
-      res.status(500).json({ success: false, error: error.message });
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -125,7 +125,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: unknown) 
       res.json({ success: true, tools: recommendations });
     } catch (error: unknown) {
       console.error("[Memory API] Error getting recommended tools:", error);
-      res.status(500).json({ success: false, error: error.message });
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -154,7 +154,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: unknown) 
       res.json({ success: true, message: "Tool catalog refreshed for workspace", count: tools.length, tools });
     } catch (error: unknown) {
       console.error("[Memory API] Error refreshing tool catalog:", error);
-      res.status(500).json({ success: false, error: error.message });
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -188,7 +188,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: unknown) 
       res.json({ success: true, insights });
     } catch (error: unknown) {
       console.error("[Memory API] Error getting insights:", error);
-      res.status(500).json({ success: false, error: error.message });
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -216,7 +216,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: unknown) 
       res.json({ success: true, insight });
     } catch (error: unknown) {
       console.error("[Memory API] Error sharing insight:", error);
-      res.status(500).json({ success: false, error: error.message });
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -236,7 +236,7 @@ export function registerAiBrainMemoryRoutes(app: Express, requireAuth: unknown) 
       res.json({ success: true, message: "Usage recorded" });
     } catch (error: unknown) {
       console.error("[Memory API] Error recording usage:", error);
-      res.status(500).json({ success: false, error: error.message });
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   });
 

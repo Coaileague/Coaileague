@@ -164,7 +164,7 @@ class ElevatedSessionGuardian {
       this.recordAnomaly(anomalyCode);
       await this.attemptHealing(anomalyCode, { userId, sessionId, platformRole, executionId });
 
-      return { success: false, error: error.message, telemetry };
+      return { success: false, error: error instanceof Error ? error.message : String(error), telemetry };
     }
   }
 
@@ -589,7 +589,7 @@ class ElevatedSessionGuardian {
   }
 
   private classifyError(error: unknown): SessionAnomalyCode {
-    const message = error.message?.toLowerCase() || '';
+    const message = error instanceof Error ? error.message : String(error)?.toLowerCase() || '';
     
     if (message.includes('signature') || message.includes('hmac')) {
       return 'hmac_signature_mismatch';

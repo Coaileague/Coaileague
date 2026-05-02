@@ -182,15 +182,15 @@ export async function sendShiftOffers(params: ShiftOfferParams): Promise<{
 
         offered++;
       } catch (err: unknown) {
-        errors.push(`${officer.id}: ${err.message}`);
+        errors.push(`${officer.id}: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
 
     log.info(`[ShiftOffer] Sent ${offered} shift offers for shift ${shiftId}`);
     return { offered, errors };
   } catch (err: unknown) {
-    log.error('[ShiftOffer] Error sending shift offers:', err.message);
-    return { offered: 0, errors: [err.message] };
+    log.error('[ShiftOffer] Error sending shift offers:', err instanceof Error ? err.message : String(err));
+    return { offered: 0, errors: [err instanceof Error ? err.message : String(err)] };
   }
 }
 
@@ -256,7 +256,7 @@ export async function acceptShiftOffer(params: {
       );
       claimed = (claimResult.rowCount ?? 0) > 0;
     } catch (e: unknown) {
-      log.warn('[ShiftOffer] Shift claim update failed:', e.message);
+      log.warn('[ShiftOffer] Shift claim update failed:', e instanceof Error ? e.message : String(e));
     }
 
     if (!claimed) {
@@ -328,7 +328,7 @@ export async function acceptShiftOffer(params: {
         );
       }
     } catch (e: unknown) {
-      log.warn('[ShiftOffer] Supervisor notification failed (non-fatal):', e.message);
+      log.warn('[ShiftOffer] Supervisor notification failed (non-fatal):', e instanceof Error ? e.message : String(e));
     }
 
     log.info(`[ShiftOffer] ${officer.first_name} ${officer.last_name} accepted shift ${offer.shift_id}`);
@@ -345,7 +345,7 @@ export async function acceptShiftOffer(params: {
       log.info('[ShiftOffer] Race loss on accept — another officer won the shift');
       return `Thanks for your reply — that shift was just filled by another officer. We'll keep you in mind for the next one!`;
     }
-    log.error('[ShiftOffer] Accept error:', err.message);
+    log.error('[ShiftOffer] Accept error:', err instanceof Error ? err.message : String(err));
     return `Thanks for accepting! There was a brief issue processing your request. Please confirm with your supervisor directly.`;
   }
 }
@@ -374,7 +374,7 @@ export async function declineShiftOffer(params: {
 
     return `No problem, ${v.firstName}! We'll reach out when another opportunity comes up. — Trinity`;
   } catch (err: unknown) {
-    log.warn('[ShiftOffer] Decline error:', err.message);
+    log.warn('[ShiftOffer] Decline error:', err instanceof Error ? err.message : String(err));
     return null;
   }
 }

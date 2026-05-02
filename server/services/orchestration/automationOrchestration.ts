@@ -397,17 +397,17 @@ class AutomationOrchestrationService {
 
       // DUPLICATE_ORCHESTRATION is a deduplication guard, not a real failure.
       // Silently return success so the RL system is not contaminated with false negatives.
-      if (typeof error?.message === 'string' && error.message.startsWith('DUPLICATE_ORCHESTRATION')) {
+      if (typeof error?.message === 'string' && error instanceof Error ? error.message : String(error).startsWith('DUPLICATE_ORCHESTRATION')) {
         this.activeAutomations.delete(orchestrationId);
         return {
           success: true,
-          data: undefined as unknown as T,
+          data: undefined as T,
           orchestrationId,
           durationMs,
         };
       }
 
-      log.error(`[AutomationOrchestration] ${params.automationName} FAILED (${durationMs}ms):`, error?.message ?? String(error), error?.stack ? `\n${error.stack}` : '');
+      log.error(`[AutomationOrchestration] ${params.automationName} FAILED (${durationMs}ms):`, error?.message ?? String(error), error?.stack ? `\n${error instanceof Error ? error.stack : undefined}` : '');
       const errorCode = this.categorizeError(error);
       const errorInfo = AUTOMATION_ERROR_CODES[errorCode] || AUTOMATION_ERROR_CODES['UNKNOWN'];
 
@@ -433,7 +433,7 @@ class AutomationOrchestrationService {
             domain: params.domain,
             automationType: params.automationType,
             durationMs,
-            error: error.message,
+            error: error instanceof Error ? error.message : String(error),
             errorCode,
             retryable: errorInfo.retryable,
           },
@@ -447,14 +447,14 @@ class AutomationOrchestrationService {
         type: 'automation_execution_failed',
         category: 'automation',
         title: `Automation Failed: ${params.automationName}`,
-        description: `${params.automationType} automation failed in ${params.domain} — ${errorInfo.remediation || error.message}`,
+        description: `${params.automationType} automation failed in ${params.domain} — ${errorInfo.remediation || error instanceof Error ? error.message : String(error)}`,
         workspaceId: params.workspaceId,
         metadata: {
           orchestrationId,
           domain: params.domain,
           automationName: params.automationName,
           automationType: params.automationType,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
           errorCode,
           retryable: errorInfo.retryable,
           remediation: errorInfo.remediation,
@@ -468,7 +468,7 @@ class AutomationOrchestrationService {
           params.workspaceId,
           `Automation Failed: ${params.automationName}`,
           errorInfo.remediation ||
-            `The automation "${params.automationName}" failed and could not complete. ${error.message}`,
+            `The automation "${params.automationName}" failed and could not complete. ${error instanceof Error ? error.message : String(error)}`,
           {
             actionUrl: '/settings/automations',
             pipelineName: params.automationName,
@@ -492,7 +492,7 @@ class AutomationOrchestrationService {
 
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         errorCode,
         orchestrationId,
         durationMs,
@@ -524,7 +524,7 @@ class AutomationOrchestrationService {
   }
 
   private categorizeError(error: Error): string {
-    const message = error.message.toLowerCase();
+    const message = error instanceof Error ? error.message : String(error).toLowerCase();
     
     if (message.includes('timeout')) return 'TIMEOUT';
     if (message.includes('connection') || message.includes('econnrefused')) return 'DB_CONNECTION_FAILED';

@@ -117,7 +117,7 @@ export async function createChatDockPubSub(): Promise<ChatDockPubSub> {
     const subscriber = publisher.duplicate();
     await Promise.all([publisher.connect(), subscriber.connect()]);
     console.log('[ChatDock] Redis pub/sub connected — multi-replica broadcast enabled');
-    return createRedisChatDockPubSub(publisher as unknown as RedisPublisherLike, subscriber as unknown as RedisSubscriberLike);
+    return createRedisChatDockPubSub(publisher as RedisPublisherLike, subscriber as RedisSubscriberLike);
   } catch (err) {
     console.warn('[ChatDock] Redis connection failed — falling back to local pub/sub:', (err as Error).message);
     return createLocalChatDockPubSub();

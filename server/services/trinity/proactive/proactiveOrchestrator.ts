@@ -156,7 +156,7 @@ const runPreShiftIntelAction: ActionHandler = {
         start,
       );
     } catch (err: unknown) {
-      return fail(request.actionId, `Pre-shift intel error: ${err.message}`, start);
+      return fail(request.actionId, `Pre-shift intel error: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -194,7 +194,7 @@ const runRevenueScanAction: ActionHandler = {
         start,
       );
     } catch (err: unknown) {
-      return fail(request.actionId, `Revenue scan error: ${err.message}`, start);
+      return fail(request.actionId, `Revenue scan error: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -227,7 +227,7 @@ const sendWeeklyBriefAction: ActionHandler = {
         start,
       );
     } catch (err: unknown) {
-      return fail(request.actionId, `Weekly brief error: ${err.message}`, start);
+      return fail(request.actionId, `Weekly brief error: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -251,7 +251,7 @@ const runAnomalyWatchAction: ActionHandler = {
         start,
       );
     } catch (err: unknown) {
-      return fail(request.actionId, `Anomaly watch error: ${err.message}`, start);
+      return fail(request.actionId, `Anomaly watch error: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };

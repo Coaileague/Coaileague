@@ -152,7 +152,7 @@ export function registerTimesheetPayrollCycleActions() {
       await AtomicFinancialLockService.assertCanModify(timeEntryId);
     } catch (err) {
       if (err instanceof FinancialLockConflict) {
-        return { error: err.message, code: 'FINANCIAL_LOCK', reason: err.reason };
+        return { error: err instanceof Error ? err.message : String(err), code: 'FINANCIAL_LOCK', reason: err.reason };
       }
       throw err;
     }

@@ -49,9 +49,9 @@ export function registerTrinityFrontierActions(orchestrator: unknown): void {
       });
 
       return {
-        success: (result as Record<string, unknown>).success,
+        success: (result as {success: boolean}).success,
         actionId: request.actionId,
-        message: (result as Record<string, unknown>).success 
+        message: (result as {success: boolean}).success 
           ? `Agent ${(result as Record<string, unknown>).assignedAgent?.name} hired successfully` 
           : (result as Record<string, unknown>).reason || 'No suitable agent found',
         data: result,
@@ -146,7 +146,7 @@ export function registerTrinityFrontierActions(orchestrator: unknown): void {
           result: frustrationCheck.predictedOutcome
         });
       } catch (e: unknown) {
-        diagnostics.checks.push({ name: 'Chain-of-Action Reasoning', status: 'error', error: e.message });
+        diagnostics.checks.push({ name: 'Chain-of-Action Reasoning', status: 'error', error: e instanceof Error ? e.message : String(e) });
       }
 
       try {
@@ -163,7 +163,7 @@ export function registerTrinityFrontierActions(orchestrator: unknown): void {
           bottlenecksFound: simulation.results.filter(r => r.bottleneckDetected).length
         });
       } catch (e: unknown) {
-        diagnostics.checks.push({ name: 'Digital Twin Simulation', status: 'error', error: e.message });
+        diagnostics.checks.push({ name: 'Digital Twin Simulation', status: 'error', error: e instanceof Error ? e.message : String(e) });
       }
 
       diagnostics.checks.push({

@@ -82,7 +82,7 @@ export async function runTrinityFinancialBriefings(): Promise<{ briefingsSent: n
         briefingsSent++;
         log.info('Financial briefing delivered', { workspaceId: ws.id });
       } catch (wsErr: unknown) {
-        log.warn('Briefing failed for workspace', { workspaceId: ws.id, error: wsErr.message });
+        log.warn('Briefing failed for workspace', { workspaceId: ws.id, error: wsErr instanceof Error ? wsErr.message : String(wsErr) });
       }
     }
   } catch (err: unknown) {

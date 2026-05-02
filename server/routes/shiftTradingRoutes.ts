@@ -473,7 +473,7 @@ router.post("/trades/:id/manager-approve", requireManager, async (req: Authentic
         });
       }
     } catch (webhookErr: unknown) {
-      log.warn('[ShiftTrading] Failed to log webhook error to audit log', { error: webhookErr.message });
+      log.warn('[ShiftTrading] Failed to log webhook error to audit log', { error: webhookErr instanceof Error ? webhookErr.message : String(webhookErr) });
     }
 
     // Notify both parties (workspace_id enforced for tenant isolation per TRINITY.md §1)

@@ -417,7 +417,7 @@ class HelpAIBotService {
             includeCrossChannel: true,
           }).catch(() => ''),
         ]);
-      } catch (histErr: unknown) { log.warn('[HelpAI] Failed to load context:', histErr.message); }
+      } catch (histErr: unknown) { log.warn('[HelpAI] Failed to load context:', histErr instanceof Error ? histErr.message : String(histErr)); }
 
       const historyBlock = userHistory ? buildUserHistoryBlock(userHistory.recentSessions) : '';
       const emotion = detectEmotionalContext(message);
@@ -656,7 +656,7 @@ Format as plain text, no headers.`,
             includeCrossChannel: true,
           }).catch(() => ''),
         ]);
-      } catch (histErr: unknown) { log.warn('[HelpAI] History fetch failed:', histErr.message); }
+      } catch (histErr: unknown) { log.warn('[HelpAI] History fetch failed:', histErr instanceof Error ? histErr.message : String(histErr)); }
       const emotion = detectEmotionalContext(message);
       const toneGuidance = buildToneGuidance(emotion);
       const memorySummary = userHistory ? buildMemorySummary(userHistory) : '';

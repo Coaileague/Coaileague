@@ -476,7 +476,7 @@ router.post('/import-migrated-shifts', requireManager, async (req: Authenticated
             aiGenerated: false,
           });
         } catch (validationError: unknown) {
-          errors.push(`Shift ${i + 1}: ${validationError.message}`);
+          errors.push(`Shift ${i + 1}: ${validationError instanceof Error ? validationError.message : String(validationError)}`);
         }
       }
 
@@ -694,7 +694,7 @@ router.post('/activate', requireManager, async (req: AuthenticatedRequest, res) 
           log.error('[Stripe] Error verifying payment:', stripeError);
           return res.status(400).json({
             success: false,
-            error: `Payment verification failed: ${stripeError.message}`,
+            error: `Payment verification failed: ${stripeError instanceof Error ? stripeError.message : String(stripeError)}`,
           });
         }
       }

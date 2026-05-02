@@ -865,7 +865,7 @@ Rank these FAQs by relevance to the user's query. Return only valid JSON.`;
       const { tokenManager } = await import('../services/billing/tokenManager');
       await (tokenManager as Record<string,unknown>).deductSupportPoolCredits('faq_search', 'FAQ AI Search', wsId || undefined);
     } catch (billingErr: unknown) {
-      log.warn('[FAQ] Support pool billing failed (non-blocking):', billingErr.message);
+      log.warn('[FAQ] Support pool billing failed (non-blocking):', billingErr instanceof Error ? billingErr.message : String(billingErr));
     }
 
     log.info(`✅ [FAQ Search] Found ${topResults.length} results (confidence: ${(topConfidenceScore * 100).toFixed(0)}%)`);

@@ -34,8 +34,8 @@ coverageRouter.get('/', requireAuth, async (req: AuthenticatedRequest, res: Resp
     const shifts = (status as Record<string,unknown>)?.pendingOffers ?? (status as Record<string,unknown>)?.activeRequests ?? [];
     res.json({ shifts, status });
   } catch (e: unknown) {
-    log.error('[CoverageRoutes] GET / failed:', e.message);
-    res.status(500).json({ error: e.message });
+    log.error('[CoverageRoutes] GET / failed:', e instanceof Error ? e.message : String(e));
+    res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
   }
 });
 
@@ -68,7 +68,7 @@ coverageRouter.post('/accept/:offerId', async (req: AuthenticatedRequest, res: R
           const { broadcastToWorkspace } = await import('../websocket');
           broadcastToWorkspace(wsWorkspaceId, { type: 'schedules_updated' });
         }
-      } catch (e: unknown) { log.warn('[Coverage] Broadcast failed:', e.message); }
+      } catch (e: unknown) { log.warn('[Coverage] Broadcast failed:', e instanceof Error ? e.message : String(e)); }
 
       res.json({ 
         success: true, 

@@ -57,7 +57,7 @@ securityAdminRouter.post('/overrides', async (req: AuthenticatedRequest, res: Re
     if (!r.success) return res.status(400).json({ ok: false, error: r.reason });
     return res.json({ ok: true, expiresAt: r.expiresAt });
   } catch (err: unknown) {
-    log.error('[SecurityAdmin] grant override failed:', err.message);
+    log.error('[SecurityAdmin] grant override failed:', err instanceof Error ? err.message : String(err));
     res.status(500).json({ ok: false, error: 'Failed' });
   }
 });
@@ -71,7 +71,7 @@ securityAdminRouter.get('/overrides', async (req: AuthenticatedRequest, res: Res
     const list = await listActiveOverrides(workspaceId);
     res.json({ ok: true, overrides: list });
   } catch (err: unknown) {
-    log.error('[SecurityAdmin] list overrides failed:', err.message);
+    log.error('[SecurityAdmin] list overrides failed:', err instanceof Error ? err.message : String(err));
     res.status(500).json({ ok: false, error: 'Failed' });
   }
 });
@@ -83,7 +83,7 @@ securityAdminRouter.delete('/overrides/:id', async (req: AuthenticatedRequest, r
     const r = await revokeOverride(req.params.id, req.user?.id);
     res.json({ ok: r.success });
   } catch (err: unknown) {
-    log.error('[SecurityAdmin] revoke override failed:', err.message);
+    log.error('[SecurityAdmin] revoke override failed:', err instanceof Error ? err.message : String(err));
     res.status(500).json({ ok: false, error: 'Failed' });
   }
 });
@@ -105,7 +105,7 @@ securityAdminRouter.get('/auditor-allowlist', async (req: AuthenticatedRequest, 
     );
     res.json({ ok: true, entries: r.rows });
   } catch (err: unknown) {
-    log.error('[SecurityAdmin] list allowlist failed:', err.message);
+    log.error('[SecurityAdmin] list allowlist failed:', err instanceof Error ? err.message : String(err));
     res.status(500).json({ ok: false, error: 'Failed' });
   }
 });
@@ -123,7 +123,7 @@ securityAdminRouter.post('/auditor-allowlist', async (req: AuthenticatedRequest,
     });
     res.json({ ok: r.success });
   } catch (err: unknown) {
-    log.error('[SecurityAdmin] add allowlist failed:', err.message);
+    log.error('[SecurityAdmin] add allowlist failed:', err instanceof Error ? err.message : String(err));
     res.status(500).json({ ok: false, error: 'Failed' });
   }
 });
@@ -137,7 +137,7 @@ securityAdminRouter.delete('/auditor-allowlist/:email', async (req: Authenticate
     const r = await removeAuditorAllowlist(workspaceId, req.params.email);
     res.json({ ok: r.success });
   } catch (err: unknown) {
-    log.error('[SecurityAdmin] remove allowlist failed:', err.message);
+    log.error('[SecurityAdmin] remove allowlist failed:', err instanceof Error ? err.message : String(err));
     res.status(500).json({ ok: false, error: 'Failed' });
   }
 });

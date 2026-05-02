@@ -77,8 +77,8 @@ async function verifyStripe(secretKey: string, label: string): Promise<void> {
         `Missing: ${missingEvents.join(', ')}`);
     }
   } catch (err : unknown) {
-    row('Stripe', `${label} webhook URL`, 'MISSING', `API error: ${err.message}`);
-    row('Stripe', `${label} webhook events (9)`, 'MISSING', `API error: ${err.message}`);
+    row('Stripe', `${label} webhook URL`, 'MISSING', `API error: ${err instanceof Error ? err.message : String(err)}`);
+    row('Stripe', `${label} webhook events (9)`, 'MISSING', `API error: ${err instanceof Error ? err.message : String(err)}`);
   }
 }
 
@@ -116,8 +116,8 @@ async function verifyResend(): Promise<void> {
     row('Resend', 'Inbound webhook', inboundFound ? 'VERIFIED' : 'MISSING',
       inboundFound ? inboundUrl : `Not registered: ${inboundUrl}`);
   } catch (err : unknown) {
-    row('Resend', 'Outbound webhook', 'MISSING', `Network error: ${err.message}`);
-    row('Resend', 'Inbound webhook',  'MISSING', `Network error: ${err.message}`);
+    row('Resend', 'Outbound webhook', 'MISSING', `Network error: ${err instanceof Error ? err.message : String(err)}`);
+    row('Resend', 'Inbound webhook',  'MISSING', `Network error: ${err instanceof Error ? err.message : String(err)}`);
   }
 }
 
@@ -165,7 +165,7 @@ async function verifyTwilio(): Promise<void> {
     }
   } catch (err : unknown) {
     for (const c of checks) {
-      row('Twilio', c.label, 'MISSING', `SDK error: ${err.message}`);
+      row('Twilio', c.label, 'MISSING', `SDK error: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 }
@@ -193,7 +193,7 @@ async function verifyPlaid(): Promise<void> {
     row('Plaid', 'API connectivity', resp.ok ? 'VERIFIED' : 'MISSING',
       resp.ok ? 'Plaid sandbox reachable — keys valid' : `HTTP ${resp.status}`);
   } catch (err : unknown) {
-    row('Plaid', 'API connectivity', 'MISSING', `Network error: ${err.message}`);
+    row('Plaid', 'API connectivity', 'MISSING', `Network error: ${err instanceof Error ? err.message : String(err)}`);
   }
 }
 

@@ -245,7 +245,7 @@ export async function initGroup5Tables(): Promise<void> {
       await pool.query(stmt);
       ok++;
     } catch (err: unknown) {
-      log.error(`[G5Init] Error: ${err.message?.slice(0, 120)}`);
+      log.error(`[G5Init] Error: ${err instanceof Error ? err.message : String(err)?.slice(0, 120)}`);
       errors++;
     }
   }

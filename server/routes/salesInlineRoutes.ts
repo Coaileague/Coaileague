@@ -515,7 +515,7 @@ Return ONLY valid JSON array with this exact structure:
               log.info(`[RFP] AI content generated for RFP ${rfpId}`);
             }
           } catch (err: unknown) {
-            log.warn(`[RFP] AI generation failed (non-blocking): ${err.message}`);
+            log.warn(`[RFP] AI generation failed (non-blocking): ${err instanceof Error ? err.message : String(err)}`);
           }
         })();
       }
@@ -586,7 +586,7 @@ Return ONLY valid JSON array with this exact structure:
             log.info(`[RFP] AI content regenerated for RFP ${id}`);
           }
         } catch (err: unknown) {
-          log.warn(`[RFP] AI regeneration failed (non-blocking): ${err.message}`);
+          log.warn(`[RFP] AI regeneration failed (non-blocking): ${err instanceof Error ? err.message : String(err)}`);
         }
       })();
 

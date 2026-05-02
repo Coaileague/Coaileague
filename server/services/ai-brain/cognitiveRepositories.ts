@@ -251,7 +251,7 @@ export class A2AProtocolRepository {
       log.info(`[A2ARepo] Agent persisted: ${agent.name}`);
       return result;
     } catch (error : unknown) {
-      if (error.code === '23505') {
+      if ((error as NodeJS.ErrnoException).code === '23505') {
         return this.updateAgent(agent.id, agent);
       }
       log.error(`[A2ARepo] Failed to persist agent:`, (error instanceof Error ? error.message : String(error)));
@@ -581,7 +581,7 @@ export class RLLoopRepository {
         RETURNING id
       `);
       log.verbose(`[RLRepo] Confidence model upserted: ${model.agentId}/${model.actionType}`);
-      return (result as unknown as unknown[])[0] ?? null;
+      return (result as unknown[])[0] ?? null;
     } catch (error : unknown) {
       log.error(`[RLRepo] Failed to upsert confidence model:`, (error instanceof Error ? error.message : String(error)));
       return null;

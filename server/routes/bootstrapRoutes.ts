@@ -54,7 +54,7 @@ router.post('/dev-seed', async (req: Request, res: Response) => {
          VALUES ($1,$2,$3,$4,'active','security',NOW(),NOW())
          ON CONFLICT (id) DO NOTHING`,
         [ws.id, ws.name, ws.owner, ws.tier]
-      ).catch(e => errors.push(`workspace ${ws.id}: ${e.message}`));
+      ).catch(e => errors.push(`workspace ${ws.id}: ${e instanceof Error ? e.message : String(e)}`));
     }
 
     // ── 2. Users ─────────────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ router.post('/dev-seed', async (req: Request, res: Response) => {
          VALUES ($1,$2,$3,$4,$5,$6,true,$7,NOW(),NOW())
          ON CONFLICT DO NOTHING`,
         [acc.id, acc.email, acc.first, acc.last, PASS_HASH, acc.role, acc.wsId]
-      ).catch(e => errors.push(`user ${acc.email}: ${e.message}`));
+      ).catch(e => errors.push(`user ${acc.email}: ${e instanceof Error ? e.message : String(e)}`));
       created.push(acc.email);
 
       // ── 3. Employee record for non-root accounts ───────────────────────────
@@ -95,7 +95,7 @@ router.post('/dev-seed', async (req: Request, res: Response) => {
            VALUES ($1,$2,$3,$4,$5,$6,'35.00',$7,'active',true,NOW(),NOW())
            ON CONFLICT DO NOTHING`,
           [`${acc.id}-emp`, acc.wsId, acc.id, acc.first, acc.last, acc.email, wsRole]
-        ).catch(e => errors.push(`employee ${acc.email}: ${e.message}`));
+        ).catch(e => errors.push(`employee ${acc.email}: ${e instanceof Error ? e.message : String(e)}`));
       }
 
       // ── 4. Platform role for root ──────────────────────────────────────────
@@ -105,7 +105,7 @@ router.post('/dev-seed', async (req: Request, res: Response) => {
            VALUES (gen_random_uuid(),$1,'root_admin',NOW(),NOW())
            ON CONFLICT DO NOTHING`,
           [acc.id]
-        ).catch(e => errors.push(`platform_role root: ${e.message}`));
+        ).catch(e => errors.push(`platform_role root: ${e instanceof Error ? e.message : String(e)}`));
 
         // Also insert workspace member record
         await pool.query(
@@ -223,7 +223,7 @@ router.get('/dev-seed', async (req: Request, res: Response) => {
         `INSERT INTO workspaces (id,name,owner_id,subscription_tier,subscription_status,business_category,created_at,updated_at)
          VALUES ($1,$2,$3,$4,'active','security',NOW(),NOW()) ON CONFLICT (id) DO NOTHING`,
         [ws.id, ws.name, ws.owner, ws.tier]
-      ).catch(e => errors.push(`ws ${ws.id}: ${e.message}`));
+      ).catch(e => errors.push(`ws ${ws.id}: ${e instanceof Error ? e.message : String(e)}`));
     }
 
     const accounts = [
@@ -245,7 +245,7 @@ router.get('/dev-seed', async (req: Request, res: Response) => {
         `INSERT INTO users (id,email,first_name,last_name,password_hash,role,email_verified,current_workspace_id,created_at,updated_at)
          VALUES ($1,$2,$3,$4,$5,$6,true,$7,NOW(),NOW()) ON CONFLICT DO NOTHING`,
         [acc.id,acc.email,acc.first,acc.last,PASS_HASH,acc.role,acc.wsId]
-      ).catch(e => errors.push(`user ${acc.email}: ${e.message}`));
+      ).catch(e => errors.push(`user ${acc.email}: ${e instanceof Error ? e.message : String(e)}`));
       created.push(acc.email);
 
       if (acc.role !== 'root_admin') {
@@ -254,14 +254,14 @@ router.get('/dev-seed', async (req: Request, res: Response) => {
           `INSERT INTO employees (id,workspace_id,user_id,first_name,last_name,email,hourly_rate,workspace_role,status,is_active,created_at,updated_at)
            VALUES ($1,$2,$3,$4,$5,$6,'35.00',$7,'active',true,NOW(),NOW()) ON CONFLICT DO NOTHING`,
           [acc.id+'-emp',acc.wsId,acc.id,acc.first,acc.last,acc.email,wsRole]
-        ).catch(e => errors.push(`emp ${acc.email}: ${e.message}`));
+        ).catch(e => errors.push(`emp ${acc.email}: ${e instanceof Error ? e.message : String(e)}`));
       }
 
       if (acc.role === 'root_admin') {
         await pool.query(
           `INSERT INTO platform_roles (id,user_id,role,created_at,updated_at) VALUES (gen_random_uuid(),$1,'root_admin',NOW(),NOW()) ON CONFLICT DO NOTHING`,
           [acc.id]
-        ).catch(e => errors.push(`role ${acc.id}: ${e.message}`));
+        ).catch(e => errors.push(`role ${acc.id}: ${e instanceof Error ? e.message : String(e)}`));
       }
 
       await pool.query(

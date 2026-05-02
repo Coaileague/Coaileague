@@ -160,7 +160,7 @@ export function registerTrinityEnhancedModeActions(orchestrator: unknown): void 
         return {
           success: false,
           actionId: request.actionId,
-          message: e.message,
+          message: e instanceof Error ? e.message : String(e),
           executionTimeMs: Date.now() - startTime
         };
       }

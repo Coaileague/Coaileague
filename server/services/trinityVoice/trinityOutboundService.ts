@@ -99,8 +99,8 @@ export async function makeOutboundCall(params: OutboundCallParams): Promise<{
     log.info(`[TrinityOutbound] Call initiated to ${toPhone}, SID: ${call.sid}`);
     return { success: true, callSid: call.sid };
   } catch (err: unknown) {
-    log.error('[TrinityOutbound] Call failed:', err.message);
-    return { success: false, error: err.message };
+    log.error('[TrinityOutbound] Call failed:', err instanceof Error ? err.message : String(err));
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
@@ -141,7 +141,7 @@ export async function callOfficerWelfareCheck(params: {
       language: params.language,
     });
   } catch (err: unknown) {
-    log.error('[TrinityOutbound] Welfare check error:', err.message);
-    return { success: false, error: err.message };
+    log.error('[TrinityOutbound] Welfare check error:', err instanceof Error ? err.message : String(err));
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }

@@ -296,7 +296,7 @@ class LLMJudgeEvaluator {
           rationale: 'Evaluation failed',
           passed: false,
         })),
-        summary: `Evaluation failed: ${error.message}`,
+        summary: `Evaluation failed: ${error instanceof Error ? error.message : String(error)}`,
         strengths: [],
         weaknesses: ['Evaluation system error'],
         suggestions: ['Retry evaluation'],

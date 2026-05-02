@@ -196,7 +196,7 @@ async function detectFinanceMode(workspaceId: string): Promise<WorkspaceFinanceM
     mode,
     qbConnected: connected,
     qbRealmId: (connection as Record<string, unknown>).realmId ?? null,
-    qbLastSync: (connection as Record<string, unknown>).updatedAt ?? null,
+    qbLastSync: (connection as {updatedAt: Date}).updatedAt ?? null,
     qbStatus,
     internalPayrollEnabled: true,
     internalInvoicingEnabled: true,
@@ -617,7 +617,7 @@ async function pushToQuickBooks(workspaceId: string, params: { type: 'invoice' |
         qbEntityId: result.qbInvoiceId,
       };
     } catch (e: unknown) {
-      return { success: false, message: `QB invoice push error: ${e.message}` };
+      return { success: false, message: `QB invoice push error: ${e instanceof Error ? e.message : String(e)}` };
     }
   }
 
@@ -684,7 +684,7 @@ async function buildReconciliationReport(workspaceId: string): Promise<{
         recommendations.push('Check the QB review queue and resolve pending sync errors.');
       }
     } catch (e: unknown) {
-      discrepancies.push(`Could not fetch QB snapshot: ${e.message}`);
+      discrepancies.push(`Could not fetch QB snapshot: ${e instanceof Error ? e.message : String(e)}`);
     }
   } else {
     recommendations.push('Connect QuickBooks to enable full reconciliation between QB ledger and CoAIleague records.');
@@ -747,7 +747,7 @@ export function registerFinanceOrchestratorActions(): void {
         const result = await detectFinanceMode(workspaceId);
         return ok(req.actionId, `Finance mode: ${result.mode}. ${result.recommendation}`, result, start);
       } catch (e: unknown) {
-        return fail(req.actionId, e.message, null, start);
+        return fail(req.actionId, e instanceof Error ? e.message : String(e), null, start);
       }
     },
   };
@@ -774,7 +774,7 @@ export function registerFinanceOrchestratorActions(): void {
         ].join('\n');
         return ok(req.actionId, summary, snapshot, start);
       } catch (e: unknown) {
-        return fail(req.actionId, e.message, null, start);
+        return fail(req.actionId, e instanceof Error ? e.message : String(e), null, start);
       }
     },
   };
@@ -796,7 +796,7 @@ export function registerFinanceOrchestratorActions(): void {
           ? ok(req.actionId, result.summary, result, start)
           : ok(req.actionId, result.summary, result, start);
       } catch (e: unknown) {
-        return fail(req.actionId, e.message, null, start);
+        return fail(req.actionId, e instanceof Error ? e.message : String(e), null, start);
       }
     },
   };
@@ -821,7 +821,7 @@ export function registerFinanceOrchestratorActions(): void {
           ? ok(req.actionId, result.summary, result, start)
           : fail(req.actionId, result.summary, result, start);
       } catch (e: unknown) {
-        return fail(req.actionId, e.message, null, start);
+        return fail(req.actionId, e instanceof Error ? e.message : String(e), null, start);
       }
     },
   };
@@ -844,7 +844,7 @@ export function registerFinanceOrchestratorActions(): void {
           ? ok(req.actionId, result.message, result, start)
           : fail(req.actionId, result.message, result, start);
       } catch (e: unknown) {
-        return fail(req.actionId, e.message, null, start);
+        return fail(req.actionId, e instanceof Error ? e.message : String(e), null, start);
       }
     },
   };
@@ -867,7 +867,7 @@ export function registerFinanceOrchestratorActions(): void {
           : `Found ${report.discrepancies.length} discrepancy/discrepancies: ${report.discrepancies[0]}`;
         return ok(req.actionId, summary, report, start);
       } catch (e: unknown) {
-        return fail(req.actionId, e.message, null, start);
+        return fail(req.actionId, e instanceof Error ? e.message : String(e), null, start);
       }
     },
   };

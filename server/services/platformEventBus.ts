@@ -558,7 +558,7 @@ class PlatformEventBus {
           event.userId || (event as Record<string,unknown>).metadata?.userId,
         );
       } catch (err: unknown) {
-        log.warn('[platformEventBus] Thalamus processing failed:', err.message);
+        log.warn('[platformEventBus] Thalamus processing failed:', err instanceof Error ? err.message : String(err));
       }
 
       // Internal emit for direct listeners (added for trinity orchestration)
@@ -577,7 +577,7 @@ class PlatformEventBus {
           try {
             await this.executeWithRetry(subscriber, event);
           } catch (error: unknown) {
-            log.error(`[PlatformEventBus] Subscriber ${subscriber.name} failed:`, error.message);
+            log.error(`[PlatformEventBus] Subscriber ${subscriber.name} failed:`, error instanceof Error ? error.message : String(error));
           }
         }));
 

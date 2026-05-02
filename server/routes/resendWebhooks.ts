@@ -923,7 +923,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
           emailBody.slice(0, 200),
         ]);
       } catch (storeErr: unknown) {
-        log.warn('[Resend Inbound] Failed to store platform email:', storeErr.message);
+        log.warn('[Resend Inbound] Failed to store platform email:', storeErr instanceof Error ? storeErr.message : String(storeErr));
       }
 
       // [PHASE-9-1] Create a support ticket for support/info/billing emails
@@ -999,7 +999,7 @@ router.post("/api/webhooks/resend/inbound", async (req, res) => {
               }
             }
           } catch (trinityErr: unknown) {
-            log.warn('[Trinity Platform] Processing failed (non-blocking):', trinityErr.message);
+            log.warn('[Trinity Platform] Processing failed (non-blocking):', trinityErr instanceof Error ? trinityErr.message : String(trinityErr));
           }
         });
       }
@@ -1511,7 +1511,7 @@ ${rawBody.substring(0, 2000)}
               url: a.url,
             })),
             receivedAt: new Date(),
-            rawPayload: inboundEmail as unknown as Record<string, unknown>,
+            rawPayload: inboundEmail as Record<string, unknown>,
           });
 
           log.info(`[Resend→Trinity] processInboundEmail complete: ${emailCategory} → ${result.status}`, {

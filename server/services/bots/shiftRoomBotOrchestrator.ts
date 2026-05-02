@@ -766,7 +766,7 @@ class ShiftRoomBotOrchestrator {
         await botPool.deployBot('helpai', conversationId, params.workspaceId);
         await botPool.deployBot('clockbot', conversationId, params.workspaceId);
       } catch (botErr: unknown) {
-        log.warn('[ShiftBotOrchestrator] Bot deploy error (non-blocking):', botErr.message);
+        log.warn('[ShiftBotOrchestrator] Bot deploy error (non-blocking):', botErr instanceof Error ? botErr.message : String(botErr));
       }
 
       // Send ReportBot welcome message (with field intel briefing)

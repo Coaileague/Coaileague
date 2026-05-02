@@ -570,7 +570,7 @@ export class InvoiceService {
         description: `Subscription invoice ${invoice.invoiceNumber} is now overdue`,
         workspaceId: invoice.workspaceId,
         metadata: { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, dueDate: invoice.dueDate, totalAmount: invoice.totalAmount },
-      }).catch((err: unknown) => log.warn('[InvoiceService] publish invoice_overdue failed:', err.message));
+      }).catch((err: unknown) => log.warn('[InvoiceService] publish invoice_overdue failed:', err instanceof Error ? err.message : String(err)));
     }
 
     return invoice;
@@ -1269,7 +1269,7 @@ export class InvoiceService {
           tx,
         });
       } catch (ledgerErr: unknown) {
-        log.error('[InvoiceService] Ledger write failed — rolling back payment transaction:', ledgerErr.message);
+        log.error('[InvoiceService] Ledger write failed — rolling back payment transaction:', ledgerErr instanceof Error ? ledgerErr.message : String(ledgerErr));
         throw ledgerErr; // re-throw to abort the transaction
       }
 
@@ -1391,7 +1391,7 @@ export class InvoiceService {
         description: `$${lateFee.toFixed(2)} late fee applied to invoice ${invoice.invoiceNumber} (${daysOverdue} days overdue)`,
         workspaceId,
         metadata: { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, lateFee, daysOverdue, newTotal, feeType, feeAmount },
-      }).catch((err: unknown) => log.warn('[InvoiceService] publish late_fee_applied failed:', err.message));
+      }).catch((err: unknown) => log.warn('[InvoiceService] publish late_fee_applied failed:', err instanceof Error ? err.message : String(err)));
 
       results.push({
         invoiceId: invoice.id,
@@ -1492,7 +1492,7 @@ export class InvoiceService {
         description: `Credit memo for $${amount.toFixed(2)} issued against invoice ${originalInvoice.invoiceNumber}. Reason: ${reason}`,
         workspaceId,
         metadata: { creditMemoId: creditMemo.id, creditMemoNumber, originalInvoiceId, originalInvoiceNumber: originalInvoice.invoiceNumber, amount, reason, createdBy },
-      }).catch((err: unknown) => log.warn('[InvoiceService] publish credit_memo_created failed:', err.message));
+      }).catch((err: unknown) => log.warn('[InvoiceService] publish credit_memo_created failed:', err instanceof Error ? err.message : String(err)));
 
       return { creditMemo, originalInvoice: updatedOriginal };
     });

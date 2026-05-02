@@ -118,7 +118,7 @@ type PDFDocumentType = InstanceType<typeof PDFDocument>;
 export async function generateProposalPdf(proposalId: string, workspaceId: string): Promise<Buffer> {
   const rows = await q(`SELECT * FROM proposals WHERE id=$1 AND workspace_id=$2`, [proposalId, workspaceId]);
   if (!rows.length) throw new Error('Proposal not found');
-  const proposal = rows[0] as unknown as ProposalData;
+  const proposal = rows[0] as ProposalData;
 
   const wsRows = await q(`SELECT name FROM workspaces WHERE id=$1`, [workspaceId]);
   const orgName = (wsRows[0] as unknown)?.name || proposal.company_name || 'CoAIleague';
@@ -283,7 +283,7 @@ export async function generateProposalPdf(proposalId: string, workspaceId: strin
     );
     log.info(`[proposalPdf] Stored to GCS: ${gcsPath} (${pdfBuffer.length} bytes)`);
   } catch (storeErr : unknown) {
-    log.warn(`[proposalPdf] GCS store failed for ${proposalId} (non-fatal): ${storeErr.message}`);
+    log.warn(`[proposalPdf] GCS store failed for ${proposalId} (non-fatal): ${storeErr instanceof Error ? storeErr.message : String(storeErr)}`);
   }
 
   return pdfBuffer;

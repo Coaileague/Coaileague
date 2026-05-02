@@ -108,7 +108,7 @@ class ClientProspectService {
         log.info(`[ClientProspect] Created new prospect: ${tempCode} for ${normalizedEmail}`);
         return { prospect: newProspect, isNew: true, tempCode };
       } catch (error : unknown) {
-        if ((error instanceof Error ? error.message : String(error))?.includes('unique') || error.code === '23505') {
+        if ((error instanceof Error ? error.message : String(error))?.includes('unique') || (error as NodeJS.ErrnoException).code === '23505') {
           // Temp code collision, regenerate
           tempCode = this.generateTempCode(orgCode);
           attempts++;

@@ -615,8 +615,8 @@ async function logAutomationLifecycle<T>(
             jobType,
             featureName,
             duration,
-            error: error.message,
-            stack: error.stack?.substring(0, 500), // Truncate stack trace
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined?.substring(0, 500), // Truncate stack trace
             timestamp: new Date().toISOString(),
           },
         });
@@ -918,7 +918,7 @@ async function runNightlyInvoiceGeneration() {
                         log.warn('Failed to send invoice via Stripe', { invoiceNumber: invoice.invoiceNumber, error: result.error });
                       }
                     } catch (stripeError: unknown) {
-                      log.error('Stripe error for invoice', { invoiceNumber: invoice.invoiceNumber, error: stripeError.message });
+                      log.error('Stripe error for invoice', { invoiceNumber: invoice.invoiceNumber, error: stripeError instanceof Error ? stripeError.message : String(stripeError) });
                     }
                   }
                   
@@ -936,7 +936,7 @@ async function runNightlyInvoiceGeneration() {
                         log.warn('QuickBooks sync failed for invoice', { invoiceNumber: invoice.invoiceNumber, error: qbResult.error });
                       }
                     } catch (qbError: unknown) {
-                      log.warn('QuickBooks sync error for invoice', { invoiceNumber: invoice.invoiceNumber, error: qbError.message });
+                      log.warn('QuickBooks sync error for invoice', { invoiceNumber: invoice.invoiceNumber, error: qbError instanceof Error ? qbError.message : String(qbError) });
                     }
                   }
 
@@ -1022,7 +1022,7 @@ async function runNightlyInvoiceGeneration() {
                   idempotencyKeyId: idem.idempotencyKeyId,
                   status: 'failed',
                   errorMessage: (error instanceof Error ? error.message : String(error)),
-                  errorStack: error.stack,
+                  errorStack: error instanceof Error ? error.stack : undefined,
                   resultMetadata: {
                     isDuplicate: false,
                     workspaceName: workspace.name,
@@ -1105,17 +1105,17 @@ async function runNightlyInvoiceGeneration() {
                   try {
                     await sendInvoiceViaStripe(invoice.id);
                   } catch (e: unknown) {
-                    log.warn('Per-client auto-send failed', { invoiceId: invoice.id, error: e.message });
+                    log.warn('Per-client auto-send failed', { invoiceId: invoice.id, error: e instanceof Error ? e.message : String(e) });
                   }
                 }
               }
             }
           } catch (clientErr: unknown) {
-            log.error('Per-client billing error', { clientId: cs.clientId, error: clientErr.message });
+            log.error('Per-client billing error', { clientId: cs.clientId, error: clientErr instanceof Error ? clientErr.message : String(clientErr) });
           }
         }
       } catch (wsErr: unknown) {
-        log.error('Per-client billing workspace error', { workspaceId: workspace.id, error: wsErr.message });
+        log.error('Per-client billing workspace error', { workspaceId: workspace.id, error: wsErr instanceof Error ? wsErr.message : String(wsErr) });
       }
     }
 
@@ -1432,7 +1432,7 @@ async function runWeeklyScheduleGeneration() {
                     }
                   }
                 } catch (aiError: unknown) {
-                  log.error('AI Brain error', { error: aiError.message });
+                  log.error('AI Brain error', { error: aiError instanceof Error ? aiError.message : String(aiError) });
                   // Continue to mark operation as completed even if AI fails
                 }
                 
@@ -1785,7 +1785,7 @@ async function runAutomaticPayrollProcessing() {
                         log.warn('QuickBooks payroll sync failed', { error: qbPayrollResult.error });
                       }
                     } catch (qbError: unknown) {
-                      log.warn('QuickBooks payroll sync error', { error: qbError.message });
+                      log.warn('QuickBooks payroll sync error', { error: qbError instanceof Error ? qbError.message : String(qbError) });
                     }
                   }
 
@@ -1857,7 +1857,7 @@ async function runAutomaticPayrollProcessing() {
                   idempotencyKeyId: idem.idempotencyKeyId,
                   status: 'failed',
                   errorMessage: (error instanceof Error ? error.message : String(error)),
-                  errorStack: error.stack,
+                  errorStack: error instanceof Error ? error.stack : undefined,
                   resultMetadata: {
                     isDuplicate: false,
                     workspaceName: workspace.name,
@@ -2179,7 +2179,7 @@ async function runLateFeeApplication() {
         }
         workspacesProcessed++;
       } catch (wsErr: unknown) {
-        log.warn('Late fee application failed for workspace', { workspaceId: ws.id, error: wsErr.message });
+        log.warn('Late fee application failed for workspace', { workspaceId: ws.id, error: wsErr instanceof Error ? wsErr.message : String(wsErr) });
       }
     }
 
@@ -2422,7 +2422,7 @@ export function startAutonomousScheduler() {
           // G26-01 FIX: Phase 10 client timesheet invoice auto-generation — was never wired to scheduler.
           // Runs immediately after the main nightly gen so both fire in the same billing window.
           await runScheduledClientInvoiceAutoGeneration().catch((err: Error) => {
-            log.warn('Client timesheet invoice auto-generation failed (non-blocking)', { error: err.message });
+            log.warn('Client timesheet invoice auto-generation failed (non-blocking)', { error: err instanceof Error ? err.message : String(err) });
           });
           emitAutomationEvent({
             jobName: 'CoAIleague Smart Billing',
@@ -2486,10 +2486,10 @@ export function startAutonomousScheduler() {
           // an automation trigger handler — never from a scheduled cron. Wired here so pay period
           // close detection and orphan detection run every night at 3 AM (same window as auto payroll).
           await runPayrollAutoClose().catch((err: Error) => {
-            log.warn('Payroll auto-close failed (non-blocking)', { error: err.message });
+            log.warn('Payroll auto-close failed (non-blocking)', { error: err instanceof Error ? err.message : String(err) });
           });
           await detectOrphanedPayrollRuns().catch((err: Error) => {
-            log.warn('Orphaned payroll run detection failed (non-blocking)', { error: err.message });
+            log.warn('Orphaned payroll run detection failed (non-blocking)', { error: err instanceof Error ? err.message : String(err) });
           });
           emitAutomationEvent({
             jobName: 'Automatic Payroll Processing',

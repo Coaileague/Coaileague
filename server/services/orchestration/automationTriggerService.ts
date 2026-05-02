@@ -1201,11 +1201,11 @@ class AutomationTriggerService {
                   log.info(`[AutomationTriggerService] Platform bill generated for ${ws.id}: $${(billResult.totalCents / 100).toFixed(2)}`);
                 }
               } catch (billError: unknown) {
-                log.error(`[AutomationTriggerService] Platform bill failed for ${ws.id}:`, billError.message);
+                log.error(`[AutomationTriggerService] Platform bill failed for ${ws.id}:`, billError instanceof Error ? billError.message : String(billError));
               }
             }
           } catch (wsError: unknown) {
-            log.error(`[AutomationTriggerService] Billing cycle failed for workspace ${ws.id}:`, wsError.message);
+            log.error(`[AutomationTriggerService] Billing cycle failed for workspace ${ws.id}:`, wsError instanceof Error ? wsError.message : String(wsError));
           }
         }
 
@@ -1218,7 +1218,7 @@ class AutomationTriggerService {
             }
           });
         } catch (collectionsErr: unknown) {
-          log.error('[AutomationTriggerService] Collections sweep failed (non-blocking):', collectionsErr.message);
+          log.error('[AutomationTriggerService] Collections sweep failed (non-blocking):', collectionsErr instanceof Error ? collectionsErr.message : String(collectionsErr));
         }
 
         // GAP FIX 1+2: Draft invoice notification + 24h review window sweep
@@ -1229,7 +1229,7 @@ class AutomationTriggerService {
             log.info(`[AutomationTriggerService] Draft invoice sweep — auto-sent:${draftResult.autoSent}, nudges:${draftResult.nudgesSent}`);
           }
         } catch (draftErr: unknown) {
-          log.error('[AutomationTriggerService] Draft invoice sweep failed (non-blocking):', draftErr.message);
+          log.error('[AutomationTriggerService] Draft invoice sweep failed (non-blocking):', draftErr instanceof Error ? draftErr.message : String(draftErr));
         }
 
         // GAP FIX 4+5: Timesheet submission + approval reminders
@@ -1240,7 +1240,7 @@ class AutomationTriggerService {
             log.info(`[AutomationTriggerService] Timesheet reminders — employee:${timesheetResult.submissionReminders}, manager:${timesheetResult.approvalReminders}`);
           }
         } catch (tsErr: unknown) {
-          log.error('[AutomationTriggerService] Timesheet reminder scan failed (non-blocking):', tsErr.message);
+          log.error('[AutomationTriggerService] Timesheet reminder scan failed (non-blocking):', tsErr instanceof Error ? tsErr.message : String(tsErr));
         }
 
         // GAP FIX 6: Payroll period auto-close + draft generation
@@ -1252,7 +1252,7 @@ class AutomationTriggerService {
           }
           await detectOrphanedPayrollRuns();
         } catch (payrollErr: unknown) {
-          log.error('[AutomationTriggerService] Payroll auto-close failed (non-blocking):', payrollErr.message);
+          log.error('[AutomationTriggerService] Payroll auto-close failed (non-blocking):', payrollErr instanceof Error ? payrollErr.message : String(payrollErr));
         }
 
         // GAP 12: Trinity Financial Briefing — weekly on Monday
@@ -1264,7 +1264,7 @@ class AutomationTriggerService {
               log.info(`[AutomationTriggerService] Trinity financial briefing — sent to ${briefingResult.briefingsSent} org owners`);
             }
           } catch (briefingErr: unknown) {
-            log.error('[AutomationTriggerService] Trinity financial briefing failed (non-blocking):', briefingErr.message);
+            log.error('[AutomationTriggerService] Trinity financial briefing failed (non-blocking):', briefingErr instanceof Error ? briefingErr.message : String(briefingErr));
           }
         }
 
@@ -1274,7 +1274,7 @@ class AutomationTriggerService {
           const { sendEmployeePaymentMethodNotifications } = await import('../billing/employeePaymentNotificationService');
           await sendEmployeePaymentMethodNotifications();
         } catch (pmErr: unknown) {
-          log.error('[AutomationTriggerService] Employee payment method notifications failed (non-blocking):', pmErr.message);
+          log.error('[AutomationTriggerService] Employee payment method notifications failed (non-blocking):', pmErr instanceof Error ? pmErr.message : String(pmErr));
         }
 
         // GAP 14 FIX: Payroll deadline nudge — notify owners 72h and 24h before cutoff
@@ -1285,7 +1285,7 @@ class AutomationTriggerService {
             log.info(`[AutomationTriggerService] Payroll deadline nudge — sent ${nudgeResult.nudgesSent} alert(s) across ${nudgeResult.workspacesChecked} workspace(s)`);
           }
         } catch (nudgeErr: unknown) {
-          log.error('[AutomationTriggerService] Payroll deadline nudge failed (non-blocking):', nudgeErr.message);
+          log.error('[AutomationTriggerService] Payroll deadline nudge failed (non-blocking):', nudgeErr instanceof Error ? nudgeErr.message : String(nudgeErr));
         }
 
         // GAP FIX 10: 1099 January automation — flag contractors in January
@@ -1297,7 +1297,7 @@ class AutomationTriggerService {
               log.info(`[AutomationTriggerService] 1099 January scan — flagged:${result1099.flagged} contractors`);
             }
           } catch (taxErr: unknown) {
-            log.error('[AutomationTriggerService] 1099 January scan failed (non-blocking):', taxErr.message);
+            log.error('[AutomationTriggerService] 1099 January scan failed (non-blocking):', taxErr instanceof Error ? taxErr.message : String(taxErr));
           }
         }
 

@@ -44,10 +44,10 @@ if (!DB_URL) {
       await client.query(sql);
       console.log(`✓ ${file}`);
     } catch (e : unknown) {
-      if (e.code === '42P07' || e.code === '42710') {
+      if ((e as NodeJS.ErrnoException).code === '42P07' || (e as NodeJS.ErrnoException).code === '42710') {
         console.log(`⚠ ${file} - already exists, skipping`);
       } else {
-        console.error(`✗ ${file}: ${e.message}`);
+        console.error(`✗ ${file}: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
   }

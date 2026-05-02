@@ -213,7 +213,7 @@ class BrowserAutomationTool {
         pageUrl,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Unknown error';
       log.error('[BrowserAutomation] Screenshot capture failed:', errorMessage);
 
       if (page) {

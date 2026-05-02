@@ -139,7 +139,7 @@ export async function creditInvoice(
       metadata: { adjustmentType: 'credit', adjustedBy, source: 'invoiceAdjustmentService' },
     });
   } catch (ledgerErr : unknown) {
-    log.error(`[INVOICE ADJUSTMENT] Ledger write failed for credit on ${invoiceId}:`, ledgerErr.message);
+    log.error(`[INVOICE ADJUSTMENT] Ledger write failed for credit on ${invoiceId}:`, ledgerErr instanceof Error ? ledgerErr.message : String(ledgerErr));
   }
 
   // GAP-7 FIX: Publish platform event so Trinity and QB sync pipelines are notified.
@@ -154,7 +154,7 @@ export async function creditInvoice(
       metadata: { source: 'invoiceAdjustmentService' },
     });
   } catch (eventErr : unknown) {
-    log.warn(`[INVOICE ADJUSTMENT] Platform event failed for credit on ${invoiceId}:`, eventErr.message);
+    log.warn(`[INVOICE ADJUSTMENT] Platform event failed for credit on ${invoiceId}:`, eventErr instanceof Error ? eventErr.message : String(eventErr));
   }
 
   log.info(`[INVOICE ADJUSTMENT] Credit applied: ${invoiceId} -$${amount.toFixed(2)} by ${adjustedBy}`);
@@ -248,7 +248,7 @@ export async function discountInvoice(
       metadata: { adjustmentType: 'discount', discountPercent, approvedBy, source: 'invoiceAdjustmentService' },
     });
   } catch (ledgerErr : unknown) {
-    log.error(`[INVOICE ADJUSTMENT] Ledger write failed for discount on ${invoiceId}:`, ledgerErr.message);
+    log.error(`[INVOICE ADJUSTMENT] Ledger write failed for discount on ${invoiceId}:`, ledgerErr instanceof Error ? ledgerErr.message : String(ledgerErr));
   }
 
   // GAP-7 FIX: Publish platform event so Trinity and QB sync pipelines are notified.
@@ -263,7 +263,7 @@ export async function discountInvoice(
       metadata: { source: 'invoiceAdjustmentService' },
     });
   } catch (eventErr : unknown) {
-    log.warn(`[INVOICE ADJUSTMENT] Platform event failed for discount on ${invoiceId}:`, eventErr.message);
+    log.warn(`[INVOICE ADJUSTMENT] Platform event failed for discount on ${invoiceId}:`, eventErr instanceof Error ? eventErr.message : String(eventErr));
   }
 
   return {
@@ -340,7 +340,7 @@ export async function refundInvoice(
     } catch (stripeErr : unknown) {
       // Stripe refund failure is critical — block the operation so the DB isn't updated
       // while the money isn't actually returned. Operator must resolve in Stripe dashboard.
-      throw new Error(`Stripe refund failed for invoice ${invoiceId}: ${stripeErr.message}. DB not modified — no money was returned yet.`);
+      throw new Error(`Stripe refund failed for invoice ${invoiceId}: ${stripeErr instanceof Error ? stripeErr.message : String(stripeErr)}. DB not modified — no money was returned yet.`);
     }
   }
 
@@ -398,7 +398,7 @@ export async function refundInvoice(
         metadata: { adjustmentType: 'refund', processedBy, stripeRefundId, stripePaymentIntentId, source: 'invoiceAdjustmentService_offline' },
       });
     } catch (ledgerErr : unknown) {
-      log.error(`[INVOICE ADJUSTMENT] Ledger write failed for offline refund on ${invoiceId}:`, ledgerErr.message);
+      log.error(`[INVOICE ADJUSTMENT] Ledger write failed for offline refund on ${invoiceId}:`, ledgerErr instanceof Error ? ledgerErr.message : String(ledgerErr));
     }
   }
   // For Stripe-backed refunds: the charge.refunded webhook writes the ledger entry via
@@ -416,7 +416,7 @@ export async function refundInvoice(
       metadata: { source: 'invoiceAdjustmentService' },
     });
   } catch (eventErr : unknown) {
-    log.warn(`[INVOICE ADJUSTMENT] Platform event failed for refund on ${invoiceId}:`, eventErr.message);
+    log.warn(`[INVOICE ADJUSTMENT] Platform event failed for refund on ${invoiceId}:`, eventErr instanceof Error ? eventErr.message : String(eventErr));
   }
 
   log.info(`[INVOICE ADJUSTMENT] Refund processed: ${invoiceId} -$${refundAmount.toFixed(2)} by ${processedBy}${stripeRefundId ? ` (Stripe refund ${stripeRefundId})` : ''}`);

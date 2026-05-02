@@ -731,7 +731,7 @@ function timedInit(name: string, fn: () => Promise<void>): Promise<{ name: strin
   const start = Date.now();
   return fn()
     .then(() => ({ name, duration: Date.now() - start, success: true }))
-    .catch((err) => ({ name, duration: Date.now() - start, success: false, error: err.message }));
+    .catch((err) => ({ name, duration: Date.now() - start, success: false, error: err instanceof Error ? err.message : String(err) }));
 }
 
 // Deferred init — delays DB-heavy startup tasks to prevent connection pool exhaustion
@@ -741,7 +741,7 @@ function deferredTimedInit(name: string, delayMs: number, fn: () => Promise<void
       const start = Date.now();
       fn()
         .then(() => resolve({ name, duration: Date.now() - start, success: true }))
-        .catch((err) => resolve({ name, duration: Date.now() - start, success: false, error: err.message }));
+        .catch((err) => resolve({ name, duration: Date.now() - start, success: false, error: err instanceof Error ? err.message : String(err) }));
     }, delayMs);
   });
 }
@@ -755,14 +755,14 @@ async function initializeCriticalServices() {
     await rateLimiting.initialize();
     log.info('Rate limiting service initialized');
   } catch (error) {
-    log.error('Rate limiting initialization failed', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+    log.error('Rate limiting initialization failed', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
   }
 
   // Auto-migrate database tables - ensures production has all required tables
   try {
     await ensureRequiredTables();
   } catch (error) {
-    log.error('Database migration check failed', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+    log.error('Database migration check failed', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
   }
 
   // Legacy table bootstraps — runs CREATE TABLE IF NOT EXISTS statements that
@@ -831,7 +831,7 @@ async function initializeCriticalServices() {
     const { ensureFounderExemption } = await import('./services/billing/founderExemption');
     await ensureFounderExemption();
   } catch (error) {
-    log.error('Founder exemption guarantee failed', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+    log.error('Founder exemption guarantee failed', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
   }
 
   // STATE REGULATORY CONFIG SEED — removed (stateRegulatoryRoutes deleted in refactor)
@@ -981,7 +981,7 @@ async function initializeCriticalServices() {
     const seedResult = await runDevelopmentSeed();
     log.info('Development seed', { result: seedResult.message });
   } catch (error) {
-    log.error('Development seed failed', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+    log.error('Development seed failed', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
 
   }
 
@@ -991,7 +991,7 @@ async function initializeCriticalServices() {
     await seedAcmeFullDemo();
     log.info('Acme demo seed complete');
   } catch (error) {
-    log.error('Acme demo seed failed', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+    log.error('Acme demo seed failed', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
   }
 
   // Phase 0 seed — Marcus Rodriguez + Downtown Mall + chatroom + 15 messages
@@ -1016,7 +1016,7 @@ async function initializeCriticalServices() {
     const enrichResult = await runDevDataEnrichment();
     log.info('Development data enrichment', { result: enrichResult.message });
   } catch (error) {
-    log.error('Development enrichment failed', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+    log.error('Development enrichment failed', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
   }
   
   // Seed rich communications & Trinity activity data for dev sandbox (only dev, idempotent)
@@ -1025,7 +1025,7 @@ async function initializeCriticalServices() {
     const commsResult = await runCommunicationsSeed();
     log.info('Development communications seed', { result: commsResult.message });
   } catch (error) {
-    log.error('Communications seed failed', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+    log.error('Communications seed failed', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
   }
 
   // Seed Acme operational data (guard tours, GPS, DAR reports, BOLOs, incidents, compliance, payroll, RMS)
@@ -1036,7 +1036,7 @@ async function initializeCriticalServices() {
     // Always ensure there are future open shifts for Trinity to process
     await ensureFutureOpenShifts();
   } catch (error) {
-    log.error('Acme operational seed failed', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+    log.error('Acme operational seed failed', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
   }
 
   // Anvil Security — core data (workspace, users, employees, clients)
@@ -1045,7 +1045,7 @@ async function initializeCriticalServices() {
     const anvilResult = await runAnvilCoreSeed();
     log.info('Anvil core seed', { result: anvilResult.message });
   } catch (error) {
-    log.error('Anvil core seed failed', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+    log.error('Anvil core seed failed', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
   }
 
   // Anvil Security — operational data (shifts, payroll, guard tours, invoices)
@@ -1054,7 +1054,7 @@ async function initializeCriticalServices() {
     const anvilOpsResult = await runAnvilOperationalSeed();
     log.info('Anvil operational seed', { result: anvilOpsResult.message });
   } catch (error) {
-    log.error('Anvil operational seed failed', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+    log.error('Anvil operational seed failed', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
   }
 
   // Compliance data — documents, alerts, post orders for both orgs
@@ -1063,7 +1063,7 @@ async function initializeCriticalServices() {
     const compResult = await runComplianceSeed();
     log.info('Compliance seed', { result: compResult.message });
   } catch (error) {
-    log.error('Compliance seed failed', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+    log.error('Compliance seed failed', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
   }
 
   // Guard card & employee compliance data (new audit columns — idempotent)
@@ -1072,7 +1072,7 @@ async function initializeCriticalServices() {
     const gcResult = await runGuardCardEnrichment();
     log.info('Guard card enrichment', { result: gcResult.message });
   } catch (error) {
-    log.error('Guard card enrichment failed', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+    log.error('Guard card enrichment failed', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
   }
 
   // Monthly open shifts — Trinity automation testing
@@ -1093,7 +1093,7 @@ async function initializeCriticalServices() {
     const contractsResult = await runContractsAndIncidentsSeed();
     log.info('Contracts/incidents seed', { result: contractsResult.message });
   } catch (error) {
-    log.error('Contracts/incidents seed failed', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+    log.error('Contracts/incidents seed failed', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
   }
 
   // Financial integrations seed — Acme (QB sandbox) + Anvil (Stripe-local)
@@ -1102,7 +1102,7 @@ async function initializeCriticalServices() {
     const finResult = await runFinancialIntegrationsSeed();
     log.info('Financial integrations seed', { result: finResult.message });
   } catch (error) {
-    log.error('Financial integrations seed failed', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+    log.error('Financial integrations seed failed', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
   }
 
   } // end if (dbAvailableForSeed)
@@ -1115,7 +1115,7 @@ async function initializeCriticalServices() {
     await initializeChatServerHub();
     log.info('ChatServerHub Gateway initialized successfully');
   } catch (error) {
-    log.error('Failed to initialize ChatServerHub Gateway', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+    log.error('Failed to initialize ChatServerHub Gateway', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
   }
 
   // Trinity Knowledge Base — seed static industry knowledge modules (idempotent)
@@ -1136,7 +1136,7 @@ async function initializeCriticalServices() {
     
     log.info('Gamification event system initialized');
   } catch (error) {
-    log.error('Failed to initialize gamification events', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+    log.error('Failed to initialize gamification events', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
   }
 }
 
@@ -1409,7 +1409,7 @@ async function initializeBackgroundServices(): Promise<void> {
     const { trinityRuntimeFlagsService } = await import('./services/featureFlagsService');
     await trinityRuntimeFlagsService.warmCache();
   } catch (e) {
-    log.warn('Feature flag cache warm failed, continuing', { error: e instanceof Error ? { message: e.message } : String(e) });
+    log.warn('Feature flag cache warm failed, continuing', { error: e instanceof Error ? { message: e instanceof Error ? e.message : String(e) } : String(e) });
   }
   
   // These run in the background without blocking
@@ -1644,7 +1644,7 @@ async function initializeBackgroundServices(): Promise<void> {
               return {
                 success: false,
                 actionId: request.actionId,
-                message: error.message,
+                message: error instanceof Error ? error.message : String(error),
                 executionTimeMs: Date.now() - startTime,
               };
             }
@@ -1764,7 +1764,7 @@ async function gracefulShutdown(signal: string): Promise<void> {
         log.info('WebSocket server closed');
       });
     } catch (e) {
-      log.error('Error closing WebSocket server', { error: e instanceof Error ? { message: e.message } : String(e) });
+      log.error('Error closing WebSocket server', { error: e instanceof Error ? { message: e instanceof Error ? e.message : String(e) } : String(e) });
     }
   }
   
@@ -1792,7 +1792,7 @@ async function gracefulShutdown(signal: string): Promise<void> {
     await pool.end();
     log.info('Database connections closed');
   } catch (e) {
-    log.error('Error closing database', { error: e instanceof Error ? { message: e.message, stack: e.stack } : String(e) });
+    log.error('Error closing database', { error: e instanceof Error ? { message: e instanceof Error ? e.message : String(e), stack: e instanceof Error ? e.stack : undefined } : String(e) });
   }
   
   // Remove lock file
@@ -1810,16 +1810,16 @@ process.on('SIGHUP', () => gracefulShutdown('SIGHUP'));
 // Handle uncaught exceptions - be resilient to Neon serverless errors
 process.on('uncaughtException', (err: unknown) => {
   const errMsg = err instanceof Error ? err.message : String(err);
-  const errStack = err instanceof Error ? (err.stack || '').split('\n').slice(0,5).join(' | ') : '';
+  const errStack = err instanceof Error ? (err instanceof Error ? err.stack : undefined || '').split('\n').slice(0,5).join(' | ') : '';
   log.error(`Uncaught exception: ${errMsg} | code=${err?.code || 'none'} | ${errStack.slice(0,200)}`);
   
-  if (err.message?.includes('Cannot set property message') && 
-      err.message?.includes('ErrorEvent')) {
+  if (err instanceof Error ? err.message : String(err)?.includes('Cannot set property message') && 
+      err instanceof Error ? err.message : String(err)?.includes('ErrorEvent')) {
     log.warn('Neon serverless library error (non-fatal), continuing');
     return;
   }
   
-  if (err.code === '57P01' || err.message?.includes('terminating connection due to administrator command')) {
+  if ((err as NodeJS.ErrnoException).code === '57P01' || err instanceof Error ? err.message : String(err)?.includes('terminating connection due to administrator command')) {
     log.warn('Database connection terminated by administrator (non-fatal), continuing');
     return;
   }
@@ -1829,7 +1829,7 @@ process.on('uncaughtException', (err: unknown) => {
     return;
   }
   
-  if (err.code === 'ECONNRESET' || err.code === 'EPIPE' || err.message?.includes('Connection terminated unexpectedly')) {
+  if ((err as NodeJS.ErrnoException).code === 'ECONNRESET' || (err as NodeJS.ErrnoException).code === 'EPIPE' || err instanceof Error ? err.message : String(err)?.includes('Connection terminated unexpectedly')) {
     log.warn('Database connection reset (non-fatal), continuing');
     return;
   }
@@ -2298,7 +2298,7 @@ self.addEventListener('activate', async () => {
     app.use(globalErrorHandler);
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
-    const errStack = error instanceof Error ? error.stack : '';
+    const errStack = error instanceof Error ? error instanceof Error ? error.stack : undefined : '';
     log.error('[FATAL] CRITICAL: Failed to register routes —', errMsg);
     if (errStack) log.error(errStack);
     log.error(`CRITICAL: Failed to register routes — ${errMsg}`, { stack: typeof errStack === 'string' ? errStack.slice(0, 500) : '' });
@@ -2349,11 +2349,11 @@ self.addEventListener('activate', async () => {
       const bound = await new Promise<boolean>((resolve) => {
         const onError = (err: NodeJS.ErrnoException) => {
           server.removeListener('error', onError);
-          if (err.code === 'EADDRINUSE') {
+          if ((err as NodeJS.ErrnoException).code === 'EADDRINUSE') {
             resolve(false);
           } else {
             // Non-EADDRINUSE errors are fatal
-            log.error('Unexpected server error during bind', { error: err.message, code: err.code });
+            log.error('Unexpected server error during bind', { error: err instanceof Error ? err.message : String(err), code: (err as NodeJS.ErrnoException).code });
             resolve(false);
           }
         };
@@ -2439,7 +2439,7 @@ self.addEventListener('activate', async () => {
   try {
     await bindToPort(port);
   } catch (err: unknown) {
-    log.error('Could not bind to port after all retries', { error: err.message, port });
+    log.error('Could not bind to port after all retries', { error: err instanceof Error ? err.message : String(err), port });
     process.exit(1);
   }
 
@@ -2474,7 +2474,7 @@ self.addEventListener('activate', async () => {
       await pool.query(`ALTER TABLE platform_updates ADD COLUMN IF NOT EXISTS date TIMESTAMP WITH TIME ZONE DEFAULT NOW()`);
       log.info('[PreGrace] platform_updates.date column ensured');
     } catch (e: unknown) {
-      log.warn('[PreGrace] platform_updates migration failed (non-fatal):', e.message);
+      log.warn('[PreGrace] platform_updates migration failed (non-fatal):', e instanceof Error ? e.message : String(e));
     }
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -2751,7 +2751,7 @@ self.addEventListener('activate', async () => {
       startAutonomousScheduler();
       log.info('Autonomous scheduler started successfully');
     } catch (error) {
-      log.error('CRITICAL: Failed to start autonomous scheduler', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+      log.error('CRITICAL: Failed to start autonomous scheduler', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
     }
     
     // PHASE 6: Initialize Trinity event subscriptions
@@ -2760,7 +2760,7 @@ self.addEventListener('activate', async () => {
       initializeTrinityEventSubscriptions();
       log.info('Trinity event subscriptions initialized successfully');
     } catch (error) {
-      log.error('Failed to initialize Trinity event subscriptions', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+      log.error('Failed to initialize Trinity event subscriptions', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
     }
 
     // PHASE 6b: Initialize compliance scoring bridge
@@ -2768,7 +2768,7 @@ self.addEventListener('activate', async () => {
       complianceScoringBridge.initialize();
       log.info('Compliance scoring bridge initialized');
     } catch (error) {
-      log.error('Failed to initialize compliance scoring bridge', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+      log.error('Failed to initialize compliance scoring bridge', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
     }
 
     // PHASE 6c: Initialize Trinity Field Intelligence — all field operations reach Trinity
@@ -2777,7 +2777,7 @@ self.addEventListener('activate', async () => {
       trinityFieldIntelligence.initialize();
       log.info('Trinity Field Intelligence initialized — RMS, CAD, GPS, Panic all connected to Trinity brain');
     } catch (error) {
-      log.error('Failed to initialize Trinity Field Intelligence', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+      log.error('Failed to initialize Trinity Field Intelligence', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
     }
 
     // PHASE 6c-ops: Initialize Ops domain backing services — registers Trinity safety/emergency/postorders/external actions
@@ -2798,7 +2798,7 @@ self.addEventListener('activate', async () => {
       lostFoundService.initialize();
       log.info('Ops domain backing services initialized — 14+ Trinity safety/emergency/postorders/external actions registered');
     } catch (error) {
-      log.error('Failed to initialize ops domain backing services', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+      log.error('Failed to initialize ops domain backing services', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
     }
 
     // PHASE 6d: Initialize Trinity Proactive Anomaly Detection
@@ -2807,7 +2807,7 @@ self.addEventListener('activate', async () => {
       trinityAnomalyDetector.start();
       log.info('Trinity Anomaly Detector initialized — proactive anomaly detection active');
     } catch (error) {
-      log.error('Failed to initialize Trinity Anomaly Detector', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+      log.error('Failed to initialize Trinity Anomaly Detector', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
     }
 
     // PHASE 6e-pre: Initialize Trinity Scheduled Multi-Org Scans (daily/weekly/monthly)
@@ -2816,7 +2816,7 @@ self.addEventListener('activate', async () => {
       trinityScheduledScans.start();
       log.info('Trinity Scheduled Scans initialized — multi-org daily/weekly/monthly automation active');
     } catch (error) {
-      log.error('Failed to initialize Trinity Scheduled Scans', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+      log.error('Failed to initialize Trinity Scheduled Scans', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
     }
 
     // PHASE 6e-helpai: Initialize HelpAI Proactive Monitor (5-minute per-workspace loop)
@@ -2826,7 +2826,7 @@ self.addEventListener('activate', async () => {
       registerDaemon('HelpAIProactiveMonitor', () => helpAIProactiveMonitor.stop?.());
       log.info('HelpAI Proactive Monitor initialized — 5-minute per-workspace loop active');
     } catch (error) {
-      log.error('Failed to initialize HelpAI Proactive Monitor', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+      log.error('Failed to initialize HelpAI Proactive Monitor', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
     }
 
     // PHASE 64 — Trinity Resolution Fabric: autonomous issue resolution backbone
@@ -2883,7 +2883,7 @@ self.addEventListener('activate', async () => {
 
       log.info('Trinity Resolution Fabric initialized — 99% autonomous resolution active (immediate/delegated/supervised/escalated tiers)');
     } catch (error) {
-      log.error('Failed to initialize Trinity Resolution Fabric', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+      log.error('Failed to initialize Trinity Resolution Fabric', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
     }
 
     // PHASE 64 — Trinity Deliberation Loop: structured reasoning for complex issues
@@ -2916,7 +2916,7 @@ self.addEventListener('activate', async () => {
 
       log.info('Trinity Deliberation Loop initialized — PERCEIVE/REASON/ACT/VERIFY/LEARN cycle active');
     } catch (error) {
-      log.error('Failed to initialize Trinity Deliberation Loop', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+      log.error('Failed to initialize Trinity Deliberation Loop', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
     }
 
     // PHASE 6e: Initialize Escalation Chain persistence + rehydration
@@ -2925,7 +2925,7 @@ self.addEventListener('activate', async () => {
       await escalationChainService.initialize();
       log.info('Escalation Chain Service initialized — DB persistence and tier advancement active');
     } catch (error) {
-      log.error('Failed to initialize Escalation Chain Service', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+      log.error('Failed to initialize Escalation Chain Service', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
     }
 
     // PHASE 6f: Plaid ACH Transfer Monitor
@@ -2935,7 +2935,7 @@ self.addEventListener('activate', async () => {
       registerDaemon('PayrollTransferMonitor', stopPayrollTransferMonitor);
       log.info('Payroll Transfer Monitor started — polling Plaid ACH transfer status every 5 minutes');
     } catch (error) {
-      log.error('Failed to start Payroll Transfer Monitor', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+      log.error('Failed to start Payroll Transfer Monitor', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
     }
 
     // PHASE 6g: Autonomous Shift Monitoring Daemon + Coverage Pipeline
@@ -2947,7 +2947,7 @@ self.addEventListener('activate', async () => {
       registerDaemon('ShiftMonitoringService', () => shiftMonitoringService.stop());
       log.info('ShiftMonitoringService started — autonomous shift monitoring active (late clock-ins, NCNS, coverage gaps)');
     } catch (error) {
-      log.error('Failed to start ShiftMonitoringService', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+      log.error('Failed to start ShiftMonitoringService', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
     }
 
     // PHASE 6h: Coverage Pipeline daemon — staffing gap detection and autonomous fill requests
@@ -2957,7 +2957,7 @@ self.addEventListener('activate', async () => {
       registerDaemon('CoveragePipeline', () => coveragePipeline.stop());
       log.info('CoveragePipeline started — autonomous coverage gap detection and officer invitation active');
     } catch (error) {
-      log.error('Failed to start CoveragePipeline', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+      log.error('Failed to start CoveragePipeline', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
     }
 
     // PHASE 10: Overdue Invoice Collections Sweep
@@ -2990,7 +2990,7 @@ self.addEventListener('activate', async () => {
       registerDaemon('OverdueCollectionsSweep', () => { clearTimeout(collectionsKickoff); clearInterval(collectionsTimer); });
       log.info('Overdue collections daemon started — sweep every 24h (3-tier escalation, 24h dedup)');
     } catch (error) {
-      log.error('Failed to start OverdueCollectionsSweep', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+      log.error('Failed to start OverdueCollectionsSweep', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
     }
 
     // PHASE 8: Notification Delivery Retry Daemon
@@ -3010,7 +3010,7 @@ self.addEventListener('activate', async () => {
       registerDaemon('NotificationDeliveryRetry', () => { clearInterval(retryTimer); clearInterval(wsAckTimer); });
       log.info('NotificationDelivery daemon started — retry every 60s, WS-ack every 35s');
     } catch (error) {
-      log.error('Failed to start NotificationDelivery daemon', { error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error) });
+      log.error('Failed to start NotificationDelivery daemon', { error: error instanceof Error ? { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined } : String(error) });
     }
 
     const totalTime = Date.now() - startupStart;

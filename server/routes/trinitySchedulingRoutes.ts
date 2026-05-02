@@ -434,10 +434,10 @@ router.get('/pending-approvals', requireAuth, async (req: AuthenticatedRequest, 
     const { eq, and, desc } = await import('drizzle-orm');
     const pending = await db.select().from(trinityProposedActions)
       .where(and(
-        eq((trinityProposedActions as Record<string, unknown>).workspaceId, workspaceId),
-        eq((trinityProposedActions as Record<string, unknown>).status, 'pending'),
+        eq((trinityProposedActions as {workspaceId: string}).workspaceId, workspaceId),
+        eq((trinityProposedActions as {status: string}).status, 'pending'),
       ))
-      .orderBy(desc((trinityProposedActions as Record<string, unknown>).createdAt))
+      .orderBy(desc((trinityProposedActions as {createdAt: Date}).createdAt))
       .limit(50);
     res.json({ approvals: pending });
   } catch (err: unknown) {
@@ -459,11 +459,11 @@ router.post('/pending-approvals/:id/approve', requireManager, async (req: Authen
     const { eq } = await import('drizzle-orm');
     const [updated] = await db.update(trinityProposedActions as unknown)
       .set({ status: 'approved', approvedBy: userId, approvedAt: new Date() } as unknown)
-      .where(eq((trinityProposedActions as Record<string, unknown>).id, id))
+      .where(eq((trinityProposedActions as {id: string}).id, id))
       .returning();
     res.json({ success: true, approval: updated });
   } catch (err: unknown) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
 });
 
@@ -481,11 +481,11 @@ router.post('/pending-approvals/:id/reject', requireManager, async (req: Authent
     const { eq } = await import('drizzle-orm');
     const [updated] = await db.update(trinityProposedActions as unknown)
       .set({ status: 'rejected', rejectedBy: userId, rejectedAt: new Date(), rejectionReason: reason } as unknown)
-      .where(eq((trinityProposedActions as Record<string, unknown>).id, id))
+      .where(eq((trinityProposedActions as {id: string}).id, id))
       .returning();
     res.json({ success: true, approval: updated });
   } catch (err: unknown) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
 });
 

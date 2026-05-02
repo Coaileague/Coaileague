@@ -494,7 +494,7 @@ class OrchestrationStateMachine {
             permissionResult: 'denied',
             permissionCheckedAt: new Date(),
             permissionCheckedBy: 'auth_service',
-            permissionDeniedReason: `Permission check error: ${error.message}`,
+            permissionDeniedReason: `Permission check error: ${error instanceof Error ? error.message : String(error)}`,
           })
           .where(eq(orchestrationOverlays.id, overlayId));
       } catch (updateError) {
@@ -505,7 +505,7 @@ class OrchestrationStateMachine {
         granted: false,
         grantedPermissions: [],
         deniedPermissions: capabilities,
-        reason: error.message,
+        reason: error instanceof Error ? error.message : String(error),
         bypassed: false,
       };
     }
@@ -1013,7 +1013,7 @@ class OrchestrationStateMachine {
         success: false,
         overlayId,
         phase: 'failed',
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }

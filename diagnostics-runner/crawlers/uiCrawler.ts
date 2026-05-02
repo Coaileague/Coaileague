@@ -190,7 +190,7 @@ export class UICrawler {
         console.log('[UICrawler] Could not find login form inputs');
       }
     } catch (error : unknown) {
-      console.log(`[UICrawler] Login failed: ${error.message}`);
+      console.log(`[UICrawler] Login failed: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       await page.close();
     }
@@ -251,8 +251,8 @@ export class UICrawler {
     page.on('pageerror', error => {
       consoleErrors.push({
         type: 'pageerror',
-        message: error.message,
-        stackTrace: error.stack
+        message: error instanceof Error ? error.message : String(error),
+        stackTrace: error instanceof Error ? error.stack : undefined
       });
     });
     
@@ -311,13 +311,13 @@ export class UICrawler {
       this.convertToTriadIssues(result);
       
     } catch (error : unknown) {
-      console.error(`[UICrawler] Error auditing ${url}:`, error.message);
+      console.error(`[UICrawler] Error auditing ${url}:`, error instanceof Error ? error.message : String(error));
       this.issues.push({
         id: generateId(),
         category: 'page_error',
         severity: 'high',
         url,
-        message: `Page failed to load: ${error.message}`,
+        message: `Page failed to load: ${error instanceof Error ? error.message : String(error)}`,
         timestamp: new Date().toISOString(),
         crawlerType: 'ui',
         subsystem: 'frontend',
@@ -522,7 +522,7 @@ export class UICrawler {
         category: 'console_error',
         severity: error.type === 'pageerror' ? 'high' : 'medium',
         url: result.url,
-        message: error.message,
+        message: error instanceof Error ? error.message : String(error),
         details: error.stackTrace,
         timestamp: result.timestamp,
         crawlerType: 'ui',

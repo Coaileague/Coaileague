@@ -235,7 +235,7 @@ export async function validateClockIn(
         })]
       );
     } catch (auditErr : unknown) {
-      log.warn('[GPS] Failed to write scheduling audit log:', auditErr.message);
+      log.warn('[GPS] Failed to write scheduling audit log:', auditErr instanceof Error ? auditErr.message : String(auditErr));
     }
 
     await logGPSViolation(violation);

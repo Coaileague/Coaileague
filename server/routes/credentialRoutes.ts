@@ -186,7 +186,7 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
     res.status(201).json({ success: true, credential: created });
   } catch (err: unknown) {
     log.error("[Credentials] POST failed:", err?.message);
-    res.status(500).json({ error: err.message || "Failed to create credential" });
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) || "Failed to create credential" });
   }
 });
 
@@ -214,7 +214,7 @@ router.patch("/:id", async (req: AuthenticatedRequest, res) => {
     res.json({ success: true, credential: updated });
   } catch (err: unknown) {
     log.error("[Credentials] PATCH failed:", err?.message);
-    res.status(500).json({ error: err.message || "Failed to update credential" });
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) || "Failed to update credential" });
   }
 });
 
@@ -233,7 +233,7 @@ router.delete("/:id", async (req: AuthenticatedRequest, res) => {
     res.json({ success: true });
   } catch (err: unknown) {
     log.error("[Credentials] DELETE failed:", err?.message);
-    res.status(500).json({ error: err.message || "Failed to remove credential" });
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) || "Failed to remove credential" });
   }
 });
 
@@ -253,7 +253,7 @@ router.get("/employee/:employeeId", async (req: AuthenticatedRequest, res) => {
 
     res.json({ credentials: creds });
   } catch (err: unknown) {
-    res.status(500).json({ error: err.message || "Failed to fetch credentials" });
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) || "Failed to fetch credentials" });
   }
 });
 

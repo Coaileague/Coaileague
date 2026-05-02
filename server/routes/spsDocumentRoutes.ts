@@ -152,7 +152,7 @@ spsDocumentRouter.post('/', async (req: AuthenticatedRequest, res) => {
       portalUrl: `/sps-packet/${accessToken}`,
     });
   } catch (err: unknown) {
-    if (err.name === 'ZodError') return res.status(400).json({ error: 'Validation error', details: err.errors });
+    if (err instanceof Error ? (err as {name?: string}).name : "Error" === 'ZodError') return res.status(400).json({ error: 'Validation error', details: err.errors });
     log.error('[spsDocumentRoutes] POST /documents error:', err);
     res.status(500).json({ error: 'Failed to create document' });
   }
@@ -404,7 +404,7 @@ If this is a Texas guard card, confirm it appears to be an official Texas DPS Pr
       const raw = await callSpsVisionAI(prompt, imageBase64, 1024);
       verificationResult = JSON.parse(raw.replace(/```json\n?|\n?```/g, '').trim());
     } catch (aiErr: unknown) {
-      log.error('[spsDocumentRoutes] Vision ID scan error:', aiErr.message);
+      log.error('[spsDocumentRoutes] Vision ID scan error:', aiErr instanceof Error ? aiErr.message : String(aiErr));
       verificationResult = {
         verification_confidence: 'low',
         flags: ['AI scan unavailable — manual review required'],

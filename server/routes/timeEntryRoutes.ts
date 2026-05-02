@@ -209,7 +209,7 @@ const router = Router();
           cadLongitude
         );
       } catch (cadErr: unknown) {
-        log.error("[Clock-In] CAD auto-provision failed:", cadErr.message);
+        log.error("[Clock-In] CAD auto-provision failed:", cadErr instanceof Error ? cadErr.message : String(cadErr));
       }
 
       broadcastToWorkspace(workspace.id, { type: 'time_entries_updated', data: { action: 'updated' } });
@@ -506,7 +506,7 @@ const router = Router();
             },
           });
         } catch (auditErr: unknown) {
-          log.warn('[TimeEntry] Bulk approve audit log failed (non-blocking):', auditErr.message);
+          log.warn('[TimeEntry] Bulk approve audit log failed (non-blocking):', auditErr instanceof Error ? auditErr.message : String(auditErr));
         }
 
         // Fire automation event — triggers invoice creation + payroll processing pipeline

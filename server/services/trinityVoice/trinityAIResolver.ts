@@ -77,7 +77,7 @@ async function parseResolverJSON(text: string): Promise<{ canResolve: boolean; a
       return parsed;
     }
   } catch (err: unknown) {
-    log.warn('[TrinityAIResolver] Non-critical error in AI resolution', { error: err.message });
+    log.warn('[TrinityAIResolver] Non-critical error in AI resolution', { error: err instanceof Error ? err.message : String(err) });
   }
 
   // Fallback: try to extract JSON from text
@@ -89,7 +89,7 @@ async function parseResolverJSON(text: string): Promise<{ canResolve: boolean; a
         return parsed;
       }
     } catch (err: unknown) {
-    log.warn('[TrinityAIResolver] Non-critical error in AI resolution', { error: err.message });
+    log.warn('[TrinityAIResolver] Non-critical error in AI resolution', { error: err instanceof Error ? err.message : String(err) });
   }
   }
 
@@ -293,7 +293,7 @@ export async function resolveWithTrinityBrain(params: {
     const tierRow = await pool.query('SELECT subscription_tier FROM workspaces WHERE id = $1 LIMIT 1', [workspaceId]);
     workspaceTier = tierRow.rows[0]?.subscription_tier ?? 'starter';
   } catch (err: unknown) {
-    log.warn('[TrinityAIResolver] Non-critical error in AI resolution', { error: err.message });
+    log.warn('[TrinityAIResolver] Non-critical error in AI resolution', { error: err instanceof Error ? err.message : String(err) });
   }
 
   // Try all three models in sequence (stop as soon as one succeeds)

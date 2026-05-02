@@ -109,7 +109,7 @@ bulkOperationsRouter.post('/import/employees', requireAuth, requireManager, uplo
         }).returning();
         imported.push(emp);
       } catch (error : unknown) {
-        errors.push({ row: i + 1, error: error.message });
+        errors.push({ row: i + 1, error: error instanceof Error ? error.message : String(error) });
       }
     }
 
@@ -120,7 +120,7 @@ bulkOperationsRouter.post('/import/employees', requireAuth, requireManager, uplo
       errorDetails: errors,
     });
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to import employees', message: error.message });
+    res.status(500).json({ error: 'Failed to import employees', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -170,7 +170,7 @@ bulkOperationsRouter.post('/import/clients', requireAuth, requireManager, upload
         }).returning();
         imported.push(client);
       } catch (error : unknown) {
-        errors.push({ row: i + 1, error: error.message });
+        errors.push({ row: i + 1, error: error instanceof Error ? error.message : String(error) });
       }
     }
 
@@ -181,7 +181,7 @@ bulkOperationsRouter.post('/import/clients', requireAuth, requireManager, upload
       errorDetails: errors,
     });
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to import clients', message: error.message });
+    res.status(500).json({ error: 'Failed to import clients', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -230,7 +230,7 @@ bulkOperationsRouter.post('/import/shifts', requireAuth, requireManager, upload.
         }).returning();
         imported.push(shift);
       } catch (error : unknown) {
-        errors.push({ row: i + 1, error: error.message });
+        errors.push({ row: i + 1, error: error instanceof Error ? error.message : String(error) });
       }
     }
 
@@ -241,7 +241,7 @@ bulkOperationsRouter.post('/import/shifts', requireAuth, requireManager, upload.
       errorDetails: errors,
     });
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to import shifts', message: error.message });
+    res.status(500).json({ error: 'Failed to import shifts', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -269,7 +269,7 @@ bulkOperationsRouter.get('/export/employees', requireAuth, async (req: Request, 
     res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
     res.send(result.data);
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to export employees', message: error.message });
+    res.status(500).json({ error: 'Failed to export employees', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -320,7 +320,7 @@ bulkOperationsRouter.get('/export/clients', requireAuth, async (req: Request, re
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(data);
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to export clients', message: error.message });
+    res.status(500).json({ error: 'Failed to export clients', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -370,7 +370,7 @@ bulkOperationsRouter.get('/export/shifts', requireAuth, async (req: Request, res
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(data);
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to export shifts', message: error.message });
+    res.status(500).json({ error: 'Failed to export shifts', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -394,7 +394,7 @@ bulkOperationsRouter.get('/export/time-entries', requireAuth, async (req: Reques
     res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
     res.send(result.data);
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to export time entries', message: error.message });
+    res.status(500).json({ error: 'Failed to export time entries', message: error instanceof Error ? error.message : String(error) });
   }
 });
 

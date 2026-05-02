@@ -1174,7 +1174,7 @@ export class PayrollAutomationEngine {
             affectedEmployeeIds: [employeeSummary.employeeId],
             employeeCount: 1,
           },
-        }).catch((err: unknown) => log.warn('[PayrollAuto] payroll_zero_rate_detected publish failed (non-blocking):', err.message));
+        }).catch((err: unknown) => log.warn('[PayrollAuto] payroll_zero_rate_detected publish failed (non-blocking):', err instanceof Error ? err.message : String(err)));
         // CRITICAL: Skip this employee entirely — do NOT create a $0 payroll entry and do NOT
         // mark their time entries as payrolled. Hours stay unpayrolled so a manager can set
         // the correct rate and re-run payroll. Creating a $0 entry would permanently orphan
@@ -1240,7 +1240,7 @@ export class PayrollAutomationEngine {
             allWarnings.push(warning);
           }
         } catch (thresholdErr: unknown) {
-          log.warn(`[AI Payroll™] 1099 threshold check failed for ${employeeSummary.employeeName}:`, thresholdErr.message);
+          log.warn(`[AI Payroll™] 1099 threshold check failed for ${employeeSummary.employeeName}:`, thresholdErr instanceof Error ? thresholdErr.message : String(thresholdErr));
         }
       } else {
         // W-2 Employee: Calculate taxes via canonical IRS Percentage Method (Pub 15-T)
@@ -1747,7 +1747,7 @@ export async function voidPayrollRun(
           description: `Reversal: payroll run ${runId.substring(0, 8)} voided — offsets payroll_processed entry (net $${reversalAmount.toFixed(2)}). Reason: ${reason}`,
           createdBy: userId,
           metadata: { originalStatus: 'processed', voidedBy: userId, reason, reversalOf: 'payroll_processed' },
-        }).catch((err: Error) => log.error(`[AI Payroll] Ledger reversal write failed for voided run ${runId}:`, err.message));
+        }).catch((err: Error) => log.error(`[AI Payroll] Ledger reversal write failed for voided run ${runId}:`, err instanceof Error ? err.message : String(err)));
       }
     }
 

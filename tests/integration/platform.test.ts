@@ -10,7 +10,7 @@ const results: { name: string; pass: boolean; detail: string }[] = [];
 
 async function test(name: string, fn: () => Promise<void>) {
   try { await fn(); results.push({ name, pass: true, detail: 'OK' }); }
-  catch (e : unknown) { results.push({ name, pass: false, detail: e.message?.slice(0, 200) ?? String(e) }); }
+  catch (e : unknown) { results.push({ name, pass: false, detail: e instanceof Error ? e.message : String(e)?.slice(0, 200) ?? String(e) }); }
 }
 
 function assert(cond: boolean, msg: string) { if (!cond) throw new Error(msg); }

@@ -51,7 +51,7 @@ const voiceGetCallLog: ActionHandler = {
       `, [workspaceId, limit]);
       return ok(request.actionId, `Retrieved ${result.rows.length} recent call sessions`, result.rows, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed to fetch call log: ${err.message}`, start);
+      return fail(request.actionId, `Failed to fetch call log: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -74,7 +74,7 @@ const voiceGetActiveSessions: ActionHandler = {
       `, [request.workspaceId]);
       return ok(request.actionId, `${result.rows.length} active call(s) in progress`, result.rows, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed: ${err.message}`, start);
+      return fail(request.actionId, `Failed: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -98,7 +98,7 @@ const voiceGetSupportCases: ActionHandler = {
       `, [request.workspaceId, request.payload?.limit || 20]);
       return ok(request.actionId, `${result.rows.length} voice support case(s) found`, result.rows, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed: ${err.message}`, start);
+      return fail(request.actionId, `Failed: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -133,7 +133,7 @@ const formsListSubmissions: ActionHandler = {
       const result = await pool.query(query, params);
       return ok(request.actionId, `${result.rows.length} submission(s) found`, result.rows, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed: ${err.message}`, start);
+      return fail(request.actionId, `Failed: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -156,7 +156,7 @@ const formsGetPendingReview: ActionHandler = {
       `, [request.workspaceId]);
       return ok(request.actionId, `${result.rows.length} form submission(s) pending review`, result.rows, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed: ${err.message}`, start);
+      return fail(request.actionId, `Failed: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -194,7 +194,7 @@ const formsGetOnboardingStatus: ActionHandler = {
         signerName: sub.signer_name,
       }, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed: ${err.message}`, start);
+      return fail(request.actionId, `Failed: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -226,7 +226,7 @@ const esignatureListPending: ActionHandler = {
       `, [request.workspaceId]);
       return ok(request.actionId, `${result.rows.length} signature(s) still pending`, result.rows, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed: ${err.message}`, start);
+      return fail(request.actionId, `Failed: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -266,7 +266,7 @@ const esignatureGetStatus: ActionHandler = {
         signers: { signed, pending },
       }, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed: ${err.message}`, start);
+      return fail(request.actionId, `Failed: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -316,7 +316,7 @@ const esignatureRemind: ActionHandler = {
 
       return ok(request.actionId, `Reminder sent to ${reminded} pending signer(s)`, { reminded, documentId }, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed: ${err.message}`, start);
+      return fail(request.actionId, `Failed: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -348,7 +348,7 @@ const proposalList: ActionHandler = {
       const result = await pool.query(query, params);
       return ok(request.actionId, `${result.rows.length} proposal(s) found`, result.rows, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed: ${err.message}`, start);
+      return fail(request.actionId, `Failed: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -382,7 +382,7 @@ const proposalGetStatus: ActionHandler = {
         ...row, winRate,
       }, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed: ${err.message}`, start);
+      return fail(request.actionId, `Failed: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -415,7 +415,7 @@ const hrDocsListPendingSignatures: ActionHandler = {
       `, [request.workspaceId]);
       return ok(request.actionId, `${result.rows.length} HR document(s) awaiting signature`, result.rows, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed: ${err.message}`, start);
+      return fail(request.actionId, `Failed: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -443,7 +443,7 @@ const hrDocsGetEmployeeFileCabinet: ActionHandler = {
       `, [employeeId, request.workspaceId]);
       return ok(request.actionId, `${result.rows.length} document(s) on file for employee ${employeeId}`, result.rows, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed: ${err.message}`, start);
+      return fail(request.actionId, `Failed: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };

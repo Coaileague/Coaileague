@@ -87,7 +87,7 @@ async function main() {
     results.push({
       name: 'Health endpoint reachable',
       pass: false,
-      detail: `Cannot reach ${baseUrl}/health — ${err.message}`,
+      detail: `Cannot reach ${baseUrl}/health — ${err instanceof Error ? err.message : String(err)}`,
       blocker: true,
     });
   }
@@ -162,7 +162,7 @@ async function main() {
       results.push({
         name: 'Statewide DB check',
         pass: false,
-        detail: `DB error: ${err.message}`,
+        detail: `DB error: ${err instanceof Error ? err.message : String(err)}`,
         blocker: true,
       });
     }
@@ -267,6 +267,6 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error('Script failed:', err.message);
+  console.error('Script failed:', err instanceof Error ? err.message : String(err));
   process.exit(1);
 });

@@ -479,7 +479,7 @@ class SubagentBanker {
     const entries: LedgerEntry[] = filteredTransactions.map(tx => ({
       id: tx.id,
       workspaceId: tx.workspaceId,
-      userId: (tx as Record<string, unknown>).userId,
+      userId: (tx as {userId: string}).userId,
       type: 'debit',
       amount: tx.tokensUsed,
       balanceAfter: 0,

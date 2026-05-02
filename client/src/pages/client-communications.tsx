@@ -232,7 +232,7 @@ function NewThreadModal({ open, onOpenChange, workspaceId, onCreated }: {
       onOpenChange(false);
       setForm({ clientId: "", subject: "", channel: "platform", initialMessage: "" });
     },
-    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e instanceof Error ? e.message : String(e), variant: "destructive" }),
   });
 
   return (
@@ -367,7 +367,7 @@ export default function ClientCommunications() {
       setAttachments([]);
       setTrinityDraft(null);
     },
-    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e instanceof Error ? e.message : String(e), variant: "destructive" }),
   });
 
   const resolveMutation = useMutation({
@@ -380,7 +380,7 @@ export default function ClientCommunications() {
       qc.invalidateQueries({ queryKey: ["/api/client-comms/threads", workspaceId, statusFilter] });
       setSelectedThreadId(null);
     },
-    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "Error", description: e instanceof Error ? e.message : String(e), variant: "destructive" }),
   });
 
   async function handleTrinityDraft() {

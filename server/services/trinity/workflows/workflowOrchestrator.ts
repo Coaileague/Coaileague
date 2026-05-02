@@ -93,7 +93,7 @@ const executeCalloffAction: ActionHandler = {
         ? ok(request.actionId, result.summary, result, start)
         : fail(request.actionId, result.summary, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Calloff workflow error: ${err.message}`, start);
+      return fail(request.actionId, `Calloff workflow error: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -121,7 +121,7 @@ const scanStaleCalloffsAction: ActionHandler = {
         start,
       );
     } catch (err: unknown) {
-      return fail(request.actionId, `Stale calloff sweep error: ${err.message}`, start);
+      return fail(request.actionId, `Stale calloff sweep error: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -147,7 +147,7 @@ const missedClockInAction: ActionHandler = {
         `calls=${result.callsPlaced}, escalated=${result.escalated}, resolved=${result.resolved}`;
       return ok(request.actionId, summary, result, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Missed clock-in sweep error: ${err.message}`, start);
+      return fail(request.actionId, `Missed clock-in sweep error: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -171,7 +171,7 @@ const sendShiftRemindersAction: ActionHandler = {
       const summary = `Shift reminders: 4h=${result.fourHourSent}, 1h=${result.oneHourSent} (scanned=${result.scanned})`;
       return ok(request.actionId, summary, result, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Shift reminder sweep error: ${err.message}`, start);
+      return fail(request.actionId, `Shift reminder sweep error: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -206,7 +206,7 @@ const invoiceLifecycleAction: ActionHandler = {
         ? ok(request.actionId, result.summary, result, start)
         : fail(request.actionId, result.summary, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Invoice lifecycle error: ${err.message}`, start);
+      return fail(request.actionId, `Invoice lifecycle error: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -234,7 +234,7 @@ const complianceScanAction: ActionHandler = {
         start,
       );
     } catch (err: unknown) {
-      return fail(request.actionId, `Compliance scan error: ${err.message}`, start);
+      return fail(request.actionId, `Compliance scan error: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -279,7 +279,7 @@ const payrollAnomalyAction: ActionHandler = {
         ? ok(request.actionId, result.summary, result, start)
         : fail(request.actionId, result.summary, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Payroll anomaly workflow error: ${err.message}`, start);
+      return fail(request.actionId, `Payroll anomaly workflow error: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -322,7 +322,7 @@ const topsVerificationAction: ActionHandler = {
       const summary = result.status === 'verified'
         ? `TOPS verified — tier=${result.tierAssigned}, name=${result.detectedName}`
         : `TOPS ${result.status} — flags=[${result.flags.join(', ')}]`;
-      return ok(request.actionId, summary, result as unknown as Record<string, unknown>, start);
+      return ok(request.actionId, summary, result as Record<string, unknown>, start);
     } catch (err: unknown) {
       return fail(request.actionId, `TOPS verification error: ${(err as Error)?.message || 'unknown'}`, start);
     }

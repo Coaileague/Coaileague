@@ -169,7 +169,7 @@ async function runHealthChecks(): Promise<ServiceHealth[]> {
 
 // Start background health check loop
 statusHealthLoop = setInterval(() => {
-  runHealthChecks().catch(err => log.error('[StatusPage] Health check failed:', err.message));
+  runHealthChecks().catch(err => log.error('[StatusPage] Health check failed:', err instanceof Error ? err.message : String(err)));
 }, HEALTH_CHECK_INTERVAL_MS);
 statusHealthLoop.unref();
 
@@ -205,7 +205,7 @@ statusRouter.get('/', async (req, res) => {
       lastUpdated: new Date().toISOString(),
     });
   } catch (err: unknown) {
-    log.error('[StatusRoutes] GET /status error:', err.message);
+    log.error('[StatusRoutes] GET /status error:', err instanceof Error ? err.message : String(err));
     return res.status(500).json({ error: 'Status check failed' });
   }
 });
@@ -226,7 +226,7 @@ statusRouter.post('/subscribe', async (req, res) => {
 
     return res.json({ success: true, message: 'Subscribed to platform status updates' });
   } catch (err: unknown) {
-    log.error('[StatusRoutes] subscribe error:', err.message);
+    log.error('[StatusRoutes] subscribe error:', err instanceof Error ? err.message : String(err));
     return res.status(500).json({ error: 'Failed to subscribe' });
   }
 });
@@ -241,7 +241,7 @@ statusRouter.get('/unsubscribe/:token', async (req, res) => {
     );
     return res.json({ success: true, message: 'Unsubscribed from status updates' });
   } catch (err: unknown) {
-    log.error('[StatusRoutes] unsubscribe error:', err.message);
+    log.error('[StatusRoutes] unsubscribe error:', err instanceof Error ? err.message : String(err));
     return res.status(500).json({ error: 'Failed to unsubscribe' });
   }
 });
@@ -282,7 +282,7 @@ statusRouter.get('/admin', requireAuth, async (req: AuthenticatedRequest, res) =
       checkIntervalSeconds: 60,
     });
   } catch (err: unknown) {
-    log.error('[StatusRoutes] admin status error:', err.message);
+    log.error('[StatusRoutes] admin status error:', err instanceof Error ? err.message : String(err));
     return res.status(500).json({ error: 'Status check failed' });
   }
 });
@@ -378,7 +378,7 @@ export function registerBackupVerificationCron(): void {
           metadata: { responseMs: ms, workspaceCount: rows[0]?.workspace_count, status: 'verified' },
         });
       } catch (err: unknown) {
-        log.error('[BackupVerification] Verification FAILED:', err.message);
+        log.error('[BackupVerification] Verification FAILED:', err instanceof Error ? err.message : String(err));
         // Alert platform staff
         log.error('[BackupVerification] ALERT: Backup verification failure — manual check required');
       }

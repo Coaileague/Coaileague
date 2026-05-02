@@ -422,7 +422,7 @@ export async function runAcmeOperationalSeed(): Promise<{ success: boolean; mess
     for (const r of reports) {
       const createdAt = new Date();
       createdAt.setDate(createdAt.getDate() - r.daysAgo);
-      const darStatus = (r as Record<string, unknown>).status ?? 'verified';
+      const darStatus = (r as {status: string}).status ?? 'verified';
       // CATEGORY C — Genuine schema mismatch: SQL omits shiftStartTime and shiftEndTime which are NOT NULL in darReports Drizzle schema
       await typedExec(sql`
         INSERT INTO dar_reports

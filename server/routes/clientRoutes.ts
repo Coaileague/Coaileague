@@ -313,7 +313,7 @@ router.post('/', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest
         [workspaceId, client.id]
       );
     } catch (crmErr : unknown) {
-      log.warn('[Client Creation] CRM pipeline initialization failed (non-blocking):', crmErr.message);
+      log.warn('[Client Creation] CRM pipeline initialization failed (non-blocking):', crmErr instanceof Error ? crmErr.message : String(crmErr));
     }
 
     const { attachClientExternalId } = await import('../services/identityService');
@@ -363,7 +363,7 @@ router.post('/', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest
 
     if (validated.email) {
       const { emailService } = await import('../services/emailService');
-      const _clientWelcomeEmail = emailService.buildClientWelcomeEmail(client.id, validated.email, (validated as Record<string, unknown>).name || 'Valued Client', validated.companyName || '', workspace.name || '');
+      const _clientWelcomeEmail = emailService.buildClientWelcomeEmail(client.id, validated.email, (validated as {name: string}).name || 'Valued Client', validated.companyName || '', workspace.name || '');
       NotificationDeliveryService.send({ idempotencyKey: `notif:client:${client.id}:welcome`,
             type: 'client_welcome', workspaceId: workspaceId || 'system', recipientUserId: client.id, channel: 'email', body: _clientWelcomeEmail })
         .catch(err => log.error('[Client Creation] Failed to queue welcome email:', err));
@@ -377,7 +377,7 @@ router.post('/', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest
           userEmail: validated.email,
           userType: 'client',
           workspaceName: workspace.name || 'Your Organization',
-          userName: (validated as Record<string, unknown>).name || validated.companyName || 'Valued Client',
+          userName: (validated as {name: string}).name || validated.companyName || 'Valued Client',
           customContext: { tenantName: workspace.name || 'Your Organization' },
         });
       } catch (trinityEmailErr) {
@@ -389,7 +389,7 @@ router.post('/', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest
     entityCreationNotifier.notifyNewClient({
       clientId: client.id,
       workspaceId,
-      name: (validated as Record<string, unknown>).name || validated.companyName || 'New Client',
+      name: (validated as {name: string}).name || validated.companyName || 'New Client',
       contactEmail: validated.email,
       address: validated.address,
       createdBy: userId || 'system',
@@ -405,7 +405,7 @@ router.post('/', requireManagerOrPlatformStaff, async (req: AuthenticatedRequest
       const emailSlug = wsRow.rows[0]?.email_slug;
       if (emailSlug) {
         const { emailProvisioningService } = await import('../services/email/emailProvisioningService');
-        const clientName = validated.companyName || (validated as Record<string, unknown>).name || `client-${client.id.slice(0, 8)}`;
+        const clientName = validated.companyName || (validated as {name: string}).name || `client-${client.id.slice(0, 8)}`;
         await emailProvisioningService.reserveClientEmailAddress(
           workspaceId,
           client.id,

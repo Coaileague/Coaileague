@@ -244,7 +244,7 @@ ESCALATE = Too risky for AI, flag for human review`;
         log.warn(`[TrinityDecisionLogger] Failed to update decision log ${params.decisionLogId} after triad review failure: ${updateErr?.message}`);
       }
 
-      return { triggered: true, verdict: 'AFFIRM', judgeModel: 'none', reasoning: `Review failed: ${error.message}` };
+      return { triggered: true, verdict: 'AFFIRM', judgeModel: 'none', reasoning: `Review failed: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
 

@@ -66,7 +66,7 @@ rfpEthicsRouter.post("/ethics/report", async (req: AuthenticatedRequest, res: Re
         aiRouting = parsed.routing || aiRouting;
         aiSummary = parsed.summary || null;
       }
-    } catch (triageErr: unknown) { log.warn('[RFP Ethics] AI triage failed, continuing with defaults:', triageErr.message); }
+    } catch (triageErr: unknown) { log.warn('[RFP Ethics] AI triage failed, continuing with defaults:', triageErr instanceof Error ? triageErr.message : String(triageErr)); }
     await q(`INSERT INTO anonymous_reports (id, workspace_id, report_code, category, severity, description, site_name, occurred_at, ai_triage_category, ai_severity_score, ai_routing, ai_summary, status, follow_up_token, reporter_email, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'pending',$13,$14,NOW(),NOW())`,
       [id, workspaceId||null, reportCode, category||"general", severity||"medium", description, siteName||null, occurredAt||null, aiCategory, aiSeverityScore, aiRouting, aiSummary, followUpToken, reporterEmail||null]);
     res.status(201).json({ success: true, reportCode, followUpToken, message: "Your report has been received and will be reviewed confidentially." });

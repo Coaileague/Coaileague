@@ -75,7 +75,7 @@ export async function runNotificationDeduplicationTests(): Promise<{
     results.push({
       name: 'pushWhatsNew creates exactly one entry',
       passed: false,
-      message: `Error: ${error.message}`,
+      message: `Error: ${error instanceof Error ? error.message : String(error)}`,
       duration: 0,
     });
     failed++;
@@ -131,7 +131,7 @@ export async function runNotificationDeduplicationTests(): Promise<{
     results.push({
       name: 'Duplicate detection blocks repeated submissions',
       passed: false,
-      message: `Unexpected error: ${error.message}`,
+      message: `Unexpected error: ${error instanceof Error ? error.message : String(error)}`,
       duration: 0,
     });
     failed++;
@@ -185,7 +185,7 @@ export async function runNotificationDeduplicationTests(): Promise<{
     results.push({
       name: 'deliverLivePatch creates one update and bumps sync',
       passed: false,
-      message: `Error: ${error.message}`,
+      message: `Error: ${error instanceof Error ? error.message : String(error)}`,
       duration: 0,
     });
     failed++;
@@ -213,7 +213,7 @@ export async function runNotificationDeduplicationTests(): Promise<{
     results.push({
       name: 'Feature registry sync version increments',
       passed: false,
-      message: `Error: ${error.message}`,
+      message: `Error: ${error instanceof Error ? error.message : String(error)}`,
       duration: 0,
     });
     failed++;

@@ -552,7 +552,7 @@ class NotificationSubagentService {
             log.info(`[NotificationSubagent] ${payload.priority} email sent to ${user.email}`);
           }
         } catch (emailError : unknown) {
-          log.error(`[NotificationSubagent] Email delivery failed:`, emailError.message);
+          log.error(`[NotificationSubagent] Email delivery failed:`, emailError instanceof Error ? emailError.message : String(emailError));
           // Don't fail the notification if email fails - in-app still works
         }
       }

@@ -432,7 +432,7 @@ router.post("/leaders/escalate", requireAuth, requireLeader, async (req: Authent
           resolution: null,
         });
       } catch (error: unknown) {
-        if (error.code === '23505' && error.constraint === 'escalation_tickets_ticket_number_unique') {
+        if ((error as NodeJS.ErrnoException).code === '23505' && error.constraint === 'escalation_tickets_ticket_number_unique') {
           attempts++;
           if (attempts >= maxAttempts) {
             return res.status(500).json({ message: "Failed to generate unique ticket number after retries" });

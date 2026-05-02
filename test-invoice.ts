@@ -13,8 +13,8 @@ async function main() {
     console.log('\n✅ Invoice generation completed!');
     console.log('Result:', JSON.stringify(result, null, 2));
   } catch (error : unknown) {
-    console.error('\n❌ Invoice generation failed:', error.message);
-    console.error(error.stack);
+    console.error('\n❌ Invoice generation failed:', error instanceof Error ? error.message : String(error));
+    console.error(error instanceof Error ? error.stack : undefined);
   }
   
   process.exit(0);

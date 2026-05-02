@@ -746,7 +746,7 @@ export default function ClientPortal() {
       setPreRegForm({ expectedVisitorName: '', expectedVisitorCompany: '', visitorType: 'guest', siteName: '', expectedArrival: '', expectedDeparture: '', hostName: '', hostContact: '', reason: '' });
       setShowPreRegForm(false);
     },
-    onError: (err: unknown) => { toast({ title: 'Error', description: err.message, variant: 'destructive' }); },
+    onError: (err: unknown) => { toast({ title: 'Error', description: err instanceof Error ? err.message : String(err), variant: 'destructive' }); },
   });
   const allVisitors = visitorsData?.visitors || [];
   const filteredVisitors = allVisitors.filter(v => {

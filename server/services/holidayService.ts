@@ -286,7 +286,7 @@ export async function initializeHolidays(): Promise<void> {
     
     log.info(`[HolidayService] Holiday initialization complete for ${currentYear} and ${nextYear}`);
   } catch (err: unknown) {
-    // OBSERVABILITY (Phase 1 Domain 1): the previous `err.message`-only
+    // OBSERVABILITY (Phase 1 Domain 1): the previous `err instanceof Error ? err.message : String(err)`-only
     // log hid the root cause of "Initialization failed (non-fatal)".
     // Surface the full PG error context so we can diagnose it without
     // another round-trip through production logs.
@@ -343,7 +343,7 @@ export function registerDecemberHolidayCron(): void {
       const nextYear = now.getUTCFullYear() + 1;
       log.info(`[HolidayService] December 1st cron: populating holidays for ${nextYear}`);
       populateHolidaysForYear(nextYear).catch(err =>
-        log.error('[HolidayService] December cron failed:', err.message)
+        log.error('[HolidayService] December cron failed:', err instanceof Error ? err.message : String(err))
       );
     }
   };

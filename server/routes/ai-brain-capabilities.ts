@@ -39,7 +39,7 @@ aiBrainCapabilitiesRouter.get('/capabilities', requireAuth, async (req: Request,
       description: 'AI Brain Orchestrator with full platform control',
     });
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to get capabilities', message: error.message });
+    res.status(500).json({ error: 'Failed to get capabilities', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -56,7 +56,7 @@ aiBrainCapabilitiesRouter.get('/services', requireAuth, async (req: Request, res
     const statuses = await serviceController.getAllServicesStatus();
     res.json({ success: true, services: statuses });
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to get services', message: error.message });
+    res.status(500).json({ error: 'Failed to get services', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -75,7 +75,7 @@ aiBrainCapabilitiesRouter.get('/services/:name', requireAuth, async (req: Reques
     
     res.json({ success: true, service: status });
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to get service status', message: error.message });
+    res.status(500).json({ error: 'Failed to get service status', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -96,7 +96,7 @@ aiBrainCapabilitiesRouter.post('/services/:name/restart', requireAuth, async (re
     const result = await serviceController.restartService(name, userId);
     res.json(result);
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to restart service', message: error.message });
+    res.status(500).json({ error: 'Failed to restart service', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -119,7 +119,7 @@ aiBrainCapabilitiesRouter.get('/features', requireAuth, async (req: Request, res
       features,
     });
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to get features', message: error.message });
+    res.status(500).json({ error: 'Failed to get features', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -134,7 +134,7 @@ aiBrainCapabilitiesRouter.get('/features/:path', requireAuth, async (req: Reques
     
     res.json({ success: true, path, enabled: value });
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to get feature', message: error.message });
+    res.status(500).json({ error: 'Failed to get feature', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -163,7 +163,7 @@ aiBrainCapabilitiesRouter.post('/features/toggle', requireAuth, async (req: Requ
     
     res.json({ success: true, ...result });
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to toggle feature', message: error.message });
+    res.status(500).json({ error: 'Failed to toggle feature', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -178,7 +178,7 @@ aiBrainCapabilitiesRouter.get('/features/history', requireAuth, async (req: Requ
     
     res.json({ success: true, history });
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to get history', message: error.message });
+    res.status(500).json({ error: 'Failed to get history', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -200,7 +200,7 @@ aiBrainCapabilitiesRouter.get('/console/commands', requireAuth, async (req: Requ
       usage: 'POST /api/ai-brain/console/execute with { command: "category:action", args: {} }',
     });
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to list commands', message: error.message });
+    res.status(500).json({ error: 'Failed to list commands', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -225,7 +225,7 @@ aiBrainCapabilitiesRouter.post('/console/execute', requireAuth, async (req: Requ
     
     res.json(result);
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to execute command', message: error.message });
+    res.status(500).json({ error: 'Failed to execute command', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -240,7 +240,7 @@ aiBrainCapabilitiesRouter.get('/console/log', requireAuth, async (req: Request, 
     
     res.json({ success: true, log });
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to get command log', message: error.message });
+    res.status(500).json({ error: 'Failed to get command log', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -272,7 +272,7 @@ aiBrainCapabilitiesRouter.post('/bot/assist', requireAuth, async (req: Request, 
     
     res.json({ success: true, ...result });
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to assist user', message: error.message });
+    res.status(500).json({ error: 'Failed to assist user', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -287,7 +287,7 @@ aiBrainCapabilitiesRouter.get('/bot/quickhelp/:topic', requireAuth, async (req: 
     
     res.json({ success: true, topic, help });
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to get quick help', message: error.message });
+    res.status(500).json({ error: 'Failed to get quick help', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -314,7 +314,7 @@ aiBrainCapabilitiesRouter.get('/support/knowledge', requireAuth, async (req: Req
     
     res.json({ success: true, results });
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to search knowledge', message: error.message });
+    res.status(500).json({ error: 'Failed to search knowledge', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -337,7 +337,7 @@ aiBrainCapabilitiesRouter.post('/support/suggest-response', requireAuth, async (
     
     res.json({ success: true, ...result });
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to suggest response', message: error.message });
+    res.status(500).json({ error: 'Failed to suggest response', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -360,7 +360,7 @@ aiBrainCapabilitiesRouter.get('/support/escalation', requireAuth, async (req: Re
     
     res.json({ success: true, ...result });
   } catch (error : unknown) {
-    res.status(500).json({ error: 'Failed to get escalation path', message: error.message });
+    res.status(500).json({ error: 'Failed to get escalation path', message: error instanceof Error ? error.message : String(error) });
   }
 });
 

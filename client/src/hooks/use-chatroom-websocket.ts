@@ -49,7 +49,7 @@ function createSystemMessage(message: string, conversationId: string): ChatMessa
     isDeletedForEveryone: false,
     deletedForEveryoneAt: null,
     deletedForEveryoneBy: null,
-  } as unknown as ChatMessage;
+  } as ChatMessage;
 }
 
 interface OnlineUser {

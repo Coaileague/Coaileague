@@ -635,8 +635,8 @@ export class EnterpriseOnboardingOrchestrator {
                 }, { idempotencyKey: `pi-credit-${workspaceId}-${paymentData.creditPackage}` });
               }
             } catch (stripeError : unknown) {
-              log.error('[EnterpriseOnboarding] Stripe error:', stripeError.message);
-              throw new Error(`Payment processing failed: ${stripeError.message}`);
+              log.error('[EnterpriseOnboarding] Stripe error:', stripeError instanceof Error ? stripeError.message : String(stripeError));
+              throw new Error(`Payment processing failed: ${stripeError instanceof Error ? stripeError.message : String(stripeError)}`);
             }
           }
           

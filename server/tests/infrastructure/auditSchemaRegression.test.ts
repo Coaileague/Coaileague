@@ -65,7 +65,7 @@ async function testCorrectSchemaInsert(): Promise<AuditSchemaTestResult> {
     return {
       testName: 'testCorrectSchemaInsert',
       passed: false,
-      error: error.message || String(error)
+      error: error instanceof Error ? error.message : String(error) || String(error)
     };
   }
 }
@@ -96,7 +96,7 @@ async function testRequiredFieldValidation(): Promise<AuditSchemaTestResult> {
     };
   } catch (error : unknown) {
     // Expected to fail with NOT NULL violation
-    if (error.code === '23502' || error.message?.includes('not-null')) {
+    if ((error as NodeJS.ErrnoException).code === '23502' || error instanceof Error ? error.message : String(error)?.includes('not-null')) {
       return {
         testName: 'testRequiredFieldValidation',
         passed: true
@@ -176,7 +176,7 @@ async function testHealthCheckAuditSchema(): Promise<AuditSchemaTestResult> {
     return {
       testName: 'testHealthCheckAuditSchema',
       passed: false,
-      error: error.message || String(error)
+      error: error instanceof Error ? error.message : String(error) || String(error)
     };
   }
 }
@@ -249,7 +249,7 @@ async function testMetricsDashboardAuditSchema(): Promise<AuditSchemaTestResult>
     return {
       testName: 'testMetricsDashboardAuditSchema',
       passed: false,
-      error: error.message || String(error)
+      error: error instanceof Error ? error.message : String(error) || String(error)
     };
   }
 }

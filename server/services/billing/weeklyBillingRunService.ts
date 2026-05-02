@@ -240,7 +240,7 @@ class WeeklyBillingRunServiceImpl {
       });
       return true;
     } catch (error: unknown) {
-      if (error.code === '23505') {
+      if ((error as NodeJS.ErrnoException).code === '23505') {
         // Unique constraint violation on idempotencyKey — another process already locked this week
         log.info(`[BillingRun] Lock contention on weekKey ${weekKey} — another run is already active`);
         return false;
@@ -354,14 +354,14 @@ class WeeklyBillingRunServiceImpl {
         } catch (orgError: unknown) {
           log.error('Unexpected error processing workspace — continuing with next org', {
             workspaceId: workspace.id,
-            error: orgError.message,
-            stack: orgError.stack,
+            error: orgError instanceof Error ? orgError.message : String(orgError),
+            stack: orgError instanceof Error ? orgError.stack : undefined,
             runId,
           });
           results.push({
             workspaceId: workspace.id,
             success: false,
-            error: orgError.message,
+            error: orgError instanceof Error ? orgError.message : String(orgError),
             errorType: 'system',
           } as unknown);
         }
@@ -609,7 +609,7 @@ class WeeklyBillingRunServiceImpl {
           }
         }
       } catch (feeErr: unknown) {
-        const msg = `Middleware fee charge exception: ${feeErr.message}`;
+        const msg = `Middleware fee charge exception: ${feeErr instanceof Error ? feeErr.message : String(feeErr)}`;
         log.error(`[WeeklyBilling] ${msg}`);
         billingExceptions.push(msg);
       }
@@ -625,7 +625,7 @@ class WeeklyBillingRunServiceImpl {
           log.info(`[WeeklyBilling] Processing fee: $${(feeResult.amountCents / 100).toFixed(2)} for invoice ${invoice.invoiceNumber}`);
         }
       } catch (feeErr: unknown) {
-        const msg = `Processing fee recording exception: ${feeErr.message}`;
+        const msg = `Processing fee recording exception: ${feeErr instanceof Error ? feeErr.message : String(feeErr)}`;
         log.error(`[WeeklyBilling] ${msg}`);
         billingExceptions.push(msg);
       }
@@ -685,7 +685,7 @@ class WeeklyBillingRunServiceImpl {
           }
         }
       } catch (creditOverageErr: unknown) {
-        const msg = `Credit overage charge exception: ${creditOverageErr.message}`;
+        const msg = `Credit overage charge exception: ${creditOverageErr instanceof Error ? creditOverageErr.message : String(creditOverageErr)}`;
         log.error(`[WeeklyBilling] ${msg}`);
         billingExceptions.push(msg);
       }

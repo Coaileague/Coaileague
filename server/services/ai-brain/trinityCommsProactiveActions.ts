@@ -43,7 +43,7 @@ export function registerCommsProactiveActions() {
     const result = await createNotification({ workspaceId, userId, type: 'alert', title, message, priority: 'normal',
  idempotencyKey: `alert-${String(Date.now())}-${'system'}`,
         })
-      .catch((err: Error) => { log.warn(`[TrinityComms] Push notification persist failed for user ${userId}:`, err.message); return null; });
+      .catch((err: Error) => { log.warn(`[TrinityComms] Push notification persist failed for user ${userId}:`, err instanceof Error ? err.message : String(err)); return null; });
     return { sent: true, userId };
   }));
 
@@ -62,7 +62,7 @@ export function registerCommsProactiveActions() {
     await createNotification({ workspaceId, userId, type: 'scheduled_email', title: subject || 'Message from CoAIleague', message, priority: priority || 'normal',
  idempotencyKey: `scheduled_email-${String(Date.now())}-${'system'}`,
         })
-      .catch((err: Error) => log.warn(`[TrinityComms] Officer email notification persist failed for user ${userId}:`, err.message));
+      .catch((err: Error) => log.warn(`[TrinityComms] Officer email notification persist failed for user ${userId}:`, err instanceof Error ? err.message : String(err)));
     const emailAddr = (emp as EmployeeWithStatus)?.email;
     if (emailAddr) {
       await NotificationDeliveryService.send({ type: 'ai_brain_email', workspaceId: workspaceId || 'system', recipientUserId: userId, channel: 'email', body: { to: emailAddr, subject: subject || 'Message from CoAIleague', html: `<p>${message}</p>` } }).catch(() => null);
@@ -86,7 +86,7 @@ export function registerCommsProactiveActions() {
       await createNotification({ workspaceId, userId: mgr.userId, type: 'scheduled_email', title: subject || 'Manager Alert from Trinity', message, priority: priority || 'normal',
  idempotencyKey: `scheduled_email-${String(Date.now())}-${mgr.userId}`,
         })
-        .catch((err: Error) => log.warn(`[TrinityComms] Manager email notification persist failed for user ${mgr.userId}:`, err.message));
+        .catch((err: Error) => log.warn(`[TrinityComms] Manager email notification persist failed for user ${mgr.userId}:`, err instanceof Error ? err.message : String(err)));
       const mgrUser = await db.query.users?.findFirst({ where: eq(users.id, mgr.userId) }).catch(() => null);
       if ((mgrUser as Record<string,unknown>)?.email) {
         await NotificationDeliveryService.send({ type: 'ai_brain_email', workspaceId: workspaceId || 'system', recipientUserId: mgr.userId, channel: 'email', body: { to: (mgrUser as Record<string,unknown>).email, subject: subject || 'Manager Alert from Trinity', html: `<p>${message}</p>` } }).catch(() => null);

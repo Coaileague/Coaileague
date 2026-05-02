@@ -188,7 +188,7 @@ export async function sendEmployeePaymentMethodNotifications(): Promise<{ notifi
 
       } catch (runErr: unknown) {
         const msg = runErr instanceof Error ? runErr.message : String(runErr);
-        const stack = runErr instanceof Error && runErr.stack ? runErr.stack.split('\n').slice(1, 6).join(' | ') : '';
+        const stack = runErr instanceof Error && runErr instanceof Error ? runErr.stack : undefined ? runErr instanceof Error ? runErr.stack : undefined.split('\n').slice(1, 6).join(' | ') : '';
         log.warn('Failed to notify employees for payroll run', { runId: run.id, error: msg, stack });
       }
     }

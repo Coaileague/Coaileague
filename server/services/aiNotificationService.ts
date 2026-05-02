@@ -1033,7 +1033,7 @@ JSON:`;
         log.info('[AINotification] Metered billing failed, using direct Gemini fallback:', result.error);
       }
     } catch (meteredError : unknown) {
-      log.info('[AINotification] Metered billing exception, using direct Gemini fallback:', meteredError.message || meteredError);
+      log.info('[AINotification] Metered billing exception, using direct Gemini fallback:', meteredError instanceof Error ? meteredError.message : String(meteredError) || meteredError);
     }
     
     // No unbilled fallback — if metered billing fails (insufficient credits), skip AI enrichment

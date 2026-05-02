@@ -185,7 +185,7 @@ async function runTier2(inv: OverdueInvoice, clientEmail: string, clientName: st
       daysOverdue: inv.daysOverdue,
       tier: 2,
     },
-  }).catch((err: Error) => log.error('[OverdueCollections] Event bus publish failed (tier 2 escalation):', err.message));
+  }).catch((err: Error) => log.error('[OverdueCollections] Event bus publish failed (tier 2 escalation):', err instanceof Error ? err.message : String(err)));
 
   await logEscalation(inv.workspaceId, inv.id, inv.invoiceNumber, 2, clientEmail);
 }
@@ -250,7 +250,7 @@ ${workspaceName}`;
       tier: 3,
       demandLetterDraft: demandLetter,
     },
-  }).catch((err: Error) => log.error('[OverdueCollections] Event bus publish failed (tier 3 escalation):', err.message));
+  }).catch((err: Error) => log.error('[OverdueCollections] Event bus publish failed (tier 3 escalation):', err instanceof Error ? err.message : String(err)));
 
   await logEscalation(inv.workspaceId, inv.id, inv.invoiceNumber, 3, owners.map(o => o.email).join(', '));
 }

@@ -777,7 +777,7 @@ class TrinityChatService {
           },
         };
       } catch (insightError: unknown) {
-        log.warn('[TrinityChatService] Business insight scan failed, falling back to regular chat:', insightError.message);
+        log.warn('[TrinityChatService] Business insight scan failed, falling back to regular chat:', insightError instanceof Error ? insightError.message : String(insightError));
       }
     }
 
@@ -2319,7 +2319,7 @@ Do NOT skip steps — decompose fully before concluding.`;
       const balance = await getAccountBalance(accessToken);
       return balance;
     } catch (err) {
-      log.warn('[TrinityChatService] getPlaidBalance failed (non-fatal):', err instanceof Error ? err.message : err);
+      log.warn('[TrinityChatService] getPlaidBalance failed (non-fatal):', err instanceof Error ? err instanceof Error ? err.message : String(err) : err);
       return null;
     }
   }

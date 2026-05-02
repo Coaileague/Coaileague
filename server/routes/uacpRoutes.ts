@@ -436,7 +436,7 @@ router.post('/attributes', requireAdminAccess, async (req, res) => {
     res.status(201).json({ attribute });
 
   } catch (error: unknown) {
-    if (error.code === '23505') { // Unique violation
+    if ((error as NodeJS.ErrnoException).code === '23505') { // Unique violation
       return res.status(409).json({ error: 'Attribute already exists for this entity' });
     }
     log.error('[UACP] Create attribute error:', error);

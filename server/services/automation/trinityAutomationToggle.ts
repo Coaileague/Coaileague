@@ -484,9 +484,9 @@ class TrinityAutomationToggleService {
           type: 'automation_failed',
           category: 'automation',
           title: `Automation Failed: ${request.feature}`,
-          description: error.message,
+          description: error instanceof Error ? error.message : String(error),
           workspaceId: request.workspaceId,
-          metadata: { requestId, error: error.message },
+          metadata: { requestId, error: error instanceof Error ? error.message : String(error) },
         });
       }
 

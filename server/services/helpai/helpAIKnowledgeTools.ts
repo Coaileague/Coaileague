@@ -83,7 +83,7 @@ export async function searchTrinityKnowledge(
     }
     return context;
   } catch (err: unknown) {
-    log.warn('[KnowledgeTools] Trinity knowledge search failed:', err.message);
+    log.warn('[KnowledgeTools] Trinity knowledge search failed:', err instanceof Error ? err.message : String(err));
     return '';
   }
 }
@@ -140,7 +140,7 @@ export async function searchKnowledgeStructured(
       });
     }
   } catch (err: unknown) {
-    log.warn('[KnowledgeTools] Structured knowledge search failed:', err.message);
+    log.warn('[KnowledgeTools] Structured knowledge search failed:', err instanceof Error ? err.message : String(err));
   }
 
   return results.sort((a, b) => b.relevanceScore - a.relevanceScore);
@@ -192,7 +192,7 @@ export async function searchPlatformFAQs(
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
   } catch (err: unknown) {
-    log.warn('[KnowledgeTools] FAQ search failed:', err.message);
+    log.warn('[KnowledgeTools] FAQ search failed:', err instanceof Error ? err.message : String(err));
     return [];
   }
 }
@@ -378,7 +378,7 @@ export async function buildCrossChannelContextBlock(
 
     return parts.join('\n');
   } catch (err: unknown) {
-    log.warn('[KnowledgeTools] Cross-channel context build failed:', err.message);
+    log.warn('[KnowledgeTools] Cross-channel context build failed:', err instanceof Error ? err.message : String(err));
     return '';
   }
 }
@@ -406,8 +406,8 @@ export async function executeSupportAction(payload: {
     log.info(`[KnowledgeTools] Support action executed: ${payload.actionType} → success=${result.success}`);
     return { success: result.success, result };
   } catch (err: unknown) {
-    log.error('[KnowledgeTools] Support action failed:', err.message);
-    return { success: false, error: err.message };
+    log.error('[KnowledgeTools] Support action failed:', err instanceof Error ? err.message : String(err));
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 

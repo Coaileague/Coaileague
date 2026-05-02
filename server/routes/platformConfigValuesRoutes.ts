@@ -208,7 +208,7 @@ platformConfigValuesRouter.post('/values', requireAuth, async (req: Request, res
 
     res.status(201).json({ value: result.rows[0] });
   } catch (err: unknown) {
-    if (err.code === '23505') {
+    if ((err as NodeJS.ErrnoException).code === '23505') {
       return res.status(409).json({ error: 'A value with that key already exists in this group' });
     }
     res.status(500).json({ error: 'Failed to create config value' });

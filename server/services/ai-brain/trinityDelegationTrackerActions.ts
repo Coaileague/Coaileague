@@ -54,7 +54,7 @@ async function notifyUser(
   await createNotification({ workspaceId, userId, type: 'task_delegation', title, message, priority,
  idempotencyKey: `task_delegation-${String(Date.now())}-${'system'}`,
         })
-    .catch((err: Error) => log.warn(`[TrinityDelegation] Notification persist failed for user ${userId}:`, err.message));
+    .catch((err: Error) => log.warn(`[TrinityDelegation] Notification persist failed for user ${userId}:`, err instanceof Error ? err.message : String(err)));
 }
 
 async function notifyManagers(
@@ -71,7 +71,7 @@ async function notifyManagers(
     await createNotification({ workspaceId, userId: mgr.userId, type: 'task_escalation', title, message, priority,
  idempotencyKey: `task_escalation-${String(Date.now())}-${mgr.userId}`,
         })
-      .catch((err: Error) => log.warn(`[TrinityDelegation] Manager escalation notification failed for user ${mgr.userId}:`, err.message));
+      .catch((err: Error) => log.warn(`[TrinityDelegation] Manager escalation notification failed for user ${mgr.userId}:`, err instanceof Error ? err.message : String(err)));
   }
   return managers.length;
 }
@@ -107,7 +107,7 @@ export function registerDelegationTrackerActions() {
     }).returning();
 
     await db.insert(orchestrationRunSteps).values({
-      runId: (run as Record<string, unknown>).id,
+      runId: (run as {id: string}).id,
       stepNumber: 1,
       stepName: 'Task Assigned',
       stepType: 'action',
@@ -129,10 +129,10 @@ export function registerDelegationTrackerActions() {
       'high'
     );
 
-    log.info(`[TrinityDelegationTracker] Task created: id=${(run as Record<string, unknown>).id}, type=${taskType}, assignedTo=${assignedTo}, dueBy=${dueBy}`);
+    log.info(`[TrinityDelegationTracker] Task created: id=${(run as {id: string}).id}, type=${taskType}, assignedTo=${assignedTo}, dueBy=${dueBy}`);
     return {
       created: true,
-      taskId: (run as Record<string, unknown>).id,
+      taskId: (run as {id: string}).id,
       taskType,
       assignedTo,
       dueBy,
@@ -306,7 +306,7 @@ export function registerDelegationTrackerActions() {
     if (!task) return { error: `Task ${taskId} not found` };
     const taskType = (task as Record<string, unknown>).inputParams?.taskType;
     const context = (task as Record<string, unknown>).inputParams?.context || {};
-    const ws = workspaceId || (task as Record<string, unknown>).workspaceId;
+    const ws = workspaceId || (task as {workspaceId: string}).workspaceId;
     let verified = false;
     let verificationDetails = '';
     let verificationData: Record<string, unknown> = {};
@@ -421,7 +421,7 @@ export function registerDelegationTrackerActions() {
       })
       .where(eq(orchestrationRuns.id, taskId));
 
-    const ws = workspaceId || (task as Record<string, unknown>).workspaceId;
+    const ws = workspaceId || (task as {workspaceId: string}).workspaceId;
     const taskDesc = currentParams.description || `Task ${taskId}`;
     await notifyUser(ws, currentParams.assignedTo, 'Task Closed', `Your task "${taskDesc}" has been marked complete. Trinity verified the outcome.`, 'normal');
 
@@ -439,7 +439,7 @@ export function registerDelegationTrackerActions() {
     const steps = await db.select().from(orchestrationRunSteps).where(eq(orchestrationRunSteps.runId, taskId)).orderBy(orchestrationRunSteps.stepNumber).catch(() => []);
     const params_ = (task as Record<string, unknown>).inputParams || {};
     const timeline = [
-      { event: 'Task Created', timestamp: (task as Record<string, unknown>).createdAt, actor: (task as Record<string, unknown>).userId, detail: `Assigned to ${params_.assignedToName || params_.assignedTo}, due ${params_.dueBy}` },
+      { event: 'Task Created', timestamp: (task as {createdAt: Date}).createdAt, actor: (task as {userId: string}).userId, detail: `Assigned to ${params_.assignedToName || params_.assignedTo}, due ${params_.dueBy}` },
       ...(params_.escalationHistory || []).map((h: unknown) => ({ event: `Status/Escalation: L${h.level || '-'}`, timestamp: h.timestamp, actor: h.updatedBy || h.escalatedTo || 'system', detail: h.reason || h.note || '' })),
       ...((task as Record<string, unknown>).completedAt ? [{ event: 'Loop Closed', timestamp: (task as Record<string, unknown>).completedAt, actor: (task as Record<string, unknown>).outputResult?.closedBy || 'trinity-ai', detail: (task as Record<string, unknown>).outputResult?.outcome || '' }] : []),
     ].sort((a, b) => new Date(a.timestamp || 0).getTime() - new Date(b.timestamp || 0).getTime());

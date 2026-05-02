@@ -36,7 +36,7 @@ async function main() {
     });
     console.log(`   ✅ Sent — MessageId: ${(r as Record<string, unknown>).messageId ?? 'n/a'}\n`);
   } catch (e: unknown) {
-    console.error(`   ❌ FAILED: ${e.message}\n`);
+    console.error(`   ❌ FAILED: ${e instanceof Error ? e.message : String(e)}\n`);
   }
 
   // ── EMAIL 1B: Trinity AI Greeting → LOSER (jgriffin) ──────────────────────
@@ -54,7 +54,7 @@ async function main() {
     });
     console.log(`   ✅ Sent — MessageId: ${(r as Record<string, unknown>).messageId ?? 'n/a'}\n`);
   } catch (e: unknown) {
-    console.error(`   ❌ FAILED: ${e.message}\n`);
+    console.error(`   ❌ FAILED: ${e instanceof Error ? e.message : String(e)}\n`);
   }
 
   // ── EMAIL 2A: Drop Notification → LOSER (jgriffin) ────────────────────────
@@ -70,7 +70,7 @@ async function main() {
     });
     console.log(`   ✅ Sent — MessageId: ${(r as Record<string, unknown>).messageId ?? 'n/a'}\n`);
   } catch (e: unknown) {
-    console.error(`   ❌ FAILED: ${e.message}\n`);
+    console.error(`   ❌ FAILED: ${e instanceof Error ? e.message : String(e)}\n`);
   }
 
   // ── EMAIL 2B: Staffing Onboarding Invitation → WINNER (txps) ──────────────
@@ -104,7 +104,7 @@ async function main() {
     });
     console.log(`   ✅ Sent — MessageId: ${(r as Record<string, unknown>).messageId ?? 'n/a'}\n`);
   } catch (e: unknown) {
-    console.error(`   ❌ FAILED: ${e.message}\n`);
+    console.error(`   ❌ FAILED: ${e instanceof Error ? e.message : String(e)}\n`);
   }
 
   console.log('=== DONE ===');

@@ -154,7 +154,7 @@ export function registerOpsActions() {
       try {
         await db.insert(shifts).values({ ...data, workspaceId, startTime: new Date(data.startTime), endTime: new Date(data.endTime) });
         imported++;
-      } catch (e: unknown) { failed++; errors.push(e.message); }
+      } catch (e: unknown) { failed++; errors.push(e instanceof Error ? e.message : String(e)); }
     }
     return { imported, failed, errors };
   }));

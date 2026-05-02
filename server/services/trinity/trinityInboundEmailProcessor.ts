@@ -333,7 +333,7 @@ Body: ${bodyText.slice(0, 1500)}`,
     const parsed: unknown = JSON.parse(text);
     return { data: parsed, confidence: Number(parsed.confidence) || 0 };
   } catch (err: unknown) {
-    log.warn('[InboundProcessor] Trinity extraction error:', err.message);
+    log.warn('[InboundProcessor] Trinity extraction error:', err instanceof Error ? err.message : String(err));
     return { data: {}, confidence: 0 };
   }
 }
@@ -1053,7 +1053,7 @@ async function processCareersApplication(
           workspaceId,
         );
       } catch (emailErr: unknown) {
-        log.warn('[CareersPipeline] Could not auto-send Round 1 email:', emailErr.message);
+        log.warn('[CareersPipeline] Could not auto-send Round 1 email:', emailErr instanceof Error ? emailErr.message : String(emailErr));
       }
     }
 
@@ -1076,10 +1076,10 @@ async function processCareersApplication(
       downstreamRecordType: 'interview_candidate',
     };
   } catch (err: unknown) {
-    log.error('[CareersPipeline] Error processing application:', err.message);
+    log.error('[CareersPipeline] Error processing application:', err instanceof Error ? err.message : String(err));
     return {
       needsReview: true,
-      reviewReason: `Careers pipeline error: ${err.message}`,
+      reviewReason: `Careers pipeline error: ${err instanceof Error ? err.message : String(err)}`,
     };
   }
 }
@@ -1503,7 +1503,7 @@ export async function processInboundEmail(email: ParsedInboundEmail): Promise<Pr
       };
     }
   } catch (pipelineErr: unknown) {
-    const failMsg = `Pipeline ${category} threw: ${pipelineErr.message}`;
+    const failMsg = `Pipeline ${category} threw: ${pipelineErr instanceof Error ? pipelineErr.message : String(pipelineErr)}`;
     log.error('[InboundProcessor] Pipeline error:', failMsg);
     await db.update(inboundEmailLog)
       .set({

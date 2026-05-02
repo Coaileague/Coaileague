@@ -68,8 +68,8 @@ async function q(sql: string, params: unknown[] = []) {
   try {
     return await pool.query(sql, params);
   } catch (e : unknown) {
-    if (!e.message?.includes('duplicate key') && !e.message?.includes('already exists')) {
-      console.warn(`  ⚠️  ${e.message?.slice(0, 100)}`);
+    if (!e instanceof Error ? e.message : String(e)?.includes('duplicate key') && !e instanceof Error ? e.message : String(e)?.includes('already exists')) {
+      console.warn(`  ⚠️  ${e instanceof Error ? e.message : String(e)?.slice(0, 100)}`);
     }
   }
 }

@@ -244,7 +244,7 @@ function verifyResendSignature(rawBody: Buffer | string, headers: Record<string,
     log.warn('[InboundEmail] No matching svix signature found');
     return false;
   } catch (err: unknown) {
-    log.error('[InboundEmail] Signature verification error:', err.message);
+    log.error('[InboundEmail] Signature verification error:', err instanceof Error ? err.message : String(err));
     return false;
   }
 }
@@ -498,7 +498,7 @@ async function handleInboundWebhook(
     rawParsed = typeof req.body === 'object' ? req.body : JSON.parse(rawBody.toString());
   } catch (parseErr: unknown) {
     // Check 10: Malformed payload — log and return 200 (never 5xx)
-    log.error(`[InboundEmail] Malformed payload for ${targetAddress}:`, parseErr.message);
+    log.error(`[InboundEmail] Malformed payload for ${targetAddress}:`, parseErr instanceof Error ? parseErr.message : String(parseErr));
     res.status(200).json({ received: true, warning: 'Malformed payload — flagged for admin review' });
     return;
   }
@@ -909,7 +909,7 @@ inboundEmailRouter.post('/', async (req: Request, res: Response) => {
     }
 
   } catch (err: unknown) {
-    log.error('[InboundEmail/root] Unhandled error:', err.message);
+    log.error('[InboundEmail/root] Unhandled error:', err instanceof Error ? err.message : String(err));
     // Still return 200 — never 5xx to Resend
     if (!res.headersSent) {
       res.status(200).json({ received: true, error: 'internal_processing_error' });

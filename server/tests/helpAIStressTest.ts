@@ -224,8 +224,8 @@ async function runTest(name: string, fn: () => Promise<void>): Promise<void> {
     results.push({ name, passed: true, duration: Date.now() - start });
     console.log(`  ✅ PASS  ${name} (${Date.now() - start}ms)`);
   } catch (err: unknown) {
-    results.push({ name, passed: false, error: err.message, duration: Date.now() - start });
-    console.error(`  ❌ FAIL  ${name}: ${err.message}`);
+    results.push({ name, passed: false, error: err instanceof Error ? err.message : String(err), duration: Date.now() - start });
+    console.error(`  ❌ FAIL  ${name}: ${err instanceof Error ? err.message : String(err)}`);
   }
 }
 

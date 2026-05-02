@@ -189,9 +189,9 @@ export async function checkIdempotency(params: IdempotencyParams): Promise<Idemp
       return await executeIdempotencyCheck(params);
     } catch (error : unknown) {
       const isRetryable = 
-        error.code === '40001' || // serialization_failure
-        error.code === '40P01' || // deadlock_detected
-        error.code === '55P03';   // lock_not_available
+        (error as NodeJS.ErrnoException).code === '40001' || // serialization_failure
+        (error as NodeJS.ErrnoException).code === '40P01' || // deadlock_detected
+        (error as NodeJS.ErrnoException).code === '55P03';   // lock_not_available
 
       if (!isRetryable || attempt === maxAttempts) {
         log.error(`[IDEMPOTENCY] Fatal error on attempt ${attempt}/${maxAttempts}: ${(error instanceof Error ? error.message : String(error))}`);

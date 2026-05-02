@@ -147,7 +147,7 @@ export const pool = new pg.Pool({
 
 pool.on('error', (err) => {
   recordDbFailure();
-  log.error('Unexpected pool error (connection will be recycled)', { error: err.message });
+  log.error('Unexpected pool error (connection will be recycled)', { error: err instanceof Error ? err.message : String(err) });
 });
 
 // Set a statement_timeout on every new connection so hanging queries are
@@ -255,12 +255,12 @@ export async function withRetry<T>(
       recordDbFailure();
       
       const isRetryable = 
-        error.message?.includes('timeout') ||
-        error.message?.includes('connection') ||
-        error.message?.includes('ECONNRESET') ||
-        error.message?.includes('ECONNREFUSED') ||
-        error.code === 'ECONNRESET' ||
-        error.code === 'ETIMEDOUT';
+        (error instanceof Error ? error instanceof Error ? error.message : String(error) : '')?.includes('timeout') ||
+        (error instanceof Error ? error instanceof Error ? error.message : String(error) : '')?.includes('connection') ||
+        (error instanceof Error ? error instanceof Error ? error.message : String(error) : '')?.includes('ECONNRESET') ||
+        (error instanceof Error ? error instanceof Error ? error.message : String(error) : '')?.includes('ECONNREFUSED') ||
+        (error as NodeJS.ErrnoException).code === 'ECONNRESET' ||
+        (error as NodeJS.ErrnoException).code === 'ETIMEDOUT';
 
       if (!isRetryable || attempt >= maxRetries) {
         throw error;

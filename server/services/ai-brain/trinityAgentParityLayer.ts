@@ -546,7 +546,7 @@ class TrinityAgentParityLayer {
         success: false,
         passed: false,
         summary: (error instanceof Error ? error.message : String(error)),
-        exitCode: error.code || 1,
+        exitCode: (error as NodeJS.ErrnoException).code || 1,
         stderr: error.stderr?.substring(0, 500),
       };
     }

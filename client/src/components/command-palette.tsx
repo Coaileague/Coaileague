@@ -178,7 +178,7 @@ export function CommandPalette() {
           setSearchTotal(data.total);
         }
       } catch (err: unknown) {
-        if (err.name !== 'AbortError') {
+        if (err instanceof Error ? (err as {name?: string}).name : "Error" !== 'AbortError') {
           setSearchResults([]);
           setSearchTotal(0);
         }

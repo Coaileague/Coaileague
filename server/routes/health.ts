@@ -631,7 +631,7 @@ supportRouter.post(
       } catch (validationError: unknown) {
         return res.status(400).json({
           error: 'Invalid report data',
-          details: validationError.errors || validationError.message,
+          details: validationError.errors || validationError instanceof Error ? validationError.message : String(validationError),
         });
       }
 

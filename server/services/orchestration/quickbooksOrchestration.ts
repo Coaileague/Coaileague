@@ -228,7 +228,7 @@ class QuickBooksOrchestrationService {
             } catch (refreshError : unknown) {
               return {
                 success: false,
-                error: `Token refresh failed: ${refreshError.message}`,
+                error: `Token refresh failed: ${refreshError instanceof Error ? refreshError.message : String(refreshError)}`,
                 errorCode: 'UNAUTHORIZED',
               };
             }
@@ -354,14 +354,14 @@ class QuickBooksOrchestrationService {
         type: 'quickbooks_operation_failed',
         category: 'automation',
         title: `QuickBooks Operation Failed — ${params.operationName}`,
-        description: `${params.operationType} operation '${params.operationName}' failed: ${error.message}${errorInfo.retryable ? ' (retryable)' : ''}`,
+        description: `${params.operationType} operation '${params.operationName}' failed: ${error instanceof Error ? error.message : String(error)}${errorInfo.retryable ? ' (retryable)' : ''}`,
         workspaceId: params.workspaceId,
-        metadata: { orchestrationId: orchestrationCtx?.orchestrationId, operationType: params.operationType, operationName: params.operationName, error: error.message, errorCode, remediation: errorInfo.remediation, retryable: errorInfo.retryable },
+        metadata: { orchestrationId: orchestrationCtx?.orchestrationId, operationType: params.operationType, operationName: params.operationName, error: error instanceof Error ? error.message : String(error), errorCode, remediation: errorInfo.remediation, retryable: errorInfo.retryable },
       }).catch((err) => log.warn('[quickbooksOrchestration] Fire-and-forget failed:', err));
 
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         errorCode,
         orchestrationId: orchestrationCtx?.orchestrationId,
         durationMs: Date.now() - startTime,

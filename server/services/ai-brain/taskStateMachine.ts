@@ -246,7 +246,7 @@ class TaskStateMachine {
         success: false,
         previousStatus: fromStatus,
         currentStatus: fromStatus,
-        error: `Database update failed: ${error.message}`,
+        error: `Database update failed: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }
@@ -319,7 +319,7 @@ class TaskStateMachine {
 
       return { taskId, success: true };
     } catch (error: unknown) {
-      return { taskId, success: false, error: error.message };
+      return { taskId, success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 

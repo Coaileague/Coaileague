@@ -467,7 +467,7 @@ router.post('/api/webhooks/twilio/sms', validateTwilioSignature, async (req: Req
     return res.send(emptyTwiml);
   } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error));
-    log.error('[TwilioSMS] Webhook error:', err.message);
+    log.error('[TwilioSMS] Webhook error:', err instanceof Error ? err.message : String(err));
     const { monitoringService } = await import('../monitoring');
     monitoringService.logError(err, {
       requestId: req.requestId,
@@ -621,7 +621,7 @@ router.post('/api/webhooks/twilio/voice-interview/response', validateTwilioSigna
       // All questions answered — persist comprehensive scorecard before ending the call
       if (candidateId) {
         generateComprehensiveScorecard(candidateId, workspaceId).catch((err: Error) =>
-          log.error('[VoiceInterview] Scorecard generation failed:', err.message),
+          log.error('[VoiceInterview] Scorecard generation failed:', err instanceof Error ? err.message : String(err)),
         );
       }
       return res.send(buildClosingTwiml(sessionScore));

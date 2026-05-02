@@ -59,7 +59,7 @@ export async function sendEmail(opts: {
     from: opts.from,
     replyTo: opts.replyTo,
     workspaceId: opts.workspaceId,
-  } as unknown as CanSpamEmailOptions);
+  } as CanSpamEmailOptions);
 
   if (!result.success) {
     return {

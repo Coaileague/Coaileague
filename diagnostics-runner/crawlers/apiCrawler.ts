@@ -294,13 +294,13 @@ export class APICrawler {
         });
       }
     } catch (error : unknown) {
-      console.error('[APICrawler] Authentication error:', error.message);
+      console.error('[APICrawler] Authentication error:', error instanceof Error ? error.message : String(error));
       this.issues.push({
         id: generateId(),
         category: 'network_failure',
         severity: 'critical',
         url: `${this.config.baseUrl}/api/auth/login`,
-        message: `Authentication request failed: ${error.message}`,
+        message: `Authentication request failed: ${error instanceof Error ? error.message : String(error)}`,
         timestamp: new Date().toISOString(),
         crawlerType: 'api',
         subsystem: 'auth',
@@ -369,7 +369,7 @@ export class APICrawler {
         success: false,
         statusCode: 0,
         responseTime: Date.now() - startTime,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString()
       };
     }

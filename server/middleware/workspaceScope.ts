@@ -99,19 +99,19 @@ export const ensureWorkspaceAccess: RequestHandler = async (req: Request, res: R
       try {
         await assertWorkspaceActive(req.session.workspaceId);
       } catch (err: unknown) {
-        if (err.name === 'WorkspaceNotFoundError') {
+        if (err instanceof Error ? (err as {name?: string}).name : "Error" === 'WorkspaceNotFoundError') {
           log.warn('[ensureWorkspaceAccess] Workspace not found on suspension check', {
             workspaceId: req.session.workspaceId,
             userId,
           });
-          return res.status(403).json({ error: err.message, code: 'WORKSPACE_NOT_FOUND' });
+          return res.status(403).json({ error: err instanceof Error ? err.message : String(err), code: 'WORKSPACE_NOT_FOUND' });
         }
-        if (err.name === 'WorkspaceInactiveError') {
+        if ((err as {name?: string}).name === 'WorkspaceInactiveError') {
           log.warn('[ensureWorkspaceAccess] Workspace inactive on mutation', {
             workspaceId: req.session.workspaceId,
             userId,
           });
-          return res.status(403).json({ error: err.message, code: 'WORKSPACE_INACTIVE' });
+          return res.status(403).json({ error: err instanceof Error ? err.message : String(err), code: 'WORKSPACE_INACTIVE' });
         }
         log.error('[workspaceScope] assertWorkspaceActive (session fast-path) unexpected error:', err);
         return res.status(500).json({ error: 'Internal error checking workspace status', code: 'INTERNAL_ERROR' });
@@ -149,11 +149,11 @@ export const ensureWorkspaceAccess: RequestHandler = async (req: Request, res: R
     try {
       await assertWorkspaceActive(resolved.workspaceId);
     } catch (err: unknown) {
-      if (err.name === 'WorkspaceNotFoundError') {
-        return res.status(403).json({ error: err.message, code: 'WORKSPACE_NOT_FOUND' });
+      if (err instanceof Error ? (err as {name?: string}).name : "Error" === 'WorkspaceNotFoundError') {
+        return res.status(403).json({ error: err instanceof Error ? err.message : String(err), code: 'WORKSPACE_NOT_FOUND' });
       }
-      if (err.name === 'WorkspaceInactiveError') {
-        return res.status(403).json({ error: err.message, code: 'WORKSPACE_INACTIVE' });
+      if ((err as {name?: string}).name === 'WorkspaceInactiveError') {
+        return res.status(403).json({ error: err instanceof Error ? err.message : String(err), code: 'WORKSPACE_INACTIVE' });
       }
       // Unexpected error (DB failure, TypeError, etc.) — propagate as 500 instead of misreporting WORKSPACE_INACTIVE
       log.error('[workspaceScope] assertWorkspaceActive unexpected error:', err);

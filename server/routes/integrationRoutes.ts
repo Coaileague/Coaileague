@@ -166,7 +166,7 @@ router.get('/api/quickbooks/automation-health', requireAuth, async (req: Authent
         }
       }
 
-      autopilotEnabled = (connection as Record<string, unknown>).metadata?.syncEnabled === true;
+      autopilotEnabled = (connection as {metadata: Record<string, unknown>}).metadata?.syncEnabled === true;
     }
 
     const mappingCoverage = 100;
@@ -388,7 +388,7 @@ router.get('/api/quickbooks/connection-status', requireAuth, async (req: Authent
       canRefresh,
       needsReauthorization,
       connectionId: connection.id,
-      companyName: (connection as Record<string, unknown>).metadata?.companyName || 'Unknown Company',
+      companyName: (connection as {metadata: Record<string, unknown>}).metadata?.companyName || 'Unknown Company',
       lastSync: connection.lastSyncAt,
       lastError: connection.lastError,
       accessTokenExpiresAt: accessTokenExpiry?.toISOString(),
@@ -473,7 +473,7 @@ router.post('/api/quickbooks/refresh-token', requireAuth, async (req: Authentica
       log.error('[IntegrationRoutes] Token refresh failed:', refreshError);
       
       // Check if it's an invalid_grant error (needs reauthorization)
-      const errorMessage = refreshError.message || '';
+      const errorMessage = refreshError instanceof Error ? refreshError.message : String(refreshError) || '';
       if (errorMessage.includes('invalid_grant') || errorMessage.includes('token')) {
         return res.status(400).json({
           success: false,

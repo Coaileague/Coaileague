@@ -138,7 +138,7 @@ async function testDbColumnsExist() {
       const count = Number((result.rows[0] as unknown).cnt);
       assert(count === 1, `${tableName}.workspace_id column exists in DB`);
     } catch (e : unknown) {
-      assert(false, `${tableName}.workspace_id DB check`, e.message);
+      assert(false, `${tableName}.workspace_id DB check`, e instanceof Error ? e.message : String(e));
     }
   }
 }
@@ -168,7 +168,7 @@ async function testNotNullConstraints() {
       const nullable = (result.rows[0] as unknown)?.is_nullable;
       assert(nullable === 'NO', `${tableName}.workspace_id is NOT NULL`);
     } catch (e : unknown) {
-      assert(false, `${tableName} NOT NULL check`, e.message);
+      assert(false, `${tableName} NOT NULL check`, e instanceof Error ? e.message : String(e));
     }
   }
 }
@@ -186,7 +186,7 @@ async function testDealsDataIntegrity() {
     const nullCount = Number((result.rows[0] as unknown).cnt);
     assert(nullCount === 0, `No deals with NULL workspace_id (found ${nullCount})`);
   } catch (e : unknown) {
-    assert(false, 'Deals null workspace_id check', e.message);
+    assert(false, 'Deals null workspace_id check', e instanceof Error ? e.message : String(e));
   }
 }
 
@@ -237,7 +237,7 @@ async function testCrossWorkspaceIsolation() {
 
     assert(true, 'Cross-workspace isolation structure verified');
   } catch (e : unknown) {
-    assert(false, 'Cross-workspace isolation check', e.message);
+    assert(false, 'Cross-workspace isolation check', e instanceof Error ? e.message : String(e));
   }
 }
 
@@ -258,7 +258,7 @@ async function testChatConnectionsWorkspace() {
     const nulls = Number(row.nulls);
     assert(nulls === 0 || total === 0, `chat_connections: ${total} rows, ${nulls} with null workspace_id`);
   } catch (e : unknown) {
-    assert(false, 'chat_connections workspace check', e.message);
+    assert(false, 'chat_connections workspace check', e instanceof Error ? e.message : String(e));
   }
 }
 

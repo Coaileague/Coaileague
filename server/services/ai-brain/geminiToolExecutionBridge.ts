@@ -181,8 +181,8 @@ export async function executeGeminiToolCall(
     log.error(`[Tool Bridge] Execution error for ${actionId}:`, error);
     
     // Propagate detailed error information back to Gemini
-    const errorMessage = error.message || 'Unknown execution error';
-    const errorDetails = error.stack ? `\n${error.stack.split('\n').slice(0, 3).join('\n')}` : '';
+    const errorMessage = error instanceof Error ? error.message : String(error) || 'Unknown execution error';
+    const errorDetails = error instanceof Error ? error.stack : undefined ? `\n${error instanceof Error ? error.stack : undefined.split('\n').slice(0, 3).join('\n')}` : '';
     
     return {
       success: false,

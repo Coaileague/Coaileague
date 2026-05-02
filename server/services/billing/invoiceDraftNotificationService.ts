@@ -158,7 +158,7 @@ export async function runDraftInvoiceSweep(): Promise<{
             actionUrl: `/invoices/${draft.id}`,
             relatedEntityType: 'invoice',
             relatedEntityId: draft.id,
-          }).catch((err: Error) => log.warn('Failed to persist auto-sent notification', { invoiceId: draft.id, error: err.message }));
+          }).catch((err: Error) => log.warn('Failed to persist auto-sent notification', { invoiceId: draft.id, error: err instanceof Error ? err.message : String(err) }));
         }
       } else {
         if (ws?.ownerId) {
@@ -171,7 +171,7 @@ export async function runDraftInvoiceSweep(): Promise<{
             actionUrl: `/invoices/${draft.id}`,
             relatedEntityType: 'invoice',
             relatedEntityId: draft.id,
-          }).catch((err: Error) => log.warn('Failed to persist draft reminder notification', { invoiceId: draft.id, error: err.message }));
+          }).catch((err: Error) => log.warn('Failed to persist draft reminder notification', { invoiceId: draft.id, error: err instanceof Error ? err.message : String(err) }));
           nudgesSent++;
         }
       }

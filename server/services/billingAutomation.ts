@@ -183,7 +183,7 @@ export async function generateUsageBasedInvoices(workspaceId: string, generateDa
       }
       log.info(`[Billing Platform] Recorded processing fees for ${generatedInvoices.length} invoices`);
     } catch (feeErr : unknown) {
-      log.warn(`[Billing Platform] Processing fee recording for invoice gen failed (non-blocking):`, feeErr.message);
+      log.warn(`[Billing Platform] Processing fee recording for invoice gen failed (non-blocking):`, feeErr instanceof Error ? feeErr.message : String(feeErr));
     }
   }
   
@@ -302,7 +302,7 @@ export async function generateInvoiceForClient(
         });
       }
     } catch (feeErr : unknown) {
-      log.warn(`[Billing] Processing fee recording for per-client invoice failed (non-blocking):`, feeErr.message);
+      log.warn(`[Billing] Processing fee recording for per-client invoice failed (non-blocking):`, feeErr instanceof Error ? feeErr.message : String(feeErr));
     }
   }
 
@@ -1183,7 +1183,7 @@ export async function generateWeeklyInvoices(
           invoice.status = 'sent';
           log.info(`[Billing Platform] Auto-sent invoice ${invoice.invoiceNumber} for ${clientSummary.clientName}`);
         } catch (sendErr : unknown) {
-          log.warn(`[Billing Platform] Auto-send failed for ${invoice.invoiceNumber}:`, sendErr.message);
+          log.warn(`[Billing Platform] Auto-send failed for ${invoice.invoiceNumber}:`, sendErr instanceof Error ? sendErr.message : String(sendErr));
         }
       }
 

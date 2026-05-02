@@ -55,7 +55,7 @@ async function summarizeWithTriad(params: {
       }
     }
   } catch (err: unknown) {
-    log.warn('[TrinityVoiceActions] Non-critical error in voice action', { error: err.message });
+    log.warn('[TrinityVoiceActions] Non-critical error in voice action', { error: err instanceof Error ? err.message : String(err) });
   }
 
   // ── Resolve workspace tier once for fallback metering ───────────────────
@@ -64,7 +64,7 @@ async function summarizeWithTriad(params: {
     const tierRow = await pool.query('SELECT subscription_tier FROM workspaces WHERE id = $1 LIMIT 1', [workspaceId]);
     workspaceTier = tierRow.rows[0]?.subscription_tier ?? 'starter';
   } catch (err: unknown) {
-    log.warn('[TrinityVoiceActions] Non-critical error in voice action', { error: err.message });
+    log.warn('[TrinityVoiceActions] Non-critical error in voice action', { error: err instanceof Error ? err.message : String(err) });
   }
 
   // ── 2. Try Claude (Secondary Validator) ──────────────────────────────────
@@ -87,7 +87,7 @@ async function summarizeWithTriad(params: {
       if (text) return { summary: text, modelUsed: 'claude' };
     }
   } catch (err: unknown) {
-    log.warn('[TrinityVoiceActions] Non-critical error in voice action', { error: err.message });
+    log.warn('[TrinityVoiceActions] Non-critical error in voice action', { error: err instanceof Error ? err.message : String(err) });
   }
 
   // ── 3. Try OpenAI (Last Resort) ──────────────────────────────────────────
@@ -110,7 +110,7 @@ async function summarizeWithTriad(params: {
       if (text) return { summary: text, modelUsed: 'openai' };
     }
   } catch (err: unknown) {
-    log.warn('[TrinityVoiceActions] Non-critical error in voice action', { error: err.message });
+    log.warn('[TrinityVoiceActions] Non-critical error in voice action', { error: err instanceof Error ? err.message : String(err) });
   }
 
   return { summary: 'AI summarization unavailable at this time. Please review the transcript manually.', modelUsed: 'none' };

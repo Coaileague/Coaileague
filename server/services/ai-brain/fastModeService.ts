@@ -415,7 +415,7 @@ class FastModeService {
           return {
             agentId,
             agentName: this.getAgentDisplayName(agentId),
-            result: (result as Record<string, unknown>).data,
+            result: (result as {data: unknown}).data,
             success: result.success,
             tokensUsed: analysisResult.estimatedTokens
           };

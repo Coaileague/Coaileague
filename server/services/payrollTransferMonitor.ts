@@ -162,7 +162,7 @@ async function pollPendingTransfers(): Promise<void> {
             employeeId: stub.employeeId,
             transferId: stub.plaidTransferId,
             status: 'polling_error',
-            failureReason: err.message,
+            failureReason: err instanceof Error ? err.message : String(err),
             consecutiveFailures: current,
           },
         }).catch((err) => log.warn('[payrollTransferMonitor] Fire-and-forget failed:', err));
@@ -179,7 +179,7 @@ async function pollPendingTransfers(): Promise<void> {
               .set({ plaidTransferStatus: 'poll_failed', updatedAt: new Date() })
               .where(eq(payStubs.id, stub.id));
           } catch (updateErr: unknown) {
-            log.error('[PayrollTransferMonitor] Failed to mark poll_failed:', updateErr.message);
+            log.error('[PayrollTransferMonitor] Failed to mark poll_failed:', updateErr instanceof Error ? updateErr.message : String(updateErr));
           }
 
           // Remove from counter so future manual retries start fresh
@@ -218,7 +218,7 @@ async function pollPendingTransfers(): Promise<void> {
                   <li><strong>Employee ID:</strong> ${stub.employeeId}</li>
                   <li><strong>Net Pay:</strong> $${stub.netPay}</li>
                   <li><strong>Failed Polls:</strong> ${current}</li>
-                  <li><strong>Last Error:</strong> ${err.message}</li>
+                  <li><strong>Last Error:</strong> ${err instanceof Error ? err.message : String(err)}</li>
                 </ul>
                 <p>The transfer status has been marked as <strong>poll_failed</strong>. 
                 Please verify the transfer in your Plaid dashboard and update the status manually in CoAIleague.</p>

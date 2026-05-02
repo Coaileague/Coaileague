@@ -738,7 +738,7 @@ class AdaptiveSupervisionRouter {
    * Find applicable fallback trigger
    */
   private findApplicableTrigger(error: Error, triggers: FallbackTrigger[]): FallbackTrigger | null {
-    const errorMessage = error.message.toLowerCase();
+    const errorMessage = error instanceof Error ? error.message : String(error).toLowerCase();
     
     if (errorMessage.includes('rate limit') || errorMessage.includes('429')) {
       return triggers.find(t => t.type === 'rate_limit') || null;

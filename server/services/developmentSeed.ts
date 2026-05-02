@@ -700,7 +700,7 @@ export async function runDevelopmentSeed(): Promise<{ success: boolean; message:
 
       log.info('[DevSeed] Phase 0 data seeded: Marcus Rodriguez + Downtown Mall + today\'s shift + 15 messages');
     } catch (phaseErr: unknown) {
-      log.info('[DevSeed] Phase 0 seed skipped:', phaseErr.message?.slice(0, 150));
+      log.info('[DevSeed] Phase 0 seed skipped:', phaseErr instanceof Error ? phaseErr.message : String(phaseErr)?.slice(0, 150));
     }
 
     log.info('[DevSeed] Development data seeded successfully!');

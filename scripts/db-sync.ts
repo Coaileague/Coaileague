@@ -58,10 +58,10 @@ async function syncSchema() {
         await db.execute(sql.raw(idx));
       }
     } catch (err : unknown) {
-      if (err.message?.includes("already exists")) {
+      if (err instanceof Error ? err.message : String(err)?.includes("already exists")) {
         console.log(`  [OK] ${table.name} — already exists`);
       } else {
-        console.error(`  [ERROR] ${table.name}:`, err.message);
+        console.error(`  [ERROR] ${table.name}:`, err instanceof Error ? err.message : String(err));
       }
     }
   }

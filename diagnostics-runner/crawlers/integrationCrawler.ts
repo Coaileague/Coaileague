@@ -170,7 +170,7 @@ export class IntegrationCrawler {
         }
       }
     } catch (error : unknown) {
-      console.log(`[IntegrationCrawler] Login failed: ${error.message}`);
+      console.log(`[IntegrationCrawler] Login failed: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       await page.close();
     }
@@ -780,7 +780,7 @@ export class IntegrationCrawler {
           stepsCompleted++;
         } catch (stepError : unknown) {
           failedStep = step.description;
-          error = stepError.message;
+          error = stepError instanceof Error ? stepError.message : String(stepError);
           break;
         }
       }
@@ -897,7 +897,7 @@ export class IntegrationCrawler {
         
         this.websocketConnectionsTested++;
       } catch (error : unknown) {
-        console.warn(`[IntegrationCrawler] WebSocket test error for ${endpoint.name}:`, error.message);
+        console.warn(`[IntegrationCrawler] WebSocket test error for ${endpoint.name}:`, error instanceof Error ? error.message : String(error));
       }
     }
   }

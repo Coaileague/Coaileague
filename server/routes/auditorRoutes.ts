@@ -113,7 +113,7 @@ auditorRouter.post('/intake', async (req: Request, res: Response) => {
     if (!result.success) return res.status(400).json({ ok: false, error: result.reason });
     return res.json({ ok: true, ...result });
   } catch (err: unknown) {
-    log.error('[AuditorRoutes] intake error:', err.message);
+    log.error('[AuditorRoutes] intake error:', err instanceof Error ? err.message : String(err));
     res.status(500).json({ ok: false, error: 'Intake failed' });
   }
 });
@@ -132,7 +132,7 @@ auditorRouter.post('/claim', async (req: Request, res: Response) => {
     req.session.auditorId = result.auditorId;
     return res.json({ ok: true, auditorId: result.auditorId });
   } catch (err: unknown) {
-    log.error('[AuditorRoutes] claim error:', err.message);
+    log.error('[AuditorRoutes] claim error:', err instanceof Error ? err.message : String(err));
     res.status(500).json({ ok: false, error: 'Claim failed' });
   }
 });
@@ -166,7 +166,7 @@ auditorRouter.post('/login', async (req: Request, res: Response) => {
     req.session.auditorId = auth.auditorId;
     return res.json({ ok: true });
   } catch (err: unknown) {
-    log.error('[AuditorRoutes] login error:', err.message);
+    log.error('[AuditorRoutes] login error:', err instanceof Error ? err.message : String(err));
     res.status(500).json({ ok: false, error: 'Login failed' });
   }
 });
@@ -216,7 +216,7 @@ auditorRouter.post('/nda/accept', requireAuditor, async (req: AuthenticatedReque
     if (!r.success) return res.status(500).json({ ok: false, error: 'Failed to record NDA acceptance' });
     res.json({ ok: true, version: r.version });
   } catch (err: unknown) {
-    log.error('[AuditorRoutes] NDA accept error:', err.message);
+    log.error('[AuditorRoutes] NDA accept error:', err instanceof Error ? err.message : String(err));
     res.status(500).json({ ok: false, error: 'NDA accept failed' });
   }
 });
@@ -228,7 +228,7 @@ auditorRouter.get('/me/audits', requireAuditor, requireNdaAccepted, async (req: 
     const audits = await listAuditsForAuditor(req.session.auditorId);
     res.json({ ok: true, audits });
   } catch (err: unknown) {
-    log.error('[AuditorRoutes] list audits error:', err.message);
+    log.error('[AuditorRoutes] list audits error:', err instanceof Error ? err.message : String(err));
     res.status(500).json({ ok: false, error: 'Failed to list audits' });
   }
 });
@@ -240,7 +240,7 @@ auditorRouter.get('/me/workspaces', requireAuditor, requireNdaAccepted, async (r
     const workspaces = await listWorkspacesForAuditor(req.session.auditorId);
     res.json({ ok: true, workspaces });
   } catch (err: unknown) {
-    log.error('[AuditorRoutes] list workspaces error:', err.message);
+    log.error('[AuditorRoutes] list workspaces error:', err instanceof Error ? err.message : String(err));
     res.status(500).json({ ok: false, error: 'Failed to list workspaces' });
   }
 });
@@ -263,7 +263,7 @@ auditorRouter.get(
       const score = await computeComplianceScore(workspaceId);
       res.json({ ok: true, ...score });
     } catch (err: unknown) {
-      log.error('[AuditorRoutes] compliance score error:', err.message);
+      log.error('[AuditorRoutes] compliance score error:', err instanceof Error ? err.message : String(err));
       res.status(500).json({ ok: false, error: 'Failed to compute score' });
     }
   },
@@ -286,7 +286,7 @@ auditorRouter.get(
       const trend = await getComplianceTrend(workspaceId);
       res.json({ ok: true, trend });
     } catch (err: unknown) {
-      log.error('[AuditorRoutes] compliance trend error:', err.message);
+      log.error('[AuditorRoutes] compliance trend error:', err instanceof Error ? err.message : String(err));
       res.status(500).json({ ok: false, error: 'Failed to fetch trend' });
     }
   },
@@ -325,7 +325,7 @@ auditorRouter.post(
       if (!r.success) return res.status(500).json({ ok: false, error: 'Failed to log notification' });
       res.json({ ok: true, id: r.id });
     } catch (err: unknown) {
-      log.error('[AuditorRoutes] flag error:', err.message);
+      log.error('[AuditorRoutes] flag error:', err instanceof Error ? err.message : String(err));
       res.status(500).json({ ok: false, error: 'Flag failed' });
     }
   },
@@ -346,7 +346,7 @@ auditorRouter.get(
       const rows = await listRegulatorNotificationsForWorkspace(workspaceId);
       res.json({ ok: true, notifications: rows });
     } catch (err: unknown) {
-      log.error('[AuditorRoutes] notifications list error:', err.message);
+      log.error('[AuditorRoutes] notifications list error:', err instanceof Error ? err.message : String(err));
       res.status(500).json({ ok: false, error: 'Failed to list notifications' });
     }
   },
@@ -364,7 +364,7 @@ auditorRouter.post('/audits', requireAuditor, requireNdaAccepted, async (req: Au
     if (!result.success) return res.status(400).json({ ok: false, error: result.reason });
     res.json({ ok: true, auditId: result.auditId });
   } catch (err: unknown) {
-    log.error('[AuditorRoutes] request audit error:', err.message);
+    log.error('[AuditorRoutes] request audit error:', err instanceof Error ? err.message : String(err));
     res.status(500).json({ ok: false, error: 'Request failed' });
   }
 });
@@ -376,7 +376,7 @@ auditorRouter.post('/audits/:id/close', requireAuditor, async (req: Authenticate
     const r = await closeAudit(req.params.id, req.session.auditorId);
     res.json({ ok: r.success });
   } catch (err: unknown) {
-    log.error('[AuditorRoutes] close audit error:', err.message);
+    log.error('[AuditorRoutes] close audit error:', err instanceof Error ? err.message : String(err));
     res.status(500).json({ ok: false, error: 'Close failed' });
   }
 });
@@ -389,7 +389,7 @@ auditorRouter.post('/audits/:id/extend', requireAuditor, async (req: Authenticat
     const r = await extendAudit(req.params.id, days);
     res.json({ ok: r.success });
   } catch (err: unknown) {
-    log.error('[AuditorRoutes] extend audit error:', err.message);
+    log.error('[AuditorRoutes] extend audit error:', err instanceof Error ? err.message : String(err));
     res.status(500).json({ ok: false, error: 'Extend failed' });
   }
 });

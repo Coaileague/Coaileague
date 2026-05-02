@@ -242,7 +242,7 @@ class AIBrainFileSystemTools {
         },
       };
     } catch (error : unknown) {
-      if (error.code === 'ENOENT') {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return { success: false, error: 'File not found', path: filePath };
       }
       return { success: false, error: (error instanceof Error ? error.message : String(error)), path: filePath };
@@ -446,7 +446,7 @@ class AIBrainFileSystemTools {
         },
       };
     } catch (error : unknown) {
-      if (error.code === 'ENOENT') {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return { success: false, error: 'File not found', path: filePath };
       }
       return { success: false, error: (error instanceof Error ? error.message : String(error)), path: filePath };
@@ -535,7 +535,7 @@ class AIBrainFileSystemTools {
         },
       };
     } catch (error : unknown) {
-      if (error.code === 'ENOENT') {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return { success: false, error: 'Directory not found', path: dirPath };
       }
       return { success: false, error: (error instanceof Error ? error.message : String(error)), path: dirPath };
@@ -663,7 +663,7 @@ class AIBrainFileSystemTools {
         },
       };
     } catch (error : unknown) {
-      if (error.code === 'ENOENT') {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return { success: false, error: 'Path not found', path: filePath };
       }
       return { success: false, error: (error instanceof Error ? error.message : String(error)), path: filePath };

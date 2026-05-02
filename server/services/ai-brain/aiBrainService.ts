@@ -282,7 +282,7 @@ export class AIBrainService {
       log.error(`❌ [AI Brain] Job ${job.id} failed:`, error);
       
       const errorMessage = (error instanceof Error ? error.message : String(error)) || 'Unknown error occurred';
-      const errorStack = error.stack || '';
+      const errorStack = error instanceof Error ? error.stack : undefined || '';
       
       await db.update(aiBrainJobs)
         .set({
@@ -294,7 +294,7 @@ export class AIBrainService {
 
       // Emit AI error event if job has a conversation context
       if (job.conversationId) {
-        const isTimeout = error.code === 'ETIMEDOUT' || error.message?.includes('timeout');
+        const isTimeout = (error as NodeJS.ErrnoException).code === 'ETIMEDOUT' || error instanceof Error ? error.message : String(error)?.includes('timeout');
         
         if (isTimeout) {
           await ChatServerHub.emitAITimeout({
@@ -453,7 +453,7 @@ export class AIBrainService {
       await Promise.race([executionPromise, timeoutPromise]);
     } catch (error : unknown) {
       // Check if this is a timeout error
-      if (error.code === 'ETIMEDOUT' || error.isTimeout) {
+      if ((error as NodeJS.ErrnoException).code === 'ETIMEDOUT' || error.isTimeout) {
         const executionTime = Date.now() - startTime;
         
         await db.update(aiBrainJobs)
@@ -656,7 +656,7 @@ export class AIBrainService {
         totalTokens = finalResponse.length / 4;
         log.info(`✅ [Chain-of-Command] ${aiResponse.provider} responded (${finalResponse.length} chars, fallback: ${aiResponse.fallbackUsed})`);
       } catch (routingError : unknown) {
-        log.warn(`⚠️ [Chain-of-Command] ${selectedProvider} routing failed, falling back to Gemini: ${routingError.message}`);
+        log.warn(`⚠️ [Chain-of-Command] ${selectedProvider} routing failed, falling back to Gemini: ${routingError instanceof Error ? routingError.message : String(routingError)}`);
         const response = await geminiClient.generate({
           workspaceId,
           userId,

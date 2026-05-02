@@ -395,7 +395,7 @@ export function registerInvoiceEmailActions() {
 
         return createResult(request.actionId, result.success, result.success ? 'Email sent' : 'Failed to send email', {
           sent: result.success,
-          messageId: (result as Record<string, unknown>).data?.data?.id
+          messageId: (result as {data: unknown}).data?.data?.id
         }, start);
       } catch (error : unknown) {
         return createResult(request.actionId, false, (error instanceof Error ? error.message : String(error)), null, start);

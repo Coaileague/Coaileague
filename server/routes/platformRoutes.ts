@@ -217,7 +217,7 @@ router.get('/master-keys/organizations', async (req: AuthenticatedRequest, res) 
     res.json(results);
   } catch (error: unknown) {
     log.error("Error fetching organizations:", error);
-    if (error instanceof Error && error.name === 'ZodError') {
+    if (error instanceof Error && (error as {name?: string}).name === 'ZodError') {
       return res.status(400).json({ error: "Invalid query parameters", details: (error as Record<string,unknown>).errors });
     }
     res.status(500).json({ error: "Failed to fetch organizations" });
@@ -464,7 +464,7 @@ router.patch('/master-keys/organizations/:id', async (req: AuthenticatedRequest,
     });
   } catch (error: unknown) {
     log.error("Error updating organization:", error);
-    if (error instanceof Error && error.name === 'ZodError') {
+    if (error instanceof Error && (error as {name?: string}).name === 'ZodError') {
       return res.status(400).json({ error: "Invalid request data", details: (error as Record<string,unknown>).errors });
     }
     res.status(500).json({ error: "Failed to update organization" });
@@ -545,7 +545,7 @@ router.post('/master-keys/organizations/:id/reset', async (req: AuthenticatedReq
     });
   } catch (error: unknown) {
     log.error("Error resetting organization:", error);
-    if (error instanceof Error && error.name === 'ZodError') {
+    if (error instanceof Error && (error as {name?: string}).name === 'ZodError') {
       return res.status(400).json({ error: "Invalid request data", details: (error as Record<string,unknown>).errors });
     }
     res.status(500).json({ error: "Failed to reset organization" });

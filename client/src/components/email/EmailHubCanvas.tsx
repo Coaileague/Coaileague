@@ -3873,11 +3873,11 @@ export function EmailHubCanvas() {
       }, 1000);
     },
     onError: (err: Error) => {
-      setSendingError(err.message);
+      setSendingError(err instanceof Error ? err.message : String(err));
       // Keep workflow visible to show error
       setTimeout(() => {
         setShowWorkflowProgress(false);
-        toast({ title: 'Failed to send email', description: err.message, variant: 'destructive' });
+        toast({ title: 'Failed to send email', description: err instanceof Error ? err.message : String(err), variant: 'destructive' });
       }, 2500);
     },
   });

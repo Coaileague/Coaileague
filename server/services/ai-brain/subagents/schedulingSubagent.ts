@@ -573,7 +573,7 @@ Generate a JSON schedule with format:
             llmJudgeWarning = riskEvaluation.reasoning;
           }
         } catch (judgeError : unknown) {
-          log.error('[SchedulingSubagent] LLM Judge evaluation failed, proceeding:', judgeError.message);
+          log.error('[SchedulingSubagent] LLM Judge evaluation failed, proceeding:', judgeError instanceof Error ? judgeError.message : String(judgeError));
         }
 
         // If blocked, return empty schedule with explanation

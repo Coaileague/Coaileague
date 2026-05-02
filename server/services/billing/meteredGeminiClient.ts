@@ -254,7 +254,7 @@ class MeteredGeminiClient {
           creditsDeducted: 0,
           tier: authResult.classification.tier
         },
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }

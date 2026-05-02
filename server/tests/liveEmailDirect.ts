@@ -188,10 +188,10 @@ async function send(to: string, subject: string, html: string, label: string) {
     if ((result as Record<string, unknown>).error) {
       console.error(`  ❌ FAILED: ${JSON.stringify((result as Record<string, unknown>).error)}\n`);
     } else {
-      console.log(`  ✅ MessageId: ${(result as Record<string, unknown>).data?.id ?? JSON.stringify(result)}\n`);
+      console.log(`  ✅ MessageId: ${(result as {data: unknown}).data?.id ?? JSON.stringify(result)}\n`);
     }
   } catch (e: unknown) {
-    console.error(`  ❌ Exception: ${e.message}\n`);
+    console.error(`  ❌ Exception: ${e instanceof Error ? e.message : String(e)}\n`);
   }
 }
 

@@ -491,7 +491,7 @@ export async function importICalFile(
 
       } catch (eventError : unknown) {
         result.eventsFailed++;
-        result.errors.push(`Failed to import event "${event.summary}": ${eventError.message}`);
+        result.errors.push(`Failed to import event "${event.summary}": ${eventError instanceof Error ? eventError.message : String(eventError)}`);
       }
     }
 
@@ -527,13 +527,13 @@ export async function importICalFile(
     });
 
   } catch (parseError : unknown) {
-    result.errors.push(`Failed to parse iCal file: ${parseError.message}`);
+    result.errors.push(`Failed to parse iCal file: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
     
     await db.update(calendarImports)
       .set({
         status: 'failed',
         completedAt: new Date(),
-        errorMessage: parseError.message,
+        errorMessage: parseError instanceof Error ? parseError.message : String(parseError),
       })
       .where(eq(calendarImports.id, importRecord.id));
 
@@ -542,7 +542,7 @@ export async function importICalFile(
       userId,
       eventType: 'sync_error',
       importId: importRecord.id,
-      description: `Calendar import failed: ${parseError.message}`,
+      description: `Calendar import failed: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
     });
   }
 

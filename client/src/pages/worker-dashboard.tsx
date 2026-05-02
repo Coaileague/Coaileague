@@ -864,7 +864,7 @@ function WorkerDashboardInner() {
       if ("vibrate" in navigator) navigator.vibrate([100, 50, 100]);
     },
     onError: (error) => {
-      toast({ title: "Error", description: error.message || "Failed to clock in/out", variant: "destructive" });
+      toast({ title: "Error", description: error instanceof Error ? error.message : String(error) || "Failed to clock in/out", variant: "destructive" });
     },
     onSettled: () => setClockingIn(false),
   });
@@ -1022,7 +1022,7 @@ function WorkerDashboardInner() {
         description: "Proof of service recorded.",
       });
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Could not submit proof photo.";
+      const message = error instanceof Error ? error instanceof Error ? error.message : String(error) : "Could not submit proof photo.";
       toast({
         title: "Photo submission failed",
         description: message,

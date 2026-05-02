@@ -274,11 +274,11 @@ Assign employees to shifts. Return valid JSON only.`;
           }
         } catch {
           log.error("AI Scheduling™ AI - Invalid JSON response:", cleanedResponse.substring(0, 200));
-          throw new Error(`AI returned non-JSON response: ${parseError.message}`);
+          throw new Error(`AI returned non-JSON response: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
         }
       } else {
         log.error("AI Scheduling™ AI - Invalid JSON response:", cleanedResponse.substring(0, 200));
-        throw new Error(`AI returned non-JSON response: ${parseError.message}`);
+        throw new Error(`AI returned non-JSON response: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
       }
     }
     

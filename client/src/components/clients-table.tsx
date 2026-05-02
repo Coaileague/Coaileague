@@ -476,7 +476,7 @@ export function ClientsTable({ workspaceId }: ClientsTableProps) {
       onError: (error: Error) => {
         toast({
           title: "Error",
-          description: error.message || "Failed to delete client",
+          description: error instanceof Error ? error.message : String(error) || "Failed to delete client",
           variant: "destructive",
         });
       },

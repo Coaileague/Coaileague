@@ -329,7 +329,7 @@ export default function Invoices() {
   const invoicesQuery = useQuery<Invoice[]>({
     queryKey: ['/api/invoices', workspaceId],
     enabled: !!workspaceId,
-    queryFn: () => apiFetch('/api/invoices', InvoiceListResponse) as unknown as Promise<Invoice[]>,
+    queryFn: () => apiFetch('/api/invoices', InvoiceListResponse) as Promise<Invoice[]>,
   });
   const {
     data: invoicesData,
@@ -434,7 +434,7 @@ export default function Invoices() {
     createInvoiceMutation.mutate({
       clientId: values.clientId!,
       invoiceNumber: `INV-${Date.now()}`, // Backend requires invoiceNumber
-      dueDate: new Date(values.dueDate as unknown as string).toISOString(),
+      dueDate: new Date(values.dueDate as string).toISOString(),
       subtotal: subtotal.toString(),
       taxAmount: tax.toString(),
       total: total.toString(), // Backend uses 'total', not 'totalAmount'
@@ -704,7 +704,7 @@ export default function Invoices() {
     },
     onError: (error: Error) => toast({ 
       title: "Send Failed", 
-      description: error instanceof Error ? error.message : "Failed to send invoice email.", 
+      description: error instanceof Error ? error instanceof Error ? error.message : String(error) : "Failed to send invoice email.", 
       variant: "destructive" 
     }),
   });
@@ -719,7 +719,7 @@ export default function Invoices() {
     },
     onError: (error: Error) => toast({ 
       title: "Update Failed", 
-      description: error instanceof Error ? error.message : "Failed to update invoice status.", 
+      description: error instanceof Error ? error instanceof Error ? error.message : String(error) : "Failed to update invoice status.", 
       variant: "destructive" 
     }),
   });
@@ -734,7 +734,7 @@ export default function Invoices() {
     },
     onError: (error: Error) => toast({ 
       title: "Action Failed", 
-      description: error instanceof Error ? error.message : "Failed to void invoice.", 
+      description: error instanceof Error ? error instanceof Error ? error.message : String(error) : "Failed to void invoice.", 
       variant: "destructive" 
     }),
   });
@@ -763,7 +763,7 @@ export default function Invoices() {
       id: selectedInvoiceId,
       updates: {
         clientId: values.clientId!,
-        dueDate: new Date(values.dueDate as unknown as string).toISOString(),
+        dueDate: new Date(values.dueDate as string).toISOString(),
         subtotal: subtotal.toString(),
         taxAmount: tax.toString(),
         total: total.toString(),
@@ -781,7 +781,7 @@ export default function Invoices() {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices", workspaceId] });
       setIsEditDialogOpen(false);
     },
-    onError: (error: Error) => toast({ title: "Update Failed", description: error.message, variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "Update Failed", description: error instanceof Error ? error.message : String(error), variant: "destructive" }),
   });
 
   const handleViewDetail = useCallback((invoice: Invoice) => {
@@ -834,7 +834,7 @@ export default function Invoices() {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices", workspaceId] });
       setIsGenerateFromHoursOpen(false);
     },
-    onError: (error: Error) => toast({ title: "Generation Failed", description: error.message || "Failed to generate invoice from hours. Please check your data.", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "Generation Failed", description: error instanceof Error ? error.message : String(error) || "Failed to generate invoice from hours. Please check your data.", variant: "destructive" }),
   });
 
   const createInvoiceMutation = useMutation({
@@ -847,7 +847,7 @@ export default function Invoices() {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices", workspaceId] });
       setIsCreateDialogOpen(false);
     },
-    onError: (error: Error) => toast({ title: "Create Failed", description: error.message || "Failed to create invoice.", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "Create Failed", description: error instanceof Error ? error.message : String(error) || "Failed to create invoice.", variant: "destructive" }),
   });
 
   const generateInvoiceMutation = useMutation({
@@ -860,7 +860,7 @@ export default function Invoices() {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices", workspaceId] });
       setIsReviewDialogOpen(false);
     },
-    onError: (error: Error) => toast({ title: "Generation Failed", description: error.message || "Failed to generate invoice.", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "Generation Failed", description: error instanceof Error ? error.message : String(error) || "Failed to generate invoice.", variant: "destructive" }),
   });
 
   const autoGenerateMutation = useMutation({
@@ -872,7 +872,7 @@ export default function Invoices() {
       toast({ title: "Auto-Generate Complete", description: data?.message || "Invoices auto-generated from unbilled hours." });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices", workspaceId] });
     },
-    onError: (error: Error) => toast({ title: "Auto-Generate Failed", description: error.message || "Failed to auto-generate invoices.", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "Auto-Generate Failed", description: error instanceof Error ? error.message : String(error) || "Failed to auto-generate invoices.", variant: "destructive" }),
   });
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -884,7 +884,7 @@ export default function Invoices() {
       setSelectedIds([]);
       toast({ title: "✅ Invoices resent", description: "Selected invoices have been resent to clients." });
     },
-    onError: (error: Error) => toast({ title: "Resend Failed", description: error.message || "Failed to resend invoices.", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "Resend Failed", description: error instanceof Error ? error.message : String(error) || "Failed to resend invoices.", variant: "destructive" }),
   });
 
   const sendAllDraftsMutation = useMutation({
@@ -893,7 +893,7 @@ export default function Invoices() {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices", workspaceId] });
       toast({ title: "✅ All draft invoices sent", description: "All draft invoices have been sent to clients." });
     },
-    onError: (error: Error) => toast({ title: "Send Failed", description: error.message || "Failed to send draft invoices.", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "Send Failed", description: error instanceof Error ? error.message : String(error) || "Failed to send draft invoices.", variant: "destructive" }),
   });
 
   const handleGenerateFromHours = () => {

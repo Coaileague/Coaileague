@@ -461,7 +461,7 @@ class AutonomousFixPipelineService {
             description: spec.approach,
             confidence: spec.confidence,
             detectionMethod: 'autonomous_fix_pipeline',
-          } as unknown as GapFinding & { id: number },
+          } as GapFinding & { id: number },
           {
             affectedFiles: spec.affectedFiles,
             changes: spec.patches,

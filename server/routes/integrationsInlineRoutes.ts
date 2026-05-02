@@ -303,7 +303,7 @@ router.get('/health', requireAuth, async (req: AuthenticatedRequest, res) => {
       try {
         await validateWebhookUrl(targetUrl);
       } catch (ssrfErr : unknown) {
-        return res.status(400).json({ message: `Invalid webhook URL: ${ssrfErr.message}` });
+        return res.status(400).json({ message: `Invalid webhook URL: ${ssrfErr instanceof Error ? ssrfErr.message : String(ssrfErr)}` });
       }
       
       const [webhook] = await db

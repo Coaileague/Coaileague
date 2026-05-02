@@ -247,7 +247,7 @@ export function registerExternalIntelligenceActions() {
 
     return {
       success: true,
-      flagId: (run as Record<string, unknown>).id,
+      flagId: (run as {id: string}).id,
       riskType,
       siteName: site?.name,
       notified: 'managers'

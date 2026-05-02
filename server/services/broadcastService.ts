@@ -98,7 +98,7 @@ class BroadcastService {
     }).catch((err: unknown) => log.warn('[BroadcastService] publish broadcast_created failed:', err.message));
 
     log.info(`[BroadcastService] Broadcast created: ${broadcast.id}`);
-    return broadcast as unknown as Broadcast;
+    return broadcast as Broadcast;
   }
 
   // ============================================
@@ -438,7 +438,7 @@ class BroadcastService {
     // Trigger AI analysis in background
     this.analyzeFeedbackAsync(feedback.id, request.content, workspaceId);
 
-    return feedback as unknown as BroadcastFeedback;
+    return feedback as BroadcastFeedback;
   }
 
   // ============================================
@@ -532,7 +532,7 @@ ${content}`;
       offset: params.offset || 0,
     });
 
-    return result as unknown as Broadcast[];
+    return result as Broadcast[];
   }
 
   // ============================================
@@ -668,7 +668,7 @@ ${content}`;
     });
 
     return {
-      feedbacks: allFeedback as unknown as BroadcastFeedback[],
+      feedbacks: allFeedback as BroadcastFeedback[],
       total: countResult.length,
     };
   }
@@ -689,7 +689,7 @@ ${content}`;
       .where(eq(broadcasts.id, broadcastId))
       .returning();
 
-    return updated as unknown as Broadcast;
+    return updated as Broadcast;
   }
 
   // ============================================

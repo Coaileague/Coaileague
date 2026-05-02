@@ -220,11 +220,11 @@ RESPOND IN THIS EXACT JSON FORMAT:
       };
     } catch (error : unknown) {
       // Handle specific OpenAI errors
-      if (error.code === 'insufficient_quota') {
+      if ((error as NodeJS.ErrnoException).code === 'insufficient_quota') {
         log.error("PredictionOS™: OpenAI quota exceeded. Using fallback analysis.");
-      } else if (error.code === 'rate_limit_exceeded') {
+      } else if ((error as NodeJS.ErrnoException).code === 'rate_limit_exceeded') {
         log.error("PredictionOS™: Rate limit exceeded. Using fallback analysis.");
-      } else if (error.status === 401) {
+      } else if ((error as {status: string}).status === 401) {
         log.error("PredictionOS™: Invalid API key. Using fallback analysis.");
       } else {
         log.error("PredictionOS™ AI analysis failed:", (error instanceof Error ? error.message : String(error)) || error);

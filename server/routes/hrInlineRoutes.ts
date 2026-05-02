@@ -296,7 +296,7 @@ router.get("/manager/command-center", requireManager, async (req: AuthenticatedR
         .limit(20);
       pendingDocCount = pendingDocs.length;
     } catch (err: unknown) {
-      log.warn('[HRInline] Failed to update onboarding status', { error: err.message });
+      log.warn('[HRInline] Failed to update onboarding status', { error: err instanceof Error ? err.message : String(err) });
     }
 
     let openIncidents: (string | number | boolean | null)[] = [];
@@ -314,7 +314,7 @@ router.get("/manager/command-center", requireManager, async (req: AuthenticatedR
         .orderBy(desc(incidents.createdAt))
         .limit(10);
     } catch (err: unknown) {
-      log.warn('[HRInline] Failed to update onboarding status', { error: err.message });
+      log.warn('[HRInline] Failed to update onboarding status', { error: err instanceof Error ? err.message : String(err) });
     }
 
     const recentNotifications = await db.select({

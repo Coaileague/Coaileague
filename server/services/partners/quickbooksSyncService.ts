@@ -436,7 +436,7 @@ export class QuickBooksSyncService {
           aggregateId: jobId,
           aggregateType: 'sync_job',
           payload: {
-            errorMessage: error.message,
+            errorMessage: error instanceof Error ? error.message : String(error),
             aiAction: errorAnalysis.action,
             aiReasoning: errorAnalysis.reasoning,
             shouldRetry: errorAnalysis.shouldRetry,
@@ -475,14 +475,14 @@ export class QuickBooksSyncService {
             }).catch(() => null)
           ));
         } catch (notifyErr : unknown) {
-          log.error('[QuickBooksSyncService] Failed to notify org owner on ABORT/ESCALATE:', notifyErr.message);
+          log.error('[QuickBooksSyncService] Failed to notify org owner on ABORT/ESCALATE:', notifyErr instanceof Error ? notifyErr.message : String(notifyErr));
         }
       }
 
       await this.updateSyncLog(jobId, {
         status: 'failed',
         errorDetails: { 
-          message: error.message,
+          message: error instanceof Error ? error.message : String(error),
           aiAnalysis: errorAnalysis,
         },
       });
@@ -494,7 +494,7 @@ export class QuickBooksSyncService {
         recordsMatched,
         recordsCreated,
         recordsReviewRequired,
-        errors: [`${error.message} (AI: ${errorAnalysis.action} - ${errorAnalysis.reasoning})`],
+        errors: [`${error instanceof Error ? error.message : String(error)} (AI: ${errorAnalysis.action} - ${errorAnalysis.reasoning})`],
         durationMs: Date.now() - startTime,
       };
     }
@@ -803,7 +803,7 @@ export class QuickBooksSyncService {
           
           log.info(`[QuickBooksSyncService] Sent invite to ${emp.email} for employee ${emp.employeeId}`);
         } catch (inviteError : unknown) {
-          log.error(`[QuickBooksSyncService] Failed to invite ${emp.email}: ${inviteError.message}`);
+          log.error(`[QuickBooksSyncService] Failed to invite ${emp.email}: ${inviteError instanceof Error ? inviteError.message : String(inviteError)}`);
         }
       }
       
@@ -916,7 +916,7 @@ export class QuickBooksSyncService {
             created++;
           }
         } catch (itemError : unknown) {
-          errors.push(`Item ${qboItem.Name}: ${itemError.message}`);
+          errors.push(`Item ${qboItem.Name}: ${itemError instanceof Error ? itemError.message : String(itemError)}`);
         }
       }
       
@@ -2390,14 +2390,14 @@ export class QuickBooksSyncService {
     shouldRetry: boolean;
     retryDelayMs?: number;
   }> {
-    log.info(`[QuickBooksSyncService] Analyzing error with Gemini AI: ${error.message}`);
+    log.info(`[QuickBooksSyncService] Analyzing error with Gemini AI: ${error instanceof Error ? error.message : String(error)}`);
 
     try {
       const prompt = `You are a QuickBooks integration specialist. Analyze this sync error and recommend an action.
 
 ERROR DETAILS:
-- Message: ${error.message}
-- Code: ${error.code || 'unknown'}
+- Message: ${error instanceof Error ? error.message : String(error)}
+- Code: ${(error as NodeJS.ErrnoException).code || 'unknown'}
 - Operation: ${context.operation}
 - Entity Type: ${context.entityType || 'unknown'}
 - Retry Count: ${context.retryCount}
@@ -2456,7 +2456,7 @@ Respond in JSON format:
               content: {
                 operation: context.operation,
                 retryCount: context.retryCount,
-                errorMessage: error.message,
+                errorMessage: error instanceof Error ? error.message : String(error),
                 aiRecommendation: parsed.action,
               },
               context: { entityType: context.entityType },
@@ -2488,13 +2488,13 @@ Respond in JSON format:
         };
       }
     } catch (aiError : unknown) {
-      log.error('[QuickBooksSyncService] Gemini analysis failed:', aiError.message);
+      log.error('[QuickBooksSyncService] Gemini analysis failed:', aiError instanceof Error ? aiError.message : String(aiError));
     }
 
     // Fallback: Basic error classification without AI
-    const isRateLimit = error.message?.includes('rate') || error.message?.includes('429');
-    const isAuth = error.message?.includes('auth') || error.message?.includes('401') || error.message?.includes('403');
-    const isTimeout = error.message?.includes('timeout') || error.message?.includes('ETIMEDOUT');
+    const isRateLimit = error instanceof Error ? error.message : String(error)?.includes('rate') || error instanceof Error ? error.message : String(error)?.includes('429');
+    const isAuth = error instanceof Error ? error.message : String(error)?.includes('auth') || error instanceof Error ? error.message : String(error)?.includes('401') || error instanceof Error ? error.message : String(error)?.includes('403');
+    const isTimeout = error instanceof Error ? error.message : String(error)?.includes('timeout') || error instanceof Error ? error.message : String(error)?.includes('ETIMEDOUT');
 
     if (context.retryCount >= 3) {
       return { action: 'ABORT', reasoning: 'Max retries exceeded', shouldRetry: false };

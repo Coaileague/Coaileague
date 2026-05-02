@@ -71,7 +71,7 @@ async function run() {
     const row = (result.rows || result)[0] as unknown;
     check('DB:connect', true, `Connected to: ${row?.current_database ?? 'ok'}`);
   } catch (err : unknown) {
-    check('DB:connect', false, `FAILED: ${err.message}`);
+    check('DB:connect', false, `FAILED: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   // ── 4. Critical source-of-truth files ────────────────────────────────────

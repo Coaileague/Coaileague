@@ -89,7 +89,7 @@ async function main() {
         console.log(`[Trinity:FillShifts]   AI Summary: ${result.summary.substring(0, 120)}`);
       }
     } catch (err : unknown) {
-      console.log(`ERROR — ${err.message}`);
+      console.log(`ERROR — ${err instanceof Error ? err instanceof Error ? err.message : String(err) : String(err)}`);
       unresolved.push(...batchShifts.map((s: unknown) => s.id));
     }
   }
@@ -126,7 +126,7 @@ async function main() {
       }
     } catch (err : unknown) {
       dbErrors++;
-      console.error(`[Trinity:FillShifts] DB error for shift ${assignment.shiftId}: ${err.message}`);
+      console.error(`[Trinity:FillShifts] DB error for shift ${assignment.shiftId}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 

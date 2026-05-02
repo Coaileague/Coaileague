@@ -508,7 +508,7 @@ class DurableJobQueueService {
     const row = result[0];
     return {
       id: row.id,
-      workspaceId: (row as Record<string, unknown>).workspaceId,
+      workspaceId: (row as {workspaceId: string}).workspaceId,
       type: row.type,
       payload: row.payload as Record<string, unknown>,
       priority: row.priority as JobPriority,

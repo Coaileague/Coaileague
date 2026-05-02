@@ -491,9 +491,9 @@ class MessageBridgeService {
         providerResponse = result.providerResponse;
         deliveryStatus = providerResponse?.status === 'failed' ? 'failed' : 'sent';
       } catch (sendError : unknown) {
-        log.error('Outbound send failed', { channelType, error: sendError.message });
+        log.error('Outbound send failed', { channelType, error: sendError instanceof Error ? sendError.message : String(sendError) });
         deliveryStatus = 'failed';
-        providerResponse = { error: sendError.message };
+        providerResponse = { error: sendError instanceof Error ? sendError.message : String(sendError) };
       }
     } else {
       log.warn('No provider adapter for channel type', { channelType });

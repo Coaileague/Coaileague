@@ -87,7 +87,7 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
       return true;
     } catch (err: unknown) {
       setHasPermission(false);
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      if (err instanceof Error ? (err as {name?: string}).name : "Error" === 'NotAllowedError' || err instanceof Error ? (err as {name?: string}).name : "Error" === 'PermissionDeniedError') {
         handleError('permission_denied', 'Microphone permission denied. Please allow access to use voice commands.');
       } else {
         handleError('unknown', 'Failed to access microphone.');
@@ -211,7 +211,7 @@ export function useVoiceCommand(options: UseVoiceCommandOptions = {}) {
 
     } catch (err: unknown) {
       console.error('[VoiceCommand] start error:', (err instanceof Error ? err.message : String(err)));
-      if (err.name === 'NotAllowedError') {
+      if (err instanceof Error ? (err as {name?: string}).name : "Error" === 'NotAllowedError') {
         handleError('permission_denied', 'Microphone permission denied.');
       } else {
         handleError('unknown', 'Failed to start recording.');

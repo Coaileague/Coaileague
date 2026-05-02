@@ -828,7 +828,7 @@ router.post('/macros', async (req: AuthenticatedRequest, res) => {
     res.status(201).json(macro);
   } catch (error: unknown) {
     log.error("Error creating chat macro:", error);
-    if (error.name === 'ZodError') {
+    if (error instanceof Error ? (error as {name?: string}).name : "Error" === 'ZodError') {
       return res.status(400).json({ message: "Invalid macro data", errors: error.errors });
     }
     res.status(500).json({ message: "Failed to create chat macro" });

@@ -105,13 +105,13 @@ export function registerEmergencyStaffingActions() {
     }).returning();
 
     await db.insert(orchestrationRunSteps).values({
-      runId: (run as Record<string, unknown>).id,
+      runId: (run as {id: string}).id,
       stepNumber: 1,
       stepName: 'Incident Declared',
       stepType: 'action',
       status: 'completed',
       inputData: { type, affectedSiteIds },
-      outputData: { incidentId: (run as Record<string, unknown>).id, declaredAt: new Date().toISOString() },
+      outputData: { incidentId: (run as {id: string}).id, declaredAt: new Date().toISOString() },
       startedAt: new Date(),
       completedAt: new Date(),
       workspaceId,
@@ -139,7 +139,7 @@ export function registerEmergencyStaffingActions() {
     }
 
     return {
-      incidentId: (run as Record<string, unknown>).id,
+      incidentId: (run as {id: string}).id,
       status: 'active',
       nearbyOfficersCount: nearbyOfficers.length,
       nearbyOfficers: nearbyOfficers.slice(0, 10).map(o => ({ id: o.id, name: `${o.firstName} ${o.lastName}`, distance: Math.round(o.distance) }))

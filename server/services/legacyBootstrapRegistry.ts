@@ -80,7 +80,7 @@ export async function runLegacyBootstraps(): Promise<void> {
   for (const entry of registry) {
     if (entry.ran) continue;
     try {
-      await entry.fn(pool as unknown as Pool);
+      await entry.fn(pool as Pool);
       entry.ran = true;
       results.ok++;
     } catch (err: unknown) {

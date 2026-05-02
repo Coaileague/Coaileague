@@ -6,7 +6,7 @@ import { runFullSystemStressTest } from './fullSystemStressTest';
     const failed = results.filter(r => !r.passed).length;
     process.exit(failed > 0 ? 1 : 0);
   } catch (e: unknown) {
-    console.error('Test runner crashed:', e.message);
+    console.error('Test runner crashed:', e instanceof Error ? e.message : String(e));
     process.exit(1);
   }
 })();

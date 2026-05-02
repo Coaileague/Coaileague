@@ -671,7 +671,7 @@ class OnboardingOrchestrator {
           this.log.warn(`[OnboardingOrchestrator] Trial start warning: ${trialResult.error}`);
         }
       } catch (trialError : unknown) {
-        this.log.warn('[OnboardingOrchestrator] Trial start failed (may already exist):', trialError.message);
+        this.log.warn('[OnboardingOrchestrator] Trial start failed (may already exist):', trialError instanceof Error ? trialError.message : String(trialError));
       }
 
       // Step 2: Initialize billing onboarding pipeline (gamified tasks + discount reward)
@@ -685,7 +685,7 @@ class OnboardingOrchestrator {
         };
         this.log.info(`[OnboardingOrchestrator] Billing pipeline initialized: ${pipelineProgress.totalTasks} tasks`);
       } catch (pipelineError : unknown) {
-        this.log.warn('[OnboardingOrchestrator] Pipeline init warning:', pipelineError.message);
+        this.log.warn('[OnboardingOrchestrator] Pipeline init warning:', pipelineError instanceof Error ? pipelineError.message : String(pipelineError));
       }
 
       // Step 3: Generate Trinity welcome message

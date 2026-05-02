@@ -4717,7 +4717,7 @@ export class DatabaseStorage implements IStorage {
         );
       return Number(logs[0]?.count || 0);
     } catch (error : unknown) {
-      if (error.code === '42P01') {
+      if ((error as NodeJS.ErrnoException).code === '42P01') {
         return 0;
       }
       throw error;
@@ -8987,9 +8987,9 @@ export class DatabaseStorage implements IStorage {
     return rows.map(r => ({
       ...r,
       adminUserId: r.userId,
-      sessionId: (r as Record<string, unknown>).metadata?.sessionId,
-      severity: (r as Record<string, unknown>).metadata?.severity,
-      action: (r as Record<string, unknown>).metadata?.action,
+      sessionId: (r as {metadata: Record<string, unknown>}).metadata?.sessionId,
+      severity: (r as {metadata: Record<string, unknown>}).metadata?.severity,
+      action: (r as {metadata: Record<string, unknown>}).metadata?.action,
       timestamp: r.createdAt,
     })) as unknown[];
   }

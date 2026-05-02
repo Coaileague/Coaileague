@@ -56,7 +56,7 @@ async function notifyUser(
   await createNotification({ workspaceId, userId, type: 'drug_test', title, message, priority,
  idempotencyKey: `drug_test-${String(Date.now())}-${'system'}`,
         })
-    .catch((err: Error) => log.warn(`[TrinityDrugTesting] Notification persist failed for user ${userId}:`, err.message));
+    .catch((err: Error) => log.warn(`[TrinityDrugTesting] Notification persist failed for user ${userId}:`, err instanceof Error ? err.message : String(err)));
 }
 
 export function registerDrugTestingActions() {
@@ -93,7 +93,7 @@ export function registerDrugTestingActions() {
       updatedAt: new Date(),
     }).returning();
 
-    const testId = (run as Record<string, unknown>).id;
+    const testId = (run as {id: string}).id;
     if (employee.userId) {
       await notifyUser(
         workspaceId,
@@ -106,7 +106,7 @@ export function registerDrugTestingActions() {
 
     return {
       success: true,
-      testId: (run as Record<string, unknown>).id,
+      testId: (run as {id: string}).id,
       employeeName: inputParams.employeeName,
       deadline
     };

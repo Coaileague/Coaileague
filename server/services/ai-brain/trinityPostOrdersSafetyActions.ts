@@ -65,7 +65,7 @@ const getPostOrdersForShift = mkAction('postorders.get_for_shift', async (req) =
       `${orders.length} post order(s) for shift ${shiftId}. ${acks.length} acknowledgment(s) recorded.`,
       { shiftId, orders, acknowledgments: acks, hasOrders: true }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -79,7 +79,7 @@ const getPostOrderTemplates = mkAction('postorders.list_templates', async (req) 
       .orderBy(desc(postOrderTemplates.createdAt));
     return createResult(req.actionId, true, `${templates.length} active post order template(s)`, { templates }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -104,7 +104,7 @@ const createPostOrderForShift = mkAction('postorders.create_for_shift', async (r
 
     return createResult(req.actionId, true, `Post order "${title}" created for shift ${shiftId}`, { order }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -132,7 +132,7 @@ const confirmOfficerAcknowledged = mkAction('postorders.confirm_acknowledgment',
 
     return createResult(req.actionId, true, `Acknowledgment recorded for officer ${employeeId}`, { ack }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -156,7 +156,7 @@ const getUnacknowledgedPostOrders = mkAction('postorders.get_unacknowledged', as
 
     return createResult(req.actionId, true, `${unacked.length} post order(s) with no acknowledgments`, { unacknowledged: unacked, count: unacked.length }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -182,7 +182,7 @@ const flagPostOrderDeviation = mkAction('postorders.flag_deviation', async (req)
 
     return createResult(req.actionId, true, `Post order deviation flagged for shift ${shiftId} — managers notified`, { shiftId, deviation: incidentDescription, notified: managers.length }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -214,7 +214,7 @@ const applyTemplateToShift = mkAction('postorders.apply_template', async (req) =
 
     return createResult(req.actionId, true, `Template "${template.title}" applied to shift ${shiftId}`, { order, template }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -227,7 +227,7 @@ const startWelfareMonitoring = mkAction('safety.start_welfare_monitoring', async
     const status = loneWorkerSafetyService.getStatus();
     return createResult(req.actionId, true, 'Lone worker welfare monitoring activated — officers working solo shifts will receive periodic check-ins', status, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -237,7 +237,7 @@ const stopWelfareMonitoring = mkAction('safety.stop_welfare_monitoring', async (
     loneWorkerSafetyService.stop();
     return createResult(req.actionId, true, 'Lone worker welfare monitoring stopped', { running: false }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -247,7 +247,7 @@ const getWelfareMonitoringStatus = mkAction('safety.welfare_status', async (req)
     const status = loneWorkerSafetyService.getStatus();
     return createResult(req.actionId, true, `Welfare monitoring is ${status.running ? 'active' : 'inactive'}`, status, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -259,7 +259,7 @@ const acknowledgeWelfareCheck = mkAction('safety.acknowledge_welfare_check', asy
     const result = await loneWorkerSafetyService.acknowledgeWelfareCheck(checkId, employeeId);
     return createResult(req.actionId, result, result ? `Check-in confirmed for officer ${employeeId}` : 'Check-in not found or already resolved', { checkId, employeeId, acknowledged: result }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -271,7 +271,7 @@ const resolveWelfareCheck = mkAction('safety.resolve_welfare_check', async (req)
     const result = (loneWorkerSafetyService as Record<string,unknown>).resolveCheck?.(checkId);
     return createResult(req.actionId, true, `Welfare check ${checkId} resolved`, { checkId, resolved: true }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -293,7 +293,7 @@ const triggerPanic = mkAction('safety.trigger_panic', async (req) => {
     });
     return createResult(req.actionId, true, `⚠️ PANIC ALERT INITIATED for ${officerName}${postName ? ' at ' + postName : ''}. Emergency chain notified. Supervisors alerted.`, { panicEventId: event.id, status: event.status }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -305,7 +305,7 @@ const acknowledgePanic = mkAction('safety.acknowledge_panic', async (req) => {
     await panicProtocolService.acknowledgePanic(panicId, acknowledgedBy);
     return createResult(req.actionId, true, `Panic alert ${panicId} acknowledged by ${acknowledgedBy}`, { panicId, acknowledged: true }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -317,7 +317,7 @@ const resolvePanic = mkAction('safety.resolve_panic', async (req) => {
     await panicProtocolService.resolvePanic(panicId, resolution, !!falseAlarm);
     return createResult(req.actionId, true, `Panic event ${panicId} resolved. ${falseAlarm ? 'Marked as false alarm.' : 'Incident logged.'}`, { panicId, resolved: true, falseAlarm: !!falseAlarm }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -332,7 +332,7 @@ const getActivePanics = mkAction('safety.get_active_panics', async (req) => {
       : `⚠️ ${active.length} ACTIVE PANIC ALERT(S) — immediate supervisor response required`;
     return createResult(req.actionId, active.length === 0, message, { activePanics: active, count: active.length }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 
@@ -345,7 +345,7 @@ const getPanicEvent = mkAction('safety.get_panic_event', async (req) => {
     if (!event) return createResult(req.actionId, false, `Panic event ${panicId} not found`, null, start);
     return createResult(req.actionId, true, `Panic event ${panicId}: status=${(event as Record<string,unknown>).status}`, { event }, start);
   } catch (e: unknown) {
-    return createResult(req.actionId, false, e.message, null, start);
+    return createResult(req.actionId, false, e instanceof Error ? e.message : String(e), null, start);
   }
 });
 

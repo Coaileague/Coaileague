@@ -348,7 +348,7 @@ class AIBrainMasterOrchestrator {
           );
           log.info(`[AI Brain Orchestrator] Sent ${memberInfo?.workspaceId ? 'workspace' : 'user'}-scoped notification to user ${userId}`);
         } catch (lookupError: unknown) {
-          log.error(`[AI Brain Orchestrator] Failed to lookup workspace, falling back to user-scoped: ${lookupError.message}`);
+          log.error(`[AI Brain Orchestrator] Failed to lookup workspace, falling back to user-scoped: ${lookupError instanceof Error ? lookupError.message : String(lookupError)}`);
           // Fall back to user-scoped notification via notifyUser with null workspaceId
           await this.notifyUser(
             userId,
@@ -959,7 +959,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: true,
             actionId: request.actionId,
-            message: `Duplicated ${(result as Record<string, unknown>).shiftsCreated} shifts to new week`,
+            message: `Duplicated ${(result as {shiftsCreated: number}).shiftsCreated} shifts to new week`,
             data: result,
             executionTimeMs: Date.now() - startTime,
             notificationSent: true
@@ -2673,7 +2673,7 @@ class AIBrainMasterOrchestrator {
             const [dbResult] = await db.select({ count: sql<number>`1` }).from(employees).limit(1);
             healthChecks.push({ service: 'database', status: 'healthy', latencyMs: Date.now() - startTime });
           } catch (dbError: unknown) {
-            healthChecks.push({ service: 'database', status: 'unhealthy', error: dbError.message });
+            healthChecks.push({ service: 'database', status: 'unhealthy', error: dbError instanceof Error ? dbError.message : String(dbError) });
           }
           
           // Check Stripe connectivity
@@ -2683,7 +2683,7 @@ class AIBrainMasterOrchestrator {
             await stripeClient.balance.retrieve();
             healthChecks.push({ service: 'stripe', status: 'healthy' });
           } catch (stripeError: unknown) {
-            healthChecks.push({ service: 'stripe', status: 'degraded', error: stripeError.message });
+            healthChecks.push({ service: 'stripe', status: 'degraded', error: stripeError instanceof Error ? stripeError.message : String(stripeError) });
           }
           
           // Check WebSocket connections - basic connectivity check
@@ -2695,7 +2695,7 @@ class AIBrainMasterOrchestrator {
               activeConnections: 'monitoring available'
             });
           } catch (wsError: unknown) {
-            healthChecks.push({ service: 'websocket', status: 'unknown', error: wsError.message });
+            healthChecks.push({ service: 'websocket', status: 'unknown', error: wsError instanceof Error ? wsError.message : String(wsError) });
           }
           
           const unhealthyServices = healthChecks.filter(h => h.status === 'unhealthy');

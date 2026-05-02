@@ -111,7 +111,7 @@ spsNegotiationRouter.post('/', async (req: AuthenticatedRequest, res) => {
       proposalPortalUrl: `/sps-proposal/${clientAccessToken}`,
     });
   } catch (err: unknown) {
-    if (err.name === 'ZodError') return res.status(400).json({ error: 'Validation error', details: err.errors });
+    if (err instanceof Error ? (err as {name?: string}).name : "Error" === 'ZodError') return res.status(400).json({ error: 'Validation error', details: err.errors });
     res.status(500).json({ error: 'Failed to create negotiation thread' });
   }
 });
@@ -238,7 +238,7 @@ Original message: "${input.messageRaw.replace(/"/g, "'")}"`;
       aiEnhancedVersion: messageAiEnhanced,
     });
   } catch (err: unknown) {
-    if (err.name === 'ZodError') return res.status(400).json({ error: 'Validation error', details: err.errors });
+    if (err instanceof Error ? (err as {name?: string}).name : "Error" === 'ZodError') return res.status(400).json({ error: 'Validation error', details: err.errors });
     log.error('[spsNegotiationRoutes] POST message error:', err);
     res.status(500).json({ error: 'Failed to send message' });
   }

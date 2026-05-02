@@ -181,7 +181,7 @@ class TrinityActionReasonerService {
         aiResult = this.parseAIResponse(geminiResult.text, perceptionThoughtId);
       }
     } catch (err) {
-      log.warn(`[TrinityActionReasoner] AI call failed for ${ctx.domain}, using heuristic fallback:`, err instanceof Error ? err.message : 'unknown');
+      log.warn(`[TrinityActionReasoner] AI call failed for ${ctx.domain}, using heuristic fallback:`, err instanceof Error ? err instanceof Error ? err.message : String(err) : 'unknown');
     }
 
     // --- FALLBACK: heuristic decision when AI unavailable ---
@@ -396,7 +396,7 @@ Required JSON structure:
       log.warn(`[TrinityActionReasoner] Unparseable response (${rawText.length} chars): "${rawText.slice(0, 120)}"`);
       throw new Error('No JSON found in AI response');
     } catch (err) {
-      log.warn('[TrinityActionReasoner] Failed to parse AI response:', err instanceof Error ? err.message : 'unknown');
+      log.warn('[TrinityActionReasoner] Failed to parse AI response:', err instanceof Error ? err instanceof Error ? err.message : String(err) : 'unknown');
       return this.defaultProceed(perceptionThoughtId, false);
     }
   }

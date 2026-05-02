@@ -160,7 +160,7 @@ export async function calculateOfficerComplianceScore(
     .where(and(
       eq(employeeDocuments.employeeId, officerId),
       eq(employeeDocuments.workspaceId, workspaceId),
-      inArray(employeeDocuments.documentType, ONBOARDING_REQUIRED_TYPES as unknown as string[]),
+      inArray(employeeDocuments.documentType, ONBOARDING_REQUIRED_TYPES as string[]),
     ));
 
   const uploadedTypes = new Set(uploadedDocs.map((d) => d.docType));

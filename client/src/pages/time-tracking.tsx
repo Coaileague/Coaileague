@@ -282,7 +282,7 @@ export default function TimeTracking() {
       stopCamera();
     },
     onError: (error) => {
-      trinity.error(error.message || "Failed to clock in. Please try again.", "Clock In Failed");
+      trinity.error(error instanceof Error ? error.message : String(error) || "Failed to clock in. Please try again.", "Clock In Failed");
     },
   });
 
@@ -324,7 +324,7 @@ export default function TimeTracking() {
       stopCamera();
     },
     onError: (error) => {
-      trinity.error(error.message || "Failed to clock out. Please try again.", "Clock Out Failed");
+      trinity.error(error instanceof Error ? error.message : String(error) || "Failed to clock out. Please try again.", "Clock Out Failed");
     },
   });
 
@@ -338,7 +338,7 @@ export default function TimeTracking() {
       trinity.info(`Enjoy your ${variables.breakType === 'meal' ? 'meal' : 'rest'} break! Take your time.`, "Break Started");
     },
     onError: (error) => {
-      trinity.error(error.message || "Failed to start break. Please try again.", "Break Start Failed");
+      trinity.error(error instanceof Error ? error.message : String(error) || "Failed to start break. Please try again.", "Break Start Failed");
     },
   });
 
@@ -352,7 +352,7 @@ export default function TimeTracking() {
       trinity.info("Welcome back! You're now on the clock again.", "Break Ended");
     },
     onError: (error) => {
-      trinity.error(error.message || "Failed to end break. Please try again.", "Break End Failed");
+      trinity.error(error instanceof Error ? error.message : String(error) || "Failed to end break. Please try again.", "Break End Failed");
     },
   });
 
@@ -363,7 +363,7 @@ export default function TimeTracking() {
       trinity.success("Time entry approved successfully!", "Entry Approved");
     },
     onError: (error) => {
-      trinity.error(error.message || "Failed to approve entry. Please try again.", "Approval Failed");
+      trinity.error(error instanceof Error ? error.message : String(error) || "Failed to approve entry. Please try again.", "Approval Failed");
     },
   });
 
@@ -377,7 +377,7 @@ export default function TimeTracking() {
       setRejectReason("");
     },
     onError: (error) => {
-      trinity.error(error.message || "Failed to reject entry. Please try again.", "Rejection Failed");
+      trinity.error(error instanceof Error ? error.message : String(error) || "Failed to reject entry. Please try again.", "Rejection Failed");
     },
   });
 
@@ -417,7 +417,7 @@ export default function TimeTracking() {
         },
         (error) => {
           setIsCapturingGPS(false);
-          switch (error.code) {
+          switch ((error as NodeJS.ErrnoException).code) {
             case error.PERMISSION_DENIED:
               // User denied the native prompt — set sentinel so UI shows settings guidance, no toast
               setGpsError("denied");
@@ -479,13 +479,13 @@ export default function TimeTracking() {
     } catch (error : unknown) {
       setIsCameraLoading(false);
 
-      if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+      if ((error as {name?: string}).name === "NotAllowedError" || (error as {name?: string}).name === "PermissionDeniedError") {
         // User denied the native browser prompt — show settings guide, no toast
         setCameraPermissionDenied(true);
-      } else if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
+      } else if ((error as {name?: string}).name === "NotFoundError" || (error as {name?: string}).name === "DevicesNotFoundError") {
         setCameraSupported(false);
         toast({ title: "No Camera Found", description: "No camera detected. Use 'Upload Photo' to select or capture an image.", variant: "destructive" });
-      } else if (error.name === "OverconstrainedError" || error.name === "ConstraintNotSatisfiedError") {
+      } else if ((error as {name?: string}).name === "OverconstrainedError" || (error as {name?: string}).name === "ConstraintNotSatisfiedError") {
         // Rear camera constraint failed — fall back to any camera
         try {
           const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
@@ -495,14 +495,14 @@ export default function TimeTracking() {
             setIsCameraActive(true);
           }
         } catch (fallbackErr : unknown) {
-          if (fallbackErr.name === "NotAllowedError" || fallbackErr.name === "PermissionDeniedError") {
+          if (fallbackErr instanceof Error ? (fallbackErr as {name?: string}).name : "Error" === "NotAllowedError" || fallbackErr instanceof Error ? (fallbackErr as {name?: string}).name : "Error" === "PermissionDeniedError") {
             setCameraPermissionDenied(true);
           } else {
             setCameraSupported(false);
             toast({ title: "Camera Unavailable", description: "Camera could not be started. Use 'Upload Photo' to capture an image.", variant: "destructive" });
           }
         }
-      } else if (error.name === "NotReadableError" || error.name === "TrackStartError") {
+      } else if ((error as {name?: string}).name === "NotReadableError" || (error as {name?: string}).name === "TrackStartError") {
         toast({ title: "Camera In Use", description: "Camera is being used by another app. Close other apps and tap 'Start Camera' again, or use 'Upload Photo'.", variant: "destructive" });
       } else {
         toast({ title: "Camera Error", description: "Camera could not be started. Use 'Upload Photo' to capture an image.", variant: "destructive" });
@@ -891,7 +891,7 @@ export default function TimeTracking() {
       setBulkSelectedEmployees(new Set());
     },
     onError: (error) => {
-      trinity.error(error.message || "Failed to approve entries", "Bulk Approval Failed");
+      trinity.error(error instanceof Error ? error.message : String(error) || "Failed to approve entries", "Bulk Approval Failed");
     },
   });
 

@@ -121,7 +121,7 @@ class AIBrainWorkflowExecutor {
         JSON.parse(params.content);
         return { valid: true };
       } catch (e: unknown) {
-        return { valid: false, error: e.message };
+        return { valid: false, error: e instanceof Error ? e.message : String(e) };
       }
     });
 
@@ -268,7 +268,7 @@ class AIBrainWorkflowExecutor {
         return new Promise((resolve, reject) => {
           exec(action.command, { cwd: action.cwd || process.cwd() }, (error, stdout, stderr) => {
             if (error) {
-              reject(new Error(`Shell command failed: ${stderr || error.message}`));
+              reject(new Error(`Shell command failed: ${stderr || error instanceof Error ? error.message : String(error)}`));
             } else {
               resolve({ stdout, stderr });
             }
@@ -436,7 +436,7 @@ class AIBrainWorkflowExecutor {
 
               await this.logExecution(execution, 'failed', { 
                 failedStep: step.id, 
-                error: error.message 
+                error: error instanceof Error ? error.message : String(error) 
               });
               await this.broadcastProgress(execution);
 

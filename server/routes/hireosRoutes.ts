@@ -641,7 +641,7 @@ router.get('/documents/:employeeId/packet', requireAuth, requireHRManager, async
           log.warn(`Unsupported file type ${document.fileType} for document ${document.id}, skipping merge`);
         }
       } catch (docError: unknown) {
-        log.error(`Error merging document ${document.id}:`, docError.message);
+        log.error(`Error merging document ${document.id}:`, docError instanceof Error ? docError.message : String(docError));
       }
     }
 

@@ -287,7 +287,7 @@ class BackupService {
         startedAt,
         completedAt: new Date(),
         tablesIncluded: this.config.criticalTables,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         metadata: {},
       };
     }

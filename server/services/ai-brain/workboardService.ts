@@ -231,7 +231,7 @@ class WorkboardService {
         content: (task as Record<string, unknown>).requestContent,
         type: (task as Record<string, unknown>).requestType,
         workspaceId: task.workspaceId,
-        userId: (task as Record<string, unknown>).userId,
+        userId: (task as {userId: string}).userId,
         executionMode: 'trinity_fast'
       });
 
@@ -272,7 +272,7 @@ class WorkboardService {
         taskId,
         content: (task as Record<string, unknown>).requestContent,
         workspaceId: task.workspaceId,
-        userId: (task as Record<string, unknown>).userId,
+        userId: (task as {userId: string}).userId,
         context: metadata
       });
 
@@ -299,7 +299,7 @@ class WorkboardService {
         // Legacy tasks without reservation - use directDeduct with proper refund on failure
         const deductResult = await subagentBanker.directDeduct({
           workspaceId: task.workspaceId,
-          userId: (task as Record<string, unknown>).userId,
+          userId: (task as {userId: string}).userId,
           credits: estimatedCredits,
           actionType: 'fast_mode_task',
           actionId: taskId,
@@ -313,7 +313,7 @@ class WorkboardService {
           if (!result.success) {
             await subagentBanker.refillCredits({
               workspaceId: task.workspaceId,
-              userId: (task as Record<string, unknown>).userId,
+              userId: (task as {userId: string}).userId,
               credits: estimatedCredits,
               source: 'refund',
               description: `Refund for failed fast mode task: ${taskId.substring(0, 8)}`
@@ -419,7 +419,7 @@ class WorkboardService {
       // Step 2: Analyze and route via SubagentSupervisor
       const routingResult = await subagentSupervisor.routeVoiceCommand({
         transcript: (task as Record<string, unknown>).requestContent,
-        userId: (task as Record<string, unknown>).userId,
+        userId: (task as {userId: string}).userId,
         workspaceId: task.workspaceId,
         context: {
           source: (task as Record<string, unknown>).requestType,
@@ -449,7 +449,7 @@ class WorkboardService {
         .where(eq(aiWorkboardTasks.id, taskId));
 
       // Step 4: Deduct credits
-      await this.recordUsage(task.workspaceId, (task as Record<string, unknown>).userId, routingResult.estimatedTokens, taskId);
+      await this.recordUsage(task.workspaceId, (task as {userId: string}).userId, routingResult.estimatedTokens, taskId);
 
       // Step 5: Update to in_progress
       await this.updateTaskStatus(taskId, 'in_progress', routingResult.assignedAgent);
@@ -554,7 +554,7 @@ class WorkboardService {
         featureKey: 'workboard_ai_response',
       });
 
-      if (!(response as Record<string, unknown>).success || !response.text) {
+      if (!(response as {success: boolean}).success || !response.text) {
         return {
           success: false,
           error: (response as Record<string, unknown>).error || 'Failed to generate AI response',
@@ -683,7 +683,7 @@ class WorkboardService {
         case 'trinity':
           // Trinity mascot notification - log for now, integrate later
           log.info('[WorkboardService] Trinity notification:', {
-            userId: (task as Record<string, unknown>).userId,
+            userId: (task as {userId: string}).userId,
             type: result.success ? 'task_completed' : 'task_failed',
             message: result.summary
           });
@@ -705,7 +705,7 @@ class WorkboardService {
             title: result.success ? 'Task Completed' : 'Task Failed',
             description: result.summary || 'Your AI workboard task has been processed.',
             workspaceId: task.workspaceId,
-            userId: (task as Record<string, unknown>).userId,
+            userId: (task as {userId: string}).userId,
             metadata: { taskId: task.id }
           });
           break;
@@ -992,7 +992,7 @@ class WorkboardService {
         taskId: taskCreated ? taskId : '',
         response: 'Sorry, I encountered an error executing your command. Please try again.',
         assignedAgent: 'GeneralAssistant',
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }

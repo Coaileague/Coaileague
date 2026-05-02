@@ -1368,7 +1368,7 @@ class TrinitySelfEditGovernanceService {
           proposalId,
           tier: proposal.permissionTier,
           files: proposal.proposedChanges.map(c => c.file),
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         } },
       });
       
@@ -1376,7 +1376,7 @@ class TrinitySelfEditGovernanceService {
         await this.rollbackToCommit(proposal.rollbackHash);
       }
 
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 

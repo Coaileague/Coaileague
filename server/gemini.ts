@@ -79,7 +79,7 @@ export async function generateGeminiResponse(options: GeminiChatOptions): Promis
     return responseText;
   } catch (error : unknown) {
     log.error("Gemini API error:", error);
-    throw new Error(`AI assistant error: ${error.message || 'Unknown error'}`);
+    throw new Error(`AI assistant error: ${error instanceof Error ? error.message : String(error) || 'Unknown error'}`);
   }
 }
 

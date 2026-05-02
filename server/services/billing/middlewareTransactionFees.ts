@@ -1019,7 +1019,7 @@ export async function chargeStorageOverageFee(params: {
 
   const overage = await calculateStorageOverage(workspaceId);
 
-  const minChargeGB: number = BILLING.storageQuotas.overageMinChargeGB as unknown as number ?? 1;
+  const minChargeGB: number = BILLING.storageQuotas.overageMinChargeGB as number ?? 1;
   if (overage.overageGB < minChargeGB) {
     return {
       success: true,
@@ -1028,7 +1028,7 @@ export async function chargeStorageOverageFee(params: {
     };
   }
 
-  const ratePerGB: number = BILLING.storageQuotas.overageRatePerGB as unknown as number ?? 10;
+  const ratePerGB: number = BILLING.storageQuotas.overageRatePerGB as number ?? 10;
   const totalCents = Math.round(overage.overageGB * ratePerGB);
 
   if (totalCents <= 0) {

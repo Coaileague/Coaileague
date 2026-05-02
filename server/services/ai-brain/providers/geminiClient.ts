@@ -1548,7 +1548,7 @@ async function executeLookupInvoices(
           }
         };
       } catch (biError: unknown) {
-        log.warn('[AI Brain] BI search fallback to standard query:', biError.message);
+        log.warn('[AI Brain] BI search fallback to standard query:', biError instanceof Error ? biError.message : String(biError));
       }
     }
 

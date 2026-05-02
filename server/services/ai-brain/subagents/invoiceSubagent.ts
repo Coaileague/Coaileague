@@ -138,7 +138,7 @@ class PaymentGatewayCircuitBreaker {
     if (this.state.failures >= this.failureThreshold) {
       this.state.state = 'open';
       this.state.nextRetry = new Date(Date.now() + this.recoveryTimeMs);
-      log.info(`[InvoiceSubagent] Payment gateway circuit opened: ${error.message}`);
+      log.info(`[InvoiceSubagent] Payment gateway circuit opened: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -455,7 +455,7 @@ class InvoiceSubagentService {
         issues: [{
           severity: 'critical',
           type: 'integration',
-          description: `Invoice generation failed: ${error.message}`,
+          description: `Invoice generation failed: ${error instanceof Error ? error.message : String(error)}`,
         }],
         auditLog: this.getAuditLog(traceId),
       };
@@ -489,13 +489,13 @@ class InvoiceSubagentService {
       });
       log.info(`[InvoiceSubagent] Session fee charged: ${sessionFee} credits for workspace ${workspaceId}`);
     } catch (feeErr : unknown) {
-      log.error(`[InvoiceSubagent] Session fee deduction failed for workspace ${workspaceId}:`, feeErr.message);
-      this.logAudit(traceId, 'invoice.batch_generate', 'billing_failed', { error: feeErr.message });
+      log.error(`[InvoiceSubagent] Session fee deduction failed for workspace ${workspaceId}:`, feeErr instanceof Error ? feeErr.message : String(feeErr));
+      this.logAudit(traceId, 'invoice.batch_generate', 'billing_failed', { error: feeErr instanceof Error ? feeErr.message : String(feeErr) });
       return {
         totalGenerated: 0,
         totalRevenue: 0,
         results: [],
-        failedClients: [`billing: ${feeErr.message}`],
+        failedClients: [`billing: ${feeErr instanceof Error ? feeErr.message : String(feeErr)}`],
       };
     }
 
@@ -545,7 +545,7 @@ class InvoiceSubagentService {
             });
             log.info(`[InvoiceSubagent] Per-invoice fee charged: ${perInvoiceFee}cr for invoice ${result.invoiceId}`);
           } catch (invoiceErr : unknown) {
-            log.warn(`[InvoiceSubagent] Per-invoice billing error (non-blocking):`, invoiceErr.message);
+            log.warn(`[InvoiceSubagent] Per-invoice billing error (non-blocking):`, invoiceErr instanceof Error ? invoiceErr.message : String(invoiceErr));
           }
         } else {
           failedClients.push(clientId);
@@ -770,7 +770,7 @@ class InvoiceSubagentService {
         .limit(1);
 
       if (existing && existing.resultId) {
-        return existing.resultId as unknown as InvoiceGenerationResult;
+        return existing.resultId as InvoiceGenerationResult;
       }
     } catch (error) {
       // Continue with new generation

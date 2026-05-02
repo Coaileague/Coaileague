@@ -179,7 +179,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
       const { attachEmployeeExternalId } = await import('../services/identityService');
       await attachEmployeeExternalId(employee.id, workspace.id);
     } catch (extIdError: unknown) {
-      log.error(`[Workspace Create] Failed to attach external ID:`, extIdError.message);
+      log.error(`[Workspace Create] Failed to attach external ID:`, extIdError instanceof Error ? extIdError.message : String(extIdError));
     }
 
     // Token tracking is event-driven (token_usage_monthly creates a row on
@@ -218,7 +218,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
         billingPeriodEnd: periodEnd,
       }).onConflictDoNothing();
     } catch (usageErr: unknown) {
-      log.error(`[Workspace Create] Usage tracking init failed (non-blocking):`, usageErr.message);
+      log.error(`[Workspace Create] Usage tracking init failed (non-blocking):`, usageErr instanceof Error ? usageErr.message : String(usageErr));
     }
 
     try {
@@ -260,7 +260,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
         ipAddress: req.ip || req.socket.remoteAddress,
       });
     } catch (auditError: unknown) {
-      log.error(`[Workspace Create] Audit log failed (non-blocking):`, auditError.message);
+      log.error(`[Workspace Create] Audit log failed (non-blocking):`, auditError instanceof Error ? auditError.message : String(auditError));
     }
 
     try {

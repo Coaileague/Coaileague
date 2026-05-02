@@ -186,7 +186,7 @@ automationRouter.post('/schedule/generate', requireAuth, async (req: Authenticat
     try {
       const { broadcastToWorkspace } = await import('../websocket');
       broadcastToWorkspace(req.workspaceId, { type: 'schedules_updated' });
-    } catch (e: unknown) { log.warn('[Automation] Broadcast failed:', e.message); }
+    } catch (e: unknown) { log.warn('[Automation] Broadcast failed:', e instanceof Error ? e.message : String(e)); }
 
     const _wsId1 = req.workspaceId || req.user?.currentWorkspaceId;
     platformEventBus.publish({
@@ -376,7 +376,7 @@ automationRouter.post('/invoice/generate', requireAuth, async (req: Authenticate
     try {
       const { broadcastToWorkspace } = await import('../websocket');
       broadcastToWorkspace(req.workspaceId, { type: 'invoices_updated' });
-    } catch (e: unknown) { log.warn('[Automation] Broadcast failed:', e.message); }
+    } catch (e: unknown) { log.warn('[Automation] Broadcast failed:', e instanceof Error ? e.message : String(e)); }
 
     const _wsId2 = req.workspaceId || req.user?.currentWorkspaceId;
     platformEventBus.publish({
@@ -495,7 +495,7 @@ automationRouter.post('/invoice/anchor-close', requireAuth, async (req: Authenti
     try {
       const { broadcastToWorkspace } = await import('../websocket');
       broadcastToWorkspace(req.workspaceId, { type: 'invoices_updated' });
-    } catch (e: unknown) { log.warn('[Automation] Broadcast failed:', e.message); }
+    } catch (e: unknown) { log.warn('[Automation] Broadcast failed:', e instanceof Error ? e.message : String(e)); }
 
     const _wsId3 = req.workspaceId || req.user?.currentWorkspaceId;
     platformEventBus.publish({
@@ -626,7 +626,7 @@ automationRouter.post('/payroll/generate', requireAuth, async (req: Authenticate
     try {
       const { broadcastToWorkspace } = await import('../websocket');
       broadcastToWorkspace(req.workspaceId, { type: 'payroll_updated' });
-    } catch (e: unknown) { log.warn('[Automation] Broadcast failed:', e.message); }
+    } catch (e: unknown) { log.warn('[Automation] Broadcast failed:', e instanceof Error ? e.message : String(e)); }
 
     const _wsId4 = req.workspaceId || req.user?.currentWorkspaceId;
     platformEventBus.publish({
@@ -745,7 +745,7 @@ automationRouter.post('/payroll/anchor-close', requireAuth, async (req: Authenti
     try {
       const { broadcastToWorkspace } = await import('../websocket');
       broadcastToWorkspace(req.workspaceId, { type: 'payroll_updated' });
-    } catch (e: unknown) { log.warn('[Automation] Broadcast failed:', e.message); }
+    } catch (e: unknown) { log.warn('[Automation] Broadcast failed:', e instanceof Error ? e.message : String(e)); }
 
     const _wsId5 = req.workspaceId || req.user?.currentWorkspaceId;
     platformEventBus.publish({

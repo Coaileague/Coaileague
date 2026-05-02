@@ -1004,7 +1004,7 @@ export class SubscriptionManager {
             .where(eq(workspaces.id, workspaceId));
         }
       } catch (error : unknown) {
-        if (error.code === 'resource_missing') {
+        if ((error as NodeJS.ErrnoException).code === 'resource_missing') {
           // Subscription was deleted in Stripe but we still have record
           await db.update(workspaces)
             .set({

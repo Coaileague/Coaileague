@@ -119,8 +119,8 @@ class GapIntelligenceService {
         output = result.stdout + result.stderr;
       } catch (execError : unknown) {
         output = (execError.stdout || '') + (execError.stderr || '');
-        if (!output && execError.message) {
-          log.info('[GapIntelligence] tsc execution failed:', execError.message);
+        if (!output && execError instanceof Error ? execError.message : String(execError)) {
+          log.info('[GapIntelligence] tsc execution failed:', execError instanceof Error ? execError.message : String(execError));
         }
       }
 

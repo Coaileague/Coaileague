@@ -651,13 +651,13 @@ class UniversalStepLogger {
       await this.logToDatabase(context, `step_${step.toLowerCase()}_error`, {
         step,
         error: stepEntry.error,
-        stack: error.stack,
+        stack: error instanceof Error ? error.stack : undefined,
       });
       
       // Persist state for durability
       await this.persistOrchestrationState(context);
       
-      log.error(`[UniversalStepLogger] [${orchestrationId}] Step ${step} ERROR:`, error.message);
+      log.error(`[UniversalStepLogger] [${orchestrationId}] Step ${step} ERROR:`, error instanceof Error ? error.message : String(error));
       
       // Release lock on error (use correct lockKey format)
       if (options?.acquireLock) {

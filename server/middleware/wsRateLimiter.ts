@@ -192,7 +192,7 @@ export async function trackConnection(
   } catch (error : unknown) {
     // If it's a unique constraint violation (duplicate sessionId), allow it
     // This can happen if the client reconnects with the same sessionId
-    if (error.code === '23505') { // PostgreSQL unique violation
+    if ((error as NodeJS.ErrnoException).code === '23505') { // PostgreSQL unique violation
       return { allowed: true };
     }
     

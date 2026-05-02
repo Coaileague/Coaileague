@@ -24,7 +24,7 @@ export function registerRatingsRoutes(app: Express, requireAuth: (req: unknown, 
       res.json({ success: true, data: stats });
     } catch (error : unknown) {
       console.error('Error calculating employer ratings:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -43,7 +43,7 @@ export function registerRatingsRoutes(app: Express, requireAuth: (req: unknown, 
       res.json({ success: true, data: trends });
     } catch (error : unknown) {
       console.error('Error fetching rating trends:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -61,7 +61,7 @@ export function registerRatingsRoutes(app: Express, requireAuth: (req: unknown, 
       res.json({ success: true, data: atRiskManagers });
     } catch (error : unknown) {
       console.error('Error identifying at-risk managers:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -84,7 +84,7 @@ export function registerRatingsRoutes(app: Express, requireAuth: (req: unknown, 
       res.json({ success: true, data: compositeScore });
     } catch (error : unknown) {
       console.error('Error calculating composite score:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -106,7 +106,7 @@ export function registerRatingsRoutes(app: Express, requireAuth: (req: unknown, 
       });
     } catch (error : unknown) {
       console.error('Error fetching workspace composite scores:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -125,7 +125,7 @@ export function registerRatingsRoutes(app: Express, requireAuth: (req: unknown, 
       res.json({ success: true, data: rank });
     } catch (error : unknown) {
       console.error('Error fetching employee rank:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 

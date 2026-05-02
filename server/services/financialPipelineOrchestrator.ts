@@ -477,7 +477,7 @@ export async function onPayrollApproved(payrollRunId: string, workspaceId: strin
         stage: 'internal_execution',
         success: false,
         action: 'failed',
-        details: `Internal payroll execution failed: ${e.message}`,
+        details: `Internal payroll execution failed: ${e instanceof Error ? e.message : String(e)}`,
       };
     }
   }

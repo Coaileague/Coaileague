@@ -110,7 +110,7 @@ async function test_chat_db_persistence() {
       name: 'Chat DB Persistence',
       category: 'CHAT',
       passed: false,
-      details: `DB query failed: ${e.message}`,
+      details: `DB query failed: ${e instanceof Error ? e.message : String(e)}`,
       severity: 'critical',
       fix: 'Ensure chat tables exist and are accessible',
     });
@@ -244,7 +244,7 @@ async function test_support_room_db() {
       name: 'Support Rooms in DB',
       category: 'SUPPORT',
       passed: false,
-      details: `DB query failed: ${e.message}`,
+      details: `DB query failed: ${e instanceof Error ? e.message : String(e)}`,
       severity: 'critical',
     });
   }
@@ -322,7 +322,7 @@ async function test_email_event_audit() {
       name: 'Email Event Audit Trail',
       category: 'EMAIL',
       passed: false,
-      details: `emailEvents table query failed: ${e.message}`,
+      details: `emailEvents table query failed: ${e instanceof Error ? e.message : String(e)}`,
       severity: 'high',
     });
   }
@@ -404,7 +404,7 @@ async function test_notification_db() {
       name: 'Notification DB Persistence',
       category: 'NOTIFICATIONS',
       passed: false,
-      details: `DB query failed: ${e.message}`,
+      details: `DB query failed: ${e instanceof Error ? e.message : String(e)}`,
       severity: 'critical',
     });
   }

@@ -92,7 +92,7 @@ async function test(name: string, fn: () => Promise<void>) {
     await fn();
     if (!results.find(r => r.name === name)) pass(name);
   } catch (e: unknown) {
-    fail(name, e.message || String(e));
+    fail(name, e instanceof Error ? e.message : String(e) || String(e));
   }
 }
 

@@ -34,13 +34,13 @@ export function registerWorkspaceTimeActions() {
     const subscription = await db.query.subscriptions?.findFirst({ where: eq(subscriptions.workspaceId, workspaceId) }).catch(() => null);
     return {
       workspaceId,
-      name: (workspace as Record<string, unknown>).name,
+      name: (workspace as {name: string}).name,
       industry: (workspace as Record<string, unknown>).industry,
       size: (workspace as Record<string, unknown>).size,
       activeEmployees: empCount?.count || 0,
       subscriptionTier: (subscription as Record<string,unknown>)?.tier || 'free',
       subscriptionStatus: (subscription as Record<string,unknown>)?.status || 'active',
-      createdAt: (workspace as Record<string, unknown>).createdAt,
+      createdAt: (workspace as {createdAt: Date}).createdAt,
     };
   }));
 

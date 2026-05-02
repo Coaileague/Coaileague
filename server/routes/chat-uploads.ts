@@ -415,7 +415,7 @@ router.post(
                     });
                   }
                 } catch (botErr: unknown) {
-                  log.warn('[ChatUploads] ReportBot photo ack failed (non-blocking):', botErr.message);
+                  log.warn('[ChatUploads] ReportBot photo ack failed (non-blocking):', botErr instanceof Error ? botErr.message : String(botErr));
                 }
               })();
             }
@@ -451,7 +451,7 @@ router.post(
             }
           }
         } catch (darErr: unknown) {
-          log.warn('[ChatUploads] DAR photo manifest link failed (non-blocking):', darErr.message);
+          log.warn('[ChatUploads] DAR photo manifest link failed (non-blocking):', darErr instanceof Error ? darErr.message : String(darErr));
         }
       }
 

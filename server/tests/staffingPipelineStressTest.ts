@@ -52,7 +52,7 @@ async function test(name: string, fn: () => Promise<void>) {
     await fn();
     results.push({ name, passed: true });
   } catch (err: unknown) {
-    results.push({ name, passed: false, error: err.message || String(err) });
+    results.push({ name, passed: false, error: err instanceof Error ? err.message : String(err) || String(err) });
   }
 }
 

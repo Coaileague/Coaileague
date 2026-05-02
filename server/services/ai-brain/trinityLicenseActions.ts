@@ -89,7 +89,7 @@ async function handleLicenseQuery(req: ActionRequest): Promise<ActionResult> {
       officers: statuses,
     }, start);
   } catch (error : unknown) {
-    return createResult('license.query', false, `License query failed: ${error.message}`, null, start);
+    return createResult('license.query', false, `License query failed: ${error instanceof Error ? error.message : String(error)}`, null, start);
   }
 }
 
@@ -163,7 +163,7 @@ async function handleLicenseAlert(req: ActionRequest): Promise<ActionResult> {
       expirationDate: cert.expirationDate,
     }, start);
   } catch (error : unknown) {
-    return createResult('license.alert', false, `License alert failed: ${error.message}`, null, start);
+    return createResult('license.alert', false, `License alert failed: ${error instanceof Error ? error.message : String(error)}`, null, start);
   }
 }
 
@@ -211,7 +211,7 @@ async function handleLicenseUpdate(req: ActionRequest): Promise<ActionResult> {
 
     return createResult('license.update', true, `Certification ${certId} updated successfully`, updated, start);
   } catch (error : unknown) {
-    return createResult('license.update', false, `License update failed: ${error.message}`, null, start);
+    return createResult('license.update', false, `License update failed: ${error instanceof Error ? error.message : String(error)}`, null, start);
   }
 }
 
@@ -274,7 +274,7 @@ async function handleLicenseExport(req: ActionRequest): Promise<ActionResult> {
       filename: `dps-license-export-${new Date().toISOString().slice(0, 10)}.csv`,
     }, start);
   } catch (error : unknown) {
-    return createResult('license.export', false, `License export failed: ${error.message}`, null, start);
+    return createResult('license.export', false, `License export failed: ${error instanceof Error ? error.message : String(error)}`, null, start);
   }
 }
 

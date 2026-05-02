@@ -55,7 +55,7 @@ async function q(sql: string, params?: unknown[]): Promise<void> {
   try {
     await pool.query(sql, params);
   } catch (err: unknown) {
-    const msg = (err.message || '').substring(0, 200);
+    const msg = (err instanceof Error ? err.message : String(err) || '').substring(0, 200);
     // Only log non-trivial errors (not unique violations from idempotent runs)
     if (!msg.includes('duplicate key')) {
       console.error(`[SeedACME] SQL error: ${msg}`);
@@ -69,7 +69,7 @@ async function seedSection(name: string, fn: () => Promise<void>): Promise<void>
     await fn();
     console.log(`[SeedACME] ✓ ${name}`);
   } catch (err: unknown) {
-    console.error(`[SeedACME] ✗ ${name}: ${(err.message || '').substring(0, 300)}`);
+    console.error(`[SeedACME] ✗ ${name}: ${(err instanceof Error ? err.message : String(err) || '').substring(0, 300)}`);
   }
 }
 

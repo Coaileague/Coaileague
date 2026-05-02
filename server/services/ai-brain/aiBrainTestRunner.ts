@@ -468,7 +468,7 @@ class AIBrainTestRunner {
         completedAt: new Date(),
         duration: 0,
         error: (error instanceof Error ? error.message : String(error)),
-        stackTrace: error.stack,
+        stackTrace: error instanceof Error ? error.stack : undefined,
       };
 
       await this.logTestResult(result, triggeredBy);

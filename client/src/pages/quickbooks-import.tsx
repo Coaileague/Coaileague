@@ -512,7 +512,7 @@ export default function QuickBooksImportPage() {
     onError: (error) => {
       toast({
         title: 'Connection Failed',
-        description: error.message || 'Failed to connect to QuickBooks',
+        description: error instanceof Error ? error.message : String(error) || 'Failed to connect to QuickBooks',
         variant: 'destructive',
       });
     },
@@ -530,7 +530,7 @@ export default function QuickBooksImportPage() {
       const data = await res.json();
       if (!res.ok) {
         const error = new Error(data.message || data.error || 'Import failed') as unknown;
-        error.code = data.code;
+        (error as NodeJS.ErrnoException).code = data.code;
         error.employeesWithMissingPayRates = data.employeesWithMissingPayRates;
         throw error;
       }
@@ -555,7 +555,7 @@ export default function QuickBooksImportPage() {
       setCurrentStep('complete');
     },
     onError: (error) => {
-      if (error.code === 'MISSING_PAY_RATES' && Array.isArray(error.employeesWithMissingPayRates)) {
+      if ((error as NodeJS.ErrnoException).code === 'MISSING_PAY_RATES' && Array.isArray(error.employeesWithMissingPayRates)) {
         setPayRateWarning({ employees: error.employeesWithMissingPayRates });
         toast({
           title: 'Pay Rate Validation',
@@ -564,8 +564,8 @@ export default function QuickBooksImportPage() {
         });
       } else {
         // Ensure error message is a safe string, not raw data
-        const errorMessage = typeof error.message === 'string' 
-          ? error.message.slice(0, 200) 
+        const errorMessage = typeof error instanceof Error ? error.message : String(error) === 'string' 
+          ? error instanceof Error ? error.message : String(error).slice(0, 200) 
           : 'Failed to import data';
         toast({
           title: 'Import Failed',
@@ -745,12 +745,12 @@ export default function QuickBooksImportPage() {
       setShowPushModal(false);
       
       // Check for migration lock error
-      if (error.code === 'MIGRATION_LOCKED' || error.message?.includes('already in progress')) {
+      if ((error as NodeJS.ErrnoException).code === 'MIGRATION_LOCKED' || error instanceof Error ? error.message : String(error)?.includes('already in progress')) {
         setMigrationLocked(true);
         setActiveMigrationInfo(error.activeRun || null);
         toast({
           title: 'Migration Already Running',
-          description: error.message || 'Another sync is in progress. You can cancel it or wait.',
+          description: error instanceof Error ? error.message : String(error) || 'Another sync is in progress. You can cancel it or wait.',
           variant: 'destructive',
         });
         return;
@@ -758,7 +758,7 @@ export default function QuickBooksImportPage() {
       
       toast({
         title: 'Push Failed',
-        description: error.message || 'Failed to push data to QuickBooks',
+        description: error instanceof Error ? error.message : String(error) || 'Failed to push data to QuickBooks',
         variant: 'destructive',
       });
     },
@@ -785,7 +785,7 @@ export default function QuickBooksImportPage() {
     onError: (error) => {
       toast({
         title: 'Cancel Failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     },
@@ -813,7 +813,7 @@ export default function QuickBooksImportPage() {
     onError: (error) => {
       toast({
         title: 'Unlock Failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
     },

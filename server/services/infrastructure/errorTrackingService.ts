@@ -324,7 +324,7 @@ class ErrorTrackingService {
     severity: ErrorSeverity = 'error'
   ): Promise<string> {
     return this.captureError({
-      message: error.message,
+      message: error instanceof Error ? error.message : String(error),
       severity,
       error,
       context,

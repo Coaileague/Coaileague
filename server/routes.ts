@@ -982,23 +982,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Phase 56: Initialize voice phone system tables
   // (voiceRouter + SMS webhook aliases are mounted early, alongside twilioWebhooksRouter,
   //  before domain mounts / requireAuth catch-alls — see block above.)
-  initializeVoiceTables().catch(err => log.error("[VoiceMigration] Failed:", err.message));
+  initializeVoiceTables().catch(err => log.error("[VoiceMigration] Failed:", err instanceof Error ? err.message : String(err)));
 
   // Run expansion migration (create new tables idempotently)
-  runExpansionMigration().catch(err => log.error("[ExpansionMigration] Failed:", err.message));
+  runExpansionMigration().catch(err => log.error("[ExpansionMigration] Failed:", err instanceof Error ? err.message : String(err)));
   // Phase 35G: Client Communication Hub tables
-  runClientCommsMigration().catch(err => log.error("[ClientCommsMigration] Failed:", err.message));
+  runClientCommsMigration().catch(err => log.error("[ClientCommsMigration] Failed:", err instanceof Error ? err.message : String(err)));
   // Run hiring migration (extend ATS tables + create interview tables)
-  runHiringMigration().catch(err => log.error("[HiringMigration] Failed:", err.message));
+  runHiringMigration().catch(err => log.error("[HiringMigration] Failed:", err instanceof Error ? err.message : String(err)));
   // Phase 35H: Equipment tracking column expansion
-  import("./services/expansionMigration").then(m => m.runEquipmentExpansionMigration()).catch(err => log.error("[EquipmentMigration] Failed:", err.message));
+  import("./services/expansionMigration").then(m => m.runEquipmentExpansionMigration()).catch(err => log.error("[EquipmentMigration] Failed:", err instanceof Error ? err.message : String(err)));
   // Phase 35K: TCOLE Session Management tables
-  import("./services/expansionMigration").then(m => m.runTCOLESessionMigration()).catch(err => log.error("[TCOLEMigration] Failed:", err.message));
+  import("./services/expansionMigration").then(m => m.runTCOLESessionMigration()).catch(err => log.error("[TCOLEMigration] Failed:", err instanceof Error ? err.message : String(err)));
   // Phase 46: Initialize federal + state holidays and register December cron
-  initializeHolidays().catch(err => log.error("[HolidayService] Init failed:", err.message));
+  initializeHolidays().catch(err => log.error("[HolidayService] Init failed:", err instanceof Error ? err.message : String(err)));
   registerDecemberHolidayCron();
   // Phase 50: Initialize outbound webhook delivery tables
-  initWebhookTables().catch(err => log.error("[WebhookDelivery] Init failed:", err.message));
+  initWebhookTables().catch(err => log.error("[WebhookDelivery] Init failed:", err instanceof Error ? err.message : String(err)));
   // Phase 51: Register weekly backup verification cron
   registerBackupVerificationCron();
 
@@ -1143,18 +1143,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api", requireAuth, featureStubRouter);
 
   app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
-    const status: number = typeof err.statusCode === "number" ? err.statusCode
-      : typeof err.status === "number" ? err.status
+    const status: number = typeof (err as Record<string, unknown>).statusCode === "number" ? (err as Record<string, unknown>).statusCode
+      : typeof (err as {status: string}).status === "number" ? (err as {status: string}).status
       : 500;
     const requestId = (req.headers["x-request-id"] as string) ?? "";
     log.error(
       `[GlobalErrorHandler] ${req.method} ${req.path} → HTTP ${status}: ${err?.message ?? "unknown error"}` +
       (requestId ? ` (reqId: ${requestId})` : ""),
-      err?.stack ? `\n${err.stack}` : ""
+      err?.stack ? `\n${err instanceof Error ? err.stack : undefined}` : ""
     );
     if (res.headersSent) return;
     res.status(status).json({
-      error: status >= 500 ? "Internal server error" : (err.message || "Request failed"),
+      error: status >= 500 ? "Internal server error" : (err instanceof Error ? err.message : String(err) || "Request failed"),
       ...(process.env.NODE_ENV !== "production" && status >= 500 ? { detail: err?.message } : {}),
     });
   });

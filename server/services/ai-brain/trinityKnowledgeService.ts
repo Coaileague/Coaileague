@@ -587,7 +587,7 @@ class TrinityKnowledgeService {
         }).onConflictDoNothing({ target: trinityKnowledgeBase.moduleKey });
         seeded++;
       } catch (err: unknown) {
-        if ((err instanceof Error ? err.message : String(err))?.includes('unique') || err.code === '23505') {
+        if ((err instanceof Error ? err.message : String(err))?.includes('unique') || (err as NodeJS.ErrnoException).code === '23505') {
           skipped++;
         } else {
           // OBSERVABILITY (Phase 1 Domain 1): surface the full PostgreSQL

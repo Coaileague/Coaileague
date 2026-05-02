@@ -60,13 +60,13 @@ export function CameraCapture({ onCapture, onCancel, preferredFacing = "environm
       setIsLoading(false);
       let errorMessage = "Failed to access camera.";
       
-      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+      if ((err as {name?: string}).name === "NotAllowedError" || (err as {name?: string}).name === "PermissionDeniedError") {
         errorMessage = "Camera permission denied. Please enable camera access in your browser settings, then try again.";
-      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+      } else if ((err as {name?: string}).name === "NotFoundError" || (err as {name?: string}).name === "DevicesNotFoundError") {
         errorMessage = "No camera found on this device. Please use the upload option instead.";
-      } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+      } else if ((err as {name?: string}).name === "NotReadableError" || (err as {name?: string}).name === "TrackStartError") {
         errorMessage = "Camera is in use by another application. Please close other apps using the camera.";
-      } else if (err.name === "OverconstrainedError") {
+      } else if ((err as {name?: string}).name === "OverconstrainedError") {
         errorMessage = "Camera does not support the requested settings. Trying again...";
         try {
           const fallbackStream = await navigator.mediaDevices.getUserMedia({

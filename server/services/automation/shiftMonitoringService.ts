@@ -322,7 +322,7 @@ class ShiftMonitoringService {
                 metadata: { shiftId: upShift.id, startTime: upShift.startTime, reminderType: 'pre_shift_30min' },
               });
             } catch (notifyErr: unknown) {
-              log.warn(`[ShiftMonitor] Pre-shift reminder failed for employee ${upEmployee.id}:`, notifyErr.message);
+              log.warn(`[ShiftMonitor] Pre-shift reminder failed for employee ${upEmployee.id}:`, notifyErr instanceof Error ? notifyErr.message : String(notifyErr));
             }
           }
 
@@ -330,7 +330,7 @@ class ShiftMonitoringService {
             log.info(`[ShiftMonitor] Pre-shift reminders sent: ${upcomingShifts.length} upcoming shifts`);
           }
         } catch (reminderErr: unknown) {
-          log.error('[ShiftMonitor] Pre-shift reminder block failed (non-blocking):', reminderErr.message);
+          log.error('[ShiftMonitor] Pre-shift reminder block failed (non-blocking):', reminderErr instanceof Error ? reminderErr.message : String(reminderErr));
         }
 
         try {
@@ -380,7 +380,7 @@ class ShiftMonitoringService {
             log.info(`[ShiftMonitor] Visitor alerts: ${overdueVisitorsResult.length} visitors never left`);
           }
         } catch (visitorErr: unknown) {
-          log.error('[ShiftMonitor] Visitor monitoring error (non-blocking):', visitorErr.message);
+          log.error('[ShiftMonitor] Visitor monitoring error (non-blocking):', visitorErr instanceof Error ? visitorErr.message : String(visitorErr));
         }
 
         // HelpAI pre-shift reminder: message officers 2h before their shift
@@ -550,7 +550,7 @@ class ShiftMonitoringService {
         break; // Notify the single most relevant on-site officer — general pool follows below
       }
     } catch (stayLateErr: unknown) {
-      log.warn(`[ShiftMonitor] Stay-late check failed (non-blocking): ${stayLateErr.message}`);
+      log.warn(`[ShiftMonitor] Stay-late check failed (non-blocking): ${stayLateErr instanceof Error ? stayLateErr.message : String(stayLateErr)}`);
     }
     // ─────────────────────────────────────────────────────────────────────────
 

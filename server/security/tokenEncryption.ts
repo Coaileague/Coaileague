@@ -116,7 +116,7 @@ export function encryptToken(token: string | null | undefined): string {
     return `${iv.toString('base64')}:${authTag.toString('base64')}:${ciphertext}`;
   } catch (error : unknown) {
     // Re-throw with context
-    throw new Error(`Token encryption failed: ${error.message}`);
+    throw new Error(`Token encryption failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -168,12 +168,12 @@ export function decryptToken(encryptedToken: string | null | undefined): string 
     return plaintext;
   } catch (error : unknown) {
     // Check for authentication failures (tampered data)
-    if (error.message.includes('Unsupported state or unable to authenticate data')) {
+    if (error instanceof Error ? error.message : String(error).includes('Unsupported state or unable to authenticate data')) {
       throw new Error('Token decryption failed - data may be corrupted or tampered with');
     }
 
     // Re-throw with context
-    throw new Error(`Token decryption failed: ${error.message}`);
+    throw new Error(`Token decryption failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -292,7 +292,7 @@ export function decryptSSN(encryptedSSN: string | null | undefined): string | nu
   try {
     return decryptToken(encryptedSSN);
   } catch (error : unknown) {
-    log.error('SSN decryption failed:', error.message);
+    log.error('SSN decryption failed:', error instanceof Error ? error.message : String(error));
     return null;
   }
 }

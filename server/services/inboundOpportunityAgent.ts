@@ -326,7 +326,7 @@ export class InboundOpportunityAgent {
               recordsChanged++;
               log.info(`Contract record created for review`);
             } catch (contractErr: unknown) {
-              log.info(`Contract record skipped: ${contractErr.message}`);
+              log.info(`Contract record skipped: ${contractErr instanceof Error ? contractErr.message : String(contractErr)}`);
             }
           }
           
@@ -1147,7 +1147,7 @@ Return ONLY the JSON array, no markdown, no explanations.`;
               }
             } catch (emailError: unknown) {
               notifications.push(`employee:${offer.employeeId}:shift_offer_email_error`);
-              log.error(`[InboundOpportunityAgent] Error sending shift offer email to ${employee.email}:`, emailError.message);
+              log.error(`[InboundOpportunityAgent] Error sending shift offer email to ${employee.email}:`, emailError instanceof Error ? emailError.message : String(emailError));
             }
           }
 
@@ -1210,7 +1210,7 @@ Return ONLY the JSON array, no markdown, no explanations.`;
               notifications.push(`sender:${notifyCtx.senderEmail}:status_updates_sent`);
               log.info(`[InboundOpportunityAgent] Staffing status updates sent to sender: ${notifyCtx.senderEmail}`);
             } catch (senderErr: unknown) {
-              log.error('[InboundOpportunityAgent] Failed to send sender status update:', senderErr.message);
+              log.error('[InboundOpportunityAgent] Failed to send sender status update:', senderErr instanceof Error ? senderErr.message : String(senderErr));
             }
           }
 
@@ -1606,7 +1606,7 @@ Consider: qualifications match, reliability history, preference match, availabil
                 notifications.push(`sender:${notifyCtx.senderEmail}:step6_confirming_sent`);
                 log.info(`[InboundOpportunityAgent] Step 6 confirming notification sent to sender: ${notifyCtx.senderEmail}`);
               } catch (senderErr: unknown) {
-                log.error('[InboundOpportunityAgent] Failed to send step 6 sender notification:', senderErr.message);
+                log.error('[InboundOpportunityAgent] Failed to send step 6 sender notification:', senderErr instanceof Error ? senderErr.message : String(senderErr));
               }
             }
             
@@ -1654,7 +1654,7 @@ Consider: qualifications match, reliability history, preference match, availabil
                 notifications.push(`sender:${notifyCtx.senderEmail}:onboarding_invitation_sent`);
                 log.info(`[InboundOpportunityAgent] Onboarding invitation sent to ${notifyCtx.senderEmail} [${confirmationNumber}]`);
               } catch (onboardErr: unknown) {
-                log.error('[InboundOpportunityAgent] Failed to send onboarding invitation:', onboardErr.message);
+                log.error('[InboundOpportunityAgent] Failed to send onboarding invitation:', onboardErr instanceof Error ? onboardErr.message : String(onboardErr));
               }
             }
 
@@ -1986,7 +1986,7 @@ Return JSON:
               notifications.push(`sender:${notifyCtx.senderEmail}:step7_completed_sent`);
               log.info(`[InboundOpportunityAgent] Step 7 completed notification sent to sender: ${notifyCtx.senderEmail}`);
             } catch (senderErr: unknown) {
-              log.error('[InboundOpportunityAgent] Failed to send step 7 sender notification:', senderErr.message);
+              log.error('[InboundOpportunityAgent] Failed to send step 7 sender notification:', senderErr instanceof Error ? senderErr.message : String(senderErr));
             }
           }
 
@@ -2022,7 +2022,7 @@ Return JSON:
                 notifications.push(`sender:${notifyCtx.senderEmail}:portal_already_invited`);
               }
             } catch (portalErr: unknown) {
-              log.error('[InboundOpportunityAgent] Failed to send portal invitation:', portalErr.message);
+              log.error('[InboundOpportunityAgent] Failed to send portal invitation:', portalErr instanceof Error ? portalErr.message : String(portalErr));
             }
           }
 

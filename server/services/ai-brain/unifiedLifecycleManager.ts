@@ -575,7 +575,7 @@ class UnifiedLifecycleManager {
     recoverable?: boolean;
     sessionId?: string;
   }): Promise<LifecycleEvent> {
-    const errorMessage = params.error instanceof Error ? params.error.message : params.error;
+    const errorMessage = params.error instanceof Error ? params.error instanceof Error ? error.message : String(error) : params.error;
     const errorStack = params.error instanceof Error ? params.error.stack : undefined;
 
     return this.emitLifecycleEvent(

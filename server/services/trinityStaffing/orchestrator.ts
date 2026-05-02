@@ -450,7 +450,7 @@ class TrinityStaffingOrchestrator {
               replyEmail: ctx?.senderEmail || `staffing@coaileague.com`,
             });
           } catch (offerErr : unknown) {
-            log.error(`[TrinityStaffing] Failed to send offer email to ${emp.email}:`, offerErr.message);
+            log.error(`[TrinityStaffing] Failed to send offer email to ${emp.email}:`, offerErr instanceof Error ? offerErr.message : String(offerErr));
           }
         }
 
@@ -470,7 +470,7 @@ class TrinityStaffingOrchestrator {
               offerId,
             });
           } catch (smsErr : unknown) {
-            log.warn(`[TrinityStaffing] SMS offer skipped for ${emp.id}:`, smsErr.message);
+            log.warn(`[TrinityStaffing] SMS offer skipped for ${emp.id}:`, smsErr instanceof Error ? smsErr.message : String(smsErr));
           }
         }
 
@@ -500,7 +500,7 @@ class TrinityStaffingOrchestrator {
             },
           });
         } catch (notifErr : unknown) {
-          log.error(`[TrinityStaffing] Failed to insert UNS offer notification for ${emp.id}:`, notifErr.message);
+          log.error(`[TrinityStaffing] Failed to insert UNS offer notification for ${emp.id}:`, notifErr instanceof Error ? notifErr.message : String(notifErr));
         }
       }
     }
@@ -727,7 +727,7 @@ class TrinityStaffingOrchestrator {
         });
         log.info(`[TrinityStaffing] Client portal invitation sent to ${ctx.senderEmail} (prospect: ${prospect.id}, code: ${tempCode})`);
       } catch (portalErr : unknown) {
-        log.error('[TrinityStaffing] Failed to send client portal invitation:', portalErr.message);
+        log.error('[TrinityStaffing] Failed to send client portal invitation:', portalErr instanceof Error ? portalErr.message : String(portalErr));
       }
     }
 
@@ -795,7 +795,7 @@ class TrinityStaffingOrchestrator {
         log.info(`[TrinityStaffing] Org summary sent to ${managerEmails.length} manager(s)`);
       }
     } catch (orgSummaryErr : unknown) {
-      log.error('[TrinityStaffing] Failed to send org summary:', orgSummaryErr.message);
+      log.error('[TrinityStaffing] Failed to send org summary:', orgSummaryErr instanceof Error ? orgSummaryErr.message : String(orgSummaryErr));
     }
   }
   

@@ -352,7 +352,7 @@ export class ExecutionPipeline {
           throw processError;
         }
 
-        log.warn(`[ExecutionPipeline] ${options.operationName} PROCESS failed, starting escalation chain: ${processError.message}`);
+        log.warn(`[ExecutionPipeline] ${options.operationName} PROCESS failed, starting escalation chain: ${processError instanceof Error ? processError.message : String(processError)}`);
         
         let lastError = processError;
         let resolved = false;
@@ -367,7 +367,7 @@ export class ExecutionPipeline {
               try {
                 ticketId = await escalation.humanReviewHandler(ctx, lastError, ctx.escalationHistory || []);
               } catch (hrError : unknown) {
-                log.error('[ExecutionPipeline] Human review handler failed:', hrError.message);
+                log.error('[ExecutionPipeline] Human review handler failed:', hrError instanceof Error ? hrError.message : String(hrError));
               }
             }
             
@@ -416,10 +416,10 @@ export class ExecutionPipeline {
               tier,
               attemptedAt: new Date(),
               result: 'failed',
-              error: retryError.message,
+              error: retryError instanceof Error ? retryError.message : String(retryError),
               modelUsed: ctx.modelUsed,
             });
-            log.warn(`[ExecutionPipeline] ${options.operationName} escalation tier ${tier} failed: ${retryError.message}`);
+            log.warn(`[ExecutionPipeline] ${options.operationName} escalation tier ${tier} failed: ${retryError instanceof Error ? retryError.message : String(retryError)}`);
           }
         }
         

@@ -407,7 +407,7 @@ export default function EmployeeOnboardingWizard() {
       const res = await fetch(`/api/onboarding/invite/${token}`);
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.message || 'Invalid invite link');
+        throw new Error(err instanceof Error ? err.message : String(err) || 'Invalid invite link');
       }
       return res.json();
     },

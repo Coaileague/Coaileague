@@ -67,8 +67,8 @@ export function withUsageTracking<T>(
       return result;
     } catch (error : unknown) {
       success = false;
-      errorMessage = error.message || String(error);
-      errorCode = error.code || error.statusCode?.toString();
+      errorMessage = error instanceof Error ? error.message : String(error) || String(error);
+      errorCode = (error as NodeJS.ErrnoException).code || error.statusCode?.toString();
       responseStatusCode = error.statusCode || error.response?.status || 500;
       throw error;
     } finally {
@@ -164,8 +164,8 @@ export async function withBatchUsageTracking<T>(
     return result;
   } catch (error : unknown) {
     success = false;
-    errorMessage = error.message || String(error);
-    errorCode = error.code || error.statusCode?.toString();
+    errorMessage = error instanceof Error ? error.message : String(error) || String(error);
+    errorCode = (error as NodeJS.ErrnoException).code || error.statusCode?.toString();
     responseStatusCode = error.statusCode || error.response?.status || 500;
     throw error;
   } finally {

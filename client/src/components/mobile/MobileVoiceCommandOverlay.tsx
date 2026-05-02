@@ -121,11 +121,11 @@ export function MobileVoiceCommandOverlay({
 
   const handleError = useCallback((error: VoiceCommandError) => {
     console.error('[VoiceOverlay] Error:', error);
-    setErrorMessage(error.message);
+    setErrorMessage(error instanceof Error ? error.message : String(error));
     onModeChange?.('ERROR');
     toast({
       title: 'Voice Command Error',
-      description: error.message,
+      description: error instanceof Error ? error.message : String(error),
       variant: 'destructive',
     });
   }, [onModeChange, toast]);

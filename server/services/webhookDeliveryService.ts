@@ -97,8 +97,8 @@ export async function validateWebhookUrl(rawUrl: string): Promise<void> {
       }
     }
   } catch (err: unknown) {
-    if (err.message?.startsWith('Webhook URL')) throw err;
-    throw new Error(`Webhook URL hostname resolution failed: ${err.message}`);
+    if (err instanceof Error ? err.message : String(err)?.startsWith('Webhook URL')) throw err;
+    throw new Error(`Webhook URL hostname resolution failed: ${err instanceof Error ? err.message : String(err)}`);
   }
 }
 
@@ -195,8 +195,8 @@ async function attemptDelivery(attempt: DeliveryAttempt): Promise<{
   try {
     await validateWebhookUrl(attempt.url);
   } catch (err: unknown) {
-    log.warn('[webhookDelivery] SSRF guard blocked delivery', { url: attempt.url, reason: err.message });
-    return { statusCode: 0, responseBody: `SSRF blocked: ${err.message}`, success: false };
+    log.warn('[webhookDelivery] SSRF guard blocked delivery', { url: attempt.url, reason: err instanceof Error ? err.message : String(err) });
+    return { statusCode: 0, responseBody: `SSRF blocked: ${err instanceof Error ? err.message : String(err)}`, success: false };
   }
 
   const controller = new AbortController();
@@ -229,7 +229,7 @@ async function attemptDelivery(attempt: DeliveryAttempt): Promise<{
     clearTimeout(timeout);
     return {
       statusCode: 0,
-      responseBody: err.message || 'Connection failed',
+      responseBody: err instanceof Error ? err.message : String(err) || 'Connection failed',
       success: false,
     };
   }
@@ -342,7 +342,7 @@ async function notifyOrgOwnerOfWebhookFailure(
     log.info(`[WebhookDelivery] Notifying org_owner ${rows[0].email} of webhook failure: webhookId=${webhookId} url=${url} eventType=${eventType}`);
     // NDS integration would go here; logging is sufficient for this phase
   } catch (err: unknown) {
-    log.error('[WebhookDelivery] Failed to notify org_owner:', err.message);
+    log.error('[WebhookDelivery] Failed to notify org_owner:', err instanceof Error ? err.message : String(err));
   }
 }
 
@@ -389,10 +389,10 @@ export async function deliverWebhookEvent(
         webhook.url,
         resolveWebhookSecret(webhook.secret),
         1
-      ).catch(err => log.error('[WebhookDelivery] Delivery error:', err.message));
+      ).catch(err => log.error('[WebhookDelivery] Delivery error:', err instanceof Error ? err.message : String(err)));
     }
   } catch (err: unknown) {
-    log.error('[WebhookDelivery] deliverWebhookEvent error:', err.message);
+    log.error('[WebhookDelivery] deliverWebhookEvent error:', err instanceof Error ? err.message : String(err));
   }
 }
 
@@ -456,6 +456,6 @@ export async function initWebhookTables(): Promise<void> {
     );
     log.info('[WebhookDelivery] webhook_outbound_log table initialized');
   } catch (err: unknown) {
-    log.error('[WebhookDelivery] Failed to init webhook tables:', err.message);
+    log.error('[WebhookDelivery] Failed to init webhook tables:', err instanceof Error ? err.message : String(err));
   }
 }

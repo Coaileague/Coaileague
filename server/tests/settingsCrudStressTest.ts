@@ -287,7 +287,7 @@ async function phase4_notification_prefs() {
         name: 'Notification Prefs Seed Row',
         phase: 'NOTIFICATIONS',
         passed: false,
-        details: `Could not seed notification prefs row: ${e.message}`,
+        details: `Could not seed notification prefs row: ${e instanceof Error ? e.message : String(e)}`,
         severity: 'high',
       });
     }

@@ -665,7 +665,7 @@ export class TokenManager {
         tokensUsed: r.creditsDeducted ?? 0,
         featureKey: r.featureKey,
         featureName: r.activityType || r.featureKey,
-        description: (r as Record<string, unknown>).metadata?.description || '',
+        description: (r as {metadata: Record<string, unknown>}).metadata?.description || '',
         createdAt: r.createdAt,
       }));
     } catch {

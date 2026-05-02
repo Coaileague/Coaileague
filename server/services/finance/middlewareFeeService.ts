@@ -116,7 +116,7 @@ export function getCompetitorComparison(tier: TierKey): CompetitorComparison {
       payrollPerEmployee: fees.payrollMiddleware.perEmployeeCents,
       tierDiscount: fees.tierDiscount,
     },
-    competitors: competitors as unknown as Record<string, CompetitorComparisonEntry>,
+    competitors: competitors as Record<string, CompetitorComparisonEntry>,
     savings: {
       vsQuickbooks: { invoiceSavingsPercent: invoiceSavingsVsQB, payrollSavingsPercent: payrollSavingsVsQB },
       vsGusto: { payrollSavingsPercent: payrollSavingsVsGusto },

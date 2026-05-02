@@ -112,7 +112,7 @@ async function handleTrainingSchedule(req: ActionRequest): Promise<ActionResult>
       availableSessions: upcomingSessions.length
     }, start);
   } catch (error : unknown) {
-    return createResult('training.schedule', false, `Training schedule action failed: ${error.message}`, null, start);
+    return createResult('training.schedule', false, `Training schedule action failed: ${error instanceof Error ? error.message : String(error)}`, null, start);
   }
 }
 
@@ -169,7 +169,7 @@ async function handleTrainingCompliance(req: ActionRequest): Promise<ActionResul
       }))
     }, start);
   } catch (error : unknown) {
-    return createResult('training.compliance', false, `Training compliance summary failed: ${error.message}`, null, start);
+    return createResult('training.compliance', false, `Training compliance summary failed: ${error instanceof Error ? error.message : String(error)}`, null, start);
   }
 }
 
@@ -236,7 +236,7 @@ async function handleTrainingHours(req: ActionRequest): Promise<ActionResult> {
       recentSessions: attendance.slice(0, 5)
     }, start);
   } catch (error : unknown) {
-    return createResult('training.hours', false, `Training hours report failed: ${error.message}`, null, start);
+    return createResult('training.hours', false, `Training hours report failed: ${error instanceof Error ? error.message : String(error)}`, null, start);
   }
 }
 

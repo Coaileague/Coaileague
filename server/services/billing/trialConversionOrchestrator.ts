@@ -288,7 +288,7 @@ class TrialConversionOrchestrator {
 
     // CLASS B FIX: Idempotency guard for trial expiry warnings
     // Check if we've already warned for this specific threshold day
-    const lastWarnedAt = (workspace as Record<string, unknown>).metadata?.last_trial_warning_day;
+    const lastWarnedAt = (workspace as {metadata: Record<string, unknown>}).metadata?.last_trial_warning_day;
     if (lastWarnedAt === daysRemaining) {
       log.info(`[TrialConversionOrchestrator] Skipping duplicate ${daysRemaining}-day warning for workspace ${workspaceId}`);
       return;

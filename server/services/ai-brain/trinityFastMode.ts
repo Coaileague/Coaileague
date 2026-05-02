@@ -325,7 +325,7 @@ class TrinityFastModeService {
         operationId: operation.id,
         type: operation.type,
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         durationMs: Date.now() - startTime,
         executedAt: new Date(),
         tier: config.tier

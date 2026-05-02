@@ -314,7 +314,7 @@ export async function processEmailReply(
         await sendEmailRound2(cand, session.workspaceId, sessionId);
       }
     } catch (r2Err : unknown) {
-      log.warn('[EmailInterview] Auto Round 2 send failed:', r2Err.message);
+      log.warn('[EmailInterview] Auto Round 2 send failed:', r2Err instanceof Error ? r2Err.message : String(r2Err));
     }
   } else if (advanceToChat) {
     // Generate a chat room ID and send invite
@@ -333,7 +333,7 @@ export async function processEmailReply(
         await sendChatInvitation(candidate, session.workspaceId, chatRoomId, chatRoomUrl);
       }
     } catch (chatErr : unknown) {
-      log.warn('[EmailInterview] Auto chat invite failed:', chatErr.message);
+      log.warn('[EmailInterview] Auto chat invite failed:', chatErr instanceof Error ? chatErr.message : String(chatErr));
     }
   }
 

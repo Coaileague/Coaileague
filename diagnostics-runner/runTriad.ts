@@ -96,8 +96,8 @@ async function main() {
     console.error('');
     console.error('❌ TRINITY TRIAD FAILED');
     console.error('=======================');
-    console.error(error.message);
-    console.error(error.stack);
+    console.error(error instanceof Error ? error.message : String(error));
+    console.error(error instanceof Error ? error.stack : undefined);
     process.exit(1);
   }
 }

@@ -214,7 +214,7 @@ export async function runPayrollAutoClose(): Promise<{
           }
         }
       } catch (wsErr: unknown) {
-        log.warn('Payroll auto-close failed for workspace', { workspaceId: ws.id, error: wsErr.message });
+        log.warn('Payroll auto-close failed for workspace', { workspaceId: ws.id, error: wsErr instanceof Error ? wsErr.message : String(wsErr) });
       }
     }
   } catch (err: unknown) {
@@ -294,6 +294,6 @@ export async function detectOrphanedPayrollRuns(): Promise<void> {
       }
     }
   } catch (err: unknown) {
-    log.warn('Orphaned payroll run detection failed', { error: err.message });
+    log.warn('Orphaned payroll run detection failed', { error: err instanceof Error ? err.message : String(err) });
   }
 }

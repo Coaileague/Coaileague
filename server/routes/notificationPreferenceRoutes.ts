@@ -62,7 +62,7 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
       },
     });
   } catch (err: unknown) {
-    log.error('[NotifPrefRoutes] GET preferences error:', err.message);
+    log.error('[NotifPrefRoutes] GET preferences error:', err instanceof Error ? err.message : String(err));
     return res.status(500).json({ error: 'Failed to fetch preferences' });
   }
 });
@@ -119,7 +119,7 @@ router.put('/', requireAuth, async (req: AuthenticatedRequest, res) => {
 
     return res.json({ success: true });
   } catch (err: unknown) {
-    log.error('[NotifPrefRoutes] PUT preferences error:', err.message);
+    log.error('[NotifPrefRoutes] PUT preferences error:', err instanceof Error ? err.message : String(err));
     return res.status(500).json({ error: 'Failed to update preferences' });
   }
 });
@@ -131,7 +131,7 @@ router.get('/templates', requireAuth, async (req: AuthenticatedRequest, res) => 
     const templates = await listTemplates(workspaceId);
     return res.json({ templates });
   } catch (err: unknown) {
-    log.error('[NotifPrefRoutes] GET templates error:', err.message);
+    log.error('[NotifPrefRoutes] GET templates error:', err instanceof Error ? err.message : String(err));
     return res.status(500).json({ error: 'Failed to fetch templates' });
   }
 });
@@ -147,7 +147,7 @@ router.post('/templates/preview', requireAuth, async (req: AuthenticatedRequest,
 
     return res.json({ rendered, variables });
   } catch (err: unknown) {
-    log.error('[NotifPrefRoutes] preview error:', err.message);
+    log.error('[NotifPrefRoutes] preview error:', err instanceof Error ? err.message : String(err));
     return res.status(500).json({ error: 'Failed to preview template' });
   }
 });
@@ -191,7 +191,7 @@ router.post('/templates', requireAuth, async (req: AuthenticatedRequest, res) =>
 
     return res.status(201).json({ template });
   } catch (err: unknown) {
-    log.error('[NotifPrefRoutes] POST template error:', err.message);
+    log.error('[NotifPrefRoutes] POST template error:', err instanceof Error ? err.message : String(err));
     return res.status(500).json({ error: 'Failed to create notification template. Please try again.' });
   }
 });
@@ -211,7 +211,7 @@ router.get('/templates/:notifType/versions', requireAuth, async (req: Authentica
 
     return res.json({ versions: rows });
   } catch (err: unknown) {
-    log.error('[NotifPrefRoutes] GET versions error:', err.message);
+    log.error('[NotifPrefRoutes] GET versions error:', err instanceof Error ? err.message : String(err));
     return res.status(500).json({ error: 'Failed to fetch template versions' });
   }
 });

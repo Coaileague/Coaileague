@@ -43,7 +43,7 @@ const auditorIntake: ActionHandler = {
       if (!result.success) return fail(request.actionId, result.reason || 'Intake failed', start);
       return ok(request.actionId, `Auditor intake processed (auditId=${result.auditId})`, result, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed: ${err.message}`, start);
+      return fail(request.actionId, `Failed: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -70,7 +70,7 @@ const auditorListActive: ActionHandler = {
       );
       return ok(request.actionId, `${r.rows.length} active audit(s)`, r.rows, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed: ${err.message}`, start);
+      return fail(request.actionId, `Failed: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -90,7 +90,7 @@ const auditorClose: ActionHandler = {
       const r = await closeAudit(auditId, request.userId);
       return r.success ? ok(request.actionId, 'Audit closed', { auditId }, start) : fail(request.actionId, 'Close failed', start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed: ${err.message}`, start);
+      return fail(request.actionId, `Failed: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };
@@ -108,7 +108,7 @@ const auditorExpireOld: ActionHandler = {
       const r = await expireOldAudits();
       return ok(request.actionId, `Expired ${r.closed} stale audit window(s)`, r, start);
     } catch (err: unknown) {
-      return fail(request.actionId, `Failed: ${err.message}`, start);
+      return fail(request.actionId, `Failed: ${err instanceof Error ? err.message : String(err)}`, start);
     }
   },
 };

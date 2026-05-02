@@ -37,7 +37,7 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
     const holidays = await getWorkspaceHolidays(workspaceId, year);
     return res.json({ holidays });
   } catch (err: unknown) {
-    log.error('[HolidayRoutes] GET /api/holidays error:', err.message);
+    log.error('[HolidayRoutes] GET /api/holidays error:', err instanceof Error ? err.message : String(err));
     return res.status(500).json({ error: 'Failed to fetch holidays' });
   }
 });
@@ -67,7 +67,7 @@ router.get('/check-date', requireAuth, async (req: AuthenticatedRequest, res) =>
     
     return res.json({ isHoliday, date, stateCode: state_code || null });
   } catch (err: unknown) {
-    log.error('[HolidayRoutes] check-date error:', err.message);
+    log.error('[HolidayRoutes] check-date error:', err instanceof Error ? err.message : String(err));
     return res.status(500).json({ error: 'Failed to check holiday status' });
   }
 });
@@ -106,7 +106,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res) => {
     
     return res.status(201).json({ holiday });
   } catch (err: unknown) {
-    log.error('[HolidayRoutes] POST /api/holidays error:', err.message);
+    log.error('[HolidayRoutes] POST /api/holidays error:', err instanceof Error ? err.message : String(err));
     return res.status(500).json({ error: 'Failed to create holiday' });
   }
 });
@@ -139,7 +139,7 @@ router.put('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     
     return res.json({ holiday });
   } catch (err: unknown) {
-    log.error('[HolidayRoutes] PUT error:', err.message);
+    log.error('[HolidayRoutes] PUT error:', err instanceof Error ? err.message : String(err));
     return res.status(500).json({ error: 'Failed to update holiday' });
   }
 });
@@ -160,7 +160,7 @@ router.delete('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     
     return res.json({ success: true });
   } catch (err: unknown) {
-    log.error('[HolidayRoutes] DELETE error:', err.message);
+    log.error('[HolidayRoutes] DELETE error:', err instanceof Error ? err.message : String(err));
     return res.status(500).json({ error: 'Failed to delete holiday' });
   }
 });

@@ -344,7 +344,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
           approvedAt: new Date().toISOString()
         });
       } catch (webhookErr: unknown) {
-        log.warn('[Payroll] Failed to log webhook error to audit log', { error: webhookErr.message });
+        log.warn('[Payroll] Failed to log webhook error to audit log', { error: webhookErr instanceof Error ? webhookErr.message : String(webhookErr) });
       }
 
       // broadcastToWorkspace imported statically
@@ -875,7 +875,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
         // broadcastToWorkspace imported statically
         broadcastToWorkspace(workspaceId, { type: 'payroll_updated', action: 'approved', runId: run.id });
       } catch (_wsErr: unknown) {
-        log.warn('[Payroll] Failed to broadcast WebSocket update', { error: _wsErr.message });
+        log.warn('[Payroll] Failed to broadcast WebSocket update', { error: _wsErr instanceof Error ? _wsErr.message : String(_wsErr) });
       }
 
       platformEventBus.publish({
@@ -963,13 +963,13 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
           // DB ledger: record in financial_processing_fees so platformBillService includes it
           import('../services/billing/financialProcessingFeeService').then(({ financialProcessingFeeService }) =>
             financialProcessingFeeService.recordPayrollFee({ workspaceId, referenceId: id, employeeCount })
-              .catch((err: Error) => log.warn('[PayrollRoute] Fee ledger record failed (non-blocking):', err.message))
-          ).catch((err: Error) => log.warn('[PayrollRoute] Fee ledger import failed:', err.message));
+              .catch((err: Error) => log.warn('[PayrollRoute] Fee ledger record failed (non-blocking):', err instanceof Error ? err.message : String(err)))
+          ).catch((err: Error) => log.warn('[PayrollRoute] Fee ledger import failed:', err instanceof Error ? err.message : String(err)));
           // Platform revenue tracking: write to platform_revenue table
           import('../services/finance/middlewareFeeService').then(({ recordMiddlewareFeeCharge }) =>
             recordMiddlewareFeeCharge(workspaceId, 'payroll_processing', feeResult.amountCents, id)
-              .catch((err: Error) => log.warn('[PayrollRoute] Platform revenue record failed (non-blocking):', err.message))
-          ).catch((err: Error) => log.warn('[PayrollRoute] Platform revenue import failed:', err.message));
+              .catch((err: Error) => log.warn('[PayrollRoute] Platform revenue record failed (non-blocking):', err instanceof Error ? err.message : String(err)))
+          ).catch((err: Error) => log.warn('[PayrollRoute] Platform revenue import failed:', err instanceof Error ? err.message : String(err)));
         }
       } catch (feeErr: unknown) {
         log.warn('[PayrollRoute] Middleware fee charge failed (non-blocking):', (feeErr instanceof Error ? feeErr.message : String(feeErr)));
@@ -1126,7 +1126,7 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
         // broadcastToWorkspace imported statically
         broadcastToWorkspace(workspaceId, { type: 'payroll_updated', action: 'processed', runId: id });
       } catch (_wsErr: unknown) {
-        log.warn('[Payroll] Failed to broadcast WebSocket update', { error: _wsErr.message });
+        log.warn('[Payroll] Failed to broadcast WebSocket update', { error: _wsErr instanceof Error ? _wsErr.message : String(_wsErr) });
       }
 
       platformEventBus.publish({
@@ -2433,7 +2433,7 @@ router.post('/runs/:id/mark-paid', async (req: AuthenticatedRequest, res) => {
         disbursementMethod,
       });
     } catch (err: unknown) {
-      log.warn('[Payroll] Failed to process batch completion', { error: err.message });
+      log.warn('[Payroll] Failed to process batch completion', { error: err instanceof Error ? err.message : String(err) });
     }
 
     platformEventBus.publish({

@@ -516,7 +516,7 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
           });
         }
       } catch (licenseErr : unknown) {
-        log.warn('[ClockIn] License check error (non-blocking):', licenseErr.message);
+        log.warn('[ClockIn] License check error (non-blocking):', licenseErr instanceof Error ? licenseErr.message : String(licenseErr));
       }
     }
 
@@ -831,7 +831,7 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
         longitude: newEntry.clockInLongitude
       });
     } catch (webhookErr : unknown) {
-      log.warn('[TimeEntry] Failed to log webhook error to audit log', { error: webhookErr.message });
+      log.warn('[TimeEntry] Failed to log webhook error to audit log', { error: webhookErr instanceof Error ? webhookErr.message : String(webhookErr) });
     }
 
     platformEventBus.publish({
@@ -1153,7 +1153,7 @@ timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Aut
         longitude: longitude || null
       });
     } catch (webhookErr : unknown) {
-      log.warn('[TimeEntry] Failed to log webhook error to audit log', { error: webhookErr.message });
+      log.warn('[TimeEntry] Failed to log webhook error to audit log', { error: webhookErr instanceof Error ? webhookErr.message : String(webhookErr) });
     }
 
     platformEventBus.publish({

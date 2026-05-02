@@ -38,7 +38,7 @@ async function run() {
     const dbModule = await import('../../server/db');
     db = dbModule.db;
   } catch (err : unknown) {
-    console.error('Cannot connect to DB:', err.message);
+    console.error('Cannot connect to DB:', err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
 
@@ -74,7 +74,7 @@ async function run() {
         notLocked ? 'SPS is not suspended/frozen/locked' :
           `SPS is locked! suspended=${ws.is_suspended}, frozen=${ws.is_frozen}, locked=${ws.is_locked}`);
     } catch (err : unknown) {
-      check('SPS:exists', false, `Query failed: ${err.message}`);
+      check('SPS:exists', false, `Query failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   } else if (IS_DEV) {
     check('SPS:exists', true, 'SPS not in dev DB — expected (production-only tenant) ✓ WARN: verify in prod');
@@ -109,7 +109,7 @@ async function run() {
       check('SPS:no-trinity-system-email', !hasTrinitySystem,
         hasTrinitySystem ? 'trinity-system@ INCORRECTLY present' : 'trinity-system@ correctly absent');
     } catch (err : unknown) {
-      check('SPS:email-count', false, `Query failed: ${err.message}`);
+      check('SPS:email-count', false, `Query failed: ${err instanceof Error ? err.message : String(err)}`);
       devSkip('SPS:docs-email-present');
       devSkip('SPS:no-trinity-system-email');
     }
@@ -141,7 +141,7 @@ async function run() {
         check('SPS:billing-not-locked', false, 'SPS workspace not found');
       }
     } catch (err : unknown) {
-      check('SPS:billing-exemption', false, `Query failed: ${err.message}`);
+      check('SPS:billing-exemption', false, `Query failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   } else {
     check('SPS:billing-not-locked', false, 'SPS workspace not found in production database');

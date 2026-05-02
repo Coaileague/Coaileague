@@ -210,28 +210,28 @@ export async function initializeSkillsSystem(): Promise<void> {
       await skillRegistry.register(payrollValidationSkill);
       log.info('  ✅ PayrollValidationSkill registered');
     } catch (e: unknown) {
-      log.warn('  ⚠️  PayrollValidationSkill skipped:', e.message);
+      log.warn('  ⚠️  PayrollValidationSkill skipped:', e instanceof Error ? e.message : String(e));
     }
     
     try {
       await skillRegistry.register(invoiceReconciliationSkill);
       log.info('  ✅ InvoiceReconciliationSkill registered');
     } catch (e: unknown) {
-      log.warn('  ⚠️  InvoiceReconciliationSkill skipped:', e.message);
+      log.warn('  ⚠️  InvoiceReconciliationSkill skipped:', e instanceof Error ? e.message : String(e));
     }
     
     try {
       await skillRegistry.register(intelligentSchedulerSkill);
       log.info('  ✅ IntelligentSchedulerSkill registered');
     } catch (e: unknown) {
-      log.warn('  ⚠️  IntelligentSchedulerSkill skipped:', e.message);
+      log.warn('  ⚠️  IntelligentSchedulerSkill skipped:', e instanceof Error ? e.message : String(e));
     }
     
     try {
       await skillRegistry.register(trinityStaffingSkill);
       log.info('  ✅ TrinityStaffingSkill registered (Premier)');
     } catch (e: unknown) {
-      log.warn('  ⚠️  TrinityStaffingSkill skipped:', e.message);
+      log.warn('  ⚠️  TrinityStaffingSkill skipped:', e instanceof Error ? e.message : String(e));
     }
 
     log.info('Registering v3 brain skills...');
@@ -240,21 +240,21 @@ export async function initializeSkillsSystem(): Promise<void> {
       await skillRegistry.register(documentGeneratorSkill);
       log.info('  ✅ DocumentGeneratorSkill registered');
     } catch (e: unknown) {
-      log.warn('  ⚠️  DocumentGeneratorSkill skipped:', e.message);
+      log.warn('  ⚠️  DocumentGeneratorSkill skipped:', e instanceof Error ? e.message : String(e));
     }
 
     try {
       await skillRegistry.register(dataResearchSkill);
       log.info('  ✅ DataResearchSkill registered');
     } catch (e: unknown) {
-      log.warn('  ⚠️  DataResearchSkill skipped:', e.message);
+      log.warn('  ⚠️  DataResearchSkill skipped:', e instanceof Error ? e.message : String(e));
     }
 
     try {
       await skillRegistry.register(financialMathVerifierSkill);
       log.info('  ✅ FinancialMathVerifierSkill registered');
     } catch (e: unknown) {
-      log.warn('  ⚠️  FinancialMathVerifierSkill skipped:', e.message);
+      log.warn('  ⚠️  FinancialMathVerifierSkill skipped:', e instanceof Error ? e.message : String(e));
     }
 
     // Load directory-based skills

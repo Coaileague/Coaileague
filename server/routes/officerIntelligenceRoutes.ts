@@ -23,8 +23,8 @@ router.get('/api/officers/:officerId/dashboard', async (req: AuthenticatedReques
     const dashboard = await officerIntelligenceService.buildDashboard(officerId, workspaceId);
     res.json(dashboard);
   } catch (err: unknown) {
-    if (err.message?.includes('Officer not found')) {
-      return res.status(404).json({ error: err.message });
+    if (err instanceof Error ? err.message : String(err)?.includes('Officer not found')) {
+      return res.status(404).json({ error: err instanceof Error ? err.message : String(err) });
     }
     log.error(err, 'Failed to build officer dashboard');
     res.status(500).json({ error: sanitizeError(err) });

@@ -302,7 +302,7 @@ async function phase3_helpai_orchestration() {
     const cnt = Number(extractRows(sessions)[0]?.cnt ?? 0);
     record({ name: 'HelpAI Sessions Table Queryable', phase: 'HELPAI', passed: true, details: `${cnt} sessions in DB`, severity: 'critical' });
   } catch (e: unknown) {
-    record({ name: 'HelpAI Sessions Table Queryable', phase: 'HELPAI', passed: false, details: e.message, severity: 'critical' });
+    record({ name: 'HelpAI Sessions Table Queryable', phase: 'HELPAI', passed: false, details: e instanceof Error ? e.message : String(e), severity: 'critical' });
   }
 
   // Safety codes table
@@ -311,7 +311,7 @@ async function phase3_helpai_orchestration() {
     const codes = await typedCount(sql`SELECT count(*) as cnt FROM helpai_safety_codes`);
     record({ name: 'HelpAI Safety Codes Table', phase: 'HELPAI', passed: true, details: `${Number(extractRows(codes)[0]?.cnt ?? 0)} codes`, severity: 'high' });
   } catch (e: unknown) {
-    record({ name: 'HelpAI Safety Codes Table', phase: 'HELPAI', passed: false, details: e.message, severity: 'high' });
+    record({ name: 'HelpAI Safety Codes Table', phase: 'HELPAI', passed: false, details: e instanceof Error ? e.message : String(e), severity: 'high' });
   }
 
   // Admin HelpAI dashboard file
@@ -374,7 +374,7 @@ async function phase4_trinity_orchestration() {
     const dl = await typedCount(sql`SELECT count(*) as cnt FROM trinity_decision_log`);
     record({ name: 'Trinity Decision Log Table', phase: 'TRINITY', passed: true, details: `${Number(extractRows(dl)[0]?.cnt ?? 0)} entries`, severity: 'high' });
   } catch (e: unknown) {
-    record({ name: 'Trinity Decision Log Table', phase: 'TRINITY', passed: false, details: e.message, severity: 'high' });
+    record({ name: 'Trinity Decision Log Table', phase: 'TRINITY', passed: false, details: e instanceof Error ? e.message : String(e), severity: 'high' });
   }
 
   // Multi-model routing: Claude AI routes file exists + mentions multi-model
@@ -497,7 +497,7 @@ async function phase5_subscription_lifecycle() {
     const idempotency = await typedCount(sql`SELECT count(*) as cnt FROM processed_stripe_events`);
     record({ name: 'Stripe Idempotency Table', phase: 'SUBSCRIPTIONS', passed: true, details: `${Number(extractRows(idempotency)[0]?.cnt ?? 0)} processed events`, severity: 'critical' });
   } catch (e: unknown) {
-    record({ name: 'Stripe Idempotency Table', phase: 'SUBSCRIPTIONS', passed: false, details: e.message, severity: 'critical' });
+    record({ name: 'Stripe Idempotency Table', phase: 'SUBSCRIPTIONS', passed: false, details: e instanceof Error ? e.message : String(e), severity: 'critical' });
   }
 }
 
@@ -515,7 +515,7 @@ async function phase6_onboarding_workflow() {
     const invitations = await typedCount(sql`SELECT count(*) as cnt FROM onboarding_invites`);
     record({ name: 'Onboarding Invites Table', phase: 'ONBOARDING', passed: true, details: `${Number(extractRows(invitations)[0]?.cnt ?? 0)} invitations`, severity: 'critical' });
   } catch (e: unknown) {
-    record({ name: 'Onboarding Invites Table', phase: 'ONBOARDING', passed: false, details: e.message, severity: 'critical' });
+    record({ name: 'Onboarding Invites Table', phase: 'ONBOARDING', passed: false, details: e instanceof Error ? e.message : String(e), severity: 'critical' });
   }
 
   // Onboarding sessions table
@@ -524,7 +524,7 @@ async function phase6_onboarding_workflow() {
     const oSessions = await typedCount(sql`SELECT count(*) as cnt FROM onboarding_sessions`);
     record({ name: 'Onboarding Sessions Table', phase: 'ONBOARDING', passed: true, details: `${Number(extractRows(oSessions)[0]?.cnt ?? 0)} sessions`, severity: 'high' });
   } catch (e: unknown) {
-    record({ name: 'Onboarding Sessions Table', phase: 'ONBOARDING', passed: false, details: e.message, severity: 'high' });
+    record({ name: 'Onboarding Sessions Table', phase: 'ONBOARDING', passed: false, details: e instanceof Error ? e.message : String(e), severity: 'high' });
   }
 
   // Auth registration route
@@ -579,7 +579,7 @@ async function phase7_credit_chain() {
     const txns = await typedCount(sql`SELECT count(*) as cnt FROM credit_transactions`);
     record({ name: 'Credit Transactions Table', phase: 'CREDITS', passed: true, details: `${Number(extractRows(txns)[0]?.cnt ?? 0)} transactions logged`, severity: 'critical' });
   } catch (e: unknown) {
-    record({ name: 'Credit Transactions Table', phase: 'CREDITS', passed: false, details: e.message, severity: 'critical' });
+    record({ name: 'Credit Transactions Table', phase: 'CREDITS', passed: false, details: e instanceof Error ? e.message : String(e), severity: 'critical' });
   }
 
   // Key feature costs defined
@@ -600,7 +600,7 @@ async function phase7_credit_chain() {
     const balances = await typedCount(sql`SELECT count(*) as cnt FROM workspace_credits WHERE current_balance >= 0`);
     record({ name: 'Workspace Credit Balances', phase: 'CREDITS', passed: true, details: `${Number(extractRows(balances)[0]?.cnt ?? 0)} workspaces have credit records`, severity: 'high' });
   } catch (e: unknown) {
-    record({ name: 'Workspace Credit Balances', phase: 'CREDITS', passed: false, details: e.message, severity: 'high' });
+    record({ name: 'Workspace Credit Balances', phase: 'CREDITS', passed: false, details: e instanceof Error ? e.message : String(e), severity: 'high' });
   }
 
   // Credit routes API
@@ -748,7 +748,7 @@ async function phase11_chatroom_system() {
     const rooms = await typedCount(sql`SELECT count(*) as cnt FROM chat_conversations`);
     record({ name: 'Chat Conversations Table', phase: 'CHATROOM', passed: true, details: `${Number(extractRows(rooms)[0]?.cnt ?? 0)} conversations`, severity: 'critical' });
   } catch (e: unknown) {
-    record({ name: 'Chat Conversations Table', phase: 'CHATROOM', passed: false, details: e.message, severity: 'critical' });
+    record({ name: 'Chat Conversations Table', phase: 'CHATROOM', passed: false, details: e instanceof Error ? e.message : String(e), severity: 'critical' });
   }
 
   // Chatroom command service
@@ -790,7 +790,7 @@ async function phase12_settings_config() {
     const wsCnt = await typedCount(sql`SELECT count(*) as cnt FROM workspaces`);
     record({ name: 'Workspaces Table Active', phase: 'SETTINGS', passed: true, details: `${Number(extractRows(wsCnt)[0]?.cnt ?? 0)} workspaces`, severity: 'critical' });
   } catch (e: unknown) {
-    record({ name: 'Workspaces Table Active', phase: 'SETTINGS', passed: false, details: e.message, severity: 'critical' });
+    record({ name: 'Workspaces Table Active', phase: 'SETTINGS', passed: false, details: e instanceof Error ? e.message : String(e), severity: 'critical' });
   }
 
   // billingConfig pricing
@@ -1020,7 +1020,7 @@ async function phase15_end_to_end() {
     const wsCnt = Number(extractRows(wsCount)[0]?.cnt ?? 0);
     record({ name: 'Multi-Tenant: Multiple Workspaces', phase: 'E2E', passed: wsCnt >= 1, details: `${wsCnt} workspaces in DB`, severity: 'critical' });
   } catch (e: unknown) {
-    record({ name: 'Multi-Tenant: Multiple Workspaces', phase: 'E2E', passed: false, details: e.message, severity: 'critical' });
+    record({ name: 'Multi-Tenant: Multiple Workspaces', phase: 'E2E', passed: false, details: e instanceof Error ? e.message : String(e), severity: 'critical' });
   }
 
   // ensureWorkspaceAccess middleware
@@ -1032,7 +1032,7 @@ async function phase15_end_to_end() {
     const auditCount = await typedCount(sql`SELECT count(*) as cnt FROM audit_logs`);
     record({ name: 'Audit Trail Active', phase: 'E2E', passed: true, details: `${Number(extractRows(auditCount)[0]?.cnt ?? 0)} audit log entries`, severity: 'critical' });
   } catch (e: unknown) {
-    record({ name: 'Audit Trail Active', phase: 'E2E', passed: false, details: e.message, severity: 'critical' });
+    record({ name: 'Audit Trail Active', phase: 'E2E', passed: false, details: e instanceof Error ? e.message : String(e), severity: 'critical' });
   }
 
   // Contract lifecycle pipeline
@@ -1044,7 +1044,7 @@ async function phase15_end_to_end() {
     const scores = await typedCount(sql`SELECT count(*) as cnt FROM employee_behavior_scores`);
     record({ name: 'Behavior Scoring DB Active', phase: 'E2E', passed: true, details: `${Number(extractRows(scores)[0]?.cnt ?? 0)} behavior scores`, severity: 'high' });
   } catch (e: unknown) {
-    record({ name: 'Behavior Scoring DB Active', phase: 'E2E', passed: false, details: e.message, severity: 'high' });
+    record({ name: 'Behavior Scoring DB Active', phase: 'E2E', passed: false, details: e instanceof Error ? e.message : String(e), severity: 'high' });
   }
 }
 

@@ -64,7 +64,7 @@ async function createSetupFeeProducts() {
         envVar: fee.envVar,
       });
     } catch (error : unknown) {
-      console.error(`Error creating ${fee.name}:`, error.message);
+      console.error(`Error creating ${fee.name}:`, error instanceof Error ? error.message : String(error));
     }
   }
 
