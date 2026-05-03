@@ -170,6 +170,9 @@ export function useChatroomWebSocket(
   const requestedConversationIdRef = useRef<string | null>(null);
   const joinedConversationIdRef = useRef<string | null>(null);
   const isJoinedRef = useRef(false);
+  // Wave 7 / Task 2: seqNum catch-up — stores last received sequence number per room
+  // Persisted to localStorage so reconnects across page refreshes can replay gaps
+  const lastSeqNumRef = useRef<number>(0);
   const lastConnectedConversationRef = useRef<string | null>(null);
   const hasInitializedRef = useRef(false);
   const onSecureRequestRef = useRef(onSecureRequest);
@@ -202,10 +205,13 @@ export function useChatroomWebSocket(
 
     isJoinedRef.current = false;
     requestedConversationIdRef.current = cId;
+    // Wave 7: include lastSeqNum so the server can replay missed messages
+    const lastSeq = lastSeqNumRef.current;
     bus.send({
       type: 'join_conversation',
       conversationId: cId,
       userId: uId,
+      ...(lastSeq > 0 ? { afterSeqNum: lastSeq } : {}),
     });
   }, [bus]);
 
@@ -259,6 +265,10 @@ export function useChatroomWebSocket(
         }
 
         case 'new_message':
+          // Wave 7: track last-seen seqNum for reconnect replay
+          if (typeof data.seqNum === 'number' && data.seqNum > lastSeqNumRef.current) {
+            lastSeqNumRef.current = data.seqNum;
+          }
           if (data.message && typeof data.message !== 'string') {
             if (!isForActiveConversation(resolvedConversationIdRef.current, requestedConversationIdRef.current, joinedConversationIdRef.current, data, data.message as ChatMessage)) {
               break;

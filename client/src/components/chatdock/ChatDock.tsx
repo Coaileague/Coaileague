@@ -2375,6 +2375,25 @@ function InlineChatView({ roomId, roomName }: { roomId: string; roomName: string
                           {msg.message && msg.message !== "[image]" && msg.message !== "[file]" && msg.message !== "[video]" && msg.message !== "[audio]" && (
                             <p className="text-[13px] mt-1"><FormattedMessage text={msg.message} /></p>
                           )}
+                          {/* Wave 7 / Task 1: Action Block — renders uiComponent JSONB as interactive UI */}
+                          {(msg as Record<string, unknown>).uiComponent && (
+                            <ChatActionBlock
+                              messageId={msg.id}
+                              conversationId={roomId}
+                              uiComponent={(msg as Record<string, unknown>).uiComponent as Parameters<typeof ChatActionBlock>[0]['uiComponent']}
+                              currentUserId={currentUser?.id}
+                              isOwn={isOwn}
+                            />
+                          )}
+                          {(msg as Record<string, unknown>).uiComponent && (
+                            <ChatActionBlock
+                              messageId={msg.id}
+                              conversationId={roomId}
+                              uiComponent={(msg as Record<string, unknown>).uiComponent as Parameters<typeof ChatActionBlock>[0]['uiComponent']}
+                              currentUserId={currentUser?.id}
+                              isOwn={isOwn}
+                            />
+                          )}
                         </div>
                       ) : (
                         <FormattedMessage text={msgContent} />

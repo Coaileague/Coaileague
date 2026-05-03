@@ -6,6 +6,7 @@
 // WEBHOOK NOTE: resendWebhooksRouter, twilioWebhooksRouter, and messageBridgeWebhookRouter
 // are registered in server/routes.ts (lines 277-279) BEFORE all domain mounts so they
 // are never intercepted by auth middleware. Do NOT re-register them here.
+import chatActionBlockRouter from "../chatActionBlockRoutes";
 import type { Express } from "express";
 import { requireAuth } from "../../auth";
 import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
@@ -56,6 +57,9 @@ export function mountCommsRoutes(app: Express): void {
   app.use("/api/sms", requireAuth, ensureWorkspaceAccess, smsRouter);
   // MOUNT ORDER: specific sub-paths of /api/chat MUST come before general /api/chat catch-alls.
   app.use("/api/chat/upload", requireAuth, ensureWorkspaceAccess, chatUploadsRouter);
+
+  // Wave 7 / Task 4: Action Block respond endpoint — mounted via static import
+  app.use("/api/chat/messages", chatActionBlockRouter);
   app.use("/api/email-attachments", requireAuth, ensureWorkspaceAccess, emailAttachmentsRouter);
   app.use("/api/chat/rooms", requireAuth, attachWorkspaceIdOptional, chatRoomsRouter);
   app.use("/api/chat/manage", requireAuth, attachWorkspaceIdOptional, chatManagementRouter);
