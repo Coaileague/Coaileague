@@ -66,6 +66,9 @@ const PRODUCTION_REQUIRED_CONFIGS: ConfigValidation[] = [
 // Conditional production-required configs — only enforced if the parent service
 // is configured. (e.g. PLAID_WEBHOOK_SECRET only matters when PLAID_CLIENT_ID
 // is set, ENCRYPTION_KEY for Plaid tokens only matters when Plaid is wired.)
+// Set warnOnly: true to emit a warning instead of a fatal error when the value
+// is missing — use this for secrets whose absence degrades a feature (webhooks)
+// rather than causing a total security failure.
 const CONDITIONAL_PRODUCTION_CONFIGS: Array<{
   name: string;
   required: boolean;
@@ -73,12 +76,17 @@ const CONDITIONAL_PRODUCTION_CONFIGS: Array<{
   validate?: (value: string) => boolean;
   errorMessage?: string;
   enabledIf: () => boolean;
+  warnOnly?: boolean;
 }> = [
   {
     name: 'PLAID_WEBHOOK_SECRET',
     required: true,
     value: process.env.PLAID_WEBHOOK_SECRET,
     enabledIf: () => !!(process.env.PLAID_CLIENT_ID && process.env.PLAID_SECRET),
+    // warnOnly: the webhook endpoint already returns 500 gracefully when this is
+    // absent; a missing secret degrades Plaid webhook delivery but should NOT
+    // crash the entire server and take down all other services.
+    warnOnly: true,
     errorMessage: 'PLAID_WEBHOOK_SECRET required when Plaid is configured — webhook JWT verification will reject all events without it. Get from Plaid Dashboard → Team Settings → Keys.',
   },
   {
@@ -215,9 +223,19 @@ export function validateConfiguration(): ConfigValidationResult {
     for (const config of CONDITIONAL_PRODUCTION_CONFIGS) {
       if (!config.enabledIf()) continue;
       if (!config.value) {
-        errors.push(`[CRITICAL] Missing ${config.name}: ${config.errorMessage || 'required in production'}`);
+        const msg = config.errorMessage || 'required in production';
+        if (config.warnOnly) {
+          warnings.push(`[WARNING] Missing ${config.name}: ${msg}`);
+        } else {
+          errors.push(`[CRITICAL] Missing ${config.name}: ${msg}`);
+        }
       } else if (config.validate && !config.validate(config.value)) {
-        errors.push(`[CRITICAL] Invalid ${config.name}: ${config.errorMessage || ''}`);
+        const msg = config.errorMessage || '';
+        if (config.warnOnly) {
+          warnings.push(`[WARNING] Invalid ${config.name}: ${msg}`);
+        } else {
+          errors.push(`[CRITICAL] Invalid ${config.name}: ${msg}`);
+        }
       }
     }
   } else {
