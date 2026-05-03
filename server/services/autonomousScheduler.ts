@@ -4138,61 +4138,8 @@ export function startAutonomousScheduler() {
 
   // Trinity Proactive Weekly Scan — Every Monday at 7am
   registerJobInfo('Trinity Weekly Intelligence Scan', '0 7 * * 1', 'Monday 7am scan: OT risk, next-week completeness, 30-day compliance, workforce summary, SLA compliance, marketplace stale offers', true);
-  cron.schedule('0 7 * * 1', () => {
-    (async () => {
-      try {
-        const { trinityProactiveScanner } = await import('./ai-brain/trinityProactiveScanner');
-        await trinityProactiveScanner.runAllWorkspacesWeeklyScan();
-        log.info('Trinity Weekly Intelligence Scan complete');
-      } catch (error: unknown) {
-        log.error('Trinity Weekly Intelligence Scan error', { error: error instanceof Error ? error.message : String(error) });
-      }
-    })();
-  });
-  log.info('Trinity Weekly Intelligence Scan registered', { schedule: '0 7 * * 1', description: 'Monday weekly: OT risk, open shifts, compliance 30d, workforce summary, SLA check' });
+  // Notification cleanup: owned by dedicated service — see canonical owner
 
-  // ════════════════════════════════════════════════════════════════════════════
-  // TRINITY DREAM CYCLE — Nightly cognitive overnight processing (2–5:30 AM)
-  // ════════════════════════════════════════════════════════════════════════════
-  // While the org sleeps, Trinity's brain continues working: memory consolidation,
-  // social graph recalculation, incubation problem solving, temporal arc updates,
-  // and narrative self-reflection. The insights produced flow into the first
-  // user interaction of the day via buildMorningBrief().
-
-  const loadActiveWorkspaceIds = async (): Promise<string[]> => {
-    const rows = await db
-      .select({ id: workspaces.id })
-      .from(workspaces)
-      .where(and(
-        eq(workspaces.isSuspended, false),
-        eq(workspaces.isFrozen, false),
-        eq(workspaces.isLocked, false),
-        ne(workspaces.subscriptionStatus, 'cancelled'),
-      ))
-      .catch(() => []);
-    return rows.map(r => r.id).filter((id): id is string => typeof id === 'string');
-  };
-
-  // 2:00 AM — Memory consolidation (compression, decay, pattern surfacing)
-  registerJobInfo(
-    'Trinity Memory Consolidation',
-    '0 2 * * *',
-    'Nightly memory compression, decay, and pattern surfacing for all workspaces',
-    true,
-  );
-  cron.schedule('0 2 * * *', () => {
-    trackJobExecution('Trinity Memory Consolidation', async () => {
-      const { trinityMemoryOptimizer } = await import('./ai-brain/trinityMemoryOptimizer');
-      const workspaceIds = await loadActiveWorkspaceIds();
-      let processed = 0;
-      for (const wsId of workspaceIds) {
-        await trinityMemoryOptimizer.runNightlyConsolidation(wsId)
-          .then(() => { processed++; })
-          .catch((e) => log.warn('DreamCycle memory consolidation failed', { wsId, error: (e instanceof Error ? e.message : String(e)) ?? e }));
-      }
-      log.info('Trinity Memory Consolidation complete', { workspacesProcessed: processed });
-    });
-  });
 
   // 2:30 AM — Social graph recalculation (influence, isolation risk, connectors)
   registerJobInfo(

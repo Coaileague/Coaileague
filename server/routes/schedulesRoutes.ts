@@ -287,6 +287,20 @@ router.post('/publish', requireManager, async (req: AuthenticatedRequest, res) =
       visibility: 'manager',
     }).catch((err: unknown) => log.warn('[EventBus] schedule_published publish failed (non-blocking):', (err instanceof Error ? err.message : String(err))));
 
+    // 📡 REAL-TIME: Push schedule_published event to all workspace members so
+    // manager dashboards, Trinity, and employee schedule views update instantly.
+    broadcastToWorkspace(workspace.id, {
+      type: 'schedule_published',
+      scheduleId: published.id,
+      title: published.title,
+      weekStartDate: weekStartDate,
+      weekEndDate: weekEndDate,
+      totalShifts: published.totalShifts,
+      employeesAffected: new Set(shiftsData.map(s => s.employeeId).filter(Boolean)).size,
+      publishedBy: userId,
+      timestamp: new Date().toISOString(),
+    });
+
     res.json({ success: true, published, message: `Schedule published. ${employeesAffected} employees notified.` });
   } catch (error: unknown) {
     res.status(500).json({ message: sanitizeError(error) || "Failed to publish schedule" });

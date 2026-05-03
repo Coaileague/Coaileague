@@ -422,3 +422,116 @@ advancedSchedulingRouter.post('/shifts/:shiftId/duplicate', requireManager, asyn
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) || 'Failed to duplicate shift' });
   }
 });
+
+// POST /recurring — Generate recurring shift pattern from a template definition.
+// Called from ShiftCreationModal when "Recurring" is selected.
+// Generates N individual shift records (status: 'draft') from a pattern definition.
+advancedSchedulingRouter.post('/recurring', requireManager, async (req: Request, res: Response) => {
+  try {
+    const workspaceId = req.workspaceId || (req.user as unknown)?.currentWorkspaceId;
+    if (!workspaceId) return res.status(400).json({ error: 'No workspace context' });
+
+    const {
+      employeeId,
+      clientId,
+      title,
+      description,
+      startTimeOfDay,      // 'HH:MM'
+      endTimeOfDay,        // 'HH:MM'
+      daysOfWeek = [],     // [0-6] where 0=Sun
+      recurrencePattern = 'weekly',
+      startDate,
+      endDate,
+      generateShifts = true,
+    } = req.body;
+
+    if (!startDate || !endDate || !startTimeOfDay || !endTimeOfDay) {
+      return res.status(400).json({ error: 'startDate, endDate, startTimeOfDay, endTimeOfDay are required' });
+    }
+    if (!Array.isArray(daysOfWeek) || daysOfWeek.length === 0) {
+      return res.status(400).json({ error: 'daysOfWeek must be a non-empty array' });
+    }
+
+    const { shifts } = await import('@shared/schema');
+    const { db } = await import('../db');
+    const { broadcastToWorkspace } = await import('../websocket');
+    const { platformEventBus } = await import('../services/platformEventBus');
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const created: typeof shifts.$inferSelect[] = [];
+
+    if (generateShifts) {
+      const current = new Date(start);
+      const [sh, sm] = startTimeOfDay.split(':').map(Number);
+      const [eh, em] = endTimeOfDay.split(':').map(Number);
+
+      // Walk day-by-day and insert shifts on matching days of week
+      while (current <= end) {
+        const dayOfWeek = current.getDay(); // 0=Sun
+        if (daysOfWeek.includes(dayOfWeek)) {
+          const shiftStart = new Date(current);
+          shiftStart.setHours(sh, sm, 0, 0);
+
+          const shiftEnd = new Date(current);
+          shiftEnd.setHours(eh, em, 0, 0);
+          // Handle overnight shifts
+          if (shiftEnd <= shiftStart) shiftEnd.setDate(shiftEnd.getDate() + 1);
+
+          const [newShift] = await db.insert(shifts).values({
+            workspaceId,
+            employeeId: employeeId || null,
+            clientId: clientId || null,
+            title: title || 'Recurring Shift',
+            description: description || null,
+            startTime: shiftStart,
+            endTime: shiftEnd,
+            date: current.toISOString().split('T')[0],
+            status: 'draft',
+            aiGenerated: false,
+            recurrencePattern,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }).returning();
+
+          if (newShift) created.push(newShift);
+        }
+
+        // Advance by the recurrence interval
+        if (recurrencePattern === 'biweekly') {
+          current.setDate(current.getDate() + (daysOfWeek.includes(current.getDay()) ? 7 : 1));
+        } else {
+          current.setDate(current.getDate() + 1);
+        }
+      }
+    }
+
+    // Broadcast so schedule grid updates immediately
+    broadcastToWorkspace(workspaceId, {
+      type: 'shifts_bulk_created',
+      count: created.length,
+      workspaceId,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Notify Trinity
+    platformEventBus.publish({
+      type: 'shift_created',
+      category: 'workforce',
+      title: `Recurring Pattern Applied: ${created.length} shifts created`,
+      description: `${recurrencePattern} pattern applied from ${startDate} to ${endDate}`,
+      workspaceId,
+      metadata: { totalShifts: created.length, recurrencePattern, employeeId, clientId },
+      visibility: 'manager',
+    }).catch(() => {});
+
+    res.json({
+      success: true,
+      message: `Created ${created.length} recurring shifts`,
+      totalShifts: created.length,
+      shifts: created,
+    });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) || 'Failed to create recurring shifts' });
+  }
+});
