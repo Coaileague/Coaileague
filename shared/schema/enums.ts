@@ -895,12 +895,18 @@ export const invoiceLifecycleStateEnum = pgEnum('invoice_lifecycle_state', [
 ]);
 
 // ─── Client Lifecycle Status ────────────────────────────────────────────────
-// Financial gate for shift publishing. pending_onboarding = no signed contract,
-// shifts cannot publish. active = contract signed. suspended = account paused.
+// Financial gate for shift publishing.
+// pending_onboarding : client record created — no contract yet
+// pending_approval   : client signed — awaiting SPS countersignature
+// active             : dual-signature complete — shifts can publish
+// past_due           : payment failure — shifts hard-blocked
+// terminated         : contract ended — all access revoked, sessions invalidated
 export const clientLifecycleStatusEnum = pgEnum('client_lifecycle_status', [
   'pending_onboarding',
+  'pending_approval',
   'active',
-  'suspended',
+  'past_due',
+  'terminated',
 ]);
 export const oversightEntityTypeEnum = pgEnum('oversight_entity_type', [
   'invoice',

@@ -90,6 +90,18 @@ export async function initiatePayrollAchTransfer(params: {
     return { status: 'skipped', reason: 'plaid_not_configured' };
   }
 
+  // ── Multi-Party Payroll Routing Guarantee (Wave 4 / Task 3) ──────────────
+  // ORIGIN (funding source): orgFinanceSettings.plaidAccountId — the TENANT's bank account.
+  //   The tenant's Plaid-linked checking account funds their guards' paychecks.
+  //
+  // DESTINATION: employeeBankAccounts.plaidAccountId — the EMPLOYEE's bank account.
+  //   Guards receive their net pay via ACH credit to their personal checking.
+  //
+  // CoAIleague PLATFORM ACCOUNTS: NEVER TOUCHED in this flow.
+  //   The platform does not intermediate payroll cash — funds go directly from
+  //   tenant bank → employee bank, keeping the platform out of payroll liability.
+  // ─────────────────────────────────────────────────────────────────────────
+
   const [orgFinance] = await db.select({
     plaidAccessTokenEncrypted: orgFinanceSettings.plaidAccessTokenEncrypted,
     plaidAccountId: orgFinanceSettings.plaidAccountId,

@@ -2964,3 +2964,58 @@ export type SupervisorHandoff = typeof supervisorHandoffs.$inferSelect;
 export type InsertSupervisorHandoff = typeof supervisorHandoffs.$inferInsert;
 
 export * from './extended';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Trinity Financial Drafts (Wave 4 — Task 5: Financial Conscience)
+// Stores staged financial operations waiting for human approval.
+// Trinity drafts the math, saves here, notifies the owner.
+// Only after APPROVE click does the Stripe/Plaid API call execute.
+// ─────────────────────────────────────────────────────────────────────────────
+export const trinityFinancialDrafts = pgTable("trinity_financial_drafts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+
+  // What operation is staged
+  operationType: varchar("operation_type", { length: 50 }).notNull(),
+    // 'invoice_generation' | 'payroll_run'
+
+  // Approval lifecycle
+  approvalStatus: varchar("approval_status", { length: 20 }).default("pending_approval").notNull(),
+    // 'pending_approval' | 'approved' | 'rejected' | 'expired' | 'executed' | 'failed'
+
+  // Human decision
+  approvedBy: varchar("approved_by"),          // userId who clicked APPROVE
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: varchar("rejected_by"),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+
+  // The computed math snapshot — EXACT amounts at staging time
+  draftPayload: jsonb("draft_payload").notNull(),
+    // For invoice_generation: { invoices[], totalBillable, clientCount, period, autoPayDiscount? }
+    // For payroll_run: { employees[], totalGrossPay, totalNetPay, period, eeCount }
+
+  // Human-readable summary Trinity shows in the notification
+  summaryText: text("summary_text").notNull(),
+  approvalPrompt: text("approval_prompt"),     // "Approve to execute: $X to Y employees"
+
+  // Execution result (populated after approved + API call)
+  executionResult: jsonb("execution_result"),
+  executedAt: timestamp("executed_at"),
+  executionError: text("execution_error"),
+
+  // Notification tracking
+  notificationId: varchar("notification_id"), // links to the in-platform notification
+
+  // Audit
+  createdBy: varchar("created_by"),            // trinity system user
+  expiresAt: timestamp("expires_at"),          // draft auto-expires after 24h if not acted on
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("trinity_financial_drafts_workspace_idx").on(table.workspaceId),
+  index("trinity_financial_drafts_status_idx").on(table.approvalStatus),
+  index("trinity_financial_drafts_op_idx").on(table.operationType),
+  index("trinity_financial_drafts_expires_idx").on(table.expiresAt),
+]);
+

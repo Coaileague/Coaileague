@@ -480,6 +480,18 @@ function checkManagerRole(req: AuthenticatedRequest): { allowed: boolean; error?
           message: 'Organization subscription is not active — payroll cannot be run until the subscription is restored',
         });
       }
+      // Wave 4 / Task 4: Also block payroll on past_due (outstanding platform invoice).
+      // Guards' paychecks should still be processed once the balance is settled.
+      if (ws.subscriptionStatus === 'past_due') {
+        return res.status(402).json({
+          error: 'WORKSPACE_PAST_DUE',
+          message:
+            'Payroll is blocked. Your platform subscription has a past-due balance. ' +
+            'Please settle the outstanding invoice in Billing Settings to run payroll.',
+          code: 'WORKSPACE_PAST_DUE',
+          actionUrl: '/settings?tab=billing',
+        });
+      }
 
       const lockResult = acquirePayrollRunLock(workspaceId, userId);
       if (!lockResult.acquired) {

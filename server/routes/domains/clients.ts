@@ -20,6 +20,7 @@ import clientPortalInviteRouter from "../clientPortalInviteRoutes";
 import signContractRouter from "../clientPortalSignContractRoutes";
 import clientCommsRouter from "../clientCommsRoutes";
 import surveyRouter from "../surveyRoutes";
+import { requireActiveClientAgreement } from "../../middleware/requireActiveClientAgreement";
 
 export function mountClientRoutes(app: Express): void {
   app.use("/api/contracts/portal", contractPortalRouter);
@@ -43,7 +44,8 @@ export function mountClientRoutes(app: Express): void {
   // Client Portal Invite — Manager+ only, NDS tracked
   app.use("/api/clients", clientPortalInviteRouter);
   // POST /api/client-portal/:clientId/sign-contract — Service Agreement signing + dual vault
-  app.use("/api/client-portal", requireAuth, ensureWorkspaceAccess, signContractRouter);
+  // requireActiveClientAgreement: blocks terminated/past_due clients, allows pending_approval (needed for signing)
+  app.use("/api/client-portal", requireAuth, ensureWorkspaceAccess, requireActiveClientAgreement, signContractRouter);
 
   // ── Spec §4: /{org_code}/login — Unified Login Entry Point ──────────────────
   // Redirects org-scoped login URL to the main login with org pre-filled

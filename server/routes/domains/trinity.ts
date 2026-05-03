@@ -38,6 +38,7 @@ import { trinityNotificationRouter } from "../trinityNotificationRoutes";
 import { trinityStaffingOrchestrator } from "../../services/trinityStaffing/orchestrator";
 import trinityStaffingRouter, { publicWebhookRouter as trinityStaffingPublicRouter } from "../trinityStaffingRoutes";
 import trinityChatRouter from "../trinityChatRoutes";
+import trinityFinancialDraftRouter from "../trinityFinancialDraftRoutes";
 import trinityControlConsoleRouter from "../trinityControlConsoleRoutes";
 import quickFixRouter from "../quickFixRoutes";
 import trinitySelfEditRouter from "../trinitySelfEditRoutes";
@@ -164,6 +165,11 @@ export function mountTrinityRoutes(app: Express): void {
   app.use("/api/trinity/session", requireAuth, ensureWorkspaceAccess, trinitySessionRouter);
   app.use("/api/trinity/swarm", requireAuth, ensureWorkspaceAccess, trinitySwarmRouter);
   app.use("/api/trinity/crisis", requireAuth, ensureWorkspaceAccess, trinityCrisisRouter);
+
+  // ── Wave 4 / Task 5: Financial Conscience — Approval Gateway ─────────────
+  // Owner-only endpoint: list pending drafts, approve, or reject.
+  // The APPROVE call is the ONLY path that executes Stripe/Plaid API calls.
+  app.use("/api/trinity/financial-drafts", requireAuth, ensureWorkspaceAccess, trinityFinancialDraftRouter);
   // ── ACC + Thalamic Brain Dashboard ───────────────────────────────────────────
   app.use("/api/trinity", brainDashboardRouter);
 

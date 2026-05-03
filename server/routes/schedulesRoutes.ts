@@ -132,6 +132,21 @@ router.post('/publish', requireManager, async (req: AuthenticatedRequest, res) =
       return res.status(400).json({ message: "No shifts found to publish for this week" });
     }
 
+    // ── Wave 4 / Task 4B: Tenant dunning hard-block ───────────────────────
+    // If the workspace SaaS subscription is past_due, ALL schedule publishing
+    // is blocked until the platform invoice is settled. Prevents service delivery
+    // without payment commitment.
+    if (workspace.subscriptionStatus === 'past_due' || workspace.subscriptionStatus === 'cancelled') {
+      return res.status(402).json({
+        error: 'WORKSPACE_PAST_DUE',
+        message:
+          'Schedule publishing is blocked. Your platform subscription has a past-due balance. ' +
+          'Please update your payment method in Billing Settings to restore access.',
+        code: 'WORKSPACE_PAST_DUE',
+        actionUrl: '/settings?tab=billing',
+      });
+    }
+
     // ── TASK 4B: Financial Gate — Block publish for un-onboarded clients ───
     // Enforce: client must have signed Service Agreement (clientOnboardingStatus='active')
     // before their shifts can be published. Trinity clears this gate via
@@ -156,16 +171,21 @@ router.post('/publish', requireManager, async (req: AuthenticatedRequest, res) =
         const [client] = await db.select({
           id: clientsTable.id, name: clientsTable.name,
           onboardingStatus: clientsTable.clientOnboardingStatus,
+          clientLifecycleStatus: clientsTable.clientLifecycleStatus,
           isActive: clientsTable.isActive,
         }).from(clientsTable)
           .where(and(eq(clientsTable.id, clientId), eq(clientsTable.workspaceId, workspace.id)))
           .limit(1);
 
-        if (client && (client.onboardingStatus !== 'active' || !client.isActive)) {
+        // Wave 4: dual-signature gate — only 'active' lifecycle status (both sigs) unlocks publishing
+        // pending_onboarding | pending_approval | past_due | terminated all block publish
+        const lifecycleOk = (client.clientLifecycleStatus as string) === 'active';
+        const onboardingOk = (client.onboardingStatus as string) === 'active';
+        if (client && (!lifecycleOk || !onboardingOk || !client.isActive)) {
           blockedClients.push({
             id: client.id,
             name: client.name || clientId,
-            status: client.onboardingStatus ?? 'unknown',
+            status: (client.clientLifecycleStatus as string) ?? client.onboardingStatus ?? 'unknown',
           });
         }
       }

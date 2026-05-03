@@ -162,3 +162,10 @@ export {
   type InsertVoiceSupportAgent,
   type VoiceSupportAgent,
 } from './domains/voice';
+export {
+  clientIdentifications,
+} from './domains/clients';
+export {
+  trinityFinancialDrafts,
+} from './domains/trinity';
+

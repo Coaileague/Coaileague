@@ -651,6 +651,40 @@ export class StripeWebhookService {
           updatedAt: new Date(),
         })
         .where(eq(workspaces.id, workspaceId));
+
+      // ── Wave 4 / Task 4: Client dunning — flip affected client to past_due ──
+      // If the failing invoice is linked to a specific client (via metadata),
+      // transition that client's lifecycle status to past_due. This hard-blocks
+      // shift publishing for their shifts via the publish gate in schedulesRoutes.
+      const invoiceMeta = (invoice as Record<string, unknown>).metadata as Record<string, string> | undefined;
+      const dunningClientId = invoiceMeta?.clientId;
+      if (dunningClientId) {
+        try {
+          const { clients: clientsTable } = await import('@shared/schema');
+          await db.update(clientsTable)
+            .set({
+              clientLifecycleStatus: 'past_due' as string,
+              updatedAt: new Date(),
+            } as Record<string, unknown>)
+            .where(
+              (await import('drizzle-orm')).and(
+                (await import('drizzle-orm')).eq(clientsTable.id, dunningClientId),
+                (await import('drizzle-orm')).eq(clientsTable.workspaceId, workspaceId),
+              )
+            );
+          log.warn('[Dunning] Client flipped to past_due on payment failure', {
+            clientId: dunningClientId,
+            workspaceId,
+            invoiceId: invoice.id,
+          });
+        } catch (clientDunningErr: unknown) {
+          log.warn('[Dunning] Non-fatal: client past_due flip failed', {
+            clientId: dunningClientId,
+            error: clientDunningErr instanceof Error ? clientDunningErr.message : String(clientDunningErr),
+          });
+        }
+      }
+
       // Phase 26: payment-failed → past_due must invalidate cache so the
       // Trinity gate transitions this workspace to the "on hold" grace
       // path on the next inbound call/SMS without a 10-min stale window.

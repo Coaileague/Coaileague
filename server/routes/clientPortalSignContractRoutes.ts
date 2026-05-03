@@ -148,13 +148,25 @@ router.post('/:clientId/sign-contract', requireAuth, ensureWorkspaceAccess, asyn
     if (!client) return res.status(404).json({ error: 'Client not found' });
 
     // ── IDEMPOTENCY: Already signed? Return existing record ────────────────
-    if (client.clientOnboardingStatus === 'active') {
+    // active = countersigned (both gates passed)
+    // pending_approval = client signed, awaiting SPS countersignature
+    if (client.clientLifecycleStatus === 'active') {
       return res.json({
         success: true,
         alreadySigned: true,
-        message: 'Service Agreement was already signed. Client is active.',
+        message: 'Service Agreement is fully executed. Client is active.',
         clientId,
         status: 'active',
+      });
+    }
+    if (client.clientLifecycleStatus === 'pending_approval') {
+      return res.json({
+        success: true,
+        alreadySigned: true,
+        pendingCountersignature: true,
+        message: 'Service Agreement signed by client. Awaiting SPS countersignature to activate.',
+        clientId,
+        status: 'pending_approval',
       });
     }
 
@@ -216,24 +228,41 @@ router.post('/:clientId/sign-contract', requireAuth, ensureWorkspaceAccess, asyn
       log.error('[SignContract] PDF generation failed (continuing — contract is still legally valid):', pdfErr);
     }
 
-    // ── Mark client as ACTIVE (idempotent UPDATE) ──────────────────────────
+    // ── Gate 1: Client signs → pending_approval ─────────────────────────────
+    // The client's signature marks the agreement as pending SPS countersignature.
+    // Financial gate (shift publishing) remains CLOSED until Gate 2 (countersig).
     await db.update(clients)
       .set({
-        clientOnboardingStatus: 'active',
-        clientLifecycleStatus: 'active',   // ← financial gate cleared (Task 4/5 wave-3)
-        isActive: true,
+        clientOnboardingStatus: 'pending_signature',
+        clientLifecycleStatus: 'pending_approval',
         updatedAt: new Date(),
       })
       .where(and(eq(clients.id, clientId), eq(clients.workspaceId, workspaceId)));
+
+    // ── Record client signature in the contract row ───────────────────────
+    if (input.contractId) {
+      const { clientContracts } = await import('@shared/schema');
+      await db.update(clientContracts)
+        .set({
+          clientSignatureData: input.signatureData,
+          clientSignedAt: signedAt,
+          clientSignedByName: input.signerName,
+          clientSignedByIp: ipAddress,
+          status: 'pending_approval' as string,
+          updatedAt: new Date(),
+        } as Record<string, unknown>)
+        .where(and(eq(clientContracts.id, input.contractId), eq(clientContracts.workspaceId, workspaceId)))
+        .catch(() => null); // Non-fatal — contract may not exist yet
+    }
 
     // ── Emit client_contract_signed → Trinity clears financial gate ────────
     await platformEventBus.publish({
       type: 'client_contract_signed',
       category: 'billing',
-      title: `Service Agreement Signed — ${client.name}`,
+      title: `Service Agreement Signed — ${client.name} (Awaiting Countersignature)`,
       description:
         `${input.signerName}${input.signerTitle ? ` (${input.signerTitle})` : ''} signed the Service Agreement for ${client.name}. ` +
-        'Financial gate cleared. Pending shifts can now be published.',
+        'Awaiting SPS countersignature. Financial gate remains closed until countersig is recorded.',
       workspaceId,
       metadata: {
         clientId,
@@ -261,13 +290,14 @@ router.post('/:clientId/sign-contract', requireAuth, ensureWorkspaceAccess, asyn
 
     return res.status(201).json({
       success: true,
-      message: 'Service Agreement signed. Client is now active and shifts can be published.',
+      message: 'Service Agreement signed by client. Awaiting SPS countersignature to activate.',
       clientId,
       clientName: client.name,
       contractId,
       signedAt: signedAt.toISOString(),
       ipAddress,
-      status: 'active',
+      status: 'pending_approval',
+      pendingCountersignature: true,
       pdfUrl,
       archiveUrl,
     });
@@ -278,3 +308,130 @@ router.post('/:clientId/sign-contract', requireAuth, ensureWorkspaceAccess, asyn
 });
 
 export default router;
+
+// ── POST /api/client-portal/:clientId/countersign ─────────────────────────
+// Gate 2: SPS Operator countersigns the service agreement.
+// ONLY after this call does clientLifecycleStatus → 'active' and
+// shift publishing become unblocked.
+// Requires manager+ role (checked via requireAuth + workspace access).
+// ──────────────────────────────────────────────────────────────────────────
+const counterSignSchema = z.object({
+  signatureData:  z.string().min(1, 'Countersignature is required'),
+  signerName:     z.string().min(1, 'Signer name is required'),
+  signerTitle:    z.string().optional(),
+  contractId:     z.string().optional(),
+});
+
+router.post('/:clientId/countersign', requireAuth, ensureWorkspaceAccess, async (req: import('../rbac').AuthenticatedRequest, res: Response) => {
+  try {
+    const { clientId } = req.params;
+    const workspaceId = req.workspaceId!;
+    const userId = req.user?.id || req.session?.userId as string;
+
+    const parsed = counterSignSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Invalid request', details: parsed.error.issues });
+    }
+    const input = parsed.data;
+
+    const [client] = await db.select().from(clients)
+      .where(and(eq(clients.id, clientId), eq(clients.workspaceId, workspaceId)))
+      .limit(1);
+    if (!client) return res.status(404).json({ error: 'Client not found' });
+
+    if (client.clientLifecycleStatus === 'active') {
+      return res.json({
+        success: true,
+        alreadyCountersigned: true,
+        message: 'Contract is already fully executed.',
+        clientId,
+        status: 'active',
+      });
+    }
+
+    if (client.clientLifecycleStatus !== 'pending_approval') {
+      return res.status(409).json({
+        error: 'INVALID_STATE',
+        message: `Cannot countersign — client is in state '${client.clientLifecycleStatus}'. Client must sign first.`,
+        currentStatus: client.clientLifecycleStatus,
+      });
+    }
+
+    const counterSignedAt = new Date();
+    const ipAddress = getClientIP(req);
+
+    // ── Gate 2: SPS countersigns → client becomes ACTIVE ─────────────────
+    await db.update(clients)
+      .set({
+        clientOnboardingStatus: 'active',
+        clientLifecycleStatus: 'active',
+        isActive: true,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(clients.id, clientId), eq(clients.workspaceId, workspaceId)));
+
+    // Update the contract row with countersig data
+    if (input.contractId) {
+      const { clientContracts } = await import('@shared/schema');
+      await db.update(clientContracts)
+        .set({
+          counterSignatureData: input.signatureData,
+          counterSignedAt,
+          counterSignedBy: userId,
+          counterSignedByIp: ipAddress,
+          counterSignedByName: input.signerName,
+          orgSignedByName: input.signerName,
+          orgSignedAt: counterSignedAt,
+          status: 'executed' as string,
+          executedAt: counterSignedAt,
+          updatedAt: new Date(),
+        } as Record<string, unknown>)
+        .where(and(eq(clientContracts.id, input.contractId), eq(clientContracts.workspaceId, workspaceId)))
+        .catch(() => null);
+    }
+
+    await platformEventBus.publish({
+      type: 'client_contract_executed',
+      category: 'billing',
+      title: `Service Agreement Fully Executed — ${client.name}`,
+      description:
+        `SPS operator ${input.signerName} countersigned. Dual-signature complete. ` +
+        `Financial gate CLEARED. Shifts for ${client.name} can now be published.`,
+      workspaceId,
+      metadata: {
+        clientId,
+        clientName: client.name,
+        contractId: input.contractId,
+        counterSignedBy: userId,
+        counterSignedByName: input.signerName,
+        counterSignedAt: counterSignedAt.toISOString(),
+        ipAddress,
+        financialGateCleared: true,
+        dualSignatureComplete: true,
+      },
+    }).catch(() => null);
+
+    broadcastToWorkspace(workspaceId, {
+      type: 'client_contract_executed',
+      clientId,
+      clientName: client.name,
+      counterSignedAt: counterSignedAt.toISOString(),
+    });
+
+    log.info(`[Countersign] Client ${clientId} fully executed by ${userId} at ${counterSignedAt.toISOString()}`);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Service Agreement countersigned. Client is now ACTIVE. Shifts can be published.',
+      clientId,
+      clientName: client.name,
+      contractId: input.contractId,
+      counterSignedAt: counterSignedAt.toISOString(),
+      status: 'active',
+      dualSignatureComplete: true,
+    });
+  } catch (err: unknown) {
+    log.error('[Countersign] Unexpected error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});

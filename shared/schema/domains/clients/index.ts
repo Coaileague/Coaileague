@@ -680,6 +680,21 @@ export const clientContracts = pgTable("client_contracts", {
   governmentIdType: varchar("government_id_type"),
   orgSignedByName: varchar("org_signed_by_name"),
   orgSignedAt: timestamp("org_signed_at"),
+
+  // ── Dual-Signature Gate (Wave 4 — Task 2, G-2) ──────────────────────────
+  // Client signs first → clientLifecycleStatus becomes 'pending_approval'
+  // SPS countersigns → clientLifecycleStatus becomes 'active'
+  clientSignatureData: text("client_signature_data"),      // typed name or base64 drawn
+  clientSignedAt: timestamp("client_signed_at"),
+  clientSignedByName: varchar("client_signed_by_name"),
+  clientSignedByIp: varchar("client_signed_by_ip", { length: 45 }),
+
+  counterSignatureData: text("counter_signature_data"),    // SPS operator signature
+  counterSignedAt: timestamp("counter_signed_at"),
+  counterSignedBy: varchar("counter_signed_by"),           // userId of SPS operator
+  counterSignedByIp: varchar("counter_signed_by_ip", { length: 45 }),
+  counterSignedByName: varchar("counter_signed_by_name"),  // display name for PDF
+
   createdBy: varchar("created_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -1068,3 +1083,42 @@ export * from './extended';
 //   status = 'accepted' → client completed setup                   [GREEN BORDER]
 //   status = 'expired'  → token age > 7 days OR manual revocation  [RED BORDER]
 // The Reaper cron at server/services/onboarding/inviteReaperService.ts enforces this.
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Government ID Verification Vault (Wave 4 — Task 1 G-6)
+// Stores structured, encrypted government ID documents for client contacts.
+// Tied to the client lifecycle: required before ACTIVE status can be granted.
+// ─────────────────────────────────────────────────────────────────────────────
+export const clientIdentifications = pgTable("client_identifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  clientId: varchar("client_id").notNull(),
+  uploadedBy: varchar("uploaded_by"),               // userId who uploaded
+
+  // Document type
+  idType: varchar("id_type", { length: 50 }).notNull(), // drivers_license | passport | state_id | military_id
+  idNumber: varchar("id_number", { length: 50 }),        // last-4 only — never store full
+  issuingState: varchar("issuing_state", { length: 5 }),
+  issuingCountry: varchar("issuing_country", { length: 3 }).default("US"),
+  expiresAt: timestamp("expires_at"),
+
+  // Storage (GCS signed path — not public URL)
+  frontImagePath: text("front_image_path"),          // GCS object path
+  backImagePath: text("back_image_path"),             // GCS object path (if applicable)
+
+  // Verification status
+  verificationStatus: varchar("verification_status", { length: 30 })
+    .default("pending"),                               // pending | verified | rejected | expired
+  verifiedAt: timestamp("verified_at"),
+  verifiedBy: varchar("verified_by"),                 // userId of SPS staff who verified
+  rejectionReason: text("rejection_reason"),
+
+  // Audit
+  uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("client_identifications_workspace_idx").on(table.workspaceId),
+  index("client_identifications_client_idx").on(table.clientId),
+]);
+

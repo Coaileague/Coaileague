@@ -165,6 +165,7 @@ export interface ActionHandler {
   handler: (request: ActionRequest) => Promise<ActionResult>;
   isTestTool?: boolean;
   isDeferred?: boolean;
+  requiresApproval?: boolean; // Wave 4: financial conscience — APPROVE gate before execution
 }
 
 export interface ServiceHealthStatus {

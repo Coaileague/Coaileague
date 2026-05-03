@@ -4583,6 +4583,185 @@ class AIBrainActionRegistry {
       },
     };
 
+    // ── Wave 4 / Task 5: Trinity Financial Conscience Actions ──────────────
+    // stage_invoice_generation and stage_payroll_run are intentionally
+    // APPROVAL-GATED. Trinity drafts the math, owner must APPROVE before
+    // any Stripe or Plaid API call executes.
+
+    const stageInvoiceGenerationAction: ActionHandler = {
+      actionId: 'finance.stage_invoice_generation',
+      name: 'Stage Invoice Generation (Requires Owner Approval)',
+      category: 'invoicing',
+      description:
+        'Trinity computes the full invoice math for the billing period and saves a draft. ' +
+        'The workspace owner receives an in-platform notification with exact amounts and must ' +
+        'click APPROVE before any invoices are created or Stripe is touched. ' +
+        'requiresApproval: true — this action NEVER executes Stripe without the human APPROVE.',
+      requiredRoles: ['system', 'owner', 'root_admin'],
+      requiresApproval: true,
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        if (!request.workspaceId) {
+          return createResult(request.actionId, false, 'workspaceId required', null, start);
+        }
+
+        const { periodStart, periodEnd, clientIds } = request.payload || {};
+        if (!periodStart || !periodEnd) {
+          return createResult(request.actionId, false, 'periodStart and periodEnd required', null, start);
+        }
+
+        // Build the math snapshot from staged invoices (no Stripe calls yet)
+        const { stageBillingRun } = await import('../financialStagingService');
+        const stagingResult = await stageBillingRun({
+          workspaceId: request.workspaceId,
+          startDate: new Date(periodStart),
+          endDate: new Date(periodEnd),
+          clientIds,
+        });
+
+        // Compute snapshot totals
+        const totalBillable = stagingResult.totals.totalBillable;
+        const invoiceList = stagingResult.draftInvoices.map(inv => ({
+          clientId: inv.clientId,
+          clientName: inv.clientName,
+          amount: inv.billable,
+          hours: inv.totalHours,
+          hasAutoPayDiscount: false,
+        }));
+
+        const payload = {
+          period: { start: periodStart, end: periodEnd },
+          clientCount: stagingResult.totals.clientCount,
+          invoiceCount: stagingResult.totals.invoiceCount,
+          totalBillable,
+          totalHours: stagingResult.totals.totalHours,
+          autoPayDiscountTotal: '0.00',
+          netTotal: totalBillable,
+          invoices: invoiceList,
+        };
+
+        const { stageInvoiceGeneration } = await import('../trinity/trinityFinancialConscience');
+        const draft = await stageInvoiceGeneration({
+          workspaceId: request.workspaceId,
+          stagedBy: request.userId || 'trinity',
+          payload,
+        });
+
+        return createResult(
+          request.actionId,
+          true,
+          `Draft saved (ID: ${draft.draftId}). Owner notified. AWAITING APPROVAL before Stripe is touched.`,
+          { draftId: draft.draftId, summaryText: draft.summaryText, approvalPrompt: draft.approvalPrompt },
+          start,
+        );
+      },
+    };
+
+    const stagePayrollRunAction: ActionHandler = {
+      actionId: 'finance.stage_payroll_run',
+      name: 'Stage Payroll Run (Requires Owner Approval)',
+      category: 'payroll',
+      description:
+        'Trinity aggregates hours, computes gross/net pay with FLSA OT rules, and saves a draft. ' +
+        'The workspace owner receives an in-platform notification with exact amounts and must ' +
+        'click APPROVE before any Plaid ACH transfers are initiated. ' +
+        'requiresApproval: true — this action NEVER touches Plaid without the human APPROVE.',
+      requiredRoles: ['system', 'owner', 'root_admin'],
+      requiresApproval: true,
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        if (!request.workspaceId) {
+          return createResult(request.actionId, false, 'workspaceId required', null, start);
+        }
+
+        const { periodStart, periodEnd } = request.payload || {};
+
+        // Stage the payroll batch (computes math only, no Plaid call)
+        const { stagePayrollBatch } = await import('../financialStagingService');
+        const batchResult = await stagePayrollBatch({
+          workspaceId: request.workspaceId,
+          userId: request.userId || 'trinity',
+          periodStart: periodStart ? new Date(periodStart) : undefined,
+          periodEnd: periodEnd ? new Date(periodEnd) : undefined,
+        });
+
+        const employeeList = batchResult.draftEntries.map(e => ({
+          employeeId: e.employeeId,
+          name: e.employeeName,
+          grossPay: e.grossPay,
+          netPay: e.netPay,
+          hours: e.totalHours,
+        }));
+
+        const payload = {
+          period: {
+            start: periodStart || batchResult.periodStart?.toISOString() || '',
+            end: periodEnd || batchResult.periodEnd?.toISOString() || '',
+          },
+          employeeCount: batchResult.totals.employeeCount,
+          totalGrossPay: batchResult.totals.totalGrossPay,
+          totalDeductions: batchResult.totals.totalDeductions || '0.00',
+          totalNetPay: batchResult.totals.totalNetPay,
+          employees: employeeList,
+        };
+
+        const { stagePayrollRun } = await import('../trinity/trinityFinancialConscience');
+        const draft = await stagePayrollRun({
+          workspaceId: request.workspaceId,
+          stagedBy: request.userId || 'trinity',
+          payload,
+        });
+
+        return createResult(
+          request.actionId,
+          true,
+          `Payroll draft saved (ID: ${draft.draftId}). Owner notified. AWAITING APPROVAL before Plaid is touched.`,
+          { draftId: draft.draftId, summaryText: draft.summaryText, approvalPrompt: draft.approvalPrompt },
+          start,
+        );
+      },
+    };
+
+    const executeFinancialDraftAction: ActionHandler = {
+      actionId: 'finance.execute_approved_draft',
+      name: 'Execute Approved Financial Draft',
+      category: 'invoicing',
+      description:
+        'Called after owner clicks APPROVE. Looks up the approved draft and executes ' +
+        'the real Stripe/Plaid API calls. If the draft is expired, pending, or already executed, ' +
+        'this action returns an error without touching any financial systems.',
+      requiredRoles: ['owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        if (!request.workspaceId) {
+          return createResult(request.actionId, false, 'workspaceId required', null, start);
+        }
+        const { draftId } = request.payload || {};
+        if (!draftId) {
+          return createResult(request.actionId, false, 'draftId required', null, start);
+        }
+
+        const { executeApprovedDraft } = await import('../trinity/trinityFinancialConscience');
+        const result = await executeApprovedDraft({
+          draftId,
+          workspaceId: request.workspaceId,
+          approvedBy: request.userId || 'unknown',
+        });
+
+        return createResult(
+          request.actionId,
+          result.success,
+          result.message || result.error || 'Unknown result',
+          result.result as Record<string, unknown> | undefined,
+          start,
+        );
+      },
+    };
+
+    helpaiOrchestrator.registerAction(stageInvoiceGenerationAction);
+    helpaiOrchestrator.registerAction(stagePayrollRunAction);
+    helpaiOrchestrator.registerAction(executeFinancialDraftAction);
+
     const addPayrollAdjustmentAction: ActionHandler = {
       actionId: 'finance.add_payroll_adjustment',
       name: 'Add Payroll Line-Item Adjustment',

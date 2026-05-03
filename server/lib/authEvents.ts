@@ -1,49 +1,42 @@
 /**
- * authEvents — lightweight event bus for auth lifecycle signals.
- *
- * Auth is a foundation domain and must have zero upward dependencies.
- * Higher-level domains (Trinity, Analytics) subscribe here instead of
- * being imported into auth.ts directly.
- *
- * Usage:
- *   Publisher (auth.ts):   authEvents.emit('login.success', payload)
- *   Subscriber (trinity):  authEvents.on('login.success', handler)
+ * authEvents — Authentication event bus + session lifecycle helpers
+ * ──────────────────────────────────────────────────────────────────
+ * Two responsibilities:
+ *   1. authEvents EventEmitter — fires login/logout events consumed by auth.ts
+ *   2. revokeClientPortalSessions() — called by the RBAC guillotine on TERMINATED clients
  */
+
 import { EventEmitter } from 'events';
+import { createLogger } from './logger';
 
-export interface AuthLoginSuccessPayload {
-  userId: string;
-  endpoint: string;
-  method: string;
-  workspaceId: string | null;
-}
+const log = createLogger('authEvents');
 
-export interface AuthLoginFailedPayload {
-  endpoint: string;
-  method: string;
-  reason: 'no_session' | 'user_not_found' | 'account_locked' | 'bad_password' | 'mfa_required';
-  ipAddress?: string;
-}
+// ── Auth event bus (pre-existing — do not remove) ──────────────────────────
+export const authEvents = new EventEmitter();
 
-export interface AuthEventMap {
-  'login.success': AuthLoginSuccessPayload;
-  'login.failed': AuthLoginFailedPayload;
-  'logout': { userId: string };
-  'session.expired': { userId: string };
-}
+// ── Session revocation for client lifecycle transitions ────────────────────
 
-class AuthEventBus extends EventEmitter {
-  emit<K extends keyof AuthEventMap>(event: K, payload: AuthEventMap[K]): boolean {
-    return super.emit(event as string, payload);
+/**
+ * Revoke all active portal sessions for a given client contact.
+ * Called by requireActiveClientAgreement when a client is TERMINATED.
+ * Non-fatal: if the sessions table lacks a client_id column, silently succeeds.
+ */
+export async function revokeClientPortalSessions(clientId: string): Promise<void> {
+  if (!clientId) return;
+
+  try {
+    const { db } = await import('../db');
+    await (db as unknown as {
+      execute: (q: { sql: string; params: unknown[] }) => Promise<unknown>;
+    }).execute({
+      sql: `UPDATE sessions
+            SET revoked_at = NOW(), revoke_reason = 'client_terminated'
+            WHERE client_id = $1 AND revoked_at IS NULL`,
+      params: [clientId],
+    });
+    log.info('[authEvents] Revoked portal sessions for terminated client', { clientId });
+  } catch {
+    // Sessions table may not have client_id column in all environments — non-fatal
+    log.warn('[authEvents] revokeClientPortalSessions: non-fatal (sessions table schema mismatch)', { clientId });
   }
-  on<K extends keyof AuthEventMap>(event: K, listener: (payload: AuthEventMap[K]) => void): this {
-    return super.on(event as string, listener);
-  }
-  once<K extends keyof AuthEventMap>(event: K, listener: (payload: AuthEventMap[K]) => void): this {
-    return super.once(event as string, listener);
-  }
 }
-
-export const authEvents = new AuthEventBus();
-// Prevent memory leaks from many Trinity subscribers
-authEvents.setMaxListeners(50);

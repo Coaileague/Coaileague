@@ -1,199 +1,323 @@
-# CoAIleague + Trinity — System Map v4.0
-**Last Updated:** 2026-05-02 | **Build:** CLEAN ✅ | **Tests:** 270/270 ✅ | **esbuild:** 0 errors ✅
+# COAILEAGUE SYSTEM MAP v5.0
+# Last updated: 2026-05-03
+# Purpose: Canonical map of what exists, where it lives, and how it connects.
+# Read this before adding ANYTHING to avoid duplication and conflicts.
 
 ---
 
-## Platform Statistics
+## WAVE COMPLETION STATUS
 
-| Metric | Count |
-|---|---|
-| Total DB tables | 752 |
-| API routes | ~2,883 route handlers |
-| Client pages | 302 |
-| Service directories | 59 |
-| Tests passing | 270 / 270 |
-| Test suites active | 23 |
+| Wave | Domains | Status | Key Deliverables |
+|---|---|---|---|
+| 1 | Infrastructure, Auth, RBAC, Orgs, Notifications | ✅ | Auth pipeline, WS, rate limiting, dedup |
+| 2 | Onboarding, Workforce, Compliance, Training, Documents | ✅ | HR forms, DPS license compliance, PDF generation |
+| 3 | Scheduling, Time, Ops, FieldOps, Auditor | ✅ | Anti-spoofing, storage typing, panic chain, contracts |
+| 4 | Billing, Payroll, Finance, Clients, Sales | 🔲 NEXT | Revenue domain audit |
 
 ---
 
-## 28 Domains — Complete Map
-
-### ⚡ Foundation (Wave 1 Complete ✅)
-
-**D28 Infrastructure** `server/services/infrastructure/` `server/routes/infrastructureRoutes.ts`
-- Health, circuit breaker, durable job queue, rate limiting, webhook idempotency
-- Canonical job queue import: `server/lib/jobQueue.ts`
-- Unified rate limiting: `server/middleware/rateLimiting/index.ts`
-- 78 routes — 4 sections documented (physical split deferred)
-- circuitBreaker canonical: `server/services/infrastructure/circuitBreaker.ts` (resilience/ stub deleted)
-- ⚠️ WAVE 2 AUDIT: 76 cron jobs in autonomousSchedulingDaemon.ts — 5 duplicate function areas
-
-**D1 Auth** `server/auth.ts` `server/routes/authRoutes.ts` (2,674 lines — merged)
-- Login, register, MFA, CSRF, session, dev bypass
-- Trinity decoupled: `server/lib/authEvents.ts` EventEmitter pattern
-- PLATFORM_WORKSPACE_ID canonical: `server/config/platformConfig.ts`
-- SESSION_STORE_TIMEOUT_MS: externalized to platformConfig
-- authCoreRoutes.ts = re-export stub (merged into authRoutes.ts)
-- Schema: 19 tables (expressSessions dead alias removed)
-
-**D2 RBAC** `server/rbac.ts` (26 exports)
-- Permission enforcement only — no state mutations
-- Lifecycle: `server/services/workspaceLifecycleService.ts`
-- Payment gates: `server/services/billing/billingGateService.ts`
-
-**D4 Orgs** `server/routes/workspace.ts` `server/routes/workspaceInlineRoutes.ts`
-- Schema: 42 tables
-- Includes: sessionCheckpoints, sessionRecoveryRequests (moved from Auth domain)
-- Canonical onboarding: onboardingFlow, onboardingStep
-- Dropped dead tables: onboardingTemplates, onboardingTasks, workspaceOnboardingStates
-
-**D27 Notifications** `server/services/notificationDeliveryService.ts`
-- Dedup window: `NOTIFICATION_DEDUP_WINDOW_MS = 6h` (shared/config/notificationConfig.ts)
-- Push icons: absoluteIconUrl() only
-- Renamed: notificationBootstrap.ts (was notificationInit), notificationFactory.ts (was root notifications.ts)
-- Schema: 1 table (notificationDeliveries)
-
----
-
-### 👤 Identity (Wave 2 In Progress)
-
-**D3 Onboarding** `server/routes/onboarding*.ts` (7 files, 76 routes)
-- Canonical model: onboardingFlow + onboardingStep (Orgs schema)
-- Active tables: onboardingInvites, onboardingApplications, orgOnboardingTasks
-- Note: assisted-onboarding.ts + onboardingRoutes.ts are 0-route files with importers (keep)
-
-**D7 Workforce** `server/routes/employeeRoutes.ts` `server/routes/hrInlineRoutes.ts`
-- Schema: 67 tables
-- Cross-domain re-exports: trainingCourses/Enrollments/Scenarios/Runs, complianceEnrollments
-- Workspace isolation: ✅ all writes scoped
-
-**D13 Compliance** `server/routes/compliance/*.ts` (15 files, ~95 routes)
-- Schema: 58 tables
-- ⚠️ Wave 2: 3 unguarded write locations (approvals.ts, documents.ts, regulatoryPortal.ts)
-- ⚠️ Wave 2: packets.ts imports Training schema directly (43 refs) — decouple in Wave 3
-
-**D14 Training** `server/routes/trainingCertificationRoutes.ts`
-- Schema: 13 tables (4 moved FROM Workforce in Wave 2)
-- trainingDifficultyEnum imported from shared/schema/enums.ts
-
-**D26 Documents** `server/routes/document*.ts` (17 files, ~64 routes)
-- PII encryption central: `server/lib/fieldEncryption.ts` (FIELD_ENCRYPTION_KEY)
-- SPS schema: 19 tables (field-encrypted)
-- Storage schema: 2 tables
-- ⚠️ Wave 2: payrollRoutes.ts uses raw AES — move to fieldEncryption.ts in Wave 3
-
----
-
-### ⚙️ Operations (Wave 3 Target)
-
-**D8 Scheduling** `server/services/scheduling/` — 42 tables
-**D9 Time Tracking** `server/routes/timeEntryRoutes.ts`
-**D11 Ops** `server/routes/opsRoutes.ts` — 57 tables
-**D12 Field Operations** `server/services/fieldOperations/`
-**D6 Auditor** `server/routes/auditorRoutes.ts` — third-party audit portal
-
----
-
-### 💰 Finance (Wave 4 Target)
-
-**D5 Billing** `server/services/billing/` — 75 tables (largest non-AI)
-**D10 Payroll** `server/routes/payrollRoutes.ts` — 21 tables
-**D15 Finance** `server/services/finance/`
-**D17 Clients** `server/routes/clientRoutes.ts` — 34 tables
-**D16 Sales** `server/routes/salesRoutes.ts`
-
----
-
-### 💬 Communications (Wave 5 Target)
-
-**D18 Comms/ChatDock** `server/services/chat/` — 60 tables (Redis pub/sub)
-**D19 Email** `server/services/email/` (Resend, Trinity email processor)
-**D20 Voice/SMS** `server/services/trinityVoice/` (Twilio)
-
----
-
-### 🤖 Trinity AI (Wave 5-6 Target)
-
-**D21 Trinity Core** `server/services/ai-brain/` — 103 tables
-**D22 Trinity Actions** actionRegistry.ts — 106 registered actions (< 300 limit ✅)
-**D23 Trinity Autonomous** autonomousSchedulingDaemon.ts — ⚠️ 76 cron jobs, 5 duplicate areas
-**D24 HelpAI** `server/services/helpai/`
-**D25 Bots** MeetingBot, ReportBot, ClockBot, SysOpBot
-
----
-
-### 📊 Scoring (New — from Claude Code session)
-
-`server/services/scoring/` + `server/routes/scoringRoutes.ts`
-- scoreEngineService, tenantScoreService, honorRollService, officerLinkageService
-- closingScoreService, moveUpRecommender, ssnFingerprint, scoringScheduler
-- 4 well-structured cron jobs (the pattern all other jobs should follow)
-- 3 test files, all passing
-
----
-
-## Permanent Architectural Rules
+## THE LIFECYCLE PIPELINE (master flow — DO NOT BREAK)
 
 ```
-AUTH:
-  auth.ts → authEvents.emit() only (no Trinity imports)
-  PLATFORM_WORKSPACE_ID → server/config/platformConfig.ts (canonical)
-  Session store timeout → SESSION_STORE_TIMEOUT_MS in platformConfig
+Client signs contract (POST /api/client-portal/:clientId/sign-contract)
+  clientLifecycleStatus = 'active'  ←── financial gate cleared
+  client_contract_signed event ──→ AutomationTriggerService ──→ Trinity notifies manager
 
-RBAC:
-  Permission enforcement only
-  Lifecycle mutations → workspaceLifecycleService.ts
-  Payment gates → billingGateService.ts
+Manager publishes schedule (POST /api/schedules/publish)
+  Financial gate: clientLifecycleStatus must be 'active' or 403 PUBLISH_BLOCKED
+  Shifts updated to 'scheduled'
+  WebSocket: type='schedule_published' ──→ ForceRefreshProvider invalidates queries
+  AutomationTriggerService: generateWeeklyInvoices()
 
-NOTIFICATIONS:
-  Dedup window → NOTIFICATION_DEDUP_WINDOW_MS (shared/config/notificationConfig.ts)
-  Push icons → absoluteIconUrl() always
+Stripe invoice paid ──→ /api/webhooks/stripe
+  invoice_paid event ──→ owner notification
+  AR close-out
 
-API KEYS:
-  Use unified apiKeys table + apiKeyScope enum
-  scope: 'integration' | 'workspace' | 'managed' | 'platform'
+Timesheet approved ──→ time_entries_approved event
+  executePayrollProcessing() ──→ requestApproval()
+  Manager approves ──→ executeApprovedPayroll()
+  W-2: calculatePayrollTaxes() (federal + FICA + state)
+  1099: isContractor=true → skip withholding
+  initiatePayrollAchTransfer() (Plaid) ──→ payroll_run_paid ──→ employee notified
 
-DOMAIN BOUNDARIES:
-  Training tables → shared/schema/domains/training/index.ts
-  Compliance tables → shared/schema/domains/compliance/index.ts
-  Onboarding canonical → onboardingFlow + onboardingStep (Orgs domain)
-  Session checkpoints → Orgs domain (NOT Auth)
-
-PII ENCRYPTION:
-  ALL field encryption through server/lib/fieldEncryption.ts
-  NO raw createCipheriv in route handlers
-
-TRINITY:
-  Purple = Trinity UI elements only
-  No mode toggles (single unified identity)
-  Action registry < 300 actions
-  publicSafetyGuard.ts mandatory on all legal-adjacent outputs
-
-BACKGROUND JOBS:
-  scoringScheduler.ts = the canonical pattern
-  No cron jobs in server/index.ts
-  Duplicate scan areas to fix: license_expiry, training_deadline,
-    shift_reminder, token_cleanup, notification_cleanup
+Lone worker misses check-in (*/5 cron)
+  nextCheckInDue > 15min ago → panicAlertService.triggerAlert()
+  SMS blast to full supervisor chain
+  loneWorkerSessions.status = 'escalated'
 ```
 
 ---
 
-## Wave Progress
+## DOMAIN OWNERSHIP MAP
 
-| Wave | Domains | Status |
+| Domain | Schema file | Route mount | Key service |
+|---|---|---|---|
+| Auth | `shared/schema/domains/auth/` | `/api/auth` via `domains/auth.ts` | `server/auth.ts` |
+| Orgs | `shared/schema/domains/orgs/` | `/api/orgs` via `domains/orgs.ts` | `workspaceLifecycleService.ts` |
+| Scheduling | `shared/schema/domains/scheduling/` | `/api/shifts`, `/api/schedules` | `schedulesRoutes.ts`, `shiftRoutes.ts` |
+| Time | `shared/schema/domains/time/` | `/api/time-entries`, `/api/breaks` | `time-entry-routes.ts` |
+| Ops | `shared/schema/domains/ops/` | `/api/incident-pipeline`, `/api/safety` | `panicAlertService.ts` |
+| FieldOps | `shared/schema/domains/ops/` | `/api/safety/*geofences*` | `safetyRoutes.ts` |
+| Auditor | `shared/schema/domains/compliance/` | `/api/regulatory-portal` | `regulatoryPortal.ts` |
+| Billing | `shared/schema/domains/billing/` | `/api/billing`, `/api/invoices` | `billingAutomation.ts` |
+| Payroll | `shared/schema/domains/payroll/` | `/api/payroll` | `payrollAutomation.ts`, `achTransferService.ts` |
+| Clients | `shared/schema/domains/clients/` | `/api/clients`, `/api/client-portal` | `clientPortalSignContractRoutes.ts` |
+| Finance | `shared/schema/domains/billing/` | `/api/financial-reports`, `/api/trinity-cfo` | `financialReportsService.ts`, `cfoTools.ts` |
+| Workforce | `shared/schema/domains/workforce/` | `/api/employees` | `employeeRoutes.ts` |
+| Compliance | `shared/schema/domains/compliance/` | `/api/compliance/*` | `regulatoryPortal.ts` |
+| Training | `shared/schema/domains/training/` | `/api/training` | `trainingCertificationRoutes.ts` |
+| Documents | `shared/schema/domains/sps/` | `/api/documents` | `documentRoutes.ts` |
+| Trinity | `shared/schema/domains/trinity/` | `/api/trinity-chat`, `/api/trinity-cfo` | `trinityChatService.ts`, `cfoTools.ts` |
+
+---
+
+## STORAGE ARCHITECTURE (enforce this strictly)
+
+### The Law: All uploads go through buildStoragePath()
+```typescript
+import { uploadFileToObjectStorage, buildStoragePath, StorageDirectory } from '../objectStorage';
+
+// CORRECT — compiler enforces workspaceId namespace
+const path = buildStoragePath(workspaceId, StorageDirectory.INCIDENTS, incidentId, filename);
+await uploadFileToObjectStorage({ objectPath: path, buffer, workspaceId, storageCategory: 'media' });
+
+// WRONG — bypass detected in Wave 3 audit
+const path = `incidents/${filename}`; // ❌ no workspaceId namespace
+```
+
+### StorageDirectory enum values (all valid paths):
+```
+INCIDENTS       → workspaces/{wsId}/incidents/{entityId}/{filename}
+CONTRACTS       → workspaces/{wsId}/contracts/{entityId}/{filename}  
+CHAT            → workspaces/{wsId}/chat/{entityId}/{filename}
+DPS_LICENSES    → workspaces/{wsId}/dps-licenses/{entityId}/{filename}
+TIME_PHOTOS     → workspaces/{wsId}/time-photos/{entityId}/{filename}
+DAR_ATTACHMENTS → workspaces/{wsId}/dar-attachments/{entityId}/{filename}
+PAYROLL         → workspaces/{wsId}/payroll/{entityId}/{filename}
+TAX_FORMS       → workspaces/{wsId}/tax-forms/{entityId}/{filename}
+COMPLIANCE_DOCS → workspaces/{wsId}/compliance-docs/{entityId}/{filename}
+AUDIT_EXPORTS   → workspaces/{wsId}/audit-exports/{entityId}/{filename}
+CLIENT_DOCS     → workspaces/{wsId}/client-docs/{entityId}/{filename}
+```
+
+### Photo URL Validation (Wave 3 hardening):
+Clock-in photos MUST come from our GCS bucket. `validateStoragePhotoUrl()` in `time-entry-routes.ts` enforces this. External URLs return 400 EXTERNAL_PHOTO_URL_REJECTED.
+
+---
+
+## TRINITY ARCHITECTURE (immutable rules)
+
+### Identity
+- Trinity is ONE unified individual — not modes, not toggles, not personalities
+- Purple = Trinity elements exclusively
+- Gold = HelpAI exclusively
+- Trinity NEVER provides legal advice
+- Trinity NEVER assumes duty of care
+
+### Autonomy Ladder (per-workspace, stored in trinity_workspace_autonomy)
+```
+off                  → Read-only, no actions
+advisory             → Recommends, waits for explicit confirm
+order_execution      → DEFAULT. Executes operator orders within risk limits
+supervised_autonomous → Proactively queues high-confidence low-risk fixes
+```
+Hard ceilings (non-bypassable regardless of autonomy mode):
+- Dollar threshold table in `financialApprovalThresholds.ts`
+- Public safety boundary (CLAUDE.md / TRINITY.md)
+- `trinityConscience.ts` veto rules
+
+### Trinity CFO Tools (read-only, safe to call in any context)
+```typescript
+import { monthlyPnL, arAgingSummary, cashRunway, expenseTrend,
+         clientProfitability, companyHealth } from '../services/trinity/cfoTools';
+```
+
+### Action Budget
+- Hard ceiling: 300 total registered Trinity actions
+- Current estimate: ~280 (check `platformActionHub.ts` before registering more)
+
+---
+
+## NOTIFICATION SYSTEM
+
+### Dedup Window: 6 hours (NOTIFICATION_DEDUP_WINDOW_MS in shared/config/notificationConfig.ts)
+Exception: Panic alerts use unique idempotency key `panic_sms_{alertId}_{recipientId}` — always fires regardless of dedup.
+
+### Panic Alert chain (never touch this without legal approval):
+1. `panicAlertService.triggerAlert()` → DB insert → `notifyEmergencyContacts()` → SMS to all managers/owners
+2. `broadcastToWorkspace({ type: 'safety:panic_alert', priority: 'critical', requiresAcknowledgment: true })`
+3. `platformEventBus.publish({ type: 'panic_alert_triggered', metadata: { priority: 'CRITICAL' } })`
+4. `autoCreateCadCall()` → CAD-SOS-{alertNumber}
+
+Tier: `panic_alerts: 'free'` — NEVER blocked by billing. Check `tierDefinitions.ts`.
+
+---
+
+## WEBSOCKET EVENT NAMES (frontend must subscribe to exact strings)
+
+Events the server emits via `broadcastToWorkspace()`:
+```
+shift_created           → shift added
+shift_updated           → shift modified
+shift_deleted           → shift removed
+schedule_published      → week published (ForceRefreshProvider subscribed ✅)
+shifts_bulk_created     → recurring pattern generated (ForceRefreshProvider subscribed ✅)
+schedules_updated       → legacy alias (keep for backward compat)
+safety:panic_alert      → panic triggered (priority: critical)
+safety:panic_acknowledged
+safety:panic_resolved
+client_contract_signed  → contract signed, financial gate cleared
+payroll_run_paid        → ACH initiated
+```
+
+**Critical:** The frontend bus dispatches by `data.type` string. If you add a new server event, you MUST add the matching `bus.subscribe('your_event', ...)` in `client/src/contexts/ForceRefreshProvider.tsx`.
+
+---
+
+## CRON JOB INVENTORY (autonomousScheduler.ts unless noted)
+
+| Schedule | Job | File |
 |---|---|---|
-| Wave 1: Foundation | D28, D1, D2, D4, D27 | ✅ COMPLETE |
-| Wave 2: Workforce | D3, D7, D13, D14, D26 | ✅ Schema done, 4 Wave 3 pre-conditions |
-| Wave 3: Operations | D8, D9, D11, D12, D6 | ⏳ NEXT — fix pre-conditions first |
-| Wave 4: Finance | D5, D10, D15, D17, D16 | ⏳ |
-| Wave 5: Comms | D18, D19, D20, D21, D25 | ⏳ |
-| Wave 6: Trinity Agency | D22, D23, D24 | ⏳ |
+| `*/5 * * * *` | Shift reminders | autonomousScheduler.ts |
+| `*/5 * * * *` | Lone worker SLA escalation → panic | autonomousScheduler.ts ← Wave 3 |
+| `*/5 * * * *` | ReportBot check-in | autonomousScheduler.ts |
+| `0 2 * * *` | Notification cleanup | notificationCleanupService.ts |
+| `30 2 * * *` | Trinity social graph recalc | autonomousScheduler.ts |
+| `30 2 * * *` | Officer score recompute | scoringScheduler.ts |
+| `0 3 * * *` | AI usage daily rollup | autonomousScheduler.ts |
+| `0 3 * * *` | Trinity incubation cycle | autonomousScheduler.ts |
+| `0 3 * * *` | Token cleanup | tokenCleanupService.ts |
+
+**Note:** Multiple jobs at the same time = NORMAL. They do different things. Only true duplicates (same job, multiple registrations) are removed.
 
 ---
 
-## Wave 3 Pre-Conditions (Must Fix First)
+## SCHEMA CONVENTIONS
 
-1. **Cron deduplication** — `autonomousSchedulingDaemon.ts`: remove license_expiry, training_deadline, shift_reminder, token_cleanup, notification_cleanup duplicates (all have 2-4 owners)
-2. **autonomousFixPipeline.ts** — double-registered cron at `45 * * * *` (same schedule twice)
-3. **Compliance write isolation** — approvals.ts, documents.ts, regulatoryPortal.ts unguarded DB inserts
-4. **payrollRoutes.ts** — move raw AES crypto to `server/lib/fieldEncryption.ts`
+### Enum placement
+- New enums → `shared/schema/enums.ts` FIRST
+- Then import into domain schema file
+- NEVER define enums inline in domain files (breaks barrel exports)
+
+### Workspace scoping
+- Every query that returns tenant data MUST include `eq(table.workspaceId, workspaceId)`
+- FK columns to shifts MUST be included in the shift DELETE cascade (app-layer in `shiftRoutes.ts`)
+
+### Tax records
+- `employeeTaxForms` table stores W-2 and 1099 with `formType: 'w2' | '1099'`
+- Tax forms generated on-demand at year-end via `taxFormGeneratorService.ts`
+- NOT generated per payroll run (correct behavior — IRS year-end aggregates)
+
+---
+
+## DEV LOGIN
+
+```
+GET /api/auth/dev-login       → Marcus Rivera (owner@acme-security.test)
+GET /api/auth/dev-login-root  → Root admin
+Password: admin123
+```
+
+---
+
+## BUILD COMMANDS
+
+```bash
+node build.mjs                    # Production build
+npx vitest run                    # Run all tests (270 expected to pass)
+node build.mjs && npx vitest run  # Full gate check
+```
+
+Server TSC (memory-limited):
+```bash
+node --max-old-space-size=2048 node_modules/typescript/bin/tsc --project tsconfig.server.json --noEmit
+```
+
+---
+
+## REPOSITORY
+
+- **Repo:** Coaileague/Coaileague
+- **Token:** `GH_TOKEN_REDACTED`
+- **Deployment branch:** `main` → Railway (auto-deploy on push)
+- **Work branch:** `development` → merge to main when green
+
+---
+
+## WAVE 4 — FINANCIAL & COMMERCIAL LOGIC (COMPLETE ✅)
+
+### Client State Machine — Canonical ENUM
+**File:** `shared/schema/enums.ts` → `clientLifecycleStatusEnum`
+**Values:** `pending_onboarding | pending_approval | active | past_due | terminated`
+- `pending_onboarding`: client record created, no contract
+- `pending_approval`: client signed (Gate 1), awaiting SPS countersignature
+- `active`: dual-signature complete — shifts CAN publish
+- `past_due`: payment failure — shifts HARD-BLOCKED
+- `terminated`: permanent — access revoked, sessions invalidated
+
+### Service Agreement Double-Gate
+**Route file:** `server/routes/clientPortalSignContractRoutes.ts`
+- Gate 1: `POST /:clientId/sign-contract` → `pending_approval` (client sig only)
+- Gate 2: `POST /:clientId/countersign` → `active` (SPS operator sig — MANAGER+ required)
+- Publish gate in `schedulesRoutes.ts` checks `clientLifecycleStatus === 'active'` ONLY
+- Schema columns on `clientContracts`: `clientSignatureData/At/By/Ip` + `counterSignatureData/At/By/Ip/Name`
+
+### RBAC Guillotine
+**File:** `server/middleware/requireActiveClientAgreement.ts`
+- Blocks `terminated` → 403 + calls `revokeClientPortalSessions(clientId)`
+- Blocks `past_due` → 403 with payment recovery URL
+- Applied at: `server/routes/domains/clients.ts` → `/api/client-portal/*`
+- Exempt: `/billing`, `/support`, `/coi`, `/health`
+
+### Government ID Vault
+**Table:** `clientIdentifications` (`shared/schema/domains/clients/index.ts`)
+- Columns: idType, idNumber (last-4 only), frontImagePath, backImagePath, verificationStatus
+- Status lifecycle: `pending → verified → rejected → expired`
+
+### 10% Auto-Pay Discount
+**File:** `server/services/billingAutomation.ts` inside `db.transaction()`
+- Checks Stripe customer for active default payment method
+- Injects `-10% Auto-Pay Discount` row into `invoiceLineItems` with snapshotted absolute dollar amount
+- Adjusts invoice total in same transaction — atomic, no race conditions
+
+### Stripe Connect — Multi-Party Routing
+**File:** `server/services/billing/stripeConnectService.ts`
+- `createDestinationCharge()`: client pays → funds route to tenant's Stripe Connect account via Destination Charges
+- Platform takes `PLATFORM_FEE_PERCENT` (2.5%) as application_fee_amount
+- Tenant `stripeConnectAccountId` stored in `orgFinanceSettings.stripeConnectAccountId`
+- `onboardTenantConnectAccount()`: creates Stripe Express account + returns onboarding URL
+
+### Plaid ACH Payroll Routing (Confirmed Isolation)
+**File:** `server/services/payroll/achTransferService.ts`
+- ORIGIN (funding source): `orgFinanceSettings.plaidAccountId` — TENANT bank
+- DESTINATION: `employeeBankAccounts.plaidAccountId` — EMPLOYEE bank
+- CoAIleague corporate accounts: NEVER TOUCHED
+
+### Dunning State Locks
+**Webhook:** `server/services/billing/stripeWebhooks.ts` → `handleInvoicePaymentFailed()`
+- Sets `workspaces.subscriptionStatus = 'past_due'` (existing)
+- NEW: Sets `clients.clientLifecycleStatus = 'past_due'` when `invoice.metadata.clientId` is present
+- Publish gate (`schedulesRoutes.ts`): blocks all publishing when `workspace.subscriptionStatus === 'past_due'`
+- Payroll gate (`payrollRoutes.ts`): blocks payroll run when `subscriptionStatus === 'past_due'`
+
+### Trinity Financial Conscience — Approval Gate
+**Service:** `server/services/trinity/trinityFinancialConscience.ts`
+**Table:** `trinityFinancialDrafts` (`shared/schema/domains/trinity/index.ts`)
+**Routes:** `server/routes/trinityFinancialDraftRoutes.ts` → `/api/trinity/financial-drafts`
+
+Actions (registered in `actionRegistry.ts`):
+- `finance.stage_invoice_generation` → drafts invoice math, notifies owner, waits for APPROVE
+- `finance.stage_payroll_run` → drafts payroll math, notifies owner, waits for APPROVE
+- `finance.execute_approved_draft` → triggered by APPROVE click; runs real Stripe/Plaid calls
+
+**RULE:** Trinity NEVER calls Stripe or Plaid directly on financial actions.
+Only `executeApprovedDraft()` after human APPROVE click moves money.
+
+### Do Not Duplicate / Conflict Rules
+- Do NOT add another sign-contract route — the double-gate in `clientPortalSignContractRoutes.ts` is the canonical path
+- Do NOT call `generateWeeklyInvoices()` from Trinity directly — use `finance.stage_invoice_generation` + APPROVE gate
+- Do NOT set `clientLifecycleStatus = 'active'` anywhere except Gate 2 (`/countersign` route)
+- The Plaid ACH service already uses tenant bank as origin — do NOT add another Plaid service
+
+---
+

@@ -693,6 +693,76 @@ async function createInvoiceFromBillableSummary(
       );
     }
 
+    // ── Wave 4 / Task 3: 10% Auto-Pay Discount Line Item ─────────────────
+    // If the client has an active Stripe payment method or Plaid ACH registered,
+    // inject a discrete -10% discount row. Amount is an absolute snapshot at
+    // generation time — not a relational percentage that drifts with edits.
+    const autoPayDiscount = await (async () => {
+      try {
+        // Check for active Stripe payment method on the client's Stripe customer
+        const [clientBillRow] = await tx
+          .select({ stripeCustomerId: (clientBillingSettings as Record<string, unknown>)['stripeCustomerId' as keyof typeof clientBillingSettings] })
+          .from(clientBillingSettings)
+          .where(and(
+            eq(clientBillingSettings.workspaceId, workspaceId),
+            eq(clientBillingSettings.clientId, clientSummary.clientId),
+            eq(clientBillingSettings.isActive, true),
+          ))
+          .limit(1)
+          .catch(() => [null]);
+
+        const stripeCustomerId = (clientBillRow as Record<string, unknown>)?.stripeCustomerId as string | null | undefined;
+        if (!stripeCustomerId) return null;
+
+        // Verify the customer has an active default payment method
+        const stripe = (await import('./billing/stripeClient')).getStripe();
+        const customer = await stripe.customers.retrieve(stripeCustomerId, {
+          expand: ['default_source', 'invoice_settings.default_payment_method'],
+        }).catch(() => null);
+
+        if (!customer || (customer as Record<string, unknown>).deleted) return null;
+        const hasActiveMethod =
+          !!(customer as Record<string, unknown>).default_source ||
+          !!(customer as Record<string, unknown>).invoice_settings;
+        if (!hasActiveMethod) return null;
+
+        // Snapshot the discount as absolute dollars against the subtotal
+        const subtotalNum = parseFloat(String(inv.subtotal || '0'));
+        const discountAmount = Number((subtotalNum * 0.10).toFixed(2));
+        return discountAmount > 0 ? discountAmount : null;
+      } catch {
+        return null; // Non-fatal — never block billing for a discount check failure
+      }
+    })();
+
+    if (autoPayDiscount !== null && autoPayDiscount > 0) {
+      const discountLineNumber = lineItems.length + 1;
+      await tx.insert(invoiceLineItems).values({
+        invoiceId: inv.id,
+        workspaceId,
+        lineNumber: discountLineNumber,
+        description: 'Auto-Pay Discount (10%) — Active payment method on file',
+        quantity: '1',
+        unitPrice: (-autoPayDiscount).toFixed(2),
+        amount: (-autoPayDiscount).toFixed(2),
+        discount: (autoPayDiscount).toFixed(2),
+        taxable: false,
+      } as Record<string, unknown>);
+
+      // Adjust the invoice total to reflect the discount
+      const newTotal = Math.max(0, parseFloat(String(inv.total || '0')) - autoPayDiscount);
+      await tx.update(invoices)
+        .set({
+          total: newTotal.toFixed(2),
+          businessAmount: Math.max(0, parseFloat(String(inv.businessAmount || '0')) - autoPayDiscount).toFixed(2),
+          notes: (inv.notes || '') + `
+[Auto-Pay Discount: -$${autoPayDiscount.toFixed(2)} applied at generation]`,
+        } as Record<string, unknown>)
+        .where(eq(invoices.id, inv.id));
+
+      log.info(`[BillingAutomation] 10% auto-pay discount applied: -$${autoPayDiscount.toFixed(2)} on invoice ${inv.id}`);
+    }
+
     // Step 3: Atomic stage via the canonical gatekeeper. Replaces the previous
     // inline `update().set({ billedAt })` block, which was missing the
     // status='approved' guard — that bug would let a billing run claim
