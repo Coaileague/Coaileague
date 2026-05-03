@@ -62,6 +62,71 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+/**
+ * Validates that a photoUrl is hosted on our GCS bucket — not an external URL.
+ *
+ * Security: Prevents time-fraud where a guard submits an arbitrary internet URL
+ * as their clock-in selfie (S-1 fix — Wave 3 enterprise hardening).
+ *
+ * Accepts:
+ *   https://storage.googleapis.com/${BUCKET_ID}/...
+ *   https://storage.cloud.google.com/${BUCKET_ID}/...
+ *   Null/undefined (photo is optional at clock-in)
+ *
+ * Rejects any other domain — including attacker-controlled URLs.
+ */
+function validateStoragePhotoUrl(url: string | null | undefined): { valid: boolean; reason?: string } {
+  if (!url) return { valid: true }; // Photo is optional
+
+  const BUCKET_ID = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+  const allowedPrefixes = [
+    `https://storage.googleapis.com/${BUCKET_ID}/`,
+    `https://storage.cloud.google.com/${BUCKET_ID}/`,
+    // Allow local dev / Railway staging without a bucket
+    ...(process.env.NODE_ENV !== 'production' ? ['http://localhost', 'https://localhost'] : []),
+  ].filter(Boolean);
+
+  if (allowedPrefixes.some(prefix => url.startsWith(prefix))) {
+    return { valid: true };
+  }
+
+  return {
+    valid: false,
+    reason: `photoUrl must be hosted on the platform storage bucket. External URLs are not permitted.`,
+  };
+}
+
+/**
+ * Validates that the device-reported clock time is within 2 minutes of server time.
+ *
+ * Security: Prevents time-theft where a guard changes their phone clock to
+ * fake an earlier/later clock-in time (Time Drift — Wave 3 enterprise hardening).
+ *
+ * Returns null if valid, or an error string if drift is detected.
+ */
+const MAX_CLOCK_DRIFT_MS = 2 * 60 * 1000; // 2 minutes
+
+function validateClockTimeDrift(deviceTimeStr: string | Date | null | undefined): string | null {
+  if (!deviceTimeStr) return null; // No reported time — server uses Date.now()
+
+  const deviceTime = new Date(deviceTimeStr).getTime();
+  if (isNaN(deviceTime)) return null; // Unparseable — let Zod catch format errors
+
+  const serverTime = Date.now();
+  const drift = Math.abs(serverTime - deviceTime);
+
+  if (drift > MAX_CLOCK_DRIFT_MS) {
+    const driftSeconds = Math.round(drift / 1000);
+    return (
+      `Device clock is ${driftSeconds}s off server time. ` +
+      `Clock-in time cannot differ from server time by more than 2 minutes. ` +
+      `Please sync your device clock and try again.`
+    );
+  }
+
+  return null;
+}
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
@@ -313,6 +378,16 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
     const rawAccuracy = req.body.gpsAccuracy ?? req.body.accuracy;
     const rawPhotoUrl = typeof req.body.photoUrl === 'string' ? req.body.photoUrl : null;
 
+    // ── S-1: Validate photo URL is from our storage bucket ────────────────
+    const photoValidation = validateStoragePhotoUrl(rawPhotoUrl);
+    if (!photoValidation.valid) {
+      return res.status(400).json({
+        error: 'Invalid photo URL',
+        detail: photoValidation.reason,
+        code: 'EXTERNAL_PHOTO_URL_REJECTED',
+      });
+    }
+
     const clockInSchema = insertTimeEntrySchema.pick({
       shiftId: true,
       clientId: true,
@@ -336,6 +411,17 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
     }
 
     const { shiftId, clientId, clockInLatitude: latitude, clockInLongitude: longitude, clockInAccuracy: accuracy, notes } = validation.data;
+
+    // ── Time Drift: Reject if device clock is >2 minutes off server time ──
+    const clientReportedTime = req.body.deviceTimestamp ?? req.body.clockIn ?? null;
+    const driftError = validateClockTimeDrift(clientReportedTime);
+    if (driftError) {
+      return res.status(400).json({
+        error: 'Clock time validation failed',
+        detail: driftError,
+        code: 'DEVICE_CLOCK_DRIFT_DETECTED',
+      });
+    }
 
     // Get employee record
     const [employee] = await db.select().from(employees)

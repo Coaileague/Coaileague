@@ -1135,6 +1135,34 @@ export const insertTimeEntrySchema = createInsertSchema(timeEntries).omit({
 }).extend({
   clockIn: z.string().or(z.date()),
   clockOut: z.string().or(z.date()).optional(),
+  // ── GPS Bounds (S-2: enterprise hardening — prevents coordinate spoofing) ──
+  // These refinements are enforced server-side in time-entry-routes.ts.
+  // Valid Earth lat: -90 to 90 | Valid Earth lng: -180 to 180
+  // Accuracy capped at 5000m — beyond that, GPS is unreliable for geofencing.
+  clockInLatitude: z.string().refine(
+    (v) => v == null || (Number(v) >= -90 && Number(v) <= 90),
+    { message: 'clockInLatitude must be between -90 and 90' }
+  ).nullable().optional(),
+  clockInLongitude: z.string().refine(
+    (v) => v == null || (Number(v) >= -180 && Number(v) <= 180),
+    { message: 'clockInLongitude must be between -180 and 180' }
+  ).nullable().optional(),
+  clockInAccuracy: z.string().refine(
+    (v) => v == null || (Number(v) >= 0 && Number(v) <= 5000),
+    { message: 'clockInAccuracy must be 0–5000 meters' }
+  ).nullable().optional(),
+  clockOutLatitude: z.string().refine(
+    (v) => v == null || (Number(v) >= -90 && Number(v) <= 90),
+    { message: 'clockOutLatitude must be between -90 and 90' }
+  ).nullable().optional(),
+  clockOutLongitude: z.string().refine(
+    (v) => v == null || (Number(v) >= -180 && Number(v) <= 180),
+    { message: 'clockOutLongitude must be between -180 and 180' }
+  ).nullable().optional(),
+  clockOutAccuracy: z.string().refine(
+    (v) => v == null || (Number(v) >= 0 && Number(v) <= 5000),
+    { message: 'clockOutAccuracy must be 0–5000 meters' }
+  ).nullable().optional(),
 });
 
 export type InsertTimeEntry = z.infer<typeof insertTimeEntrySchema>;
