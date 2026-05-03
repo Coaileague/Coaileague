@@ -30,6 +30,7 @@ import { sql } from 'drizzle-orm';
 import { platformEventBus } from '../../platformEventBus';
 import { aiMeteringService } from '../../billing/aiMeteringService';
 import { createLogger } from '../../../lib/logger';
+import { classifyAndRoute, type TaskContext } from './taskComplexityClassifier';
 
 const log = createLogger('ModelRouter');
 
@@ -479,6 +480,28 @@ class ModelRouter {
       description: `Every model in the ${role} chain is unavailable. Platform continues in manual mode. Health checks will restore AI automatically.`,
       metadata: { alertCategory: 'ai_all_models_down', severity: 'critical', role },
     }).catch((err) => log.warn('[modelRouter] Fire-and-forget failed:', err));
+  }
+
+  /**
+   * routeForTask() — Wave 8.2.5
+   * Dynamic routing: Trinity classifies the task, picks the cheapest capable model,
+   * then falls back up the chain if it fails. No hardcoded model choices needed.
+   *
+   * Usage (replaces hardcoded role in any route):
+   *   const result = await modelRouter.routeForTask({
+   *     actionType: 'chat_response',
+   *     prompt: userMessage,
+   *     isRealtime: true,
+   *   }, systemPrompt, userPrompt);
+   */
+  async routeForTask(
+    ctx: TaskContext,
+    systemPrompt: string,
+    userPrompt: string,
+    options?: Omit<ModelRouterRequest, 'role' | 'systemPrompt' | 'userPrompt'>
+  ): Promise<ModelRouterResponse> {
+    const role = classifyAndRoute(ctx);
+    return this.route({ role, systemPrompt, userPrompt, ...options });
   }
 
   async healthCheck(): Promise<{ model: string; status: string; cooldownUntil?: string }[]> {

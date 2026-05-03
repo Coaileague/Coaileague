@@ -5,7 +5,7 @@ import { db } from './db';
 import { eq, sql } from 'drizzle-orm';
 import { formatUserDisplayName, formatUserDisplayNameForChat } from './utils/formatUserDisplayName';
 import { parseSlashCommand, validateCommand, getHelpText, COMMAND_REGISTRY } from '@shared/commands';
-import { queueManager } from './services/helpOsQueue';
+import { queueManager } from './services/helpAiQueue'; // renamed from helpOsQueue — Wave 8.2.5
 import type { ChatMessage } from '@shared/schema';
 import { chatConversations, helpaiActionLog } from '@shared/schema';
 import { trackConnection, trackDisconnection, checkMessageRateLimit } from './middleware/wsRateLimiter';

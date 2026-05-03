@@ -1,3 +1,4 @@
+import { classifyAndRoute } from '../ai-brain/providers/taskComplexityClassifier';
 /**
  * HelpAI - Unified AI Support System
  * Dual-persona architecture: bubbleAgent (customer-facing) and staffCopilot (agent assistance)

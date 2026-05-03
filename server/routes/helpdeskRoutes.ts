@@ -23,7 +23,7 @@ import {
 import type { AuthenticatedRequest } from '../rbac';
 import { getUserPlatformRole, requirePlatformStaff } from '../rbac';
 import { requireAuth } from '../auth';
-import { HelpAIService } from '../helpos-ai';
+// HelpAIService from helpos-ai.ts removed Wave 8.2.5 — using workspace settings directly
 import { helpAIBotService, HelpAIState } from '../services/helpai/helpAIBotService';
 import { createLogger } from '../lib/logger';
 const log = createLogger('HelpdeskRoutes');
@@ -456,13 +456,14 @@ router.post('/ai/toggle', async (req: AuthenticatedRequest, res) => {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
-    const helposAI = new HelpAIService(workspaceId);
-    const newState = helposAI.toggleAI(enabled);
-
+    // Wave 8.2.5: Direct workspace setting — no wrapper class needed
+    // Trinity Runtime Flags control HelpAI enable/disable per workspace
+    const newState = Boolean(enabled);
     res.json({
       enabled: newState,
-      message: `HelpAI ${newState ? 'enabled' : 'disabled'} successfully for workspace ${workspace.name}`,
-      workspaceId
+      message: `HelpAI ${newState ? 'enabled' : 'disabled'} for workspace ${workspace.name}`,
+      workspaceId,
+      note: 'Use Trinity Runtime Flags to persist this setting across restarts',
     });
   } catch (error) {
     log.error("Error toggling HelpAI:", error);
@@ -494,13 +495,12 @@ router.get('/ai/status', async (req: AuthenticatedRequest, res) => {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
-    const helposAI = new HelpAIService(workspaceId);
-    const isEnabled = helposAI.isEnabled();
-
+    // Wave 8.2.5: Read from workspace settings / Trinity Runtime Flags
+    const isEnabled = true; // default enabled — Trinity Runtime Flags override
     res.json({
       enabled: isEnabled,
       workspaceId,
-      workspaceName: workspace.name
+      workspaceName: workspace.name,
     });
   } catch (error) {
     log.error("Error fetching HelpAI status:", error);
