@@ -187,6 +187,20 @@ export function ForceRefreshProvider({ children }: { children: React.ReactNode }
         queryClient.invalidateQueries({ queryKey: ['/api/scheduling'] });
         queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
       }),
+      // schedule_published: fired by server when manager publishes a weekly schedule.
+      // Updates the schedule grid, published schedules list, and dashboard for all
+      // workspace-connected clients in real-time.
+      bus.subscribe('schedule_published', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/schedules'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduling'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      }),
+      // shifts_bulk_created: fired after recurring pattern generates multiple shifts
+      bus.subscribe('shifts_bulk_created', () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduling'] });
+      }),
       bus.subscribe('shift_created', () => {
         queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
         queryClient.invalidateQueries({ queryKey: ['/api/scheduling'] });
