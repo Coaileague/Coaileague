@@ -1800,6 +1800,9 @@ export const hiringPipeline = pgTable("hiring_pipeline", {
   metadata: jsonb("metadata").default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+
+  // Wave 6 / Task 1: ATS Unification — FK to canonical interviewCandidates record
+  canonicalApplicantId: varchar("canonical_applicant_id"), // FK → interview_candidates.id
 }, (table) => [
   index("idx_hiring_pipeline_workspace").on(table.workspaceId),
   index("idx_hiring_pipeline_status").on(table.status),

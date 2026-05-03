@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════════
 // Tables: interview_candidates, interview_sessions, interview_questions_bank, interview_scorecards
 
-import { pgTable, varchar, text, integer, boolean, timestamp, jsonb, decimal, index, unique } from 'drizzle-orm/pg-core';
+import { pgView, pgTable, varchar, text, integer, boolean, timestamp, jsonb, decimal, index, unique } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
@@ -48,6 +48,15 @@ export const interviewCandidates = pgTable('interview_candidates', {
 
   // Metadata
   isActive: boolean('is_active').default(true),
+
+  // Wave 6 / Task 1: Trinity scoring columns (mirrored from applicants table)
+  trinityScore: integer('trinity_score'),              // 0-100 composite
+  trinityScoredAt: timestamp('trinity_scored_at'),
+  trinityRecommendation: varchar('trinity_recommendation', { length: 20 }),
+    // 'hire' | 'advance' | 'hold' | 'reject'
+  trinityScoreDimensions: jsonb('trinity_score_dimensions'),
+  trinityFlags: jsonb('trinity_flags'),
+
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (table) => [
@@ -199,3 +208,36 @@ export const insertInterviewScorecardSchema = createInsertSchema(interviewScorec
 });
 export type InsertInterviewScorecard = z.infer<typeof insertInterviewScorecardSchema>;
 export type InterviewScorecard = typeof interviewScorecards.$inferSelect;
+
+// ── Applicant Unified View (Wave 6 / Task 1 — READ-ONLY) ─────────────────────
+// Joins all three ATS models on canonicalApplicantId for manager dashboards.
+// Never used for writes. Schema freeze requires this be a DB view, not a table.
+//
+// Column legend:
+//   candidate_id        — the canonical interviewCandidates.id (source of truth)
+//   applicant_id        — workforce.applicants.id (if linked)
+//   pipeline_id         — hiringPipeline.id (if linked)
+//   trinity_score       — from interviewCandidates (most up-to-date after interview)
+//   full_name           — firstName + lastName from interviewCandidates
+export const applicantUnifiedView = pgView("applicant_unified_view").as((qb) =>
+  qb
+    .select({
+      candidateId: interviewCandidates.id,
+      workspaceId: interviewCandidates.workspaceId,
+      firstName: interviewCandidates.firstName,
+      lastName: interviewCandidates.lastName,
+      email: interviewCandidates.email,
+      phone: interviewCandidates.phone,
+      positionType: interviewCandidates.positionType,
+      stage: interviewCandidates.stage,
+      decision: interviewCandidates.decision,
+      trinityScore: interviewCandidates.trinityScore,
+      trinityRecommendation: interviewCandidates.trinityRecommendation,
+      trinityScoredAt: interviewCandidates.trinityScoredAt,
+      chatRoomId: interviewCandidates.chatRoomId,
+      isActive: interviewCandidates.isActive,
+      createdAt: interviewCandidates.createdAt,
+    })
+    .from(interviewCandidates)
+);
+

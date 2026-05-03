@@ -792,7 +792,7 @@ class TrinityChatService {
     // Build system prompt based on mode (with humanized personality + memory)
     let systemPrompt: string;
     try {
-      systemPrompt = this.buildSystemPrompt(mode, workspaceContext, buddySettings, userName, recentInsights, memoryProfile, supportHistory, workspaceId, isSupportMode, isManagerLevel, isSupervisorLevel, workspaceRole);
+      systemPrompt = await this.buildSystemPrompt(mode, workspaceContext, buddySettings, userName, recentInsights, memoryProfile, supportHistory, workspaceId, isSupportMode, isManagerLevel, isSupervisorLevel, workspaceRole);
     } catch (err: unknown) {
       log.warn('[TrinityChatService] System prompt build failed, using fallback:', (err instanceof Error ? err.message : String(err)));
       systemPrompt = 'You are Trinity, an AI co-pilot for CoAIleague. Be helpful and concise.';
@@ -2650,7 +2650,7 @@ Do NOT skip steps — decompose fully before concluding.`;
   /**
    * Build system prompt based on mode and context
    */
-  private buildSystemPrompt(
+  private async buildSystemPrompt(
     mode: ConversationMode,
     workspaceContext: Record<string, unknown>,
     buddySettings: TrinityBuddySettings | null,
@@ -2710,6 +2710,53 @@ Do NOT skip steps — decompose fully before concluding.`;
       basePrompt += `\n\nUSER IDENTITY (carry across all turns — never ask who they are):\n${identityLine}\n` +
         `Address them by their first name when it feels natural. ` +
         `They don't need to re-introduce themselves or explain their role — you already know it.`;
+    }
+
+    // ── Wave 6 / Task 3: Episodic Memory — Historical Manager Preferences ────
+    // Inject last-5 human override events for this workspace so Trinity learns
+    // from patterns of disagreement across sessions. Non-blocking — gracefully
+    // skips if DB is unavailable or no overrides exist yet.
+    if (workspaceId && (isManagerLevel || isSupervisorLevel)) {
+      try {
+        const { db: _db } = await import('../../db');
+        const { aiLearningEvents: _ale } = await import('@shared/schema');
+        const { eq: _eq, and: _and, desc: _desc } = await import('drizzle-orm');
+        const overrides = await _db
+          .select({
+            action: _ale.action,
+            outcome: _ale.outcome,
+            data: _ale.data,
+            createdAt: _ale.createdAt,
+          })
+          .from(_ale)
+          .where(_and(
+            _eq(_ale.workspaceId, workspaceId),
+            _eq(_ale.eventType, 'human_override'),
+            _eq(_ale.humanIntervention, true),
+          ))
+          .orderBy(_desc(_ale.createdAt))
+          .limit(5);
+
+        if (overrides.length > 0) {
+          const overrideSummary = overrides
+            .map((o, i) => {
+              const d = o.data as Record<string, unknown> | null;
+              const original = d?.original ? String(d.original).slice(0, 60) : 'Trinity suggestion';
+              const override = d?.override ? String(d.override).slice(0, 60) : 'Manager choice';
+              const reason = d?.reason ? ` (reason: ${String(d.reason).slice(0, 80)})` : '';
+              const date = o.createdAt ? new Date(o.createdAt).toLocaleDateString() : '';
+              return `${i + 1}. [${date}] ${o.action}: Trinity suggested "${original}" → Manager chose "${override}"${reason}`;
+            })
+            .join('\n');
+
+          basePrompt += `\n\nHISTORICAL MANAGER PREFERENCES (last ${overrides.length} override${overrides.length > 1 ? 's' : ''} — learn from these):\n` +
+            `These are real decisions where a manager in this workspace chose differently than you recommended. ` +
+            `Factor them into your current suggestions without referencing them explicitly unless asked.\n` +
+            overrideSummary;
+        }
+      } catch {
+        // Non-fatal — never break prompt generation for a learning read failure
+      }
     }
 
     // Guru-depth reasoning activates automatically from context rather than

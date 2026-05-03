@@ -61,6 +61,9 @@ export const applicants = pgTable("applicants", {
   liabilityScore: integer("liability_score"),
   trinitySummary: text("trinity_summary"),
   updatedAt: timestamp("updated_at").default(sql`now()`),
+
+  // Wave 6 / Task 1: ATS Unification — FK to canonical interviewCandidates record
+  canonicalApplicantId: varchar("canonical_applicant_id"), // FK → interview_candidates.id
 });
 
 export const insertApplicantsSchema = createInsertSchema(applicants).omit({ id: true });

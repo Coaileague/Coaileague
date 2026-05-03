@@ -25,6 +25,7 @@ import { requestTimeout } from "./middleware/requestTimeout";
 import { notificationStateManager } from "./services/notificationStateManager";
 import { setupWebSocket } from "./websocket";
 import { redisTokenBuffer } from "./services/billing/redisTokenBuffer";
+import { registerEpisodicMemoryListeners } from "./services/ai-brain/episodicMemoryListeners";
 import Stripe from "stripe";
 import { getStripe, isStripeConfigured } from "./services/billing/stripeClient";
 
@@ -151,6 +152,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Wave 5 / Task 1: Start Redis token buffer — batches AI token writes
   // to Postgres (60s or 100-event flush) instead of one insert per AI call.
   redisTokenBuffer.start();
+
+  // Wave 6 / Task 3: Register override → aiLearningEvents listeners
+  // Captures human manager overrides so Trinity learns from disagreements.
+  registerEpisodicMemoryListeners();
 
   // ============================================================================
   // STARTUP: SEED ROOT USER AND PLATFORM WORKSPACE (background, non-blocking)

@@ -227,4 +227,42 @@ router.post('/:workspaceId/apply', async (req, res) => {
   }
 });
 
+
+// ── /apply/:tenantSlug — Wave 6 / Task 4 (G-5) ───────────────────────────────
+// Vanity URL: /api/public/apply/statewide proxies to /:workspaceId/* routes.
+// Resolves workspaceId from workspace slug (name slug or dedicated slug column).
+// Zero code duplication — reads the workspace ID then redirects internally.
+
+async function resolveWorkspaceBySlug(slug: string): Promise<string | null> {
+  try {
+    // Try exact match on slug column, then ILIKE on name
+    const result = await db.$client.query(
+      `SELECT id FROM workspaces
+       WHERE slug = $1
+          OR LOWER(REGEXP_REPLACE(name, '[^a-zA-Z0-9]', '-', 'g')) = $1
+          OR LOWER(company_name) = $1
+       LIMIT 1`,
+      [slug.toLowerCase()]
+    );
+    return result.rows[0]?.id || null;
+  } catch { return null; }
+}
+
+// GET /api/public/apply/:tenantSlug — public job board by slug
+router.get('/apply/:tenantSlug', async (req, res) => {
+  const workspaceId = await resolveWorkspaceBySlug(req.params.tenantSlug);
+  if (!workspaceId) return res.status(404).json({ error: 'Organization not found' });
+  req.params.workspaceId = workspaceId;
+  // Proxy to existing /:workspaceId handler by mutating params and re-routing
+  return res.redirect(307, `/api/public/jobs/${workspaceId}`);
+});
+
+// POST /api/public/apply/:tenantSlug — submit application via slug
+router.post('/apply/:tenantSlug', async (req, res) => {
+  const workspaceId = await resolveWorkspaceBySlug(req.params.tenantSlug);
+  if (!workspaceId) return res.status(404).json({ error: 'Organization not found' });
+  req.params.workspaceId = workspaceId;
+  return res.redirect(307, `/api/public/jobs/${workspaceId}/apply`);
+});
+
 export default router;

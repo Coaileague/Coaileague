@@ -174,4 +174,7 @@ export {
 export {
   temporalChatSessions,
 } from './domains/comms';
+export {
+  applicantUnifiedView,
+} from './domains/recruitment';
 
