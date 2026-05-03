@@ -182,6 +182,22 @@ async function requireAuditorPortalAuth(req: Request, res: Response, next: Funct
   if (!parsed) return res.status(401).json({ success: false, error: 'Invalid or expired auditor token' });
   req.auditorAccountId = parsed.accountId;
   req.auditorWorkspaceId = parsed.workspaceId;
+
+  // ── S-3: Workspace scope enforcement in middleware (Wave 3 hardening) ────
+  // Extract :workspaceId from the URL path: /dashboard/:workspaceId/section
+  // and validate it matches the workspace encoded in the HMAC token.
+  // This was previously checked in every handler (11 manual checks) — moving
+  // it here means future contributors cannot accidentally skip it.
+  const urlWorkspaceId = req.params.workspaceId ?? req.path.split('/').filter(Boolean)[0];
+  if (urlWorkspaceId && urlWorkspaceId !== parsed.workspaceId) {
+    res.status(403).json({
+      success: false,
+      error: 'Workspace scope mismatch. Your auditor token does not grant access to this workspace.',
+      code: 'AUDITOR_SCOPE_VIOLATION',
+    });
+    return;
+  }
+
   // Wrap next() to log access after successful auth
   const loggingNext = async () => {
     const workspaceId = parsed.workspaceId;
@@ -472,10 +488,7 @@ router.post('/request/:id/grant', requireAuth, async (req: Request, res: Respons
 router.get('/dashboard/:workspaceId/overview', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    const auditorWorkspaceId = req.auditorWorkspaceId;
-    if (auditorWorkspaceId !== workspaceId) {
-      return res.status(403).json({ success: false, error: 'Access denied — not scoped to this organization' });
-    }
+    // Workspace scope validated by requireAuditorPortalAuth middleware (S-3)
 
     const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
     if (!ws) return res.status(404).json({ success: false, error: 'Organization not found' });
@@ -523,9 +536,7 @@ router.get('/dashboard/:workspaceId/overview', requireAuditorPortalAuth, async (
 router.get('/dashboard/:workspaceId/insurance', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    if (req.auditorWorkspaceId !== workspaceId) {
-      return res.status(403).json({ success: false, error: 'Access denied' });
-    }
+    // Workspace scope validated by requireAuditorPortalAuth middleware (S-3)
 
     const insuranceDocs = await db.select().from(complianceDocuments)
       .where(and(
@@ -558,9 +569,7 @@ router.get('/dashboard/:workspaceId/insurance', requireAuditorPortalAuth, async 
 router.get('/dashboard/:workspaceId/posting', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    if (req.auditorWorkspaceId !== workspaceId) {
-      return res.status(403).json({ success: false, error: 'Access denied' });
-    }
+    // Workspace scope validated by requireAuditorPortalAuth middleware (S-3)
 
     const [posterDoc] = await db.select().from(complianceDocuments)
       .where(and(
@@ -592,9 +601,7 @@ router.get('/dashboard/:workspaceId/posting', requireAuditorPortalAuth, async (r
 router.get('/dashboard/:workspaceId/uniform', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    if (req.auditorWorkspaceId !== workspaceId) {
-      return res.status(403).json({ success: false, error: 'Access denied' });
-    }
+    // Workspace scope validated by requireAuditorPortalAuth middleware (S-3)
 
     const [uniformDoc] = await db.select().from(complianceDocuments)
       .where(and(
@@ -624,9 +631,7 @@ router.get('/dashboard/:workspaceId/uniform', requireAuditorPortalAuth, async (r
 router.get('/dashboard/:workspaceId/vehicles', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    if (req.auditorWorkspaceId !== workspaceId) {
-      return res.status(403).json({ success: false, error: 'Access denied' });
-    }
+    // Workspace scope validated by requireAuditorPortalAuth middleware (S-3)
 
     const vehicleDocs = await db.select().from(complianceDocuments)
       .where(and(
@@ -661,9 +666,7 @@ router.get('/dashboard/:workspaceId/vehicles', requireAuditorPortalAuth, async (
 router.get('/dashboard/:workspaceId/officers', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    if (req.auditorWorkspaceId !== workspaceId) {
-      return res.status(403).json({ success: false, error: 'Access denied' });
-    }
+    // Workspace scope validated by requireAuditorPortalAuth middleware (S-3)
 
     const officerList = await db.select({
       id: employees.id,
@@ -729,9 +732,7 @@ router.get('/dashboard/:workspaceId/officers', requireAuditorPortalAuth, async (
 router.get('/dashboard/:workspaceId/violations', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    if (req.auditorWorkspaceId !== workspaceId) {
-      return res.status(403).json({ success: false, error: 'Access denied' });
-    }
+    // Workspace scope validated by requireAuditorPortalAuth middleware (S-3)
 
     const { from, to } = req.query;
     const violations = await listRegulatoryViolations(workspaceId, {
@@ -749,9 +750,7 @@ router.get('/dashboard/:workspaceId/violations', requireAuditorPortalAuth, async
 router.get('/dashboard/:workspaceId/shifts', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    if (req.auditorWorkspaceId !== workspaceId) {
-      return res.status(403).json({ success: false, error: 'Access denied' });
-    }
+    // Workspace scope validated by requireAuditorPortalAuth middleware (S-3)
 
     const { from, to, employeeId, siteId, page = '1', limit = '50' } = req.query;
     const safeLimit = Math.min(Math.max(1, parseInt(limit as string) || 50), 200);
@@ -798,9 +797,7 @@ router.get('/dashboard/:workspaceId/shifts', requireAuditorPortalAuth, async (re
 router.get('/dashboard/:workspaceId/incidents', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    if (req.auditorWorkspaceId !== workspaceId) {
-      return res.status(403).json({ success: false, error: 'Access denied' });
-    }
+    // Workspace scope validated by requireAuditorPortalAuth middleware (S-3)
 
     const incidents = await db.select().from(incidentReports)
       .where(eq(incidentReports.workspaceId, workspaceId))
@@ -816,9 +813,7 @@ router.get('/dashboard/:workspaceId/incidents', requireAuditorPortalAuth, async 
 router.get('/dashboard/:workspaceId/documents', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    if (req.auditorWorkspaceId !== workspaceId) {
-      return res.status(403).json({ success: false, error: 'Access denied' });
-    }
+    // Workspace scope validated by requireAuditorPortalAuth middleware (S-3)
 
     // Excluded categories — financial data must never surface to auditors
     const excludedTypes = [
@@ -852,9 +847,7 @@ router.get('/dashboard/:workspaceId/documents', requireAuditorPortalAuth, async 
 router.post('/dashboard/:workspaceId/report', requireAuditorPortalAuth, async (req: Request, res: Response) => {
   try {
     const { workspaceId } = req.params;
-    if (req.auditorWorkspaceId !== workspaceId) {
-      return res.status(403).json({ success: false, error: 'Access denied' });
-    }
+    // Workspace scope validated by requireAuditorPortalAuth middleware (S-3)
 
     const { reportUrl, auditOutcome, findings, correctiveActions } = req.body;
 

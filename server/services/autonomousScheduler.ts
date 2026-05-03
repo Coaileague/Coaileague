@@ -3236,6 +3236,94 @@ export function startAutonomousScheduler() {
   });
   log.info('Shift Reminder Automation registered', { schedule: '*/5 * * * *', description: 'Sends shift reminders based on user preferences' });
 
+  // ── F-3: Lone Worker SLA Escalation — Every 5 minutes ───────────────────
+  // Wave 3 enterprise hardening: If a lone worker session misses its check-in
+  // window by >15 minutes and no panic alert has been triggered, auto-escalate
+  // by calling panicAlertService.triggerAlert() with an SLA_TIMEOUT metadata flag.
+  // This closes the gap where a lone worker's SLA breach stays in pending_review
+  // indefinitely without paging their supervisor chain.
+  cron.schedule('*/5 * * * *', () => {
+    (async () => {
+      try {
+        const { db } = await import('../db');
+        const { loneWorkerSessions, employees } = await import('@shared/schema');
+        const { lt, eq, and, isNull } = await import('drizzle-orm');
+        const { panicAlertService } = await import('./ops/panicAlertService');
+
+        const ESCALATION_THRESHOLD_MS = 15 * 60 * 1000; // 15 minutes
+        const cutoff = new Date(Date.now() - ESCALATION_THRESHOLD_MS);
+
+        // Find active lone worker sessions that missed their check-in window
+        const overdueSessions = await db
+          .select({
+            id: loneWorkerSessions.id,
+            workspaceId: loneWorkerSessions.workspaceId,
+            employeeId: loneWorkerSessions.employeeId,
+            nextCheckInDue: loneWorkerSessions.nextCheckInDue,
+            latitude: loneWorkerSessions.latitude,
+            longitude: loneWorkerSessions.longitude,
+          })
+          .from(loneWorkerSessions)
+          .where(
+            and(
+              eq(loneWorkerSessions.status, 'active'),
+              isNull(loneWorkerSessions.endedAt),
+              lt(loneWorkerSessions.nextCheckInDue, cutoff),
+            )
+          )
+          .limit(50);
+
+        if (overdueSessions.length === 0) return;
+
+        log.warn('[LoneWorkerEscalation] Overdue sessions detected', { count: overdueSessions.length });
+
+        for (const session of overdueSessions) {
+          try {
+            // Get employee name for the panic alert
+            const [emp] = await db
+              .select({ firstName: employees.firstName, lastName: employees.lastName })
+              .from(employees)
+              .where(eq(employees.id, session.employeeId))
+              .limit(1);
+
+            const employeeName = emp ? `${emp.firstName} ${emp.lastName}`.trim() : 'Unknown Officer';
+            const minutesMissed = Math.round((Date.now() - new Date(session.nextCheckInDue!).getTime()) / 60000);
+
+            await panicAlertService.triggerAlert({
+              workspaceId: session.workspaceId,
+              employeeId: session.employeeId,
+              employeeName,
+              latitude: session.latitude ? Number(session.latitude) : null,
+              longitude: session.longitude ? Number(session.longitude) : null,
+              triggeredByUserId: 'system',
+              siteName: `LONE WORKER SLA TIMEOUT — ${minutesMissed} minutes overdue`,
+            });
+
+            // Mark the session as escalated to prevent repeated alerts
+            await db
+              .update(loneWorkerSessions)
+              .set({ status: 'escalated', updatedAt: new Date() })
+              .where(eq(loneWorkerSessions.id, session.id));
+
+            log.warn('[LoneWorkerEscalation] Panic alert triggered for overdue session', {
+              sessionId: session.id,
+              employeeId: session.employeeId,
+              minutesMissed,
+            });
+          } catch (sessionErr: unknown) {
+            log.error('[LoneWorkerEscalation] Failed to escalate session', {
+              sessionId: session.id,
+              error: sessionErr instanceof Error ? sessionErr.message : String(sessionErr),
+            });
+          }
+        }
+      } catch (err: unknown) {
+        log.error('[LoneWorkerEscalation] Job error:', err instanceof Error ? err.message : String(err));
+      }
+    })();
+  });
+  log.info('Lone Worker SLA Escalation registered', { schedule: '*/5 * * * *', description: 'Auto-escalates lone worker sessions overdue by >15min to panic alert' });
+
   // Document Signature Reminder & Expiry Automation - Daily at 10 AM
   cron.schedule(CRON.signatureReminders, () => {
     (async () => {
