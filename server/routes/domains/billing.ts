@@ -20,6 +20,9 @@ import financeSettingsRouter from "../financeSettingsRoutes";
 import invoiceRouter from "../invoiceRoutes";
 import { billingSettingsRouter } from "../billingSettingsRoutes";
 import qbReportsRouter from "../qbReportsRoutes";
+import financialReportsRouter from "../financialReportsRoutes";
+import trinityCfoRouter from "../trinityCfoRoutes";
+import trinityAutonomyRouter from "../trinityAutonomyRoutes";
 import budgetRouter from "../budgetRoutes";
 import quickbooksPhase3Router from "../quickbooksPhase3Routes";
 import financialIntelligenceRouter from "../financialIntelligence";
@@ -48,6 +51,8 @@ export function mountBillingRoutes(app: Express): void {
     "/api/disputes",
     "/api/billing-settings",
     "/api/qb-reports",
+    "/api/financial-reports",
+    "/api/trinity/cfo",
     "/api/budgets",
     "/api/quickbooks",
   ];
@@ -170,6 +175,9 @@ export function mountBillingRoutes(app: Express): void {
   app.use("/api/invoices", requireAuth, ensureWorkspaceAccess, invoiceRouter);
   app.use("/api/billing-settings", requireAuth, ensureWorkspaceAccess, billingSettingsRouter);
   app.use("/api/qb-reports", requireAuth, ensureWorkspaceAccess, qbReportsRouter);
+  app.use("/api/financial-reports", requireAuth, ensureWorkspaceAccess, financialReportsRouter);
+  app.use("/api/trinity/cfo", requireAuth, ensureWorkspaceAccess, trinityCfoRouter);
+  app.use("/api/trinity/autonomy", requireAuth, ensureWorkspaceAccess, trinityAutonomyRouter);
   app.use("/api/budgets", requireAuth, ensureWorkspaceAccess, budgetRouter);
   app.use("/api/quickbooks/phase3", requireAuth, ensureWorkspaceAccess, quickbooksPhase3Router);
   app.use("/api/finance", requireAuth, ensureWorkspaceAccess, financialIntelligenceRouter);

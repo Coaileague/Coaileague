@@ -314,6 +314,8 @@ const LaborLawConfig = lazy(() => import("@/pages/labor-law-config"));
 const FlexStaffing = lazy(() => import("@/pages/flex-staffing"));
 const FormSubmissions = lazy(() => import("@/pages/form-submissions"));
 const QBReports = lazy(() => import("@/pages/qb-reports"));
+const FinancialReports = lazy(() => import("@/pages/financial-reports"));
+const TrinityAutonomy = lazy(() => import("@/pages/trinity-autonomy"));
 
 const EmailIntelligence = lazy(() => import("@/pages/email-intelligence"));
 const I9Compliance = lazy(() => import("@/pages/i9-compliance"));
@@ -1004,6 +1006,8 @@ function AppContent() {
                 <Route path="/engagement/employee"><ErrorBoundary><EmployeeEngagement /></ErrorBoundary></Route>
                 <Route path="/analytics/reports"><ErrorBoundary><AnalyticsReportsPage /></ErrorBoundary></Route>
                 <Route path="/qb-reports"><ErrorBoundary><QBReports /></ErrorBoundary></Route>
+                <Route path="/financial-reports"><ErrorBoundary componentName="Financial Reports"><FinancialReports /></ErrorBoundary></Route>
+                <Route path="/trinity/autonomy"><ErrorBoundary componentName="Trinity Autonomy"><TrinityAutonomy /></ErrorBoundary></Route>
                 <Route path="/clients"><ErrorBoundary componentName="Client List"><Clients /></ErrorBoundary></Route>
                 <Route path="/invoices"><ErrorBoundary componentName="Invoice Manager"><Invoices /></ErrorBoundary></Route>
                 <Route path="/financial-intelligence"><ErrorBoundary componentName="Financial Intelligence"><FinancialIntelligence /></ErrorBoundary></Route>
@@ -1545,6 +1549,16 @@ function AppContent() {
                 <Route path="/qb-reports">
                   <RBACRoute require="admin">
                     <ErrorBoundary><QBReports /></ErrorBoundary>
+                  </RBACRoute>
+                </Route>
+                <Route path="/financial-reports">
+                  <RBACRoute require="admin">
+                    <ErrorBoundary componentName="Financial Reports"><FinancialReports /></ErrorBoundary>
+                  </RBACRoute>
+                </Route>
+                <Route path="/trinity/autonomy">
+                  <RBACRoute require="admin">
+                    <ErrorBoundary componentName="Trinity Autonomy"><TrinityAutonomy /></ErrorBoundary>
                   </RBACRoute>
                 </Route>
                 <Route path="/clients">

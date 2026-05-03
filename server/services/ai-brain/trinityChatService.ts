@@ -939,6 +939,38 @@ class TrinityChatService {
       }
     }
 
+    // AUTONOMY LADDER — apply the operator-selected autonomy rung. Defaults
+    // to 'order_execution' when not configured. This sits on top of the hard
+    // dollar-threshold table and the public-safety boundary, neither of which
+    // can be relaxed by this setting.
+    if (workspaceId) {
+      try {
+        const { getAutonomyMode } = await import('../../services/trinity/autonomyModeStore');
+        const { getAutonomyModePrompt } = await import('../../trinity/personality');
+        const mode = await getAutonomyMode(workspaceId);
+        systemPrompt += getAutonomyModePrompt(mode);
+      } catch {
+        // non-fatal — Trinity falls back to her default voice
+      }
+    }
+
+    // CFO BRIEFING — when a manager asks anything financial, inject Trinity's
+    // computed P&L / AR / runway / margin / expense view so she reasons in
+    // income-vs-expense terms instead of guessing from headline numbers.
+    if (isManagerLevel && workspaceId) {
+      try {
+        const isFinancialQuery = /\b(margin|profit|loss|p&l|pnl|cash|runway|burn|invoice|receivable|ar\b|outstanding|overdue|expense|spend|payroll cost|client profitability|revenue|income|financ|how are we doing|company health|state of the business)\b/i.test(message || '');
+        if (isFinancialQuery) {
+          const { companyHealth } = await import('../../services/trinity/cfoTools');
+          const health = await companyHealth(workspaceId);
+          const alertLines = health.alerts.map(a => `- [${a.severity.toUpperCase()}] ${a.message}`).join('\n');
+          systemPrompt += `\n\nCFO BRIEFING (live, computed now):\n${health.oneLiner}\n${alertLines || '- No critical alerts.'}\n\nWhen asked about company health, ground your answer in these numbers. Cite them. Recommend 1–2 specific next steps.`;
+        }
+      } catch {
+        // non-fatal — CFO briefing is best-effort
+      }
+    }
+
     // === EPISODIC + WORKING MEMORY INJECTION ===
     // Trinity reads her notebook before every interaction
     if (userId && workspaceId) {
