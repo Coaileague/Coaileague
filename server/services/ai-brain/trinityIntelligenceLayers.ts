@@ -8,7 +8,7 @@
  *   L3 — Compliance & Regulatory Brain (4 actions)
  *   L4 — Client Billing Intelligence (3 actions)
  *   L5 — Predictive Analytics Brain (4 actions)
- *   L6 — External Integration Intelligence (5 actions)
+ *   L6 — External Integration Intelligence (6 actions)
  *   L7 — Natural Language Reasoning (2 actions)
  *   L8 — Anomaly Detection & Fraud Prevention (3 actions)
  *
@@ -28,6 +28,7 @@ import {
   timeEntries,
   payrollRuns,
   payrollEntries,
+  payStubs,
   invoices,
   clients,
   workspaces,
@@ -2202,6 +2203,107 @@ export function registerExternalIntegrationIntelligenceActions() {
     };
   }));
 
+  // 6.4b — ACH Transfer Status (Plaid)
+  // End-user-facing query: "did the ACH for invoice/payroll/transfer X clear?"
+  // Reads workspace-scoped pay stubs and (for non-terminal cached statuses)
+  // refreshes from Plaid in real time. Reuses partners/plaidService — no new
+  // transport code, no parallel polling loop.
+  helpaiOrchestrator.registerAction(mkLayer('payroll', 'payments.check_ach_status', async (params) => {
+    const { workspaceId, transferId, payStubId, payrollRunId, employeeId } = params as {
+      workspaceId?: string; transferId?: string; payStubId?: string;
+      payrollRunId?: string; employeeId?: string;
+    };
+    if (!workspaceId) return { error: 'workspaceId required' };
+    if (!transferId && !payStubId && !payrollRunId && !employeeId) {
+      return { error: 'one of transferId, payStubId, payrollRunId, or employeeId required' };
+    }
+
+    const filters = [eq(payStubs.workspaceId, workspaceId)];
+    if (transferId) filters.push(eq(payStubs.plaidTransferId, transferId));
+    if (payStubId) filters.push(eq(payStubs.id, payStubId));
+    if (payrollRunId) filters.push(eq(payStubs.payrollRunId, payrollRunId));
+    if (employeeId) filters.push(eq(payStubs.employeeId, employeeId));
+
+    const stubs = await db.select({
+      id: payStubs.id,
+      payrollRunId: payStubs.payrollRunId,
+      employeeId: payStubs.employeeId,
+      netPay: payStubs.netPay,
+      plaidTransferId: payStubs.plaidTransferId,
+      plaidTransferStatus: payStubs.plaidTransferStatus,
+      plaidTransferFailureReason: payStubs.plaidTransferFailureReason,
+    })
+      .from(payStubs)
+      .where(and(...filters))
+      .limit(50);
+
+    if (!stubs.length) {
+      return {
+        found: 0,
+        transfers: [],
+        advisory: 'No matching pay stubs found for this workspace.',
+        confidenceScore: '1.0',
+      };
+    }
+
+    // Refresh non-terminal statuses from Plaid; trust cached terminal statuses.
+    const TERMINAL = new Set(['settled', 'failed', 'cancelled', 'returned']);
+    const { getTransferStatus } = await import('../partners/plaidService');
+
+    const transfers = await Promise.all(stubs.map(async (s) => {
+      const cached = s.plaidTransferStatus || 'unknown';
+      if (!s.plaidTransferId) {
+        return {
+          payStubId: s.id, payrollRunId: s.payrollRunId, employeeId: s.employeeId,
+          transferId: null, status: 'no_transfer', netPay: s.netPay,
+          source: 'cache', failureReason: null,
+        };
+      }
+      if (TERMINAL.has(cached)) {
+        return {
+          payStubId: s.id, payrollRunId: s.payrollRunId, employeeId: s.employeeId,
+          transferId: s.plaidTransferId, status: cached, netPay: s.netPay,
+          source: 'cache', failureReason: s.plaidTransferFailureReason || null,
+        };
+      }
+      try {
+        const live = await getTransferStatus(s.plaidTransferId);
+        return {
+          payStubId: s.id, payrollRunId: s.payrollRunId, employeeId: s.employeeId,
+          transferId: s.plaidTransferId, status: live.status, netPay: s.netPay,
+          source: 'plaid_live', failureReason: live.failureReason || null,
+        };
+      } catch (err: unknown) {
+        return {
+          payStubId: s.id, payrollRunId: s.payrollRunId, employeeId: s.employeeId,
+          transferId: s.plaidTransferId, status: cached, netPay: s.netPay,
+          source: 'cache_after_plaid_error', failureReason: s.plaidTransferFailureReason || null,
+          plaidError: err instanceof Error ? err.message : String(err),
+        };
+      }
+    }));
+
+    const summary = transfers.reduce<Record<string, number>>((acc, t) => {
+      acc[t.status] = (acc[t.status] || 0) + 1;
+      return acc;
+    }, {});
+    const settled = summary.settled || 0;
+    const failed = (summary.failed || 0) + (summary.returned || 0);
+    const pending = (summary.pending || 0) + (summary.posted || 0);
+
+    return {
+      found: transfers.length,
+      transfers,
+      summary,
+      advisory: failed > 0
+        ? `${failed} transfer(s) failed/returned — manual remediation required.`
+        : pending > 0
+          ? `${pending} transfer(s) still in flight; ${settled} settled.`
+          : `${settled} transfer(s) settled.`,
+      confidenceScore: '0.95',
+    };
+  }));
+
   // 6.5 ADP/Gusto Export Format
   helpaiOrchestrator.registerAction(mkLayer('payroll', 'payroll.export_adp', async (params) => {
     const { workspaceId, payrollRunId } = params;
@@ -2254,7 +2356,7 @@ export function registerExternalIntegrationIntelligenceActions() {
     };
   }));
 
-  log.info('[Trinity L6 — External Integration Intelligence] Registered 5 IRS-deadlines, 941, W2/W3, NACHA, ADP-export actions');
+  log.info('[Trinity L6 — External Integration Intelligence] Registered 6 actions: IRS-deadlines, 941, W2/W3, NACHA, ACH-status, ADP-export');
 }
 
 // ============================================================================

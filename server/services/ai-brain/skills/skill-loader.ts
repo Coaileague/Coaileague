@@ -18,6 +18,7 @@ import { trinityStaffingSkill } from './trinity-staffing-skill';
 import { documentGeneratorSkill } from './documentGeneratorSkill';
 import { dataResearchSkill } from './dataResearchSkill';
 import { financialMathVerifierSkill } from './financialMathVerifierSkill';
+import { registerSkillBridgeActions } from './skillActionBridge';
 
 // Create instances of revenue-critical skills
 const intelligentSchedulerSkill = new IntelligentSchedulerSkill();
@@ -259,6 +260,11 @@ export async function initializeSkillsSystem(): Promise<void> {
 
     // Load directory-based skills
     const loadedCount = await skillLoader.loadAllSkills();
+
+    // Expose registry through Trinity's action surface (skills.list,
+    // skills.get_manifest, skills.health, skill.execute). Without this,
+    // skills are loaded but Trinity has no way to invoke them.
+    registerSkillBridgeActions();
 
     // Watch for changes in development
     if (process.env.NODE_ENV === 'development') {
