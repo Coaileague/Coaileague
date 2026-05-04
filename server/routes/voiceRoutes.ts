@@ -78,6 +78,10 @@ import {
 import { handleEmergency } from '../services/trinityVoice/extensions/emergencyExtension';
 import { handleCareers } from '../services/trinityVoice/extensions/careersExtension';
 import {
+  buildTenantPortalMenu, routeTenantPortal,
+  routeGuardMenu, routeClientMenu,
+} from '../services/trinityVoice/extensions/tenantPortalExtension';
+import {
   handleGuestIdentify,
   handleTenantLookup,
   handleTenantMenu,
@@ -5230,6 +5234,376 @@ voiceRouter.post('/ai-stream', twilioSignatureMiddleware, async (req: Request, r
   }
 });
 
+
+
+
+// ──────────────────────────────────────────────────────────────────────────────
+// WAVE 16 PHASE 2: DURESS BYPASS + MISSED CALL SMS + CHATDOCK SYNC
+// ──────────────────────────────────────────────────────────────────────────────
+
+// DURESS PHRASES (bilingual — add more without code changes)
+const DURESS_PHRASES_EN = [
+  'code red', 'officer needs assistance', 'officer down',
+  'help me now', 'mayday', 'i am in danger', 'panic', 'intruder',
+];
+const DURESS_PHRASES_ES = [
+  'codigo rojo', 'código rojo', 'oficial necesita ayuda', 'ayuda ahora',
+  'peligro', 'intruso', 'emergencia ahora',
+];
+
+function isDuressPhrase(spoken: string): boolean {
+  const s = (spoken || '').toLowerCase().trim();
+  return [...DURESS_PHRASES_EN, ...DURESS_PHRASES_ES].some(p => s.includes(p));
+}
+
+// POST /api/voice/duress-check
+// Called immediately after Trinity answers — listens for 3 seconds.
+// If duress phrase detected: blast SMS to ALL contacts simultaneously, <Dial> instantly.
+// If no duress: redirect to normal language select.
+voiceRouter.post('/duress-check', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { SpeechResult, CallSid, From } = req.body;
+    const baseUrl = getBaseUrl(req);
+    const workspaceId = (req.query.workspaceId as string) || '';
+    const lang: 'en' | 'es' = (req.query.lang as 'en' | 'es') || 'en';
+
+    const spoken = (SpeechResult || '').toLowerCase().trim();
+
+    if (!isDuressPhrase(spoken)) {
+      // Not duress — continue to normal language select
+      return xmlResponse(res, twiml(redirect(`${baseUrl}/api/voice/language-select?lang=${lang}`)));
+    }
+
+    // === DURESS DETECTED ===
+    log.error(`[DURESS] Code Red on CallSid ${CallSid} from ${From}: "${spoken}"`);
+
+    // Blast SMS to ALL contacts in waterfall simultaneously (don't wait for answers)
+    if (workspaceId) {
+      const { pool: dbPool } = await import('../db');
+      const { rows: contacts } = await dbPool.query(
+        `SELECT DISTINCT u.phone, u.first_name, wm.workspace_role
+         FROM workspace_members wm
+         JOIN users u ON u.id = wm.user_id
+         WHERE wm.workspace_id = $1
+           AND wm.workspace_role IN ('org_owner','co_owner','department_manager','supervisor','shift_leader')
+           AND u.phone IS NOT NULL AND u.phone != ''
+         ORDER BY CASE wm.workspace_role
+           WHEN 'org_owner' THEN 1 WHEN 'co_owner' THEN 2
+           WHEN 'department_manager' THEN 3 WHEN 'supervisor' THEN 4 ELSE 5
+         END`,
+        [workspaceId]
+      ).catch(() => ({ rows: [] }));
+
+      const duressMsg = `🚨 CODE RED — OFFICER DURESS ALERT 🚨\nTrinity detected a distress call from ${From}. An officer may need immediate assistance. Call ${From} back NOW or check the CoAIleague dashboard immediately.`;
+
+      for (const c of contacts) {
+        const { sendSMS } = await import('../services/smsService');
+        sendSMS({ to: c.phone, body: duressMsg, workspaceId, type: 'system_alert' }).catch(() => {});
+      }
+
+      // Post to ChatDock immediately
+      const { broadcastToWorkspace } = await import('../websocket');
+      broadcastToWorkspace(workspaceId, {
+        type: 'duress_alert',
+        payload: {
+          callSid: CallSid, callerNumber: From,
+          spokenPhrase: spoken,
+          message: `🚨 CODE RED: Distress call received from ${From}. All managers notified via SMS.`,
+          timestamp: new Date().toISOString(),
+          severity: 'critical',
+        },
+      });
+
+      // Log to platform event bus
+      const { platformEventBus } = await import('../services/platformEventBus');
+      platformEventBus.publish({
+        type: 'voice_duress_detected', category: 'error',
+        title: '🚨 CODE RED — Officer Duress Call',
+        description: `Distress phrase detected from ${From}: "${spoken}". All contacts notified.`,
+        workspaceId,
+        metadata: { callSid: CallSid, callerNumber: From, spokenPhrase: spoken },
+      }).catch(() => {});
+    }
+
+    // Get owner phone for immediate dial (no whisper — this is an emergency)
+    let ownerPhone = process.env.SPS_OWNER_PHONE || '';
+    if (workspaceId) {
+      const { pool: dbPool } = await import('../db');
+      const { rows } = await dbPool.query(
+        `SELECT u.phone FROM workspaces w JOIN users u ON u.id = w.owner_id
+         WHERE w.id = $1 AND u.phone IS NOT NULL LIMIT 1`,
+        [workspaceId]
+      ).catch(() => ({ rows: [] }));
+      if (rows[0]?.phone) ownerPhone = rows[0].phone;
+    }
+
+    const voiceId = lang === 'es' ? VOICE_ES : VOICE;
+    const duressAlert = lang === 'es'
+      ? 'Alerta de emergencia. Conectando con su supervisor inmediatamente. Permanezca en la línea.'
+      : 'Emergency alert received. Connecting you with your supervisor immediately. Please stay on the line.';
+
+    // <Dial> with NO whisper — bridge immediately
+    return xmlResponse(res, twiml(
+      say(duressAlert, voiceId, lang === 'es' ? 'es-US' : 'en-US') +
+      (ownerPhone
+        ? `<Dial callerId="${process.env.TWILIO_PHONE_NUMBER || ''}" timeout="20" action="${baseUrl}/api/voice/transfer-complete?workspaceId=${encodeURIComponent(workspaceId)}&intent=emergency"><Number>${ownerPhone}</Number></Dial>`
+        : say('All supervisors have been notified. Please stay safe. Help is on the way.', voiceId, lang === 'es' ? 'es-US' : 'en-US') + '<Hangup/>')
+    ));
+  } catch (err: unknown) {
+    log.error('[Duress] Error:', err instanceof Error ? err.message : String(err));
+    xmlResponse(res, twiml('<Say>Emergency alert sent. Please stay on the line.</Say>'));
+  }
+});
+
+// POST /api/voice/tenant-portal
+// Called when a guest selects or is routed to a specific tenant's phone portal.
+// Builds and returns the full tenant menu.
+voiceRouter.post('/tenant-portal', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { CallSid, From } = req.body;
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const { sessionId, workspaceId } = extractQS(req);
+    const company = decodeURIComponent((req.query.company as string) || 'the company');
+    const xml = await buildTenantPortalMenu({
+      workspaceId, companyName: company, lang, baseUrl,
+      callSid: CallSid, callerNumber: From || '', sessionId,
+    });
+    return xmlResponse(res, xml);
+  } catch (err: unknown) {
+    log.error('[TenantPortal] Error:', err instanceof Error ? err.message : String(err));
+    xmlResponse(res, twiml('<Say>I am sorry, there was an issue loading the portal. Please try again.</Say>'));
+  }
+});
+
+// POST /api/voice/tenant-portal-route — digit/speech routing
+voiceRouter.post('/tenant-portal-route', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { SpeechResult } = req.body;
+    const Digits = (req.body.Digits as string) || (req.query._d as string) || '';
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const { sessionId, workspaceId } = extractQS(req);
+    const company = decodeURIComponent((req.query.company as string) || 'the company');
+    const caller = decodeURIComponent((req.query.caller as string) || '');
+    const xml = await routeTenantPortal({
+      workspaceId, companyName: company, lang, baseUrl,
+      sessionId, callerNumber: caller, digit: Digits, speech: SpeechResult || '',
+    });
+    return xmlResponse(res, xml);
+  } catch (err: unknown) {
+    log.error('[TenantPortal] Route error:', err instanceof Error ? err.message : String(err));
+    xmlResponse(res, twiml('<Say>I am sorry, I had trouble with that. Let me transfer you now.</Say>'));
+  }
+});
+
+// POST /api/voice/tenant-portal-guard — guard sub-menu routing
+voiceRouter.post('/tenant-portal-guard', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { SpeechResult } = req.body;
+    const Digits = (req.body.Digits as string) || (req.query._d as string) || '';
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const { sessionId, workspaceId } = extractQS(req);
+    const company = decodeURIComponent((req.query.company as string) || '');
+    const caller = decodeURIComponent((req.query.caller as string) || '');
+    const xml = await routeGuardMenu({
+      workspaceId, companyName: company, lang, baseUrl,
+      sessionId, callerNumber: caller, digit: Digits, speech: SpeechResult || '',
+    });
+    return xmlResponse(res, xml);
+  } catch (err: unknown) {
+    log.error('[TenantPortal] Guard menu error:', err instanceof Error ? err.message : String(err));
+    xmlResponse(res, twiml('<Say>I am sorry, please hold while I connect you.</Say>'));
+  }
+});
+
+// POST /api/voice/tenant-portal-client — client sub-menu routing
+voiceRouter.post('/tenant-portal-client', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { SpeechResult } = req.body;
+    const Digits = (req.body.Digits as string) || (req.query._d as string) || '';
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const { sessionId, workspaceId } = extractQS(req);
+    const company = decodeURIComponent((req.query.company as string) || '');
+    const caller = decodeURIComponent((req.query.caller as string) || '');
+    const xml = await routeClientMenu({
+      workspaceId, companyName: company, lang, baseUrl,
+      sessionId, callerNumber: caller, digit: Digits, speech: SpeechResult || '',
+    });
+    return xmlResponse(res, xml);
+  } catch (err: unknown) {
+    log.error('[TenantPortal] Client menu error:', err instanceof Error ? err.message : String(err));
+    xmlResponse(res, twiml('<Say>I am sorry, let me connect you with someone directly.</Say>'));
+  }
+});
+
+// POST /api/voice/tenant-transfer-ready
+// Called after guard records their name + purpose. Fires smart-transfer.
+voiceRouter.post('/tenant-transfer-ready', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { RecordingUrl, RecordingDuration } = req.body;
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const { sessionId, workspaceId } = extractQS(req);
+    const company = decodeURIComponent((req.query.company as string) || '');
+    const caller = decodeURIComponent((req.query.caller as string) || '');
+    const intent = (req.query.intent as string) || 'general_help';
+    const callerInfo = RecordingDuration && parseInt(RecordingDuration) > 1
+      ? `Recording available: ${RecordingUrl || 'see call log'}`
+      : 'Caller did not leave details';
+
+    const { handleSmartTransfer } = await import('../services/trinityVoice/extensions/guestExtension');
+    const xml = await handleSmartTransfer({
+      callSid: req.body.CallSid, sessionId,
+      tenantWorkspaceId: workspaceId,
+      companyName: company, lang: lang as 'en' | 'es',
+      baseUrl, intent: intent as import('../services/trinityVoice/tenantLookupService').CallIntent,
+      callerInfo,
+    });
+    return xmlResponse(res, xml);
+  } catch (err: unknown) {
+    log.error('[TenantPortal] Transfer ready error:', err instanceof Error ? err.message : String(err));
+    xmlResponse(res, twiml('<Say>Connecting you now. Please hold.</Say>'));
+  }
+});
+
+// POST /api/voice/calloff-recorded — guard calloff voicemail → notify supervisor
+voiceRouter.post('/calloff-recorded', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { RecordingUrl, From } = req.body;
+    const lang = getLang(req);
+    const { workspaceId } = extractQS(req);
+    const voiceId = lang === 'es' ? VOICE_ES : VOICE;
+    const langCode = lang === 'es' ? 'es-US' : 'en-US';
+
+    // Notify supervisor/manager of calloff via SMS
+    if (workspaceId) {
+      const { pool: dbPool } = await import('../db');
+      const { rows } = await dbPool.query(
+        `SELECT DISTINCT u.phone FROM workspace_members wm JOIN users u ON u.id = wm.user_id
+         WHERE wm.workspace_id = $1
+           AND wm.workspace_role IN ('supervisor','department_manager','org_owner','co_owner')
+           AND u.phone IS NOT NULL LIMIT 3`,
+        [workspaceId]
+      ).catch(() => ({ rows: [] }));
+      for (const c of rows) {
+        const { sendSMS } = await import('../services/smsService');
+        sendSMS({
+          to: c.phone,
+          body: `📵 Calloff notification from ${From}. Recording: ${RecordingUrl || 'see dashboard'}. Please arrange coverage.`,
+          workspaceId, type: 'system_alert',
+        }).catch(() => {});
+      }
+    }
+
+    return xmlResponse(res, twiml(
+      say(lang === 'es'
+        ? 'Gracias. Su ausencia ha sido registrada y su supervisor ha sido notificado. Que se mejore pronto.'
+        : 'Thank you. Your calloff has been recorded and your supervisor has been notified. We hope you feel better soon.',
+        voiceId, langCode) +
+      '<Hangup/>'
+    ));
+  } catch (err: unknown) {
+    log.error('[Calloff] Error:', err instanceof Error ? err.message : String(err));
+    xmlResponse(res, twiml('<Say>Thank you. Your message has been recorded. Goodbye.</Say>'));
+  }
+});
+
+// POST /api/voice/missed-call-sms
+
+// Called by Twilio status-callback when DialStatus is no-answer / busy / canceled
+// AND the caller hung up before leaving a voicemail.
+// Fires an SMS to the caller: "We missed you — text us for immediate AI help."
+voiceRouter.post('/missed-call-sms', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { Called, Caller, CallStatus, DialCallStatus } = req.body;
+    const workspaceId = (req.query.workspaceId as string) || '';
+    const lang: 'en' | 'es' = (req.query.lang as 'en' | 'es') || 'en';
+
+    // Only fire if call was truly abandoned (no voicemail left)
+    const isAbandoned = ['no-answer', 'busy', 'canceled', 'failed'].includes(DialCallStatus || CallStatus || '');
+    if (!isAbandoned || !Caller) {
+      return res.sendStatus(204);
+    }
+
+    log.info(`[MissedCall] Firing SMS fallback to ${Caller} (status: ${DialCallStatus || CallStatus})`);
+
+    const missedMsg = lang === 'es'
+      ? `Hola, soy Trinity de CoAIleague. Vi que intentó llamarnos pero no pudimos atenderle. ` +
+        `Puede responder directamente a este mensaje y le ayudaré de inmediato con cualquier pregunta o solicitud. ` +
+        `¡Estamos aquí para ayudarle!`
+      : `Hi, this is Trinity at CoAIleague. I saw we just missed your call and I am sorry we could not answer in time. ` +
+        `You can reply directly to this text and I will assist you immediately — no hold times, no menus. ` +
+        `What can I help you with?`;
+
+    const { sendSMS } = await import('../services/smsService');
+    await sendSMS({ to: Caller, body: missedMsg, workspaceId: workspaceId || undefined, type: 'system_alert' });
+
+    log.info(`[MissedCall] SMS sent to ${Caller}`);
+    return res.sendStatus(204);
+  } catch (err: unknown) {
+    log.warn('[MissedCall] SMS fallback failed:', err instanceof Error ? err.message : String(err));
+    return res.sendStatus(204);
+  }
+});
+
+// POST /api/voice/call-chatdock-sync
+// Called at call start and call end to post live call cards to ChatDock.
+// Supervisors see: inbound call card with caller ID, duration, transcript summary.
+voiceRouter.post('/call-chatdock-sync', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { CallSid, CallStatus, From, RecordingUrl, TranscriptionText, Duration } = req.body;
+    const workspaceId = (req.query.workspaceId as string) || '';
+    const eventType = (req.query.event as string) || 'call_start'; // 'call_start' | 'call_end'
+
+    const { broadcastToWorkspace } = await import('../websocket');
+
+    if (eventType === 'call_start') {
+      broadcastToWorkspace(workspaceId, {
+        type: 'voice_call_active',
+        payload: {
+          callSid: CallSid, callerNumber: From,
+          status: 'active', startedAt: new Date().toISOString(),
+          message: `📞 Incoming call from ${From}`,
+        },
+      });
+    } else if (eventType === 'call_end') {
+      const summary = TranscriptionText
+        ? `Call ended (${Duration || 0}s). Trinity transcript: "${String(TranscriptionText).slice(0, 300)}${String(TranscriptionText).length > 300 ? '...' : ''}"`
+        : `Call ended (${Duration || 0}s). ${RecordingUrl ? 'Recording available.' : 'No recording.'}`;
+
+      broadcastToWorkspace(workspaceId, {
+        type: 'voice_call_ended',
+        payload: {
+          callSid: CallSid, callerNumber: From,
+          status: 'ended', duration: Duration,
+          summary, recordingUrl: RecordingUrl || null,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      // If there is a transcription, also create a HelpAI action log entry
+      if (TranscriptionText && workspaceId) {
+        const { pool: dbPool } = await import('../db');
+        await dbPool.query(
+          `INSERT INTO helpai_action_log (workspace_id, action_type, action_status, action_payload, created_at)
+           VALUES ($1, 'voice_call_summary', 'completed', $2::jsonb, NOW())`,
+          [workspaceId, JSON.stringify({
+            callSid: CallSid, callerNumber: From, duration: Duration,
+            transcript: TranscriptionText, recordingUrl: RecordingUrl,
+          })]
+        ).catch(() => {});
+      }
+    }
+
+    return res.sendStatus(204);
+  } catch (err: unknown) {
+    log.warn('[ChatDockSync] Error:', err instanceof Error ? err.message : String(err));
+    return res.sendStatus(204);
+  }
+});
 
 // Mount the authenticated management sub-router onto the main voice router
 voiceRouter.use(mgmtRouter);

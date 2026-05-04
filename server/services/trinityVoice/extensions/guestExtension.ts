@@ -188,7 +188,8 @@ export async function handleTenantLookup(params: {
     ? `Encontré a ${tenant.companyName}. Un momento por favor, voy a conectarle con su portal.`
     : `I found ${tenant.companyName}. One moment please — connecting you to their portal now.`;
 
-  const menuUrl = `${baseUrl}/api/voice/tenant-menu?lang=${lang}&sessionId=${encodeURIComponent(sessionId)}&tenantWorkspaceId=${encodeURIComponent(tenant.workspaceId)}&company=${encodeURIComponent(tenant.companyName)}&intent=${encodeURIComponent(intent)}&badge=${encodeURIComponent(badgeNumber || "")}`;
+  // Wave 16: Route to the full tenant portal (replaces old tenant-menu stub)
+  const menuUrl = `${baseUrl}/api/voice/tenant-portal?lang=${lang}&sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(tenant.workspaceId)}&company=${encodeURIComponent(tenant.companyName)}&intent=${encodeURIComponent(intent)}&badge=${encodeURIComponent(badgeNumber || "")}`;
 
   logCallAction({ callSessionId: sessionId, workspaceId: tenant.workspaceId, action: "tenant_resolved", payload: { tenantName: tenant.companyName, intent }, outcome: "success" }).catch(() => {});
 

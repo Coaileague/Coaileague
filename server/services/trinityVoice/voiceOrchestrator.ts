@@ -422,11 +422,14 @@ export async function handleInbound(params: {
     'Hi! Thank you for calling Co-League — where intelligent workforce management meets real results. ' +
     'Press 1 for English. Marque 2 para Español.';
 
+  // Wave 16: Duress bypass — if call metadata already has duress flag, skip all menus
+  // (Duress phrase is detected in the live speech stream by /api/voice/duress-check)
   return twiml(
-    gather({ action: `${baseUrl}/api/voice/language-select`, numDigits: 1, timeout: 8 },
-      (customGreeting ? say(customGreeting) : '') +
-      say(brandedGreeting)
-    ) +
+    // Immediately gather speech for duress detection — 3 second window before menu
+    `<Gather input="speech" action="${baseUrl}/api/voice/duress-check?workspaceId=${encodeURIComponent(workspaceId)}&callSid=${encodeURIComponent(callSid)}" method="POST" timeout="3" speechTimeout="1" language="en-US,es-US" hints="code red,officer needs assistance,help me,emergency,mayday,ayuda,emergencia,código rojo">` +
+    (customGreeting ? say(customGreeting) : '') +
+    say(brandedGreeting) +
+    `</Gather>` +
     redirect(`${baseUrl}/api/voice/language-select`)
   );
 }
