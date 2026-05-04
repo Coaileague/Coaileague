@@ -234,6 +234,12 @@ router.get('/', async (req: Request, res: Response) => {
       plaid: plaid.status === 'green' ? '✅ Plaid ACH ready' : '⚠️ Plaid pending production approval (payroll calc still works)',
       sqlMigration: '⚠️ Run migrations/wave6_5_drop_dead_tables.sql on Railway Postgres manually',
     },
+    adminTools: {
+      orphanAudit: 'GET /api/admin/workspace/orphan-audit (X-Diagnostic-Secret) — find workspaces missing org_code/email/addresses',
+      repairOne: 'POST /api/admin/workspace/repair-identity {workspaceId} — re-run onboarding for a specific workspace',
+      repairAll: 'POST /api/admin/workspace/repair-all-orphans — bulk-repair all incomplete workspaces',
+      statewideRepair: `POST /api/admin/workspace/repair-identity {"workspaceId":"${process.env.STATEWIDE_WORKSPACE_ID || 'set STATEWIDE_WORKSPACE_ID'}","dryRun":false}`,
+    },
   };
 
   log.info(`[Diagnostic] Complete: ${overallStatus} (${redCount} red, ${yellowCount} yellow, ${greenCount} green) in ${report.durationMs}ms`);

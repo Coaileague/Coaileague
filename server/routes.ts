@@ -29,6 +29,7 @@ import { registerEpisodicMemoryListeners } from "./services/ai-brain/episodicMem
 import productionDiagnosticRouter from "./routes/productionDiagnosticRoute";
 import { generateEvidenceBundle } from "./services/auditor/evidenceBundleService";
 import handshakeQrRouter from "./routes/handshakeQrRoutes";
+import workspaceRepairRouter from "./routes/workspaceRepairRoutes";
 import Stripe from "stripe";
 import { getStripe, isStripeConfigured } from "./services/billing/stripeClient";
 
@@ -160,6 +161,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Wave 10: Bio-Link Rapid Invite QR Handshake
   app.use('/api/workspace/handshake-qr', handshakeQrRouter);
+
+  // Wave 10: Workspace Identity Repair + Orphan Audit (root admin only, DIAG_BYPASS_SECRET)
+  // GET  /api/admin/workspace/orphan-audit         — find incomplete workspaces
+  // POST /api/admin/workspace/repair-identity      — repair one workspace
+  // POST /api/admin/workspace/repair-all-orphans   — bulk repair all orphans
+  app.use('/api/admin/workspace', workspaceRepairRouter);
 
   // Wave 9: DPS 30-day Evidence Bundle (org_owner or platform staff only)
   app.post('/api/compliance/evidence-bundle', requireAuth, async (req: AuthenticatedRequest, res) => {
