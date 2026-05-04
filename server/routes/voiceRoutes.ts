@@ -77,6 +77,15 @@ import {
 } from '../services/trinityVoice/extensions/staffExtension';
 import { handleEmergency } from '../services/trinityVoice/extensions/emergencyExtension';
 import { handleCareers } from '../services/trinityVoice/extensions/careersExtension';
+import {
+  handleGuestIdentify,
+  handleTenantLookup,
+  handleTenantMenu,
+  handleCollectCallerInfo,
+  handleSmartTransfer,
+  handleAnnounceCaller,
+  handleTransferComplete,
+} from '../services/trinityVoice/extensions/guestExtension';
 import { z } from 'zod';
 import {
   resolveWithTrinityBrain,
@@ -574,7 +583,10 @@ voiceRouter.post('/caller-identify', twilioSignatureMiddleware, async (req: Requ
         return xmlResponse(res, twiml(redirect(`${baseUrl}/api/voice/main-menu-route?lang=${lang}&_d=5`)));
       }
       if (intent === 'employee') Digits = '1';
-      else if (intent === 'client') Digits = '2';
+      else if (intent === 'client') {
+        // Wave 16: client intent → guest routing (reach a security company)
+        return xmlResponse(res, twiml(redirect(`${baseUrl}/api/voice/guest-identify?lang=${lang}&sessionId=${encodeURIComponent(sessionId)}`)));
+      }
       else if (intent === 'sales') {
         return xmlResponse(res, twiml(redirect(`${baseUrl}/api/voice/main-menu-route?lang=${lang}&_d=1`)));
       }
@@ -672,21 +684,10 @@ voiceRouter.post('/caller-identify', twilioSignatureMiddleware, async (req: Requ
       ));
     }
 
+    // Wave 16: Digit 2 → guest routing (reach a specific security company)
     if (Digits === '2') {
-      const prompt = lang === 'es'
-        ? 'Por favor diga el nombre de su empresa de seguridad o su número de licencia para que pueda conectarle con su proveedor.'
-        : 'Please say the name of your security company or their license number so I can connect you with your provider.';
-
-      const action = `${baseUrl}/api/voice/client-identify?sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}`;
-      return xmlResponse(res, twiml(
-        `<Gather input="speech" action="${action}" method="POST" timeout="10" speechTimeout="auto">` +
-        say(prompt, voiceId, langCode) +
-        `</Gather>` +
-        say(lang === 'es' ? 'No le escuché. Pasando al menú general.' : 'I did not catch that. Taking you to the general menu.', voiceId, langCode) +
-        redirect(`${baseUrl}/api/voice/general-menu?lang=${lang}`)
-      ));
+      return xmlResponse(res, twiml(redirect(`${baseUrl}/api/voice/guest-identify?lang=${lang}&sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}`)));
     }
-
     // Press 3, 0, or no input → general menu
     const extEnabled = (workspace.phoneRecord.extensionConfig as Record<string, boolean>) || {};
     return xmlResponse(res, buildGeneralMenu(lang, baseUrl, extEnabled));
@@ -3466,6 +3467,103 @@ mgmtRouter.use(async (req: AuthenticatedRequest, res: Response, next: NextFuncti
       message: 'Unable to verify plan tier. Please try again or contact support.',
     });
   }
+});
+
+
+// ──────────────────────────────────────────────────────────────────────────────
+// WAVE 16: GUEST, PUBLIC CALLER & SMART TRANSFER ROUTES
+// ──────────────────────────────────────────────────────────────────────────────
+
+voiceRouter.post('/guest-identify', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { CallSid, To } = req.body;
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const workspace = await resolveWorkspaceFromPhoneNumber(To);
+    const workspaceId = workspace?.workspaceId || '';
+    const session = await getSession(CallSid);
+    const sessionId = session?.id || CallSid;
+    xmlResponse(res, handleGuestIdentify({ callSid: CallSid, sessionId, workspaceId, lang, baseUrl }));
+  } catch (err: unknown) { log.error('[Wave16] guest-identify:', err instanceof Error ? err.message : String(err)); xmlResponse(res, twiml('<Say>An error occurred. Please try again.</Say>')); }
+});
+
+voiceRouter.post('/tenant-lookup', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { CallSid, From, SpeechResult } = req.body;
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const intent = (req.query.intent as string) || 'general_help';
+    const retryCount = parseInt((req.query.retry as string) || '0', 10);
+    const { sessionId } = extractQS(req);
+    const workspaceId = (req.query.workspaceId as string) || '';
+    const xml = await handleTenantLookup({ callSid: CallSid, sessionId, workspaceId, lang, baseUrl, speechResult: SpeechResult || '', intent, callerNumber: From || '', retryCount });
+    xmlResponse(res, xml);
+  } catch (err: unknown) { log.error('[Wave16] tenant-lookup:', err instanceof Error ? err.message : String(err)); xmlResponse(res, twiml('<Say>I had trouble looking that up. Please try again.</Say>')); }
+});
+
+voiceRouter.post('/tenant-menu', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { SpeechResult } = req.body;
+    const digits = (req.body.Digits as string) || '';
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const { sessionId } = extractQS(req);
+    const tenantWorkspaceId = (req.query.tenantWorkspaceId as string) || '';
+    const company = decodeURIComponent((req.query.company as string) || 'the company');
+    const intent = (req.query.intent as string) || 'general_help';
+    xmlResponse(res, handleTenantMenu({ sessionId, tenantWorkspaceId, companyName: company, lang, baseUrl, digits, speechResult: SpeechResult || '', intent }));
+  } catch (err: unknown) { log.error('[Wave16] tenant-menu:', err instanceof Error ? err.message : String(err)); xmlResponse(res, twiml('<Say>Something went wrong. Please call back.</Say>')); }
+});
+
+voiceRouter.post('/collect-caller-info', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { CallSid, SpeechResult } = req.body;
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const { sessionId } = extractQS(req);
+    const tenantWorkspaceId = (req.query.tenantWorkspaceId as string) || '';
+    const company = decodeURIComponent((req.query.company as string) || 'the company');
+    const intent = ((req.query.intent as string) || 'general_help') as import('../services/trinityVoice/tenantLookupService').CallIntent;
+    const skipInfo = req.query.skipInfo === 'true';
+    const xml = await handleCollectCallerInfo({ callSid: CallSid, sessionId, tenantWorkspaceId, companyName: company, lang, baseUrl, intent, speechResult: SpeechResult || '', skipInfo });
+    xmlResponse(res, xml);
+  } catch (err: unknown) { log.error('[Wave16] collect-caller-info:', err instanceof Error ? err.message : String(err)); xmlResponse(res, twiml('<Say>Let me connect you now.</Say>')); }
+});
+
+voiceRouter.post('/smart-transfer', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { CallSid } = req.body;
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const { sessionId } = extractQS(req);
+    const tenantWorkspaceId = (req.query.tenantWorkspaceId as string) || '';
+    const company = decodeURIComponent((req.query.company as string) || 'the company');
+    const intent = ((req.query.intent as string) || 'general_help') as import('../services/trinityVoice/tenantLookupService').CallIntent;
+    const callerInfo = decodeURIComponent((req.query.callerInfo as string) || '');
+    const xml = await handleSmartTransfer({ callSid: CallSid, sessionId, tenantWorkspaceId, companyName: company, lang, baseUrl, intent, callerInfo });
+    xmlResponse(res, xml);
+  } catch (err: unknown) { log.error('[Wave16] smart-transfer:', err instanceof Error ? err.message : String(err)); xmlResponse(res, twiml('<Say>I could not complete the transfer. Please call back.</Say>')); }
+});
+
+voiceRouter.get('/announce-caller', async (req: Request, res: Response) => {
+  try {
+    const lang = (req.query.lang as string) === 'es' ? 'es' : 'en';
+    const intent = (req.query.intent as string) || 'general_help';
+    const company = decodeURIComponent((req.query.company as string) || 'the company');
+    const callerInfo = decodeURIComponent((req.query.callerInfo as string) || '');
+    const contactName = decodeURIComponent((req.query.contactName as string) || 'there');
+    xmlResponse(res, handleAnnounceCaller({ lang, intent, companyName: company, callerInfo, contactName }));
+  } catch (err: unknown) { log.error('[Wave16] announce-caller:', err instanceof Error ? err.message : String(err)); xmlResponse(res, twiml('<Say>Incoming call. Connecting now.</Say>')); }
+});
+
+voiceRouter.post('/transfer-complete', twilioSignatureMiddleware, async (req: Request, res: Response) => {
+  try {
+    const lang = getLang(req);
+    const baseUrl = getBaseUrl(req);
+    const { sessionId, workspaceId } = extractQS(req);
+    const dialCallStatus = (req.body.DialCallStatus as string) || 'no-answer';
+    xmlResponse(res, handleTransferComplete({ lang, dialCallStatus, sessionId, workspaceId, baseUrl }));
+  } catch (err: unknown) { log.error('[Wave16] transfer-complete:', err instanceof Error ? err.message : String(err)); xmlResponse(res, twiml('<Say>Thank you for calling. Have a great day.</Say><Hangup/>')); }
 });
 
 // GET /api/voice/numbers — list phone numbers for workspace

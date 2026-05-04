@@ -173,12 +173,12 @@ export function buildMainIVR(
 
   if (lang === 'es') {
     const greeting =
-      'Hola, soy Trinity, la asistente de inteligencia artificial de Co-League. ' +
-      'Puedo ayudarle de manera personalizada si se identifica primero. ' +
-      'Si es un empleado o usuario de la plataforma y desea ayuda personalizada, marque 1. ' +
-      'Si es un cliente que necesita asistencia de su proveedor de seguridad, marque 2. ' +
-      'Para servicios generales, marque 3. ' +
-      'Por favor tome su tiempo. También puede simplemente decirme en qué puedo ayudarle, o enviarnos un mensaje de texto a este número en cualquier momento.';
+      'Hola, gracias por llamar. Soy Trinity, la asistente de inteligencia artificial de CoAIleague. ' +
+      'Estoy aquí para ayudarle — tome todo el tiempo que necesite. ' +
+      'Si es guardia, oficial, o usuario de la plataforma, marque 1. ' +
+      'Si desea comunicarse con una empresa de seguridad específica — para presentar una queja, hablar con un gerente, o necesita sus servicios — marque 2. ' +
+      'Para conocer CoAIleague o hablar con nuestro equipo, marque 3. ' +
+      'O simplemente dígame en qué puedo ayudarle.';
 
     return twiml(
       `<Gather input="speech dtmf" action="${baseUrl}/api/voice/caller-identify?lang=es" method="POST" numDigits="1" timeout="15" speechTimeout="auto" hints="${hintsEs}">` +
@@ -189,11 +189,12 @@ export function buildMainIVR(
   }
 
   const greeting =
-    'Hi! My name is Trinity, Co-League\'s artificial intelligence assistant. ' +
-    'I can provide you with personalized help if you identify yourself first. ' +
-    'If you\'re a platform user or employee of an organization and would like personalized assistance, press 1. ' +
-    'If you\'re a client needing assistance from your security provider, press 2. ' +
-    'For general services and information, press 3. ' +
+    'Hi, and thank you for calling. My name is Trinity, the AI assistant for CoAIleague. ' +
+    'I am here to help you — please take your time. ' +
+    'If you are a guard, officer, or platform employee, press 1. ' +
+    'If you are trying to reach a specific security company — to report a complaint, speak with a manager, or need their services — press 2. ' +
+    'To learn about CoAIleague or speak with our team, press 3. ' +
+    'Or you can simply tell me what you need and I will take care of it. ' +
     'Please take your time. You can also just tell me what you need help with, or text this number at any time for immediate assistance from me.';
 
   return twiml(
