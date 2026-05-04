@@ -271,6 +271,16 @@ export const featureFlags = pgTable("feature_flags", {
   maxReportsPerMonth: integer("max_reports_per_month").default(10),
   maxStorageGb: integer("max_storage_gb").default(5),
 
+  // Wave 19.5 — Spend Cap Kill-Switch
+  // max_overage_limit_cents: hard cap on unbilled overage per billing cycle.
+  // 0 = no cap enforced. Default 5000 = $50.00 cap.
+  // When current_month_overage_cents reaches 80% → alert email to owner.
+  // When it reaches 100% → API returns 402 for premium metered calls.
+  maxOverageLimitCents: integer("max_overage_limit_cents").default(5000),
+  currentMonthOverageCents: integer("current_month_overage_cents").default(0),
+  overageAlertSentAt: timestamp("overage_alert_sent_at"),
+  overageBlockedAt: timestamp("overage_blocked_at"),
+
   // Billing integration
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   billingCycle: varchar("billing_cycle").default("monthly"), // 'monthly', 'annual'

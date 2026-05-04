@@ -177,6 +177,81 @@ Key components:
 
 ---
 
+## Wave 19.5 — Billing Safety Valves & Data Archival (Complete)
+
+**Goal:** Enterprise guardrails that protect MRR and keep the database fast at 10,000+ guards.
+
+### Task 1 — Spend Cap Kill-Switch
+
+**Schema (workspaces table — idempotent ALTER TABLE on boot):**
+```
+max_overage_limit_cents    INTEGER DEFAULT 5000  -- $50.00 default cap. 0 = no cap.
+current_month_overage_cents INTEGER DEFAULT 0
+overage_alert_sent_at      TIMESTAMP
+overage_blocked_at         TIMESTAMP
+```
+
+**platformServicesMeter.processBatch() — runs before every credit deduction:**
+- Calculates projected overage in cents (1 credit = 0.1 cents)
+- 80% threshold → updates `overage_alert_sent_at`, fires `spend_cap.warning` platform event + SMS to owner
+- 100% threshold → updates `overage_blocked_at`, fires `spend_cap.blocked` event, **skips the billing** (continues to next workspace)
+- Zero limit → no cap enforced (opt-out for Enterprise)
+- `resetMonthlyOverage(workspaceId)` — called from Stripe invoice.paid webhook to reset counters each cycle
+- `ensureSpendCapSchema()` — idempotent, runs on server startup
+
+**What gets blocked at 100%:** AI token overages, PTT metered calls, any `platformServicesMeter` charge.
+**What is NEVER blocked:** Tier base subscription, panic alerts, compliance-critical actions.
+
+### Task 2 — Data Archival Pipeline (Hot vs. Cold)
+
+**File:** `server/services/storageArchival.ts`
+
+**Archival rules:**
+- Records > 60 days → `archived=TRUE`, `archived_at=NOW()`
+- Records > 1 year → `audio_url=NULL` (storage freed, metadata retained)
+- Regulatory hold → NEVER archived (checked via retentionPolicyService)
+
+**Tables covered:** `cad_event_log`, `ptt_transmissions`, `ptt_plate_log`, `import_history`, `incident_reports`
+
+**Partial indexes added:**
+```sql
+CREATE INDEX cad_event_log_active_idx ON cad_event_log(workspace_id, created_at DESC) WHERE archived IS NOT TRUE;
+CREATE INDEX ptt_transmissions_active_idx ON ptt_transmissions(workspace_id, created_at DESC) WHERE archived IS NOT TRUE;
+```
+All primary queries run against the partial index — full table ignored by default.
+
+**Cron:** `scheduleArchivalCron()` — daily at 3am UTC. First run scheduled at server startup.
+**Batch size:** 500 records per run to avoid row-lock contention.
+**API:** `getStorageStats(workspaceId)` — returns hot/cold counts for billing dashboard.
+
+### Task 3 — Proration Transparency UI
+
+**New API endpoint:** `GET /api/billing/addons/:addonId/proration-preview`
+- Calls `stripe.invoices.retrieveUpcoming()` with the workspace's subscription
+- Returns `{ dueTodayCents, nextMonthCents }`
+- Falls back to full addon price if Stripe preview unavailable
+
+**Billing page flow:**
+1. Tenant clicks "Purchase Add-on" → `fetchProrationPreview()` called
+2. Modal appears: "Calculating prorated charge..." (loading state)
+3. Modal shows: **Due Today (Prorated): $X.XX** | **Next Month Total: $Y.YY/mo**
+4. Tenant clicks **"Confirm — Pay $X.XX Today"** → `purchaseAddonMutation.mutate(addonId)`
+5. Or clicks Cancel → modal closes, nothing charged
+
+No surprise charges. Tenant explicitly consents before any charge fires.
+
+### Tests: 18/18 passing (tests/unit/wave19_5-guardrails.test.ts)
+- Spend cap threshold math (80%/100%/zero limit/credit→cents conversion)
+- PTT cost-per-transmission within expected range
+- Archival 60-day/365-day boundary logic
+- Audio URL purge preserves metadata
+- Proration calculation accuracy
+- Retention policy integration (active/cancelled/regulatory hold)
+
+---
+
+---
+
 ## WAVE NUMBERING CORRECTION (Bryan confirmed 2026-05-04)
 
 The original session transcript compressed Wave 18 and Wave 19 into

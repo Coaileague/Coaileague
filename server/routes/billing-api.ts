@@ -538,6 +538,46 @@ billingRouter.post('/addons/:addonId/purchase', async (req: AuthenticatedRequest
 /**
  * Cancel add-on
  */
+// ── Proration preview for addon mid-cycle purchase (Wave 19.5) ───────────────
+billingRouter.get('/addons/:addonId/proration-preview', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const workspaceId = req.workspaceId || (req.user as Record<string,unknown>)?.workspaceId;
+    if (!workspaceId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const [addon] = await db.select().from(billingAddons)
+      .where(eq(billingAddons.id, req.params.addonId)).limit(1);
+    if (!addon) return res.status(404).json({ error: 'Addon not found' });
+
+    const [ws] = await db.select({
+      stripeCustomerId: workspaces.stripeCustomerId,
+      stripeSubscriptionId: workspaces.stripeSubscriptionId,
+    }).from(workspaces).where(eq(workspaces.id, workspaceId as string)).limit(1);
+
+    const priceCents = Math.round(parseFloat(String(addon.basePrice || '0')) * 100);
+
+    if (!ws?.stripeCustomerId || !ws?.stripeSubscriptionId) {
+      return res.json({ dueTodayCents: priceCents, nextMonthCents: priceCents, estimated: true });
+    }
+
+    try {
+      const upcoming = await stripe.invoices.retrieveUpcoming({
+        customer: ws.stripeCustomerId,
+        subscription: ws.stripeSubscriptionId,
+      });
+      const dueTodayCents = upcoming.amount_due;
+      const nextMonthCents = upcoming.lines.data
+        .filter(line => !line.proration)
+        .reduce((sum, line) => sum + (line.amount || 0), 0);
+      return res.json({ dueTodayCents, nextMonthCents });
+    } catch {
+      return res.json({ dueTodayCents: priceCents, nextMonthCents: priceCents, estimated: true });
+    }
+  } catch (err: unknown) {
+    log.error('Proration preview failed:', err);
+    return res.status(500).json({ error: sanitizeError(err) });
+  }
+});
+
 billingRouter.post('/addons/:addonId/cancel', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const workspaceId = req.workspaceId || (req.user)?.workspaceId || req.currentWorkspaceId;

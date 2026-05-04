@@ -520,6 +520,47 @@ export default function Billing() {
   };
 
 
+  // ── Proration Preview State (Wave 19.5) ────────────────────────────────────
+  const [prorationPreview, setProrationPreview] = useState<{
+    addonId: string;
+    addonName: string;
+    dueTodayCents: number;
+    nextMonthCents: number;
+    isLoading: boolean;
+  } | null>(null);
+
+  // Fetch proration preview before purchase — shows tenant exact charge
+  const fetchProrationPreview = async (addon: { id: string; name?: string; featureName?: string }) => {
+    setProrationPreview({
+      addonId: addon.id,
+      addonName: addon.name || addon.featureName || "Add-on",
+      dueTodayCents: 0,
+      nextMonthCents: 0,
+      isLoading: true,
+    });
+    try {
+      const res = await fetch(`/api/billing/addons/${encodeURIComponent(addon.id)}/proration-preview`, {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json() as { dueTodayCents: number; nextMonthCents: number };
+        setProrationPreview(prev => prev ? {
+          ...prev,
+          dueTodayCents: data.dueTodayCents || 0,
+          nextMonthCents: data.nextMonthCents || 0,
+          isLoading: false,
+        } : null);
+      } else {
+        // Endpoint unavailable — proceed to purchase directly
+        setProrationPreview(null);
+        purchaseAddonMutation.mutate(addon.id);
+      }
+    } catch {
+      setProrationPreview(null);
+      purchaseAddonMutation.mutate(addon.id);
+    }
+  };
+
   // Purchase add-on mutation
   const purchaseAddonMutation = useMutation({
     mutationFn: async (addonId: string) => {
@@ -1410,7 +1451,7 @@ export default function Billing() {
                             className="w-full"
                             variant={isActive ? "outline" : "default"}
                             disabled={isActive || purchaseAddonMutation.isPending}
-                            onClick={() => purchaseAddonMutation.mutate(addon.id)}
+                            onClick={() => isActive ? undefined : fetchProrationPreview(addon)}
                             data-testid={`button-purchase-addon-${addon.id}`}
                           >
                             {purchaseAddonMutation.isPending ? (

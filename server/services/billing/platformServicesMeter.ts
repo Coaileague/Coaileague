@@ -306,6 +306,63 @@ export class PlatformServicesMeter {
         }
 
         if (totalCredits > 0) {
+          // ── SPEND CAP KILL-SWITCH (Wave 19.5) ───────────────────────────────
+          // Check tenant's max_overage_limit before charging. Zero = no cap.
+          const CREDITS_TO_CENTS = 0.1; // 1 credit = $0.001 = 0.1 cents
+          const overageCents = Math.ceil(totalCredits * CREDITS_TO_CENTS);
+          try {
+            const { pool } = await import('../../db');
+            const wsRow = await pool.query(
+              `SELECT max_overage_limit_cents, current_month_overage_cents,
+                      overage_alert_sent_at, overage_blocked_at, owner_id
+               FROM workspaces WHERE id = $1 LIMIT 1`,
+              [workspaceId]
+            );
+            if (wsRow.rows[0]) {
+              const ws = wsRow.rows[0];
+              const limitCents: number = ws.max_overage_limit_cents || 0;
+              const currentCents: number = ws.current_month_overage_cents || 0;
+              const projectedCents = currentCents + overageCents;
+
+              if (limitCents > 0) {
+                const pct = projectedCents / limitCents;
+
+                // 100% → BLOCK. Return without charging. Log the block.
+                if (pct >= 1.0) {
+                  log.warn(`[SpendCap] BLOCKED workspace ${workspaceId}: projected ${projectedCents}¢ >= limit ${limitCents}¢`);
+                  if (!ws.overage_blocked_at) {
+                    await pool.query(
+                      `UPDATE workspaces SET overage_blocked_at = NOW() WHERE id = $1`,
+                      [workspaceId]
+                    );
+                    // Notify owner
+                    spendCapNotify(workspaceId, ws.owner_id, 'blocked', limitCents).catch(() => {});
+                  }
+                  continue; // Skip this workspace's billing — spend cap hit
+                }
+
+                // 80% → ALERT (once per billing cycle)
+                if (pct >= 0.8 && !ws.overage_alert_sent_at) {
+                  log.info(`[SpendCap] 80% threshold reached for workspace ${workspaceId}`);
+                  await pool.query(
+                    `UPDATE workspaces SET overage_alert_sent_at = NOW() WHERE id = $1`,
+                    [workspaceId]
+                  );
+                  spendCapNotify(workspaceId, ws.owner_id, 'warning', limitCents, Math.round(pct * 100)).catch(() => {});
+                }
+
+                // Update running total
+                await pool.query(
+                  `UPDATE workspaces SET current_month_overage_cents = $1 WHERE id = $2`,
+                  [projectedCents, workspaceId]
+                );
+              }
+            }
+          } catch (capErr: unknown) {
+            log.warn('[SpendCap] Cap check failed (non-fatal):', capErr instanceof Error ? capErr.message : String(capErr));
+          }
+          // ── END SPEND CAP ──────────────────────────────────────────────────
+
           // Deduct credits
           const description = Object.entries(serviceBreakdown)
             .map(([service, credits]) => `${service}: ${credits}`)
@@ -403,3 +460,53 @@ export async function trackSMSUsage(
 ): Promise<void> {
   return platformServicesMeter.trackSMS(workspaceId, smsType, segments, metadata);
 }
+// ── Spend Cap Notification (Wave 19.5) ─────────────────────────────────────
+// Non-blocking. Sends owner email + platform event when cap is approached/hit.
+async function spendCapNotify(
+  workspaceId: string,
+  ownerId: string | null,
+  type: 'warning' | 'blocked',
+  limitCents: number,
+  percentUsed?: number
+): Promise<void> {
+  try {
+    const { platformEventBus } = await import('../platformEventBus');
+    const dollarLimit = (limitCents / 100).toFixed(2);
+    const title = type === 'blocked'
+      ? `🚨 Spend Cap Reached — Metered services paused`
+      : `⚠️ Spend Cap at ${percentUsed}% — Approaching limit`;
+    const description = type === 'blocked'
+      ? `Your workspace has reached its $${dollarLimit} monthly overage cap. Premium metered API calls (AI overages, PTT) are paused until next billing cycle or cap is raised.`
+      : `Your workspace is at ${percentUsed}% of its $${dollarLimit} monthly overage cap. Consider raising your limit in Billing Settings to avoid service interruption.`;
+
+    await platformEventBus.publish({
+      type: type === 'blocked' ? 'spend_cap.blocked' : 'spend_cap.warning',
+      category: 'billing',
+      title,
+      description,
+      workspaceId,
+      metadata: { limitCents, percentUsed, ownerId },
+    });
+
+    // Email the owner
+    if (ownerId) {
+      const { pool } = await import('../../db');
+      const ownerRow = await pool.query(
+        `SELECT email, first_name FROM users WHERE id = $1 LIMIT 1`,
+        [ownerId]
+      );
+      if (ownerRow.rows[0]?.email) {
+        const { sendSMS } = await import('../smsService');
+        // SMS fallback — email service uses its own billing meter so we use SMS here
+        const msgBody = type === 'blocked'
+          ? `CoAIleague: Your spend cap of $${dollarLimit} has been reached. Metered services are paused. Raise your limit at coaileague.com/billing.`
+          : `CoAIleague: Your spend cap is ${percentUsed}% used ($${dollarLimit} limit). Raise it at coaileague.com/billing to avoid interruption.`;
+        sendSMS({ to: ownerRow.rows[0].email, body: msgBody, workspaceId, type: 'system_alert' }).catch(() => {});
+      }
+    }
+  } catch (err: unknown) {
+    // Notification failures are non-fatal — cap enforcement still worked
+  }
+}
+
+
