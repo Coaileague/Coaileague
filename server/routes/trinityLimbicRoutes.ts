@@ -14,6 +14,7 @@
  */
 
 import { sanitizeError } from '../middleware/errorHandler';
+import { ensureWorkspaceAccess } from '../middleware/workspaceScope';
 import { Router, Response } from 'express';
 import { requireManager, type AuthenticatedRequest } from '../rbac';
 import { trinityLimbicSystem } from '../services/ai-brain/trinityLimbicSystem';

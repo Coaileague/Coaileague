@@ -1,4 +1,5 @@
 import { sanitizeError } from '../middleware/errorHandler';
+import { ensureWorkspaceAccess } from '../middleware/workspaceScope';
 import { validatePayRate, canAssignRole, requiresOwnerToAssign, OWNER_ASSIGN_MIN_LEVEL, businessRuleResponse } from '../lib/businessRules';
 import { WORKSPACE_ROLE_HIERARCHY } from '../lib/rbac/roleDefinitions';
 import { Router } from "express";

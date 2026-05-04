@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import { ensureWorkspaceAccess } from '../middleware/workspaceScope';
 import { requireAuth } from '../auth';
 import { hasPlatformWideAccess } from '../rbac';
 import { db } from "../db";

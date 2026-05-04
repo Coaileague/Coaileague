@@ -16,6 +16,7 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
+import { requireAuth } from '../auth';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
 import { hasPlatformWideAccess } from '../rbac';

@@ -12,6 +12,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { requireAuth } from '../auth';
 import { db } from '../db';
 import { auditorAccounts } from '@shared/schema';
 import { eq } from 'drizzle-orm';

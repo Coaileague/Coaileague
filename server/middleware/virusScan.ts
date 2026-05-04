@@ -18,6 +18,7 @@
  */
 
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
+import { requireAuth } from '../auth';
 import { createLogger } from '../lib/logger';
 import type { AuthenticatedRequest } from '../rbac';
 const log = createLogger('virusScan');

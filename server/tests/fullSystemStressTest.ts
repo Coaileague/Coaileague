@@ -1,4 +1,6 @@
 import fs from 'fs';
+import { ensureWorkspaceAccess } from '../middleware/workspaceScope';
+import { requireAuth } from '../auth';
 import { db } from '../db';
 import { sql, eq, desc, and, gte, count } from 'drizzle-orm';
 import {

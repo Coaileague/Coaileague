@@ -12,6 +12,8 @@
  */
 
 import Decimal from 'decimal.js';
+import { ensureWorkspaceAccess } from '../middleware/workspaceScope';
+import { requireAuth } from '../auth';
 
 Decimal.set({ precision: 20, rounding: Decimal.ROUND_HALF_UP });
 

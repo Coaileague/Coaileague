@@ -8,6 +8,7 @@
  */
 
 import { Router, Response, NextFunction } from 'express';
+import { requireAuth } from '../auth';
 import { eq, or, ilike, and, sql, desc } from 'drizzle-orm';
 import { db } from '../db';
 import { workspaces, users, employees, clients, systemAuditLogs } from '@shared/schema';

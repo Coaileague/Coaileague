@@ -9,6 +9,7 @@
  */
 
 import { db } from '../db';
+import { requireAuth } from '../auth';
 import { sql } from 'drizzle-orm';
 import { createLogger } from '../lib/logger';
 const log = createLogger('middlewareQualityScanner');

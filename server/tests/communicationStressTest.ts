@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { requireAuth } from '../auth';
 import { db } from '../db';
 import { 
   chatConversations, chatMessages, chatParticipants,

@@ -1,4 +1,5 @@
 import { sanitizeError } from '../middleware/errorHandler';
+import { ensureWorkspaceAccess } from '../middleware/workspaceScope';
 import { Router } from "express";
 import crypto from 'crypto';
 import https from 'https';

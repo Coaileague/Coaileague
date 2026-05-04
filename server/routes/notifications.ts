@@ -3,6 +3,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../auth';
 import { requireManager, type AuthenticatedRequest } from '../rbac';
+import { ensureWorkspaceAccess } from '../middleware/workspaceScope';
 import { db } from '../db';
 import { eq, and, isNull } from 'drizzle-orm';
 import { storage } from '../storage';

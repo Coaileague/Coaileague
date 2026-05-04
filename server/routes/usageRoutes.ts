@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { ensureWorkspaceAccess } from '../middleware/workspaceScope';
 import { db, pool } from "../db";
 import { workspaces } from "@shared/schema";
 import { eq } from "drizzle-orm";

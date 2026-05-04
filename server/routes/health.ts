@@ -2,6 +2,7 @@
 // Consolidated module for health checks, workspace status, and diagnostics
 
 import { sanitizeError } from '../middleware/errorHandler';
+import { requireAuth } from '../auth';
 import type { Request, Response } from 'express';
 import { Router } from 'express';
 import type { User } from '@shared/schema';

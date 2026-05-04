@@ -6,6 +6,7 @@
  */
 
 import { sanitizeError } from '../middleware/errorHandler';
+import { requireAuth } from '../auth';
 import { Router } from 'express';
 import { db } from '../db';
 import {

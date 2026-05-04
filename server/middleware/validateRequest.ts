@@ -10,6 +10,7 @@
  * On success: populates req.validatedBody / req.validatedQuery / req.validatedParams
  */
 import { Request, Response, NextFunction } from 'express';
+import { requireAuth } from '../auth';
 import { ZodSchema } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 

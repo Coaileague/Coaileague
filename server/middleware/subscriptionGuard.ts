@@ -12,6 +12,7 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
+import { requireAuth } from '../auth';
 import { isPublicPath, isBillingGuardExempt } from '../lib/publicPaths';
 import { db } from '../db';
 import { workspaces } from '@shared/schema';

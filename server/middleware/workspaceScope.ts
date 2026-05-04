@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
+import { requireAuth } from '../auth';
 import { db } from '../db';
 import { employees, workspaces, platformRoles } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';

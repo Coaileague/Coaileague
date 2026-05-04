@@ -1,4 +1,5 @@
 import { type Response, type NextFunction } from 'express';
+import { requireAuth } from '../auth';
 /**
  * AI Brain Workboard Routes
  * 

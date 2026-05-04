@@ -2,6 +2,7 @@
 // THE LAW: No new routes without Bryan's approval.
 // Canonical prefixes: /api/auth/*, /api/tos/*, /api/session-checkpoints, /api/admin/end-users, /api/dev
 import type { Express } from "express";
+import { requireAuth } from '../../auth';
 // requireAuth loaded lazily to prevent circular module initialization crash.
 // When esbuild bundles auth.ts + authRoutes.ts, eager top-level imports of
 // requireAuth can resolve to undefined if the auth module hasn't finished

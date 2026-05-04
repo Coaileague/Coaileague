@@ -18,6 +18,8 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { ensureWorkspaceAccess } from '../middleware/workspaceScope';
+import { requireAuth } from '../auth';
 import { WORKSPACE_ROLE_HIERARCHY, hasPlatformWideAccess, type AuthenticatedRequest } from '../rbac';
 
 /**

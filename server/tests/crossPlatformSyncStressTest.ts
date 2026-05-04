@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { requireAuth } from '../auth';
 import { sql } from 'drizzle-orm';
 import * as fs from 'fs';
 import { PREMIUM_FEATURES, CREDIT_PACKAGES, canAccessFeature, getFeatureTokenCost, isFeatureIncludedInTier, getMonthlyLimit } from '@shared/config/premiumFeatures';

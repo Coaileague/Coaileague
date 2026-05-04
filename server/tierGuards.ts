@@ -1,4 +1,6 @@
 import { Response, NextFunction, RequestHandler } from 'express';
+import { requireManager } from '../rbac';
+import { requireAuth } from '../auth';
 import { AuthenticatedRequest } from './rbac';
 import { cacheManager } from './services/platform/cacheManager';
 import { universalAudit } from './services/universalAuditService';
