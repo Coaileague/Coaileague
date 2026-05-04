@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { IdentityCard } from "@/components/dashboard/IdentityCard";
 import { useLocation } from "wouter";
 import {
   DollarSign,
@@ -410,6 +411,7 @@ export default function OrgOwnerDashboard() {
             </div>
           </div>
 
+          <div className="mb-4"><IdentityCard showPaySummary /></div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="rounded-md border border-border bg-background p-3">
               <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">

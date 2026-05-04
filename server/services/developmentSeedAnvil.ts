@@ -82,6 +82,10 @@ export async function runAnvilCoreSeed(): Promise<{ success: boolean; message: s
     businessCategory: 'security',
     maxEmployees: 30,
     maxClients: 20,
+    // Org identity — set here so IdentityCard and settings always show real data
+    orgCode: 'ANVIL',
+    licenseNumber: 'C-ANVIL-001',  // Placeholder for dev; production uses real PSB C-number
+    state: 'TX',
     createdAt: sql`now()`,
     updatedAt: sql`now()`,
   }).onConflictDoNothing();

@@ -96,13 +96,9 @@ export function TrinityAnimatedLogo({
         </filter>
       </defs>
 
-      {/* ── Trifecta: all 3 arms spin as one unit ── */}
+      {/* ── Trifecta: arms breathe/glow — no group spin ── */}
+      {/* Arms are fixed at 12/4/8 o'clock. Only opacity/size breathes. */}
       <g>
-        {alwaysAnimate && (
-          <animateTransform attributeName="transform" type="rotate"
-            from="0 60 60" to="360 60 60" dur={sp.ring1}
-            repeatCount="indefinite"/>
-        )}
         {/* Arm 1 — 12 o'clock */}
         <g filter={`url(#ga-${uid})`}>
           <path d={ARM} fill={`url(#a1-${uid})`}>
@@ -131,13 +127,13 @@ export function TrinityAnimatedLogo({
           </circle>
         </g>
       </g>
-      {/* ── Core — breathing radial glow ── */}
-      <circle cx="60" cy="60" r="16" fill={`url(#c-${uid})`}
-        filter={`url(#gc-${uid})`} opacity="0.85">
+      {/* ── Core — small bright centre dot, glow via filter only (no filled disc) ── */}
+      <circle cx="60" cy="60" r="6" fill={`url(#c-${uid})`}
+        filter={`url(#gc-${uid})`} opacity="0.7">
         {alwaysAnimate && (
           <>
-            <animate attributeName="r" values="13;18;13" dur={sp.core} repeatCount="indefinite"/>
-            <animate attributeName="opacity" values="0.7;0.95;0.7" dur={sp.core} repeatCount="indefinite"/>
+            <animate attributeName="r" values="5;8;5" dur={sp.core} repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.5;0.85;0.5" dur={sp.core} repeatCount="indefinite"/>
           </>
         )}
       </circle>
@@ -244,26 +240,8 @@ export function TrinityOrbitalAvatar({ size = 36, state: stateProp, className, n
           </g>
         )}
 
-        {/* ACTIVE: arc 1 — primary CW spin */}
-        {isActive && (
-          <g>
-            <animateTransform attributeName="transform" type="rotate"
-              from="0 50 50" to="360 50 50" dur={sp.ring1} repeatCount="indefinite"/>
-            <circle cx="50" cy="50" r="46" fill="none" stroke={c.arm1}
-              strokeWidth="2.2" strokeDasharray="24 56" strokeLinecap="round"
-              opacity="0.85" filter={`url(#av-glow-${uid})`}/>
-          </g>
-        )}
-
-        {/* ACTIVE: arc 2 — CCW counter-spin */}
-        {isActive && (
-          <g>
-            <animateTransform attributeName="transform" type="rotate"
-              from="360 50 50" to="0 50 50" dur={sp.ring2} repeatCount="indefinite"/>
-            <circle cx="50" cy="50" r="46" fill="none" stroke={c.arm2}
-              strokeWidth="1.4" strokeDasharray="10 70" strokeLinecap="round" opacity="0.55"/>
-          </g>
-        )}
+        {/* ACTIVE: halo provided by parent (ThoughtBar/UniversalSpinner CSS conic-gradient) */}
+        {/* No inner SVG arcs — prevents double-ring appearance */}
       </svg>
 
       {/* ── Arms — transparent, no background box ── */}

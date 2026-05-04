@@ -581,7 +581,21 @@ function TrinityIcon({
   // TrinityOrbitalAvatar IS the icon — it has its own orbital rings, glow,
   // breathing animation, and auto-detects Trinity state via useTrinityGlobalState.
   // No outer wrapper needed — it was causing a double-circle overlay.
-  const trinityState = critical ? "error" : active ? "thinking" : "idle";
+  // Map domain → distinct Trinity color state so the halo color reflects the action type
+  const domainState = (dom: string | undefined): TrinityState => {
+    if (!dom) return "thinking";
+    if (dom === "compliance" || dom === "audit" || dom === "validation") return "focused";
+    if (dom === "billing" || dom === "payroll" || dom === "financial") return "speaking";
+    if (dom === "scheduling" || dom === "shifts") return "thinking";
+    if (dom === "analytics" || dom === "reporting" || dom === "ai") return "listening";
+    if (dom === "safety" || dom === "uof" || dom === "incident") return "warning";
+    return "thinking";
+  };
+  // Use active operation domain if available, else generic active state
+  const activeDomain = (typeof activeOperation === "object" && activeOperation !== null)
+    ? (activeOperation as { domain?: string }).domain
+    : undefined;
+  const trinityState: TrinityState = critical ? "error" : active ? domainState(activeDomain) : "idle";
   return (
     <span style={{ display: "inline-flex", flexShrink: 0 }} aria-hidden="true">
       {/* Brand halo — external glow rings in Purple/Teal/Gold */}

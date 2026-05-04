@@ -12,6 +12,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
  */
 
 import { useState, useEffect, useRef, useCallback, type ChangeEvent } from "react";
+import { IdentityCard } from "@/components/dashboard/IdentityCard";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { markCoreActionPerformed, markCoreActionAndAutoSubscribe } from "@/lib/pushNotifications";

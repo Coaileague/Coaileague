@@ -100,7 +100,7 @@ export function UniversalSpinner({ size = "md", className, label }: UniversalSpi
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
           <span className="coai-universal-spinner" style={{ width: px, height: px }}>
-            <TrinityOrbitalAvatar size={px} state="thinking" />
+            <TrinityOrbitalAvatar size={px} state="loading" />
           </span>
         </div>
       </div>
