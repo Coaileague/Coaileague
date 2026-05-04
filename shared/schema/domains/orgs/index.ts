@@ -840,7 +840,6 @@ export const workspaces = pgTable("workspaces", {
   voiceCustomGreeting: text("voice_custom_greeting"),     // EN greeting override (default: company name)
   voiceCustomGreetingEs: text("voice_custom_greeting_es"), // ES greeting override
   voicePortalEnabled: boolean("voice_portal_enabled").default(true), // auto-enabled on registration
-  stateLicenseState: varchar("state_license_state"), // State code (TX, CA, FL, NY)
   stateLicenseExpiry: timestamp("state_license_expiry"), // When license expires
   stateLicenseDocumentId: varchar("state_license_document_id"), // Reference to uploaded license document
   stateLicenseVerified: boolean("state_license_verified").default(false), // Trinity AI verification status
