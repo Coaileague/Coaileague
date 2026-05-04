@@ -140,6 +140,7 @@ const ShiftAcceptPage = lazy(() => import("@/pages/shift-accept"));
 const ComplianceScenariosPage = lazy(() => import("@/pages/compliance-scenarios"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const DPSAuditorPortal = lazy(() => import("@/pages/compliance/dps-auditor-portal"));
+const QRPrintSheet = lazy(() => import("@/pages/qr-print-sheet"));
 const OwnerAnalytics = lazy(() => import("@/pages/owner-analytics"));
 const RootAdminDashboard = lazy(() => import("@/pages/root-admin-dashboard"));
 const SystemHealth = lazy(() => import("@/pages/system-health"));
@@ -1335,6 +1336,7 @@ function AppContent() {
                 {LegacyRedirectRoutes()}
                 {HelpdeskRoomRedirect()}
                 <Route path="/dps-portal/:token" component={DPSAuditorPortal} />
+        <Route path="/guard-tours/print-qr/:tourId" component={QRPrintSheet} />
         <Route component={NotFound} />
                 </Switch>
                 </Suspense>
@@ -1937,6 +1939,7 @@ function AppContent() {
                 {LegacyRedirectRoutes()}
                 {HelpdeskRoomRedirect()}
                 <Route path="/dps-portal/:token" component={DPSAuditorPortal} />
+        <Route path="/guard-tours/print-qr/:tourId" component={QRPrintSheet} />
         <Route component={NotFound} />
               </Switch>
               </Suspense>

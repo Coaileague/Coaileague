@@ -21,6 +21,7 @@
  */
 
 import { pool } from '../../db';
+import { broadcastToWorkspace } from '../../websocket';
 import { createLogger } from '../../lib/logger';
 import { platformEventBus } from '../platformEventBus';
 import { isProduction } from '../../lib/isProduction';
@@ -126,6 +127,21 @@ async function firePatrolAlert(
     metadata: {
       tourId: tour.tour_id, employeeId: tour.assigned_employee_id,
       checkpointName, minutesMissed, level,
+    },
+  }).catch(() => {});
+
+  // ── Wave 21A: CAD board patrol_missed broadcast ─────────────────────────
+  // Fire non-blocking so SMS is never delayed by broadcast failure
+  broadcastToWorkspace(tour.workspace_id, {
+    type: 'patrol_missed',
+    data: {
+      tourId: tour.id,
+      checkpointName,
+      minutesMissed,
+      severity,
+      message: level === 'incident'
+        ? `🚨 ${checkpointName} missed ${minutesMissed}min — INCIDENT`
+        : `⚠️ ${checkpointName} missed ${minutesMissed}min`,
     },
   }).catch(() => {});
 

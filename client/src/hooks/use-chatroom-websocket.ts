@@ -361,6 +361,56 @@ export function useChatroomWebSocket(
           setTimeout(() => dispatchTrinityState("idle"), 2000);
           break;
 
+        case 'patrol_scan': {
+          // CAD: officer dot flashes green on patrol scan
+          dispatchTrinityState("success");
+          setTimeout(() => dispatchTrinityState("idle"), 2000);
+          break;
+        }
+
+        case 'patrol_missed': {
+          // CAD: missed checkpoint → Trinity warning state + HelpAI alert
+          dispatchTrinityState("warning");
+          const pm = data as { checkpointName?: string; minutesMissed?: number; message?: string };
+          const missedMsg = {
+            id: `missed-${Date.now()}`,
+            message: `⚠️ **Patrol Alert**: ${pm.checkpointName || "checkpoint"} missed by ${pm.minutesMissed || "?"} minutes. Check guard status.`,
+            senderName: "HelpAI",
+            senderId: "helpai-dispatch",
+            senderType: "bot" as const,
+            isBot: true,
+            createdAt: new Date().toISOString(),
+            metadata: { patrolMissed: true },
+          };
+          setMessages((prev) => [...prev, missedMsg as ChatMessage]);
+          setTimeout(() => dispatchTrinityState("idle"), 4000);
+          break;
+        }
+
+        case 'helpai_patrol_scan': {
+          // HelpAI patrol confirmation message in shift room
+          const pd = data as {
+            roomId?: string; officerName?: string;
+            checkpointName?: string; scannedAt?: string; message?: string;
+          };
+          dispatchTrinityState("speaking");
+          if (pd.message) {
+            const patrolMsg = {
+              id: `patrol-${Date.now()}`,
+              message: pd.message,
+              senderName: "HelpAI",
+              senderId: "helpai-dispatch",
+              senderType: "bot" as const,
+              isBot: true,
+              createdAt: pd.scannedAt || new Date().toISOString(),
+              metadata: { patrolScan: true, checkpointName: pd.checkpointName },
+            };
+            setMessages((prev) => [...prev, patrolMsg as ChatMessage]);
+          }
+          setTimeout(() => dispatchTrinityState("idle"), 1800);
+          break;
+        }
+
         case 'helpai_cad_alert': {
           // CAD → ChatDock: inject HelpAI dispatcher alert as a bot message
           dispatchTrinityState("speaking");

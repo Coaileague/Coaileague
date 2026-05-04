@@ -391,6 +391,80 @@ Owners can click one button → professional PDF ready in ~2 seconds.
 
 ---
 
+## Wave 21A — NFC/QR Patrol Engine + CAD Integration (Complete)
+
+**Philosophy:** Guard scans a checkpoint → everything updates automatically.
+No manual reporting. Trinity, HelpAI, supervisors, and the CAD board all
+know the patrol status in real time.
+
+### QR Code Generation (guardTourRoutes.ts)
+
+**New endpoints:**
+- `GET /api/guard-tours/checkpoints/:id/qr` → PNG QR image, 300px, error correction H
+- `GET /api/guard-tours/tours/:tourId/print-qr` → JSON array of base64 data URLs for all checkpoints
+
+**QR Payload format** (workspace-locked, cross-tenant proof):
+```json
+{ "v": 1, "w": "workspaceId", "c": "checkpointId", "t": "tourId", "n": "Checkpoint Name", "nfc": "nfc-tag-uuid-or-null" }
+```
+`w` (workspaceId) is always embedded. If a guard from Tenant A scans a QR from Tenant B
+the API rejects it — workspace mismatch caught at validation. Physical tags cannot cause
+confusion between clients or tenants.
+
+QR stored back to `guardTourCheckpoints.qrCode` for reference.
+Error correction level H: survives 30% damage — works on dirty, partially torn laminated tags.
+
+### QR Print Sheet (client/src/pages/qr-print-sheet.tsx, 186 lines)
+
+Route: `/guard-tours/print-qr/:tourId`
+
+- Grid of cards, one per checkpoint, sorted by patrol order number
+- Each card: company name header, 180px QR, checkpoint name + description, checkpoint ID (first 12 chars), footer
+- Print dialog auto-opens when QR codes load
+- Manual "Print / Save PDF" button for re-printing
+- Cards designed for lamination: solid black QR on white, high contrast
+- Company name pulled from workspace config — tenant-branded
+- Print CSS: A4, 1cm margins, `break-inside-avoid` per card, no UI chrome in print output
+- "Print QR Codes" button added to each tour card in guard-tour.tsx management page
+
+### CAD ↔ Patrol Bridge (guardTourRoutes.ts /scans POST)
+
+On every checkpoint scan:
+1. `patrol_scan` broadcast → CAD board → officer dot flashes green at checkpoint GPS
+2. `cad_event_log` entry written: `"Maria Lopez cleared North Entrance during patrol"`
+3. `helpai_patrol_scan` broadcast → active shift room → HelpAI posts: `✅ Maria Lopez cleared North Entrance — 14:32:17`
+4. Trinity logo → success state → idle after 2 seconds
+
+All three happen non-blocking — the scan API response (201) fires immediately, broadcast follows async. Network issues never delay the guard's scan confirmation.
+
+### Missed Checkpoint → CAD (patrolWatcherService.ts)
+
+Existing missed checkpoint detection (10/20/30 min thresholds) now ALSO broadcasts:
+- `patrol_missed` event → CAD board → red alert indicator
+- HelpAI in shift room: `⚠️ Patrol Alert: South Gate missed 25 minutes. Check guard status.`
+- Trinity logo → warning state → idle after 4 seconds
+Runs alongside existing SMS escalation (not instead of it).
+
+### WebSocket Events (use-chatroom-websocket.ts)
+
+| Event | Trinity State | Action |
+|---|---|---|
+| `patrol_scan` | success → idle 2s | CAD dot flashes green |
+| `helpai_patrol_scan` | speaking → idle | HelpAI message in shift room |
+| `patrol_missed` | warning → idle 4s | HelpAI alert + CAD red indicator |
+
+### Tests: 16/16 passing (tests/unit/wave21a-patrol-nfc.test.ts)
+- QR workspace isolation (cross-tenant rejection, same-tenant acceptance)
+- NFC anti-spoof validation (time drift, GPS radius)
+- Patrol watcher thresholds (10/22/35 minute escalation levels)
+- CAD broadcast payload structure
+- HelpAI message format
+- Print sheet URL format and checkpoint sort order
+
+---
+
+---
+
 ## Wave 20 — Texas DPS Auditor Portal & Regulatory Knowledge Engine (Complete)
 
 **Philosophy:** Dynamic by design. Any state = config rows, not code changes.
