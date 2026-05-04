@@ -237,7 +237,11 @@ export default function CustomLogin() {
     }
   };
 
-  /** Dev quick-login helper — sets session then resolves role route via /api/auth/me */
+  /**
+   * Dev quick-login helper — sets session then resolves role route via /api/auth/me.
+   * Retries /api/auth/me up to 3× with 400ms gaps to handle connect-pg-simple
+   * session store eventual-consistency (write committed but read may miss on first hit).
+   */
   const devQuickLogin = async (account: 'acme' | 'root') => {
     setIsLoading(true);
     try {
@@ -250,17 +254,23 @@ export default function CustomLogin() {
       if (res.ok) {
         const result = await res.json();
         if (result.success) {
-          // Fetch /api/auth/me for full role data, then role-route
-          try {
-            const meRes = await fetch('/api/auth/me', { credentials: 'include' });
-            if (meRes.ok) {
-              const meData = await meRes.json();
-              const dest = getRoleHomeRoute(meData.user);
-              await queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
-              window.location.href = dest;
-              return;
-            }
-          } catch { /* fall through to default */ }
+          // Retry /api/auth/me up to 3x — session store may lag on first read
+          for (let attempt = 0; attempt < 3; attempt++) {
+            if (attempt > 0) await new Promise(r => setTimeout(r, 400)); // 400ms between retries
+            try {
+              const meRes = await fetch('/api/auth/me', { credentials: 'include' });
+              if (meRes.ok) {
+                const meData = await meRes.json();
+                if (meData?.user?.id) { // Confirm we got a real user back
+                  const dest = getRoleHomeRoute(meData.user);
+                  await queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+                  window.location.href = dest;
+                  return;
+                }
+              }
+            } catch { /* retry */ }
+          }
+          // All retries exhausted — fall back to role-inferred path
           window.location.href = account === 'root' ? '/root-admin-dashboard' : '/dashboard';
           return;
         }

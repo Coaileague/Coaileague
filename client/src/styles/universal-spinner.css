@@ -28,3 +28,14 @@
     animation: coai-glow 3.5s ease-in-out infinite;
   }
 }
+
+/* Wave 13: Gemini-style conic-gradient arc keyframes */
+@keyframes geminiSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes geminiSpinCCW {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
