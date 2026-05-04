@@ -1,6 +1,54 @@
 
 ---
 
+## DEPLOYMENT CRASH LAW — requireAuth Circular Module Init (added 2026-05-04)
+
+**RECURRING CRASH:** `ReferenceError: requireAuth is not defined`
+Affected deploys: 2026-04-30 (×3), 2026-05-03 (×3). Total: 6 crash loops.
+
+**ROOT CAUSE:**
+esbuild bundles all modules into a single IIFE. When module execution order puts
+`authRoutes.ts` initialization BEFORE `auth.ts` finishes exporting, any top-level
+`import { requireAuth }` in a file that depends on both resolves to `undefined`.
+
+The crash is triggered at module-level `router.get(...)` calls — these run immediately
+when the module loads, not deferred to request time.
+
+**THE FIX (domains/auth.ts):**
+Never import `requireAuth` eagerly at the top level in files that also import
+from `authRoutes.ts`. Use a lazy dynamic import inside a function body instead:
+
+```ts
+// ❌ WRONG — eager top-level import (can be undefined at module init)
+import { requireAuth } from "../../auth";
+
+// ✅ CORRECT — lazy dynamic import (resolved at call time, always safe)
+let _requireAuth: RequestHandler | null = null;
+async function getRequireAuth(): Promise<RequestHandler> {
+  if (!_requireAuth) {
+    const { requireAuth } = await import("../../auth");
+    _requireAuth = requireAuth;
+  }
+  return _requireAuth;
+}
+```
+
+**PRE-PUSH CHECK (add to Railway Mirror Protocol):**
+```bash
+# Ensure no file imports both requireAuth AND authRoutes at top level
+grep -l "requireAuth" server/routes/domains/*.ts | xargs grep -l "authRoutes"
+# Should return ZERO files (or only files using the lazy pattern)
+```
+
+**NEVER build into a top-level const outside a function if the value comes from
+auth.ts AND the file also imports from authRoutes.ts. These two modules form a
+soft circular dependency through the domain router.**
+
+---
+
+
+---
+
 ## NOTIFICATION ICON ARCHITECTURE (confirmed 2026-05-04)
 
 ### Android Status Bar SmallIcon — ic_stat_coaileague.png

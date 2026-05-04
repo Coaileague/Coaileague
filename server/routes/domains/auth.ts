@@ -2,7 +2,20 @@
 // THE LAW: No new routes without Bryan's approval.
 // Canonical prefixes: /api/auth/*, /api/tos/*, /api/session-checkpoints, /api/admin/end-users, /api/dev
 import type { Express } from "express";
-import { requireAuth } from "../../auth";
+// requireAuth loaded lazily to prevent circular module initialization crash.
+// When esbuild bundles auth.ts + authRoutes.ts, eager top-level imports of
+// requireAuth can resolve to undefined if the auth module hasn't finished
+// initializing. Lazy resolution (inside function body) is always safe.
+// See SYSTEM_MAP: DEPLOYMENT CRASH LAW — requireAuth circular init.
+import type { RequestHandler } from "express";
+let _requireAuth: RequestHandler | null = null;
+async function getRequireAuth(): Promise<RequestHandler> {
+  if (!_requireAuth) {
+    const { requireAuth } = await import("../../auth");
+    _requireAuth = requireAuth;
+  }
+  return _requireAuth;
+}
 import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
 // Merged: authCoreRoutes → authRoutes (Wave 2)
 import authRouter from "../authRoutes";
@@ -38,8 +51,12 @@ export function mountAuthRoutes(app: Express): void {
   // TOS — public (no auth) — called during org registration and employee onboarding
   app.use("/api/tos", tosRouter);
 
-  app.use("/api/session-checkpoints", requireAuth, ensureWorkspaceAccess, sessionCheckpointRouter);
-  app.use("/api/admin/end-users", requireAuth, endUserControlRouter);
+  // requireAuth applied via lazy loader — safe against circular module init
+  getRequireAuth().then(ra => {
+    app.use("/api/session-checkpoints", ra, ensureWorkspaceAccess, sessionCheckpointRouter);
+    app.use("/api/admin/end-users", ra, endUserControlRouter);
+  }).catch(console.error);
+  // handled in getRequireAuth().then() block above
   if (process.env.NODE_ENV !== 'production') {
     app.use("/api/dev", devRouter);
   }
