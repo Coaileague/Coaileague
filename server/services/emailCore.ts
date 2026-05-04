@@ -321,6 +321,29 @@ export async function sendCanSpamCompliantEmail(
   const { to, subject, html, emailType, workspaceId, skipUnsubscribeCheck, tags, replyTo, bcc } = options;
   const isTransactional = isTransactionalEmail(emailType);
 
+  // ── DEVELOPMENT SIMULATION GUARD ─────────────────────────────────────────
+  // Resend has no sandbox environment — every API call in development burns
+  // real API quota and delivers to real inboxes (which are test addresses
+  // that bounce, damaging sender reputation). Guard fires for ALL callers
+  // since this is the canonical send path every service uses.
+  //
+  // Override: set EMAIL_FORCE_REAL=true in dev to test real delivery
+  // temporarily (template previews, deliverability checks, etc.).
+  //
+  // Production: always sends — no simulation ever.
+  if (!isProduction() && process.env.EMAIL_FORCE_REAL !== 'true') {
+    const simId = `SIM-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    log.info('┌─── EMAIL SIMULATED (dev mode — no API call made) ──────────────────');
+    log.info(`│  Type:      ${emailType}`);
+    log.info(`│  To:        ${to}`);
+    log.info(`│  Subject:   ${subject}`);
+    log.info(`│  Workspace: ${workspaceId || 'platform'}`);
+    log.info(`│  SimID:     ${simId}`);
+    log.info(`│  [Set EMAIL_FORCE_REAL=true to send for real in dev]`);
+    log.info('└────────────────────────────────────────────────────────────────────');
+    return { success: true, data: { id: simId }, skipped: false };
+  }
+
   // Email format validation
   if (!to || !to.includes('@')) {
     log.error(`[Email] ERROR: Invalid recipient address: "${to}" | Type: ${emailType}`);

@@ -923,7 +923,10 @@ export class EmailService {
     replyTo?: string,
     bcc?: string | string[]
   ): Promise<EmailResult> {
-    const isSimulation = !isProduction() && (true || process.env.EMAIL_SIMULATION_MODE === 'true');
+    // Simulation is now enforced at the sendCanSpamCompliantEmail level (emailCore.ts).
+    // This flag is kept for the audit log path only — emailService._deliver() calls
+    // sendCanSpamCompliantEmail which already guards. EMAIL_FORCE_REAL overrides both.
+    const isSimulation = !isProduction() && process.env.EMAIL_FORCE_REAL !== 'true';
 
     const result = await automationOrchestration.executeAutomation(
       {
