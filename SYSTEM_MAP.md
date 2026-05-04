@@ -177,6 +177,78 @@ Key components:
 
 ---
 
+## Wave 17 — Zero-Friction Migration Engine (Complete)
+
+**Goal:** One unified AI importer for any messy competitor export. Zero overlapping services.
+
+**Files:**
+- `server/services/migration/unifiedMigrationService.ts` — all logic (452 lines)
+- `server/routes/importRoutes.ts` — thin router, 8 endpoints (232 lines, rewritten)
+- `server/routes/migration.ts` — STUBBED (redirects to /api/import)
+- `tests/unit/wave17-migration.test.ts` — 18 tests, all passing
+
+**Eliminated:** Old `importRoutes.ts` (706 lines, CSV-only, string input) + old `migration.ts` (487 lines, in-memory CSV jobs, unregistered AI mapper)
+
+**New package:** `xlsx` — Excel/XLSX parsing in production
+
+**API (mounted at `/api/import` — already in orgs.ts):**
+```
+POST   /api/import/parse              → upload CSV/XLSX/PDF → Gemini → jobId + preview
+GET    /api/import/jobs/:jobId        → job status + all rows
+PUT    /api/import/jobs/:jobId/rows   → edit individual rows before commit
+POST   /api/import/jobs/:jobId/commit → approve and write to DB
+DELETE /api/import/jobs/:jobId        → cancel job
+POST   /api/import/rollback/:batchId  → undo a committed batch
+GET    /api/import/history            → audit trail
+```
+
+**Pipeline (Parse → Review → Commit):**
+1. Tenant uploads file (CSV, XLSX, PDF)
+2. Server extracts raw text via `extractRawText()` (XLSX → sheet_to_csv → Gemini)
+3. `parseWithGemini()` sends to Gemini Flash — returns confidence-scored rows
+4. `createJob()` builds in-memory job (2h TTL) with summary counts
+5. Frontend shows confidence table: auto≥90 (pre-checked), review 50-89 (yellow), fix<50 (red)
+6. Tenant edits red/yellow rows inline → `PUT /jobs/:id/rows`
+7. Tenant clicks Approve → `POST /jobs/:id/commit` → transaction → import_history
+
+**Confidence scoring:**
+- `auto` (≥90): pre-checked, no action needed
+- `review` (50-89): tenant should verify before committing
+- `fix` (<50 or blocking error): tenant must fix before commit
+- `ghost`: name present, both email AND phone missing → creates employee with `status:'incomplete'` + `completion_token` UUID → SMS/email sent to self-complete
+
+**Ghost Employee Bridge:**
+When a guard is missing both email and phone (common in competitor exports):
+- Record created with `onboarding_status: 'pending'` and a `completion_token`
+- If phone exists: SMS sent → `https://coaileague.com/complete/{token}`
+- Employee fills in their own info → profile completed
+- Import never fails due to missing contact info
+
+**Rollback:**
+Every committed batch has a `batchId`. `POST /api/import/rollback/:batchId` deletes all records in employees/clients/shifts with that batchId and marks import_history as rolled_back. One click to undo a 500-guard import.
+
+**DB schema additions (idempotent, run at startup):**
+- `import_history` table (workspace_id, batch_id, entity_type, counts, status)
+- `employees.import_batch_id` column
+- `employees.completion_token` column
+- `clients.import_batch_id` column
+- `shifts.import_batch_id` column
+
+**Supported source formats:** GetSling, TrackTik, ADP, Gusto, Deputy, When I Work, QuickBooks, plain spreadsheets, hand-typed rosters — Gemini Flash normalizes all of them.
+
+**Test coverage (18 tests):**
+- CSV/XLSX/PDF extraction
+- Job creation, retrieval, workspace isolation
+- Row editing + error recalculation
+- Ghost detection (name present, no contact info)
+- Confidence scoring rules
+- Client and shift entity types
+- Bulk import: 500 guards created and retrieved in <100ms
+
+---
+
+---
+
 ## Wave 16 — Trinity 360 Omni-Channel SOC Telephony (Complete)
 
 **Architecture:** One master Twilio number. Trinity answers all calls. Tenants identified by `workspaces.state_license_number` or `workspaces.twilio_phone_number`. Guest flow handles prospects, law enforcement, complainants.
