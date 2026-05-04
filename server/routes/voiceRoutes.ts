@@ -32,7 +32,6 @@ const log = createLogger('VoiceRoutes');
 import { db } from '../db';
 import {
   voiceCallSessions,
-  workspacePhoneNumbers,
 } from '../../shared/schema/domains/voice';
 import { eq, and, desc, isNull } from 'drizzle-orm';
 import { requireAuth, type AuthenticatedRequest } from '../rbac';
