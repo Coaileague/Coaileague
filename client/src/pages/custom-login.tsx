@@ -13,6 +13,7 @@ import { Loader2, Eye, EyeOff, AlertCircle, Shield } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { getRoleHomeRoute, getRoleLabel } from "@/lib/rbacRoutes";
 import { LoginLogo } from "@/components/unified-brand-logo";
 import { useRecaptcha } from "@/hooks/useRecaptcha";
 import { useTransitionLoader, startLoginTransition } from "@/components/canvas-hub";
@@ -45,7 +46,7 @@ interface LoginResponse {
 export default function CustomLogin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
@@ -70,11 +71,13 @@ export default function CustomLogin() {
   const transitionLoader = useTransitionLoader();
   const { executeRecaptcha } = useRecaptcha({ action: 'login' });
 
+  // Role-based post-login redirect — fires when auth state resolves
   useEffect(() => {
-    if (isAuthenticated && !authLoading) {
-      setLocation("/dashboard");
+    if (isAuthenticated && !authLoading && user) {
+      const dest = getRoleHomeRoute(user as Parameters<typeof getRoleHomeRoute>[0]);
+      setLocation(dest);
     }
-  }, [isAuthenticated, authLoading, setLocation]);
+  }, [isAuthenticated, authLoading, user, setLocation]);
 
   useEffect(() => {
     fetch("/api/auth/capabilities")
@@ -183,7 +186,7 @@ export default function CustomLogin() {
         return;
       }
 
-      let redirectTo = result.user.currentWorkspaceId ? "/dashboard" : "/onboarding/start";
+      let redirectTo = getRoleHomeRoute(result.user as Parameters<typeof getRoleHomeRoute>[0]);
 
       try {
         const authCheck = await secureFetch("/api/auth/me", { credentials: "include" });
@@ -234,45 +237,44 @@ export default function CustomLogin() {
     }
   };
 
-  const loginDemo = async () => {
+  /** Dev quick-login helper — sets session then resolves role route via /api/auth/me */
+  const devQuickLogin = async (account: 'acme' | 'root') => {
     setIsLoading(true);
     try {
-      // Try direct dev bypass endpoint first (bypasses complex auth flow)
       const res = await fetch('/api/dev/quick-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ account: 'acme' }),
+        body: JSON.stringify({ account }),
         credentials: 'include',
       });
       if (res.ok) {
         const result = await res.json();
-        if (result.success) { window.location.href = '/dashboard'; return; }
+        if (result.success) {
+          // Fetch /api/auth/me for full role data, then role-route
+          try {
+            const meRes = await fetch('/api/auth/me', { credentials: 'include' });
+            if (meRes.ok) {
+              const meData = await meRes.json();
+              const dest = getRoleHomeRoute(meData.user);
+              await queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+              window.location.href = dest;
+              return;
+            }
+          } catch { /* fall through to default */ }
+          window.location.href = account === 'root' ? '/root-admin-dashboard' : '/dashboard';
+          return;
+        }
       }
     } catch { /* fallback below */ }
     // Fallback: fill form and submit normally
-    form.setValue("email", "owner@acme-security.test");
+    const email = account === 'root' ? 'root@coaileague.com' : 'owner@acme-security.test';
+    form.setValue("email", email);
     form.setValue("password", "admin123");
     await form.handleSubmit(onSubmit)();
   };
 
-  const loginRoot = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch('/api/dev/quick-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ account: 'root' }),
-        credentials: 'include',
-      });
-      if (res.ok) {
-        const result = await res.json();
-        if (result.success) { window.location.href = '/dashboard'; return; }
-      }
-    } catch { /* fallback below */ }
-    form.setValue("email", "root@coaileague.com");
-    form.setValue("password", "admin123");
-    await form.handleSubmit(onSubmit)();
-  };
+  const loginDemo = async () => devQuickLogin('acme');
+  const loginRoot = async () => devQuickLogin('root');
 
   const resendVerification = async () => {
     if (!unverifiedEmail) return;

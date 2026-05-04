@@ -208,10 +208,8 @@
   "scope": "/",
   "scope_extensions": [
     {
-      "origin": "https://*.coaileague.com"
-    },
-    {
-      "origin": "https://*.replit.app"
+      "type": "url",
+      "origin": "https://coaileague.com"
     }
   ],
   "screenshots": [

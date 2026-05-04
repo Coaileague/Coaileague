@@ -18,7 +18,15 @@ import {
   users,
   employees,
   clients,
+  workspaces,
+  platformRoles,
+  systemAuditLogs,
 } from "@shared/schema";
+import { pool } from "../db";
+import { isDbCircuitOpen } from "../db";
+import { hasPlatformWideAccess, checkWorkspacePaymentStatus } from "../rbac";
+import { rotateCsrfToken } from "../middleware/csrf";
+import { recordSuccessfulLogin } from "../auth";
 import { eq, and, isNull } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
