@@ -361,6 +361,39 @@ export function useChatroomWebSocket(
           setTimeout(() => dispatchTrinityState("idle"), 2000);
           break;
 
+        case 'helpai_cad_alert': {
+          // CAD → ChatDock: inject HelpAI dispatcher alert as a bot message
+          dispatchTrinityState("speaking");
+          const cadData = data as {
+            callNumber?: string; callType?: string; priority?: number;
+            siteName?: string; incidentDescription?: string;
+            receivedAt?: string;
+          };
+          const priorityLabel = cadData.priority === 1 ? "🔴 CRITICAL" : cadData.priority === 2 ? "🟠 URGENT" : "🟡 PRIORITY";
+          const alertText = [
+            `📡 CAD DISPATCH — ${cadData.callNumber || "New Call"}`,
+            `${priorityLabel} | ${(cadData.callType || "incident").toUpperCase()}`,
+            cadData.siteName ? `📍 ${cadData.siteName}` : "",
+            cadData.incidentDescription ? `ℹ️ ${cadData.incidentDescription}` : "",
+            "All units: acknowledge this call in the shift room.",
+          ].filter(Boolean).join("
+");
+
+          const cadMsg = {
+            id: `cad-${Date.now()}`,
+            message: alertText,
+            senderName: "HelpAI Dispatch",
+            senderId: "helpai-dispatch",
+            senderType: "bot" as const,
+            isBot: true,
+            createdAt: cadData.receivedAt || new Date().toISOString(),
+            metadata: { cadAlert: true, callNumber: cadData.callNumber },
+          };
+          setMessages((prev) => [...prev, cadMsg as ChatMessage]);
+          setTimeout(() => dispatchTrinityState("idle"), 2500);
+          break;
+        }
+
         case 'user_typing':
           if (data.userId && data.userId !== userIdRef.current && data.isTyping !== undefined) {
             // If a bot is typing → Trinity logo goes to thinking

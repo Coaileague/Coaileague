@@ -79,6 +79,22 @@ cadRouter.post("/calls", requireAuth, ensureWorkspaceAccess, async (req: Authent
       [id, workspaceId, callNumber, callType||"other", Number(priority), siteId||null, siteName||null, locationDescription, callerName||null, callerPhone||null, callerType||null, incidentDescription, createdBy||null, latitude||null, longitude||null]);
     const rows = await q(`SELECT * FROM cad_calls WHERE id=$1`, [id]);
     await broadcastToWorkspace(workspaceId, { type: "cad:new_call", data: rows[0] });
+
+    // CAD → ChatDock bridge: post HelpAI alert to active shift rooms
+    // Officers in shift rooms see CAD calls as dispatcher messages
+    broadcastToWorkspace(workspaceId, {
+      type: "helpai_cad_alert",
+      data: {
+        callNumber,
+        callType: callType || "other",
+        priority: Number(priority),
+        siteName: siteName || locationDescription,
+        incidentDescription,
+        latitude: latitude || null,
+        longitude: longitude || null,
+        receivedAt: new Date().toISOString(),
+      },
+    });
     await q(`INSERT INTO cad_dispatch_log (id,workspace_id,call_id,action,action_by,action_by_name,notes,logged_at) VALUES($1,$2,$3,'call_received',$4,'Dispatch','Call for service received',NOW())`,
       [randomUUID(), workspaceId, id, createdBy||null]);
     platformEventBus.publish({

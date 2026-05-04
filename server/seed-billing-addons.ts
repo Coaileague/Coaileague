@@ -52,6 +52,28 @@ const ADDONS = [
     isActive: true,
   },
   {
+    addonKey: 'ptt_radio',
+    name: 'Radio (PTT)',
+    description: 'Push-to-talk radio inside shift rooms. HelpAI acts as AI dispatcher — auto-transcribes every transmission, extracts license plates and incidents, and logs to the CAD board in real time. Replaces Zello.',
+    category: 'communications',
+    pricingType: 'per_seat',
+    basePrice: '0.00',          // Base: included in tier price
+    perSeatPrice: '3.00',       // $3.00 per active PTT user per month
+    monthlyTokenAllowance: '0', // Tokens billed separately via AI budget
+    overageRatePer1kTokens: '0.0010',
+    requiresBaseTier: 'professional',
+    maxSeatsIncluded: 0,        // All seats are charged
+    isAIFeature: true,
+    isActive: true,
+    metadata: {
+      costPerTransmission: 0.0011,        // Whisper + Gemini Flash per TX
+      maxTransmissionsPerSeat: 2000,      // Per month soft cap
+      cadIntegration: true,
+      deliveryLayers: ['websocket', 'fcm', 'sms', 'voice'],
+      radioFeatures: ['plate_extraction', 'incident_logging', 'gps_stamp', 'shift_log', 'dispatcher_response'],
+    },
+  },
+  {
     addonKey: 'insightos',
     name: 'InsightOS Analytics',
     description: 'Advanced workforce analytics with predictive modeling, trend analysis, and custom report generation',

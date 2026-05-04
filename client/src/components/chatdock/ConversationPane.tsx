@@ -38,6 +38,7 @@ import { formatDistanceToNow } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { dispatchTrinityState } from "@/lib/trinityState";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiFetch as pttFetch } from "@/lib/apiError";
 import { apiFetch, AnyResponse } from "@/lib/apiError";
 import { useToast } from "@/hooks/use-toast";
 import { useTrinitySession } from "@/contexts/TrinitySessionContext";
@@ -1407,8 +1408,52 @@ export function InlineChatView({ roomId, roomName }: { roomId: string; roomName:
   // handleFileUpload → ChatServerHub transcribes via OpenAI Whisper and
   // feeds the transcript to HelpAI/Trinity for command handling.
   const [isRecording, setIsRecording] = useState(false);
+  const [isPTTMode, setIsPTTMode] = useState(false);  // PTT vs generic voice
+  const [pttWaveform, setPttWaveform] = useState<number[]>([]);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
+  const pttAnalyserRef = useRef<AnalyserNode | null>(null);
+  const pttAnimFrameRef = useRef<number | null>(null);
+  const pttGPSRef = useRef<{ lat: number | null; lng: number | null }>({ lat: null, lng: null });
+
+  // Auto-detect PTT mode from room name — shift rooms get the radio button
+  useEffect(() => {
+    const isShiftRoom = /shift/i.test(roomName || "");
+    setIsPTTMode(isShiftRoom);
+    setIsPTTMode(isShiftRoom);
+  }, [roomName]);
+
+  // Track GPS for PTT transmission stamping
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    const watch = navigator.geolocation.watchPosition(
+      (pos) => { pttGPSRef.current = { lat: pos.coords.latitude, lng: pos.coords.longitude }; },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 30000 }
+    );
+    return () => navigator.geolocation.clearWatch(watch);
+  }, []);
+
+  // Radio crackle: short synthesized static burst — feels like a real radio
+  const playRadioCrackle = useCallback((type: "open" | "close") => {
+    try {
+      const ctx = new AudioContext();
+      const bufSize = ctx.sampleRate * 0.08; // 80ms crackle
+      const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * (1 - i / bufSize) * 0.3;
+      }
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const gain = ctx.createGain();
+      gain.gain.value = type === "open" ? 0.4 : 0.25;
+      src.connect(gain);
+      gain.connect(ctx.destination);
+      src.start();
+      src.onended = () => ctx.close();
+    } catch { /* no audio context in tests */ }
+  }, []);
 
   const startVoiceRecording = useCallback(async () => {
     if (isRecording) return;
@@ -1420,21 +1465,65 @@ export function InlineChatView({ roomId, roomName }: { roomId: string; roomName:
         if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data);
       };
       mr.onstop = async () => {
+        // Stop waveform animation
+        if (pttAnimFrameRef.current) { cancelAnimationFrame(pttAnimFrameRef.current); pttAnimFrameRef.current = null; }
+        setPttWaveform([]);
         try {
           const blob = new Blob(audioChunksRef.current, { type: mr.mimeType || 'audio/webm' });
           stream.getTracks().forEach((t) => t.stop());
           if (blob.size === 0) return;
-          const file = new File([blob], `voice-${Date.now()}.webm`, { type: blob.type });
-          const dt = new DataTransfer();
-          dt.items.add(file);
-          await handleFileUpload(dt.files);
+
+          if (isPTTMode) {
+            // PTT path — route to dispatcher service with GPS stamp
+            playRadioCrackle("close");
+            dispatchTrinityState("thinking");
+            const formData = new FormData();
+            formData.append("audio", blob, `ptt-${Date.now()}.webm`);
+            formData.append("roomId", roomId);
+            if (pttGPSRef.current.lat !== null) formData.append("latitude", String(pttGPSRef.current.lat));
+            if (pttGPSRef.current.lng !== null) formData.append("longitude", String(pttGPSRef.current.lng));
+            await fetch("/api/ptt/transmit", {
+              method: "POST",
+              body: formData,
+              credentials: "include",
+            });
+          } else {
+            // Standard voice message path
+            const file = new File([blob], `voice-${Date.now()}.webm`, { type: blob.type });
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            await handleFileUpload(dt.files);
+          }
         } catch (err) {
-          toast({ title: "Voice upload failed", variant: "destructive" });
+          toast({ title: isPTTMode ? "Radio transmission failed" : "Voice upload failed", variant: "destructive" });
+          dispatchTrinityState("error");
         }
       };
       mediaRecorderRef.current = mr;
       mr.start();
       setIsRecording(true);
+
+      // Waveform animation using AnalyserNode
+      if (isPTTMode) {
+        playRadioCrackle("open");
+        dispatchTrinityState("listening");
+        try {
+          const audioCtx = new AudioContext();
+          const src2 = audioCtx.createMediaStreamSource(stream);
+          const analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 64;
+          src2.connect(analyser);
+          pttAnalyserRef.current = analyser;
+          const data = new Uint8Array(analyser.frequencyBinCount);
+          const tick = () => {
+            analyser.getByteFrequencyData(data);
+            const bars = Array.from(data.slice(0, 8)).map(v => Math.round(v / 255 * 100));
+            setPttWaveform(bars);
+            pttAnimFrameRef.current = requestAnimationFrame(tick);
+          };
+          tick();
+        } catch { /* analyser optional */ }
+      }
     } catch {
       toast({ title: "Microphone access denied", variant: "destructive" });
     }
@@ -2089,6 +2178,8 @@ export function InlineChatView({ roomId, roomName }: { roomId: string; roomName:
               roomId={roomId}
               isConnected={isConnected}
               isRecording={isRecording}
+              isPTTMode={isPTTMode}
+              waveform={pttWaveform}
               onStart={startVoiceRecording}
               onStop={stopVoiceRecording}
             />
@@ -2124,15 +2215,58 @@ function VoiceRecordButton({
   roomId,
   isConnected,
   isRecording,
+  isPTTMode,
+  waveform,
   onStart,
   onStop,
 }: {
   roomId: string;
   isConnected: boolean;
   isRecording: boolean;
+  isPTTMode?: boolean;
+  waveform?: number[];
   onStart: () => void;
   onStop: () => void;
 }) {
+  if (isPTTMode) {
+    return (
+      <div className="flex-shrink-0 flex items-center gap-1.5">
+        {/* Waveform bars — visible while recording */}
+        {isRecording && waveform && waveform.length > 0 && (
+          <div className="flex items-end gap-[2px] h-6 px-1">
+            {waveform.map((h, i) => (
+              <div
+                key={i}
+                className="w-[3px] rounded-full bg-[#22c55e] transition-all duration-75"
+                style={{ height: `${Math.max(4, h * 0.22)}px` }}
+              />
+            ))}
+          </div>
+        )}
+        <button
+          type="button"
+          onMouseDown={(e) => { e.preventDefault(); onStart(); }}
+          onMouseUp={onStop}
+          onMouseLeave={() => { if (isRecording) onStop(); }}
+          onTouchStart={(e) => { e.preventDefault(); onStart(); }}
+          onTouchEnd={onStop}
+          disabled={!isConnected}
+          className={cn(
+            "h-10 px-3 rounded-full flex items-center gap-1.5 text-xs font-semibold transition-all duration-150 select-none",
+            isRecording
+              ? "bg-[#22c55e] text-white shadow-lg shadow-green-500/40 scale-105"
+              : "bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600/30 active:scale-95"
+          )}
+          data-testid={`button-ptt-${roomId}`}
+          aria-label={isRecording ? "Transmitting… release to send" : "Hold to transmit"}
+        >
+          <Radio className="h-3.5 w-3.5" />
+          <span>{isRecording ? "TRANSMITTING" : "PTT"}</span>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-shrink-0">
       <button
