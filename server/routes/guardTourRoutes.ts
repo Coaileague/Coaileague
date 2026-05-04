@@ -11,6 +11,8 @@ import {
   insertGuardTourScanSchema,
 } from "@shared/schema";
 import { hasManagerAccess, type AuthenticatedRequest } from "../rbac";
+import { requireAuth } from "../auth";
+import { ensureWorkspaceAccess } from "../middleware/workspaceScope";
 import { eq, and, desc, asc } from "drizzle-orm";
 import { tokenManager } from "../services/billing/tokenManager";
 import { createLogger } from '../lib/logger';

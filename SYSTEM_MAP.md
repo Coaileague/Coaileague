@@ -1,6 +1,56 @@
 
 ---
 
+## DEPLOYMENT CRASH LAW — Missing Middleware Imports (added 2026-05-04)
+
+**ROOT CAUSE OF requireAuth CRASH LOOP:**
+`server/routes/guardTourRoutes.ts` used `requireAuth` and `ensureWorkspaceAccess`
+in two QR code endpoints added in Wave 21A without importing them.
+esbuild bundles cleanly (it finds the symbol from other bundled files).
+Node.js ESM runtime crashes: `ReferenceError: requireAuth is not defined`.
+Crash appears at the first request to the route, not at module init.
+
+**THE BAD PATTERN:**
+```ts
+// No import for requireAuth or ensureWorkspaceAccess
+router.get("/checkpoints/:id/qr", requireAuth, ensureWorkspaceAccess, async (req, res) => {
+```
+
+**THE FIX:**
+```ts
+import { requireAuth } from "../auth";
+import { ensureWorkspaceAccess } from "../middleware/workspaceScope";
+```
+
+**PRE-PUSH CHECK (add to Railway Mirror Protocol):**
+```bash
+# Check ALL new/modified route files for missing middleware imports
+for f in server/routes/*.ts server/routes/**/*.ts; do
+  for sym in requireAuth ensureWorkspaceAccess requireManager; do
+    if grep -q "$sym" "$f" && ! grep -q "import.*$sym" "$f"; then
+      echo "MISSING IMPORT: $sym in $f"
+    fi
+  done
+done
+# Must return ZERO results
+```
+
+**COMMON MISSING IMPORTS IN ROUTE FILES:**
+  requireAuth           → from "../auth"
+  ensureWorkspaceAccess → from "../middleware/workspaceScope"
+  requireManager        → from "../rbac"
+  requireOwner          → from "../rbac"
+  sanitizeError         → from "../middleware/errorHandler"
+  createLogger          → from "../lib/logger"
+
+This class of error is silent at build time. esbuild bundles across files so
+the symbol exists somewhere in the bundle. The ESM runtime module resolver
+requires the symbol to be in scope at the specific module that uses it.
+
+---
+
+---
+
 ## DEPLOYMENT CRASH LAW — requireAuth Circular Module Init (added 2026-05-04)
 
 **RECURRING CRASH:** `ReferenceError: requireAuth is not defined`
