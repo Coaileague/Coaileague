@@ -226,7 +226,12 @@ class TrinityAutonomousNotifierService {
     }
 
     // Log for support staff visibility
-    log.info(`📢 [TrinityNotifier] Broadcasting to ${connectedStaff.size} support staff`);
+    if (connectedStaff.size > 0) {
+      log.info(`📢 [TrinityNotifier] Broadcasting to ${connectedStaff.size} support staff`);
+    } else {
+      log.debug(`[TrinityNotifier] No support staff online — alert stored in DB for next login`);
+    }
+    // (removed redundant zero-staff broadcast log)
     
     // Track which staff received the alert
     for (const [userId, connection] of connectedStaff) {

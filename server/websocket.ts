@@ -821,7 +821,13 @@ export function broadcastTrinityAlertToSupport(message: WsPayload) {
     return 0;
   }
   
-  const payload = JSON.stringify(message);
+  let payload: string;
+  try {
+    payload = safeStringify(message);
+  } catch (serErr: unknown) {
+    log.warn('[WS] broadcastTrinityAlertToSupport: serialization failed');
+    return 0;
+  }
   
   let sentCount = 0;
   globalWSS.clients.forEach((client: WebSocket) => {
@@ -974,6 +980,24 @@ initChatDurability().then(() => {
   });
 }).catch(() => null);
 
+
+// ── Safe JSON serializer — prevents BigInt/circular-ref crashes in broadcast ─
+// Gemini-enriched notification metadata sometimes contains BigInt (from
+// Drizzle decimal columns) or Infinity. JSON.stringify throws on these.
+// This replacer converts them to safe equivalents silently.
+function safeStringify(data: unknown): string {
+  const seen = new WeakSet();
+  return JSON.stringify(data, (_key, value) => {
+    if (typeof value === "bigint") return value.toString();
+    if (value === Infinity || value === -Infinity) return null;
+    if (typeof value === "object" && value !== null) {
+      if (seen.has(value)) return "[Circular]";
+      seen.add(value);
+    }
+    return value;
+  });
+}
+
 export function broadcastToWorkspace(workspaceId: string, data: WsPayload) {
   if (!globalBroadcaster) {
     log.warn('Global broadcaster not initialized for workspace broadcast');
@@ -998,7 +1022,7 @@ export function broadcastToWorkspace(workspaceId: string, data: WsPayload) {
     log.debug('Workspace broadcast sent', { workspaceId, eventId });
     return 1;
   } catch (err) {
-    log.warn('Failed to broadcast to workspace', { workspaceId, error: err instanceof Error ? err.message : String(err) });
+    log.warn('Failed to broadcast to workspace — check for non-serializable data in payload', { workspaceId, payloadType: data?.type, error: err instanceof Error ? err.message : String(err) });
     return 0;
   }
 }
@@ -1361,7 +1385,13 @@ export function setupWebSocket(server: Server) {
     registerRoomBroadcaster((roomId: string, message: WsPayload) => {
       const clients = conversationClients.get(roomId);
       if (clients) {
-        const payload = JSON.stringify(message);
+        let payload: string;
+  try {
+    payload = safeStringify(message);
+  } catch (serErr: unknown) {
+    log.warn('[WS] broadcastTrinityAlertToSupport: serialization failed');
+    return 0;
+  }
         clients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN) {
             try {
@@ -8376,10 +8406,14 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
         return;
       }
 
-      const payload = JSON.stringify({
-        ...data,
-        timestamp: new Date().toISOString(),
-      });
+      let payload: string;
+      try {
+        payload = safeStringify({ ...data, timestamp: new Date().toISOString() });
+      } catch (serErr: unknown) {
+        log.warn('[WS] broadcastToWorkspace: serialization failed, skipping broadcast',
+          { workspaceId, error: serErr instanceof Error ? serErr.message : String(serErr) });
+        return;
+      }
 
       const sendToWorkspaceClients = (wsId: string) => {
         let sent = 0;
@@ -8488,7 +8522,9 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
     }) => {
       // Extract enhanced metadata for live display
       const enhancedMetadata = update.metadata || {};
-      const payload = JSON.stringify({
+      let payload: string;
+      try {
+        payload = safeStringify({
         type: 'platform_update',
         update: {
           ...update,
@@ -8502,8 +8538,12 @@ Available commands include: /help, /who, /assign, /transfer, /close, /lock, /unl
           impactDescription: update.impactDescription || enhancedMetadata.impactDescription,
           badge: update.badge || enhancedMetadata.badge,
         },
-        timestamp: new Date().toISOString(),
-      });
+            timestamp: new Date().toISOString(),
+          });
+      } catch (serErr: unknown) {
+        log.warn('[WS] broadcastPlatformUpdate: serialization failed', { title: update.title });
+        return;
+      }
 
       log.info('Broadcasting platform update', { title: update.title });
 
