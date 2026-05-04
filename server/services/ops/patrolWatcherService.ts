@@ -14,7 +14,7 @@
  *   For solo guards with loneWorkerSessions active.
  *   If lastCheckIn > checkInInterval minutes: send SMS safety handshake.
  *   If no response after 5 minutes: escalate to supervisor.
- *   If no response after 15 minutes: emergency escalation to owner + 911 advisory.
+ *   If no response after 15 minutes: emergency escalation to owner — supervisor decides next steps.
  *
  * Called by a scheduled job (Railway Cron or setInterval at startup).
  * Non-blocking — errors are logged, never thrown.
@@ -35,7 +35,7 @@ const PATROL_INCIDENT_MINUTES  = 30;
 // Lone worker thresholds
 const LONE_WORKER_HANDSHAKE_MINUTES  = 5;  // check-in overdue → send SMS
 const LONE_WORKER_ESCALATE_MINUTES   = 10; // still no response → supervisor
-const LONE_WORKER_EMERGENCY_MINUTES  = 20; // still no response → owner + 911 advisory
+const LONE_WORKER_EMERGENCY_MINUTES  = 20; // still no response → owner + full escalation chain
 
 /** Run the patrol watcher check (call every 5 minutes via cron) */
 export async function runPatrolWatcherCheck(): Promise<{

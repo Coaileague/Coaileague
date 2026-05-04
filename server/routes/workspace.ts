@@ -167,6 +167,20 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
           .then(() => log.info(`[Workspace Create] Email addresses provisioned for workspace ${workspace.id}`))
           .catch((err: unknown) => log.warn(`[Workspace Create] Email provisioning failed (non-blocking):`, (err as Error)?.message))
       ).catch((err: unknown) => log.warn(`[Workspace Create] Email provisioning import failed:`, (err as Error)?.message));
+
+      // Wave 16: Auto-provision voice portal config
+      // Sets default hiring link and marks portal as enabled.
+      // Trinity uses workspace.stateLicenseNumber to route guest callers automatically.
+      // No additional config needed — the platform name and license # drive everything.
+      import('../db').then(({ pool: voicePool }) => {
+        const slug = (workspace as Record<string, unknown>).orgCode || emailSlug || '';
+        const hiringLink = `https://coaileague.com/apply/${slug}`;
+        return voicePool.query(
+          `UPDATE workspaces SET voice_hiring_link = $1, voice_portal_enabled = true WHERE id = $2`,
+          [hiringLink, workspace.id]
+        );
+      }).then(() => log.info(`[Workspace Create] Voice portal auto-provisioned for ${workspace.id}`))
+        .catch((err: unknown) => log.warn(`[Workspace Create] Voice portal provisioning failed (non-blocking):`, (err as Error)?.message));
     } catch (slugErr: unknown) {
       log.warn(`[Workspace Create] Email slug setup failed (non-blocking):`, (slugErr as Record<string,unknown>)?.message);
     }

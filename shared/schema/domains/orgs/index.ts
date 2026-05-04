@@ -832,6 +832,14 @@ export const workspaces = pgTable("workspaces", {
 
   // State licensing for regulated industries (security, healthcare, etc.)
   stateLicenseNumber: varchar("state_license_number"), // e.g., C11608501 for Texas PSB
+  stateLicenseState: varchar("state_license_state"), // e.g., TX
+
+  // Wave 16: Voice portal auto-provisioning
+  // Set at workspace creation. Drives the phone portal without manual config.
+  voiceHiringLink: varchar("voice_hiring_link"),          // URL texted to applicants who press Hiring
+  voiceCustomGreeting: text("voice_custom_greeting"),     // EN greeting override (default: company name)
+  voiceCustomGreetingEs: text("voice_custom_greeting_es"), // ES greeting override
+  voicePortalEnabled: boolean("voice_portal_enabled").default(true), // auto-enabled on registration
   stateLicenseState: varchar("state_license_state"), // State code (TX, CA, FL, NY)
   stateLicenseExpiry: timestamp("state_license_expiry"), // When license expires
   stateLicenseDocumentId: varchar("state_license_document_id"), // Reference to uploaded license document

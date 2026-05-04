@@ -44,19 +44,20 @@ import type { CallIntent } from '../tenantLookupService';
 
 const log = createLogger('TenantPortal');
 
-// Voice IDs — Trinity uses a warm, professional female voice
-const VOICE_EN = 'Polly.Joanna-Neural'; // AWS Polly warm voice via Twilio
-const VOICE_ES = 'Polly.Lupe-Neural';
+// Voice config — Trinity voice. Matches the voice in geminiLiveBridge (Aoede).
+// These map to Twilio's <Say voice=""> parameter. Google WaveNet gives natural prosody.
+const VOICE_EN = 'Google.en-US-Neural2-F';
+const VOICE_ES = 'Google.es-US-Neural2-A';
 
-function sayEn(text: string): string {
-  return say(text, VOICE_EN, 'en-US');
-}
-function sayEs(text: string): string {
-  return say(text, VOICE_ES, 'es-US');
-}
+function sayEn(text: string): string { return say(text, VOICE_EN, 'en-US'); }
+function sayEs(text: string): string { return say(text, VOICE_ES, 'es-US'); }
 function sayBoth(textEn: string, textEs: string, lang: 'en' | 'es'): string {
   return lang === 'es' ? sayEs(textEs) : sayEn(textEn);
 }
+
+// Hard safety rule: Trinity NEVER references 911, emergency services, or implies
+// she dispatches any public safety resource. Supervisors decide next steps.
+// No 911 in any TTS string. Zero duty created for CoAIleague or tenants.
 
 // ── Tenant Root Menu ─────────────────────────────────────────────────────────
 
@@ -92,32 +93,44 @@ export async function buildTenantPortalMenu(params: {
 
   const menuParams = `lang=${lang}&workspaceId=${encodeURIComponent(workspaceId)}&company=${encodeURIComponent(companyName)}&sessionId=${encodeURIComponent(sessionId)}&caller=${encodeURIComponent(callerNumber)}`;
 
+  // Get hiring link from workspace (auto-provisioned at registration)
+  let hiringLink = `https://coaileague.com/apply/${companyName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+  try {
+    const { rows: wsRows } = await pool.query(
+      `SELECT voice_hiring_link FROM workspaces WHERE id = $1 LIMIT 1`, [workspaceId]
+    );
+    if (wsRows[0]?.voice_hiring_link) hiringLink = wsRows[0].voice_hiring_link;
+  } catch { /* non-fatal */ }
+
   const greetingEn =
-    `${personalGreeting} Hi, you have reached ${companyName}. ` +
-    `I am Trinity, your AI assistant. I am here to help you with whatever you need, in English or Spanish. ` +
-    `For guards and officers, press 1. ` +
+    `${personalGreeting ? personalGreeting + ' ' : ''}Hi, you have reached ${companyName}. ` +
+    `I am Trinity, your intelligent assistant. I am here to help in English or in Spanish — just speak naturally and I will take care of you. ` +
+    `For guards and officers, press or say 1. ` +
     `For clients and site contacts, press 2. ` +
-    `For an emergency, press 3. ` +
-    `To file a complaint or concern, press 4. ` +
-    `For employment verification, press 5. ` +
-    `To speak with a manager directly, press 6. ` +
+    `For an urgent situation, press 3. ` +
+    `To report a complaint or concern, press 4. ` +
+    `For employment or hiring information, press 5. ` +
+    `To verify employment, press 6. ` +
+    `For pay or timesheet questions, press 7. ` +
+    `To speak with a manager directly, press 8. ` +
     `To speak freely with Trinity AI, press 0. ` +
-    `Or simply tell me what you need and I will take care of it.`;
+    `Or simply tell me what you need.`;
 
   const greetingEs =
-    `${lang === 'es' ? personalGreeting : ''} Hola, ha llamado a ${companyName}. ` +
-    `Soy Trinity, su asistente de inteligencia artificial. Estoy aquí para ayudarle en inglés o español. ` +
-    `Si es guardia u oficial, marque 1. ` +
+    `${lang === 'es' && personalGreeting ? personalGreeting + ' ' : ''}Hola, ha llamado a ${companyName}. ` +
+    `Soy Trinity, su asistente inteligente. Estoy aquí para ayudarle en español o en inglés — hable con naturalidad y le atenderé. ` +
+    `Para guardias y oficiales, marque 1. ` +
     `Para clientes y contactos del sitio, marque 2. ` +
-    `Para una emergencia, marque 3. ` +
-    `Para presentar una queja, marque 4. ` +
-    `Para verificar empleo, marque 5. ` +
-    `Para hablar con un gerente directamente, marque 6. ` +
-    `Para hablar libremente con Trinity, marque 0. ` +
-    `O simplemente dígame qué necesita.`;
+    `Para una situación urgente, marque 3. ` +
+    `Para reportar una queja, marque 4. ` +
+    `Para información de empleo o contratación, marque 5. ` +
+    `Para verificar empleo, marque 6. ` +
+    `Para preguntas de pago, marque 7. ` +
+    `Para hablar con un gerente, marque 8. ` +
+    `Para hablar libremente con Trinity, marque 0.`;
 
-  const hintsEn = 'one,two,three,four,five,six,zero,guard,officer,client,emergency,complaint,manager,help,verification,schedule,clock in,clock out,calloff';
-  const hintsEs = 'uno,dos,tres,cuatro,cinco,seis,cero,guardia,oficial,cliente,emergencia,queja,gerente,ayuda,verificación,horario';
+  const hintsEn = 'one,two,three,four,five,six,seven,eight,zero,guard,officer,client,urgent,complaint,hiring,employment,apply,verification,pay,paycheck,schedule,clock in,clock out,calloff,manager,help';
+  const hintsEs = 'uno,dos,tres,cuatro,cinco,seis,siete,ocho,cero,guardia,oficial,cliente,urgente,queja,empleo,contratación,verificación,pago,horario,gerente';
 
   return twiml(
     `<Gather input="speech dtmf" numDigits="1" action="${baseUrl}/api/voice/tenant-portal-route?${menuParams}" method="POST" timeout="15" speechTimeout="auto" language="${lang === 'es' ? 'es-US' : 'en-US'}" hints="${lang === 'es' ? hintsEs : hintsEn}">` +
@@ -145,14 +158,17 @@ export async function routeTenantPortal(params: {
   // Speech → digit mapping
   const s = speech.toLowerCase().trim();
   if (!digit && s) {
-    if (/\b(guard|officer|employee|staff|clock|schedule|calloff|pay|shift)\b/.test(s)) digit = '1';
-    else if (/\b(client|customer|site|coverage|billing|account)\b/.test(s)) digit = '2';
-    else if (/\b(emergency|urgent|danger|help now)\b/.test(s)) digit = '3';
-    else if (/\b(complaint|concern|unhappy|problem|issue|rude)\b/.test(s)) digit = '4';
-    else if (/\b(verify|verification|employment|background)\b/.test(s)) digit = '5';
-    else if (/\b(manager|supervisor|owner|speak to|talk to|human)\b/.test(s)) digit = '6';
-    else if (/\b(trinity|ai|free|talk freely|just talk)\b/.test(s)) digit = '0';
-    else digit = '0'; // Default to Trinity AI
+    if (/\b(guard|officer|employee|staff|clock|calloff|shift|my shift|schedule)\b/.test(s)) digit = '1';
+    else if (/\b(client|customer|site|coverage|account|we hired|our guard)\b/.test(s)) digit = '2';
+    else if (/\b(urgent|danger|immediate|safety|help right now|assist)\b/.test(s)) digit = '3';
+    else if (/\b(complaint|concern|unhappy|terrible|problem|issue|rude|unprofessional)\b/.test(s)) digit = '4';
+    else if (/\b(hiring|apply|job|career|application|interested in working|want to work)\b/.test(s)) digit = '5';
+    else if (/\b(verify|verification|employment verification|background check|confirm.*work)\b/.test(s)) digit = '6';
+    else if (/\b(pay|paycheck|payment|timesheet|hours worked|overtime|wages|salary)\b/.test(s)) digit = '7';
+    else if (/\b(manager|supervisor|owner|speak to someone|talk to a person|human being)\b/.test(s)) digit = '8';
+    else if (/\b(compliment|great|excellent|wonderful|thank|commend|praise|amazing|good job)\b/.test(s)) digit = '4'; // compliment routes through same collect flow
+    else if (/\b(trinity|ai|free talk|just talk|speak freely)\b/.test(s)) digit = '0';
+    else digit = '0'; // Default to Trinity AI free-talk
   }
 
   const qp = `lang=${lang}&workspaceId=${encodeURIComponent(workspaceId)}&company=${encodeURIComponent(companyName)}&sessionId=${encodeURIComponent(sessionId)}&caller=${encodeURIComponent(callerNumber)}`;
@@ -160,10 +176,12 @@ export async function routeTenantPortal(params: {
   switch (digit) {
     case '1': return buildGuardMenu({ workspaceId, companyName, lang, baseUrl, sessionId, callerNumber });
     case '2': return buildClientMenu({ workspaceId, companyName, lang, baseUrl, sessionId, callerNumber });
-    case '3': return buildEmergencyRoute({ workspaceId, companyName, lang, baseUrl, sessionId, callerNumber });
+    case '3': return buildUrgentRoute({ workspaceId, companyName, lang, baseUrl, sessionId, callerNumber });
     case '4': return buildCollectAndTransfer({ workspaceId, companyName, lang, baseUrl, sessionId, callerNumber, intent: 'complaint' });
-    case '5': return buildEmploymentVerification({ workspaceId, companyName, lang, baseUrl, sessionId, callerNumber });
-    case '6': return buildCollectAndTransfer({ workspaceId, companyName, lang, baseUrl, sessionId, callerNumber, intent: 'general_help' });
+    case '5': return buildHiringMenu({ workspaceId, companyName, lang, baseUrl, sessionId, callerNumber });
+    case '6': return buildEmploymentVerification({ workspaceId, companyName, lang, baseUrl, sessionId, callerNumber });
+    case '7': return buildPayMenu({ workspaceId, companyName, lang, baseUrl, sessionId, callerNumber });
+    case '8': return buildCollectAndTransfer({ workspaceId, companyName, lang, baseUrl, sessionId, callerNumber, intent: 'general_help' });
     default:  return twiml(redirect(`${baseUrl}/api/voice/ai-stream?workspaceId=${encodeURIComponent(workspaceId)}&lang=${lang}&${qp}`));
   }
 }
@@ -439,6 +457,130 @@ export async function routeClientMenu(params: {
 }
 
 // ── Emergency Route ───────────────────────────────────────────────────────────
+
+// ── Hiring / Employment Menu ─────────────────────────────────────────────────
+
+async function buildHiringMenu(params: {
+  workspaceId: string; companyName: string; lang: 'en' | 'es';
+  baseUrl: string; sessionId: string; callerNumber: string;
+}): Promise<string> {
+  const { workspaceId, companyName, lang, callerNumber } = params;
+
+  // Get hiring link from workspace
+  let hiringLink = '';
+  try {
+    const { rows } = await pool.query(
+      `SELECT voice_hiring_link FROM workspaces WHERE id = $1 LIMIT 1`, [workspaceId]
+    );
+    hiringLink = rows[0]?.voice_hiring_link || '';
+  } catch { /* non-fatal */ }
+
+  const responseEn = hiringLink
+    ? `Thank you for your interest in joining ${companyName}. I am sending a link to our application right now to ${callerNumber}. You can also ask me any questions about the position, qualifications, or next steps — I am connected to our hiring system and can answer most questions right away.`
+    : `Thank you for your interest in joining ${companyName}. Please call back during business hours to speak with our hiring team, or I can take your name and number and have someone reach out to you today.`;
+
+  const responseEs = hiringLink
+    ? `Gracias por su interés en unirse a ${companyName}. Estoy enviando un enlace de solicitud a ${callerNumber} ahora mismo. También puede hacerme preguntas sobre el puesto y los próximos pasos.`
+    : `Gracias por su interés en ${companyName}. Llame en horario de trabajo o déjeme su nombre y número para que alguien le contacte hoy.`;
+
+  // Text the hiring link immediately
+  if (hiringLink && callerNumber && callerNumber !== 'unknown') {
+    const hiringMsg = lang === 'es'
+      ? `Hola, soy Trinity de ${companyName}. Aquí está su enlace de solicitud de empleo: ${hiringLink} — Le deseamos mucho éxito.`
+      : `Hi, this is Trinity from ${companyName}. Here is your employment application link: ${hiringLink} — We look forward to reviewing your application!`;
+    import('../../smsService').then(({ sendSMS }) =>
+      sendSMS({ to: callerNumber, body: hiringMsg, workspaceId, type: 'system_alert' }).catch(() => {})
+    ).catch(() => {});
+  }
+
+  return twiml(
+    sayBoth(responseEn, responseEs, lang) +
+    `<Hangup/>`
+  );
+}
+
+// ── Pay / Timesheet Menu ──────────────────────────────────────────────────────
+
+async function buildPayMenu(params: {
+  workspaceId: string; companyName: string; lang: 'en' | 'es';
+  baseUrl: string; sessionId: string; callerNumber: string;
+}): Promise<string> {
+  const { workspaceId, lang, callerNumber } = params;
+  const guard = await lookupCallerByPhone(callerNumber, workspaceId);
+
+  let payInfo = '';
+  let payInfoEs = '';
+
+  if (guard?.employeeId) {
+    const { rows } = await pool.query(
+      `SELECT
+         COALESCE(SUM(total_hours),0)::numeric(8,2) AS week_hours,
+         COALESCE(SUM(CASE WHEN overtime_hours > 0 THEN overtime_hours ELSE 0 END),0)::numeric(8,2) AS ot_hours,
+         COUNT(*) AS entries
+       FROM time_entries
+       WHERE employee_id = $1
+         AND clock_in >= date_trunc('week', NOW())
+         AND clock_out IS NOT NULL`,
+      [guard.employeeId]
+    ).catch(() => ({ rows: [{ week_hours: 0, ot_hours: 0, entries: 0 }] }));
+    const wh = parseFloat(rows[0]?.week_hours || '0').toFixed(1);
+    const ot = parseFloat(rows[0]?.ot_hours || '0').toFixed(1);
+    payInfo = `This week you have ${wh} regular hours recorded${parseFloat(ot) > 0 ? ` and ${ot} overtime hours` : ''}. Your full pay statement and timesheet history are available in the CoAIleague app. If you believe there is an error, I can flag it for your supervisor to review.`;
+    payInfoEs = `Esta semana tiene ${wh} horas regulares${parseFloat(ot) > 0 ? ` y ${ot} horas de tiempo extra` : ''}. Su estado de pago completo está en la aplicación. Si cree que hay un error, puedo notificar a su supervisor.`;
+  } else {
+    payInfo = `For pay and timesheet questions, I need to verify your identity first. Please log into the CoAIleague app with your credentials, or speak with your supervisor who can pull up your records directly.`;
+    payInfoEs = `Para preguntas de pago, necesito verificar su identidad. Por favor inicie sesión en la aplicación de CoAIleague o hable con su supervisor.`;
+  }
+
+  return twiml(sayBoth(payInfo, payInfoEs, lang) + `<Hangup/>`);
+}
+
+// ── Urgent Situation Route (formerly "Emergency" — no 911 language) ──────────
+
+async function buildUrgentRoute(params: {
+  workspaceId: string; companyName: string; lang: 'en' | 'es';
+  baseUrl: string; sessionId: string; callerNumber: string;
+}): Promise<string> {
+  const { workspaceId, companyName, lang, baseUrl, sessionId, callerNumber } = params;
+
+  // Notify all contacts simultaneously via SMS
+  const { rows: contacts } = await pool.query(
+    `SELECT DISTINCT u.phone, u.first_name FROM workspace_members wm JOIN users u ON u.id = wm.user_id
+     WHERE wm.workspace_id = $1
+       AND wm.workspace_role IN ('org_owner','co_owner','department_manager','supervisor','shift_leader')
+       AND u.phone IS NOT NULL AND u.phone != ''`,
+    [workspaceId]
+  ).catch(() => ({ rows: [] }));
+
+  for (const c of contacts) {
+    import('../../smsService').then(({ sendSMS }) =>
+      sendSMS({
+        to: c.phone,
+        body: `Urgent: ${companyName} — Incoming urgent call from ${callerNumber}. Please respond immediately.`,
+        workspaceId, type: 'system_alert',
+      }).catch(() => {})
+    ).catch(() => {});
+  }
+
+  const contact = await resolveOnDutyContact({ workspaceId, intent: 'emergency' });
+  const transferUrl = `${baseUrl}/api/voice/transfer-complete?lang=${lang}&sessionId=${encodeURIComponent(sessionId)}&workspaceId=${encodeURIComponent(workspaceId)}`;
+  const whisperUrl = `${baseUrl}/api/voice/announce-caller?lang=${lang}&intent=emergency&company=${encodeURIComponent(companyName)}&callerInfo=${encodeURIComponent('URGENT — immediate response needed')}&contactName=${encodeURIComponent(contact.name || 'Manager')}`;
+
+  return twiml(
+    sayBoth(
+      `I understand this is urgent. I am notifying ${companyName} management right now and connecting you immediately. Please stay on the line.`,
+      `Entiendo que es urgente. Estoy notificando a la gerencia de ${companyName} ahora mismo y le conecto de inmediato. Por favor permanezca en la línea.`,
+      lang
+    ) +
+    (contact.found && contact.phone
+      ? `<Dial callerId="${process.env.TWILIO_PHONE_NUMBER || ''}" timeout="20" action="${transferUrl}" method="POST"><Number url="${whisperUrl}" method="GET">${contact.phone}</Number></Dial>`
+      : sayBoth(
+          'Management has been notified by message. Someone will reach out to you shortly.',
+          'La gerencia ha sido notificada. Alguien se pondrá en contacto con usted en breve.',
+          lang
+        ) + `<Hangup/>`)
+  );
+}
 
 async function buildEmergencyRoute(params: {
   workspaceId: string; companyName: string; lang: 'en' | 'es';
