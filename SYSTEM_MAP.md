@@ -803,5 +803,146 @@ No new env vars needed for Wave 16. All voice routing is code-driven from the da
 
 ---
 
-# NEXT: WAVE 17 — Zero-Friction Migration Engine
-# THEN: WAVE 18 — CAD Infrastructure
+## RAILWAY MIRROR PROTOCOL — PERMANENT BUILD RULE
+*Instituted after Wave 16 deployment failures. Must be followed before every commit.*
+
+### The Three Deployment Killers (learned the hard way)
+1. **Node OOM during TSC** — 1.1M lines of TS needs 4GB heap. `nixpacks.toml` [variables]
+   sets `NODE_OPTIONS=--max-old-space-size=4096` for ALL build phases. Never remove this.
+2. **Escaped backticks in JSX** — Python string injection writes `\`` instead of real template
+   literals. Always use string concatenation in JSX event handlers: `"/api/" + id + "/path"`
+3. **Invalid TwiML attributes** — Twilio `<Gather>` accepts exactly ONE language value.
+   Never use comma-separated values like `language="en-US,es-US"`. Use `language="en-US"`.
+
+### Pre-Commit Checklist (mandatory)
+```
+1. node build.mjs          ← esbuild catches syntax errors TSC misses at scale
+2. npx vitest run           ← 270 tests must pass
+3. grep -r "\\`" client/src/ ← zero escaped backticks allowed
+4. grep -r "en-US,es" server/ ← zero invalid TwiML language combos
+```
+TSC (`npx tsc --noEmit`) is run on Railway with full 4GB heap. Local runs may OOM on
+constrained containers — that is expected. The build.mjs + vitest gates are sufficient
+for local validation.
+
+---
+
+## WAVE 14 — Smart RMS (Records Management System)
+*Files: server/services/rms/smartRmsService.ts, trinityComplianceIncidentActions.ts*
+
+| Feature | Details |
+|---|---|
+| Auto-DAR | Aggregates shift events → chronological timeline. Guard reviews + submits. |
+| Narrative Translator | Raw guard text → formal third-person report. Guard approval required. |
+| Pass-Down Log | Priority/category/24h TTL, mandatory guard acknowledge at clock-in |
+| Banned Entities | BOLO + trespass unified. Queried at every clock-in. |
+| Client Copy Pipeline | Strips SSNs/IDs, supervisor approves, client portal sync. |
+| Shift Brief | BOLOs + pass-downs injected as intercept modal at clock-in |
+
+**Schema additions (ops domain):** `site_pass_down_log`, `banned_entities`,
+`incident_report_client_copies`, DAR column extensions (10 new columns).
+
+**HelpAI actions added:** `rms.auto_generate_dar`, `rms.translate_narrative`,
+`rms.approve_narrative`, `rms.get_shift_brief`, `rms.sync_client_copy`
+
+---
+
+## WAVE 14.5 — RMS Frontend Bridge
+*Files: client/src/pages/rms-hub.tsx, worker-dashboard.tsx, worker-incidents.tsx*
+
+| Component | Details |
+|---|---|
+| Shift Brief Modal | Intercepts clock-in in worker-dashboard. Mandatory ack if hasCritical. |
+| Auto-DAR Timeline | rms-hub.tsx — Shift ID → auto-generate → review → submit flow |
+| Narrative Translator UI | "Draft with Trinity" button → approval block before submission |
+| Client Copy Approve | Incident row button → sanitized copy → client portal sync |
+
+**Known footgun:** JSX fetch URLs must use string concatenation, never template literals
+written via Python injection. Always write: `"/api/rms/" + id + "/endpoint"`.
+
+---
+
+## WAVE 16 — Trinity 360 Omni-Channel SOC Telephony
+*Files: server/routes/voiceRoutes.ts (5,600+ lines), tenantPortalExtension.ts,
+guestExtension.ts, tenantLookupService.ts, voiceOrchestrator.ts*
+
+### Architecture Decision (permanent)
+**ONE master Twilio number.** No per-tenant numbers. No `workspace_phone_numbers` table.
+`workspaces.twilio_phone_number` column holds the dedicated number if a tenant has one.
+Master number falls through to the CoAIleague guest IVR automatically.
+
+### Workspace Phone Resolution
+```typescript
+// resolveWorkspaceFromPhoneNumber queries workspaces.twilio_phone_number
+// Returns null for master number → guest IVR handles it
+// NEVER returns 'Configuration error' — always falls to guest flow
+```
+
+### Priority Waterfall (all transfers)
+```
+1st: Supervisor on active shift (workspace_members role=supervisor/shift_leader)
+2nd: Manager/Dept Manager on active shift
+3rd: Co-Owner (if phone on file)
+4th: Owner (always last — always has phone)
+5th: Voicemail → SMS to owner
+```
+*Statewide today: Steps 1-3 empty → Bryan at 830-213-4562 (from users.phone, not hardcoded)*
+
+### Full 9-Option Tenant Portal Menu
+| Option | Action |
+|---|---|
+| 1 — Guards/Officers | Schedule query, clock in/out (writes time_entries), calloff, pay, supervisor |
+| 2 — Clients | Coverage count, concerns, billing, request coverage, manager |
+| 3 — Urgent | Blast SMS all contacts + immediate <Dial> (no 911 language, no duty created) |
+| 4 — Complaint | Collect name + purpose → <Dial> on-duty manager |
+| 5 — Hiring | Texts workspace.voice_hiring_link instantly via SMS |
+| 6 — Employment Verification | Platform DB query → response |
+| 7 — Pay/Timesheet | time_entries query → hours this week |
+| 8 — Speak with Manager | Collect name + purpose → <Dial> waterfall |
+| 0 — Trinity AI | Gemini Live bidirectional audio session |
+
+### TwiML Safety Net (Directive 3)
+```
+POST /api/voice/inbound
+  try:
+    → normal call handling
+  catch (ANY error):
+    → returns hardcoded valid XML
+    → <Say>Transferring you to our team...</Say>
+    → <Dial>VOICE_FALLBACK_PHONE || OWNER_PHONE || 8302134562</Dial>
+    → caller NEVER gets a dead line
+```
+
+### SOC Features
+- **Duress bypass:** "Code Red" / "Código Rojo" → blast SMS all contacts + immediate Dial
+- **Missed call SMS:** hang-up during hold → Trinity texts caller within seconds
+- **ChatDock sync:** live call card on call_start, summary + recording on call_end
+- **Caller recognition:** `lookupCallerByPhone(From, workspaceId)` → personalized greeting
+
+### 911 Hard Rule (permanent, non-negotiable)
+Trinity NEVER says "911", "call the police", or "contact emergency services" in any TTS.
+No duty created. No liability for CoAIleague, tenants, or Trinity.
+Enforced by: `publicSafetyGuard.ts`, `trinityConscience.ts`, `panicAlertService.ts`,
+`trinityActionDispatcher.ts`, and manual audit of all voice TTS strings.
+
+### Auto-Provisioning (workspace registration)
+Every new tenant gets on workspace creation (non-blocking):
+- `voice_hiring_link = https://coaileague.com/apply/{orgCode}`
+- `voice_portal_enabled = true`
+
+### Environment Variables (complete — no new vars needed)
+| Var | Purpose | Status |
+|---|---|---|
+| TWILIO_PHONE_NUMBER | Master voice number | Required, in Railway |
+| TWILIO_ACCOUNT_SID | Auth | Required, in Railway |
+| TWILIO_AUTH_TOKEN | Auth | Required, in Railway |
+| GEMINI_API_KEY | Gemini Live free-talk | Required, in Railway |
+| VOICE_FALLBACK_PHONE | Safety net fallback | Optional (defaults to OWNER_PHONE) |
+| OWNER_PHONE | Absolute last resort Dial | Optional |
+
+**Twilio webhook:** `POST https://www.coaileague.com/api/voice/inbound`
+**Status callback:** `POST https://www.coaileague.com/api/webhooks/twilio/status`
+
+---
+
+# NEXT: WAVE 18 — CAD Infrastructure & NFC Patrol Engine

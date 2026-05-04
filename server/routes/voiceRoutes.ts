@@ -133,7 +133,7 @@ export async function initializeVoiceTables(): Promise<void> {
     const client = await pool.connect();
     try {
       await client.query(`
-        CREATE TABLE IF NOT EXISTS workspace_phone_numbers (
+        -- workspace_phone_numbers TABLE ELIMINATED (Directive 2) -- (
           id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
           workspace_id VARCHAR NOT NULL,
           phone_number VARCHAR NOT NULL UNIQUE,

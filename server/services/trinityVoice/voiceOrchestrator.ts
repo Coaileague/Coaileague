@@ -11,13 +11,13 @@
  */
 
 import { db } from '../../db';
+import { workspaces } from '@shared/schema';
 import {
-  workspacePhoneNumbers,
   voiceCallSessions,
   voiceCallActions,
   type VoiceCallSession,
 } from '../../../shared/schema/domains/voice';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, or, sql } from 'drizzle-orm';
 import { createLogger } from '../../lib/logger';
 import { trinityHelpaiCommandBus } from '../helpai/trinityHelpaiCommandBus';
 import {
@@ -117,41 +117,53 @@ function pause(seconds: number = 1): string {
 
 export async function resolveWorkspaceFromPhoneNumber(to: string): Promise<{
   workspaceId: string;
-  phoneRecord: typeof workspacePhoneNumbers.$inferSelect;
-  subscriptionStatus: string;   // 'active' | 'trial' | 'suspended' | 'cancelled' | etc.
-  subscriptionTier: string;     // 'free' | 'trial' | 'starter' | 'professional' | 'business' | 'enterprise'
-  isProtected: boolean;         // grandfathered or platform — always serve
+  subscriptionStatus: string;
+  subscriptionTier: string;
+  isProtected: boolean;
+  companyName: string;
+  greetingScript: string | null;
+  greetingScriptEs: string | null;
+  extensionConfig: Record<string, boolean>;
 } | null> {
-  const [phoneRecord] = await db
-    .select()
-    .from(workspacePhoneNumbers)
-    .where(and(
-      eq(workspacePhoneNumbers.phoneNumber, to),
-      eq(workspacePhoneNumbers.isActive, true),
-    ))
-    .limit(1);
+  // Directive 2: Query workspaces.twilio_phone_number — single table, zero bloat.
+  const clean = (to || '').replace(/\s/g, '');
+  try {
+    const result = await db.select({
+      workspaceId: workspaces.id,
+      subscriptionStatus: workspaces.subscriptionStatus,
+      subscriptionTier: workspaces.subscriptionTier,
+      companyName: workspaces.companyName,
+      greetingScript: workspaces.voiceCustomGreeting,
+      greetingScriptEs: workspaces.voiceCustomGreetingEs,
+      founderExemption: workspaces.founderExemption,
+    }).from(workspaces).where(
+      and(
+        or(eq(workspaces.twilioPhoneNumber, clean), eq(workspaces.twilioPhoneNumber, to)),
+        eq(workspaces.isActive, true)
+      )
+    ).limit(1);
 
-  if (!phoneRecord) return null;
-
-  const workspaceId = phoneRecord.workspaceId;
-  const isProtected =
-    workspaceId === PLATFORM_WORKSPACE_ID ||
-    (!!GRANDFATHERED_TENANT_ID && workspaceId === GRANDFATHERED_TENANT_ID);
-
-  // Subscription status comes from the shared tier cache (10-min TTL) so
-  // Trinity webhooks don't stampede the workspaces table and stay in sync
-  // with the HTTP tier guards. On cache miss or DB failure we default to
-  // 'active' / 'starter' so a transient lookup failure can't lock out a
-  // legitimate tenant.
-  const tierInfo = await cacheManager.getWorkspaceTierWithStatus(workspaceId);
-
-  return {
-    workspaceId,
-    phoneRecord,
-    subscriptionStatus: tierInfo?.status ?? 'active',
-    subscriptionTier: tierInfo?.tier ?? 'starter',
-    isProtected,
-  };
+    if (!result[0]) return null;
+    const row = result[0];
+    const workspaceId = row.workspaceId;
+    const isProtected =
+      workspaceId === PLATFORM_WORKSPACE_ID ||
+      (!!GRANDFATHERED_TENANT_ID && workspaceId === GRANDFATHERED_TENANT_ID) ||
+      Boolean(row.founderExemption);
+    return {
+      workspaceId,
+      subscriptionStatus: row.subscriptionStatus || 'active',
+      subscriptionTier: row.subscriptionTier || 'trial',
+      isProtected,
+      companyName: row.companyName || '',
+      greetingScript: row.greetingScript || null,
+      greetingScriptEs: row.greetingScriptEs || null,
+      extensionConfig: {},
+    };
+  } catch (err) {
+    log.error('[VoiceOrchestrator] resolveWorkspaceFromPhoneNumber failed:', err instanceof Error ? err.message : String(err));
+    return null;
+  }
 }
 
 // ─── Main Menu Builder ────────────────────────────────────────────────────────
