@@ -10,3 +10,5 @@ workforceos-platform.tar.gz.*
 .env
 .env.local
 .env.*.local
+
+.tsbuildinfo

@@ -734,7 +734,6 @@ export default function ClientPortal() {
   // Returns empty data without calling the 410 endpoint
   const { data: preRegData, isLoading: preRegLoading } = useQuery<any>({
     queryKey: ['/api/visitor-management/pre-registrations'],
-    enabled: false,  // disabled until Wave 11 Compliance Engine rebuild
     enabled: activeTab === 'visitor-log',
   });
   const preRegistrations: unknown[] = preRegData?.preRegistrations || [];

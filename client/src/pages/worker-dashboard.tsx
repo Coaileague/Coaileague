@@ -929,7 +929,7 @@ function WorkerDashboardInner() {
     };
   }, [clockStatus?.isClockedIn]);
 
-  const handleClockAction = useCallback(() => {
+  const handleClockAction = useCallback(async () => {
     // Readiness Section 4 — auto-subscribe to push on first clock-in so the
     // officer receives shift alerts + duress responses from day one, instead
     // of waiting for the 7-day engagement window.
