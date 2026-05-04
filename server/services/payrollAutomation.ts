@@ -460,7 +460,7 @@ export class PayrollAutomationEngine {
    */
   static calculateSocialSecurity(grossPay: number, ytdWages: number = 0): number {
     const SS_RATE = 0.062;
-    const WAGE_BASE = 168600; // 2024 wage base
+    const WAGE_BASE = 176100; // 2025 wage base (IRS Rev. Proc. 2024-40) — source: taxRulesRegistry.ts FICA_2025.ssWageBase
     
     // If YTD wages already exceed the wage base, no SS tax due
     if (ytdWages >= WAGE_BASE) {
@@ -1194,7 +1194,7 @@ export class PayrollAutomationEngine {
       });
       
       // Log when employee has reached the SS wage base limit
-      const SS_WAGE_BASE = 168600;
+      const SS_WAGE_BASE = 176100; // 2025 IRS wage base — matches taxRulesRegistry.ts FICA_2025.ssWageBase
       if (ytdWages >= SS_WAGE_BASE) {
         log.info(`[AI Payroll™] Employee ${employeeSummary.employeeId} has reached SS wage base limit — no SS withholding this period`);
       } else if (ytdWages + grossPay > SS_WAGE_BASE) {
