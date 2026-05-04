@@ -3,17 +3,13 @@ import { AlertTriangle, AlertCircle, Database } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/useAuth";
 
+// Shape returned by GET /api/ai-brain/status
 interface AISystemStatus {
-  success: boolean;
-  status: {
-    primaryProvider: string;
-    activeProvider: string;
-    mode: 'normal' | 'degraded' | 'emergency';
-    isHealthy: boolean;
-    isDegraded: boolean;
-    isEmergency: boolean;
-  };
-  message: string;
+  healthy: boolean;
+  mode: 'normal' | 'degraded' | 'emergency';
+  activeProvider: string;
+  primaryProvider: string;
+  providers: Array<{ name: string; healthy: boolean; latencyMs?: number }>;
 }
 
 export function AISystemStatusBanner() {
@@ -47,9 +43,11 @@ export function AISystemStatusBanner() {
   }
 
   if (isLoading || !data || error) return null;
-  if (data.status.mode === 'normal') return null;
+  // Defensive: handle both flat shape (current API) and legacy nested shape
+  const mode = (data as any).status?.mode ?? (data as any).mode ?? 'normal';
+  if (mode === 'normal') return null;
 
-  const isEmergency = data.status.mode === 'emergency';
+  const isEmergency = mode === 'emergency';
 
   return (
     <Alert 
@@ -74,7 +72,7 @@ export function AISystemStatusBanner() {
         >
           {isEmergency 
             ? 'AI is running in limited mode. Some features may be unavailable.' 
-            : `AI is running on backup systems (${data.status.activeProvider}). All features remain available.`}
+            : `AI is running on backup systems (${(data as any).status?.activeProvider ?? (data as any).activeProvider ?? "backup"}). All features remain available.`}
         </AlertDescription>
       </div>
     </Alert>
