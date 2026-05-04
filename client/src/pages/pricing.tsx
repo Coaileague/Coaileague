@@ -120,7 +120,7 @@ const TIER_REPLACES: Record<string, { items: string[]; note: string }> = {
       "QuickBooks Invoicing ($100–400/month)",
       "Compliance tracking software ($200–500/month)",
     ],
-    note: "30 officers × $749/month = $24.97/officer. Compare to the cost of dedicated scheduling and payroll coordinators at your organization.",
+    note: "30 officers × $1,499/month = $24.97/officer. Compare to the cost of dedicated scheduling and payroll coordinators at your organization.",
   },
   business: {
     items: [
@@ -138,7 +138,7 @@ const TIER_REPLACES: Record<string, { items: string[]; note: string }> = {
       "Your current technology stack across 5–7 platforms",
       "Dedicated compliance consultant ($150–300/hour)",
     ],
-    note: "200 officers × $6,999/month = $35/officer. Compare to multi-person operations teams, compliance consultants, and disparate software subscriptions your organization currently manages.",
+    note: "200 officers × $9,999/month = $35/officer. Compare to multi-person operations teams, compliance consultants, and disparate software subscriptions your organization currently manages.",
   },
 };
 
@@ -340,7 +340,7 @@ function StrategicCard({ annual: _annual }: { annual: boolean }) {
             ))}
             <div className="flex justify-between pt-1">
               <span className="text-muted-foreground">Minimum engagement</span>
-              <span className="font-medium text-foreground">$15,000/month</span>
+              <span className="font-medium text-foreground">$19,999/month</span>
             </div>
           </div>
           {!open ? (
@@ -407,7 +407,7 @@ const FAQS = [
   },
   {
     q: "Can I try it before I commit to anything?",
-    a: "Yes. 14 days of full platform access. Up to 10 seats. No credit card. No automatic charges. At the end of your trial, you pick a plan or your account goes read-only. We do not hold your data hostage.",
+    a: "Yes. 14 days of full platform access. Up to 15 active seats. No credit card. No automatic charges. At the end of your trial, you pick a plan or your account goes read-only. We do not hold your data hostage.",
   },
   {
     q: "What does 'Trinity replaces your scheduler' actually mean in practice?",
@@ -431,7 +431,7 @@ const FAQS = [
   },
   {
     q: "What is Strategic pricing?",
-    a: "Strategic is for 300+ officer operations. Pricing is negotiated based on your officer count, states of operation, payroll volume, and specific requirements. Minimum engagement is $15,000/month. We respond to all Strategic inquiries within 4 business hours with a personalized ROI analysis. Most Strategic clients find the platform pays for itself within the first quarter.",
+    a: "Strategic is for 300+ officer operations. Pricing is negotiated based on your officer count, states of operation, payroll volume, and specific requirements. Minimum engagement is $19,999/month. We respond to all Strategic inquiries within 4 business hours with a personalized ROI analysis. Most Strategic clients find the platform pays for itself within the first quarter.",
   },
   {
     q: "Is there a long-term contract?",
@@ -600,7 +600,7 @@ function FeatureTable() {
           </tr>
           <tr className="border-b border-border/60">
             <th />
-            {(["$199", "$749", "$2,249", "$6,999", "Custom"] as const).map(p => (
+            {(["$399", "$1,499", "$3,999", "$9,999", "Custom"] as const).map(p => (
               <th key={p} className="text-center py-1.5 px-2 text-xs text-muted-foreground font-normal">{p}/mo</th>
             ))}
           </tr>
@@ -1030,7 +1030,7 @@ export default function PricingPage() {
     <>
       <SEO
         title="Pricing — CoAIleague"
-        description="Simple, transparent pricing for AI-powered security workforce management. From $199/month for 10 seats. No credits. No hidden fees."
+        description="Simple, transparent pricing for AI-powered security workforce management. From $399/month for 15 active seats. No credits. No hidden fees."
       />
       <UniversalHeader />
       <main className="min-h-screen bg-background">
@@ -1113,7 +1113,7 @@ export default function PricingPage() {
               <div className="rounded-md bg-card border border-border p-4">
                 <p className="text-xs text-muted-foreground mb-1">{PLATFORM_NAME} Business Plan</p>
                 <p className="text-xl font-bold text-foreground">$26,988/year</p>
-                <p className="text-xs text-muted-foreground">or $2,249/month</p>
+                <p className="text-xs text-muted-foreground">or $3,999/month</p>
               </div>
               <div className="rounded-md bg-primary/10 border border-primary/30 p-4 flex items-center justify-center">
                 <div>

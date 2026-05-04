@@ -315,6 +315,14 @@ export default function RMSHub() {
   const [activeTab, setActiveTab] = useState("incidents");
   const [showCreateIncident, setShowCreateIncident] = useState(false);
   const [showCreateDAR, setShowCreateDAR] = useState(false);
+  // Wave 14.5: Auto-DAR state
+  const [autoDarData, setAutoDarData] = useState<null | {
+    timeline: Array<{ time: string; type: string; description: string; location?: string; integrity?: string }>;
+    nfcTapCount: number; incidentCount: number; patrolCount: number;
+    shiftId: string; employeeName: string; siteName: string;
+  }>(null);
+  const [autoDarLoading, setAutoDarLoading] = useState(false);
+  const [autoDarShiftId, setAutoDarShiftId] = useState("");
   const [showCreateVisitor, setShowCreateVisitor] = useState(false);
   const [showPreRegisterVisitor, setShowPreRegisterVisitor] = useState(false);
   const [showVisitorDetail, setShowVisitorDetail] = useState<null>(null);
@@ -1425,13 +1433,40 @@ export default function RMSHub() {
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-3 self-end sm:self-center">
+                              <div className="flex items-center gap-3 self-end sm:self-center flex-wrap justify-end">
                                 <DsBadge color={PRIORITY_COLORS[inc.priority] || "muted"}>
                                   {inc.priority}
                                 </DsBadge>
                                 <DsBadge color={STATUS_COLORS[inc.status] || "muted"}>
                                   {inc.status}
                                 </DsBadge>
+                                {/* Wave 14.5: Client Copy Approve button */}
+                                {clientCopySynced.has(inc.id) ? (
+                                  <span className="text-xs text-green-400 flex items-center gap-1">✓ Client Copy Synced</span>
+                                ) : (
+                                  <button
+                                    className="text-xs px-2 py-1 rounded border border-purple-700/50 text-purple-400 hover:bg-purple-950/30 transition-colors disabled:opacity-40"
+                                    disabled={clientCopyLoading === inc.id}
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      setClientCopyLoading(inc.id);
+                                      try {
+                                        const res = await fetch(\`/api/rms/incidents/\${inc.id}/client-copy\`, {
+                                          method: "POST", credentials: "include",
+                                          headers: { "Content-Type": "application/json" },
+                                          body: JSON.stringify({ workspaceId }),
+                                        });
+                                        if (res.ok) {
+                                          setClientCopySynced(prev => new Set([...prev, inc.id]));
+                                          toast({ title: "Client Copy Created", description: "Sanitized incident report synced to Client Portal." });
+                                        } else toast({ title: "Failed", variant: "destructive" });
+                                      } catch { toast({ title: "Error", variant: "destructive" }); }
+                                      finally { setClientCopyLoading(null); }
+                                    }}
+                                  >
+                                    {clientCopyLoading === inc.id ? "..." : "✦ Approve for Client"}
+                                  </button>
+                                )}
                                 <div className="text-[10px] text-[var(--ds-text-muted)] font-medium">
                                   {timeAgo(inc.occurred_at)}
                                 </div>
@@ -1479,9 +1514,96 @@ export default function RMSHub() {
         </UniversalModalContent>
       </UniversalModal>
 
+      {/* Wave 14.5: Auto-DAR Generator Panel */}
+      <UniversalModal open={!!autoDarData} onOpenChange={() => setAutoDarData(null)}>
+        <UniversalModalContent className="max-w-lg">
+          <UniversalModalHeader>
+            <UniversalModalTitle>Auto-Generated DAR ✓</UniversalModalTitle>
+          </UniversalModalHeader>
+          {autoDarData && (
+            <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+              <div className="flex gap-4 text-center">
+                {[
+                  { label: "NFC Taps", val: autoDarData.nfcTapCount },
+                  { label: "Incidents", val: autoDarData.incidentCount },
+                  { label: "Patrol Rounds", val: autoDarData.patrolCount },
+                  { label: "Events", val: autoDarData.timeline.length },
+                ].map(s => (
+                  <div key={s.label} className="flex-1 bg-muted/40 rounded-lg p-3">
+                    <div className="text-2xl font-bold text-foreground">{s.val}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Shift Timeline</p>
+                <div className="space-y-1.5">
+                  {autoDarData.timeline.map((ev, i) => (
+                    <div key={i} className="flex gap-3 items-start text-sm">
+                      <span className="text-xs text-muted-foreground w-14 shrink-0 pt-0.5">
+                        {new Date(ev.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                      <span className={[
+                        "flex-1",
+                        ev.type === "incident" ? "text-red-400" :
+                        ev.type === "nfc_tap" && ev.integrity === "flagged" ? "text-amber-400" :
+                        "text-foreground"
+                      ].join(" ")}>{ev.description}</span>
+                      {ev.integrity === "verified" && <span className="text-xs text-green-500">✓</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">Guard review required. Click Submit to save this DAR.</p>
+            </div>
+          )}
+          <div className="px-4 pb-4 flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => setAutoDarData(null)}>Cancel</Button>
+            <Button className="flex-1" onClick={async () => {
+              if (!autoDarData) return;
+              try {
+                await apiRequest("POST", "/api/rms/dars/auto-submit", { ...autoDarData, workspaceId });
+                toast({ title: "DAR Submitted", description: "Your auto-generated DAR has been saved." });
+                setAutoDarData(null);
+                invalidateAll();
+              } catch { toast({ title: "Submit Failed", variant: "destructive" }); }
+            }}>Submit DAR</Button>
+          </div>
+        </UniversalModalContent>
+      </UniversalModal>
+
       <UniversalModal open={showCreateDAR} onOpenChange={setShowCreateDAR}>
         <UniversalModalContent className="max-w-md">
-          <UniversalModalHeader><UniversalModalTitle>Submit Daily Activity Report</UniversalModalTitle></UniversalModalHeader>
+          <UniversalModalHeader>
+            <div className="flex items-center gap-2">
+              <UniversalModalTitle>Submit Daily Activity Report</UniversalModalTitle>
+            </div>
+            {/* Wave 14.5: Auto-generate shortcut */}
+            <div className="mt-2 p-3 bg-primary/10 rounded-lg border border-primary/20 flex items-center gap-3">
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-primary">⚡ Auto-Generate from Shift</p>
+                <input
+                  className="mt-1 w-full text-xs bg-background border border-border rounded px-2 py-1"
+                  placeholder="Enter Shift ID..."
+                  value={autoDarShiftId}
+                  onChange={e => setAutoDarShiftId(e.target.value)}
+                />
+              </div>
+              <Button size="sm" variant="outline" className="shrink-0"
+                disabled={!autoDarShiftId || autoDarLoading}
+                onClick={async () => {
+                  setAutoDarLoading(true);
+                  try {
+                    const res = await fetch(\`/api/rms/dars/auto-generate?shiftId=\${autoDarShiftId}\`, { credentials: "include" });
+                    if (res.ok) { const d = await res.json(); setAutoDarData(d); setShowCreateDAR(false); }
+                    else toast({ title: "No shift data found", variant: "destructive" });
+                  } catch { toast({ title: "Auto-generate failed", variant: "destructive" }); }
+                  finally { setAutoDarLoading(false); }
+                }}>
+                {autoDarLoading ? "..." : "Auto"}
+              </Button>
+            </div>
+          </UniversalModalHeader>
           <DARForm />
         </UniversalModalContent>
       </UniversalModal>

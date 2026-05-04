@@ -79,6 +79,13 @@ export default function WorkerIncidents() {
   const [description, setDescription] = useState('');
   const [location, setLocationData] = useState<{ lat: number; lng: number } | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  // Wave 14.5: Trinity AI Narrative Translator
+  const [trinityDraft, setTrinityDraft] = useState<null | {
+    formalNarrative: string; keyFacts: string[]; suggestedTitle: string;
+    draftId: string; originalInput: string;
+  }>(null);
+  const [trinityLoading, setTrinityLoading] = useState(false);
+  const [trinityApproved, setTrinityApproved] = useState(false);
   // submitting state removed — using submitMutation.isPending (Wave 8 fix)
 
   // Get recent incidents
@@ -282,6 +289,78 @@ export default function WorkerIncidents() {
                 className="min-h-[120px] bg-slate-800/50 border-slate-700 resize-none"
                 data-testid="input-description"
               />
+              {/* Wave 14.5: Trinity AI Translator button */}
+              <Button
+                size="sm"
+                variant="outline"
+                className="absolute bottom-3 left-3 text-xs gap-1 text-purple-400 border-purple-800/50 hover:bg-purple-950/30"
+                disabled={!description.trim() || trinityLoading}
+                onClick={async () => {
+                  setTrinityLoading(true);
+                  try {
+                    const res = await fetch("/api/rms/narrative/translate", {
+                      method: "POST", credentials: "include",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ rawInput: description, context: { site: location } }),
+                    });
+                    if (res.ok) {
+                      const draft = await res.json();
+                      setTrinityDraft(draft);
+                      setTrinityApproved(false);
+                    } else toast({ title: "Trinity unavailable", variant: "destructive" });
+                  } catch { toast({ title: "Translation failed", variant: "destructive" }); }
+                  finally { setTrinityLoading(false); }
+                }}
+              >
+                {trinityLoading ? "..." : "✦ Draft with Trinity"}
+              </Button>
+
+              {/* Trinity Approval Block */}
+              {trinityDraft && !trinityApproved && (
+                <div className="mt-3 rounded-xl border border-purple-800/50 bg-purple-950/20 overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-purple-800/30 flex items-center gap-2">
+                    <span className="text-xs font-bold text-purple-400 uppercase tracking-wider">✦ Trinity Draft</span>
+                    <span className="text-xs text-muted-foreground ml-auto">Review before saving</span>
+                  </div>
+                  {trinityDraft.suggestedTitle && (
+                    <div className="px-4 pt-3">
+                      <p className="text-xs text-muted-foreground">Suggested title</p>
+                      <p className="text-sm font-semibold text-foreground">{trinityDraft.suggestedTitle}</p>
+                    </div>
+                  )}
+                  <div className="px-4 py-3">
+                    <p className="text-xs text-muted-foreground mb-1">Formal narrative</p>
+                    <p className="text-sm text-foreground leading-relaxed">{trinityDraft.formalNarrative}</p>
+                  </div>
+                  {trinityDraft.keyFacts?.length > 0 && (
+                    <div className="px-4 pb-3">
+                      <p className="text-xs text-muted-foreground mb-1">Key facts</p>
+                      {trinityDraft.keyFacts.map((f, i) => (
+                        <p key={i} className="text-xs text-foreground">· {f}</p>
+                      ))}
+                    </div>
+                  )}
+                  <div className="px-4 pb-3 flex gap-2">
+                    <Button size="sm" variant="outline" className="flex-1 text-xs"
+                      onClick={() => setTrinityDraft(null)}>Discard</Button>
+                    <Button size="sm" className="flex-1 text-xs bg-purple-700 hover:bg-purple-600 text-white"
+                      onClick={async () => {
+                        if (!trinityDraft) return;
+                        setDescription(trinityDraft.formalNarrative);
+                        setTrinityApproved(true);
+                        toast({ title: "Narrative approved", description: "Trinity draft accepted and applied." });
+                      }}>
+                      ✓ Approve Narrative
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {trinityApproved && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-purple-400">
+                  <span>✦</span><span>Trinity narrative applied</span>
+                </div>
+              )}
+
               <Button
                 size="icon"
                 onClick={() => setIsRecording(!isRecording)}

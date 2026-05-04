@@ -61,14 +61,15 @@ export const BILLING = {
     starter: {
       id: "starter",
       name: "Starter",
-      description: "Replaces part-time scheduler + admin for small companies (up to 10 employees)",
-      monthlyPrice: 29900, // $299/month in cents
-      yearlyPrice: 287040, // $2,870.40/year ($239.20/mo - 20% savings)
-      maxEmployees: 10,
+      description: "Replaces part-time scheduler + admin for small patrol companies (up to 15 active officers)",
+      monthlyPrice: 39900, // $399/month in cents (Wave 15 restructure)
+      yearlyPrice: 382920, // $3,829.20/year ($319.10/mo - 20% savings)
+      maxEmployees: 15,    // 15 active seats included
       maxManagers: 2,
-      monthlyTokens: 5000, // 5,000 AI tokens/month; hard cap at 8,000
-      adminReplacementValue: 32600, // Saves ~$2,716/mo = $32,592/year in admin replacement
-      overagePerEmployee: 2500, // $25/employee after 10
+      monthlyTokens: 25000,  // 25,000 AI tokens/month; hard cap at 40,000
+      tokenOveragePer1k: 12, // $0.12/1,000 tokens over quota
+      adminReplacementValue: 32600,
+      overagePerEmployee: 3000, // $30/active seat/mo after 15
       roiMetrics: {
         humansReplaced: "Part-time scheduler ($2,166/mo) + Admin ($400/mo) + Payroll ($150/mo)",
         monthlyLaborSaved: 2716, // $2,716/month in labor costs replaced
@@ -111,14 +112,15 @@ export const BILLING = {
     professional: {
       id: "professional",
       name: "Professional",
-      description: "Replaces scheduler + admin + compliance + equipment manager for growing companies (up to 100 employees)",
-      monthlyPrice: 99900, // $999/month in cents
-      yearlyPrice: 959040, // $9,590.40/year ($799.20/mo - 20% savings)
-      maxEmployees: 30,
+      description: "Replaces scheduler + admin + compliance + equipment manager for growing companies (up to 50 active officers)",
+      monthlyPrice: 149900, // $1,499/month in cents (Wave 15 restructure)
+      yearlyPrice: 1439040, // $14,390.40/year ($1,199/mo - 20% savings) ($799.20/mo - 20% savings)
+      maxEmployees: 50,   // 50 active seats (Wave 15 restructure)
       maxManagers: 5,
-      monthlyTokens: 20000, // 20,000 AI tokens/month; hard cap at 35,000; overages billed monthly
+      monthlyTokens: 75000,  // 75,000 AI tokens/month; hard cap at 125,000
+      tokenOveragePer1k: 10, // $0.10/1,000 tokens over quota
       adminReplacementValue: 184200, // Saves ~$15,351/mo = $184,212/year in labor replacement
-      overagePerEmployee: 2500, // $25/employee after 100
+      overagePerEmployee: 3200, // $32/active seat/mo after 50
       roiMetrics: {
         humansReplaced: "Full scheduler ($5,000) + Admin ($3,000) + Compliance ($3,500) + Equipment mgr ($3,000) + Payroll ($600)",
         monthlyLaborSaved: 17350, // $17,350/month in labor costs replaced
@@ -172,13 +174,13 @@ export const BILLING = {
       id: "business",
       name: "Business",
       description: "Full back-office replacement for mid-market security companies (up to 300 employees)",
-      monthlyPrice: 299900, // $2,999/month in cents
-      yearlyPrice: 2879040, // $28,790.40/year ($2,399.20/mo - 20% savings)
+      monthlyPrice: 399900, // $3,999/month in cents (Wave 15 restructure)
+      yearlyPrice: 3839040, // $38,390.40/year ($3,199/mo - 20% savings) // $28,790.40/year ($2,399.20/mo - 20% savings)
       maxEmployees: 75,
       maxManagers: 15,
       monthlyTokens: 60000, // 60,000 AI tokens/month; hard cap at 120,000; overages billed monthly
       adminReplacementValue: 360000, // Saves ~$30,000/mo in labor
-      overagePerEmployee: 2500, // $25/employee after 300
+      overagePerEmployee: 2200, // $22/active seat/mo after 500 (volume discount) // $25/employee after 300
       roiMetrics: {
         humansReplaced: "2× Schedulers ($10,000) + Ops Manager ($7,000) + Compliance ($6,000) + Finance ($4,500) + Payroll ($3,000)",
         monthlyLaborSaved: 30500,
@@ -204,16 +206,17 @@ export const BILLING = {
       id: "enterprise",
       name: "Enterprise",
       description: "Replaces entire back-office team for large security companies (up to 1,000 employees)",
-      monthlyPrice: 799900, // $7,999/month in cents
-      yearlyPrice: 7679040, // $76,790.40/year ($6,399.20/mo - 20% savings)
-      maxEmployees: 200, // Enterprise base cap — designed for Securitas/Allied/GuardWorld scale
+      monthlyPrice: 999900, // $9,999/month in cents (Wave 15: 500-seat baseline)
+      yearlyPrice: 9599040, // $95,990.40/year ($7,999/mo - 20% savings)
+      maxEmployees: 500, // 500 active seats — true Enterprise baseline (Wave 15) — designed for Securitas/Allied/GuardWorld scale
       maxManagers: 100,
-      monthlyTokens: 200000, // 200,000 AI tokens/month; hard cap 400,000; overages at $0.08/1,000 tokens
+      monthlyTokens: 500000, // 500,000 AI tokens/month; hard cap 1,000,000
+      tokenOveragePer1k: 6, // $0.06/1,000 tokens over quota (volume discount)
       adminReplacementValue: 500000, // Saves ~$50,250/mo = $603,000/year in labor replacement
       isContactSales: false,
-      startsAt: 799900, // Starts at $7,999/month base
+      startsAt: 999900, // Starts at $9,999/month base (Wave 15)
       perEmployeePrice: 2500, // $25/employee after 1,000
-      overagePerEmployee: 2500,
+      overagePerEmployee: 2200, // $22/active seat/mo after 500 (volume discount)
       roiMetrics: {
         humansReplaced: "2× Schedulers ($10,000) + Ops Director ($8,000) + 2× Admin ($6,000) + Compliance ($6,000) + Equipment/Fleet ($5,000) + HR ($4,500) + Payroll Mgr ($5,000)",
         monthlyLaborSaved: 50250,
@@ -263,7 +266,7 @@ export const BILLING = {
       monthlyPrice: 0, // Custom — $15,000+ minimum
       yearlyPrice: 0, // Custom
       isContactSales: true,
-      startsAt: 1500000, // $15,000/month minimum in cents
+      startsAt: 1999900, // $19,999/month minimum in cents (Wave 15 restructure)
       maxEmployees: 0, // Custom — 300+ officers
       maxManagers: 0, // Custom
       monthlyTokens: 0, // Custom AI allocation

@@ -740,6 +740,15 @@ function WorkerDashboardInner() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   // clockingIn state removed — using clockMutation.isPending (Wave 8 fix)
   const [showLateConfirm, setShowLateConfirm] = useState(false);
+  // Wave 14.5: Shift Brief modal state
+  const [shiftBriefData, setShiftBriefData] = useState<null | {
+    siteId: string; siteName: string; hasCritical: boolean; requiresAcknowledgment: boolean;
+    activeBolos: Array<{ id: string; subjectName?: string; licensePlate?: string; banType: string; reason: string }>;
+    passDownNotes: Array<{ id: string; content: string; priority: string; category: string; authorName?: string }>;
+    recentIncidents: Array<{ title: string; category: string; occurredAt: string }>;
+    pendingClockInAction?: () => void;
+  }>(null);
+  const [briefAcknowledged, setBriefAcknowledged] = useState(false);
 
   // Monitor online status
   useEffect(() => {
@@ -928,6 +937,19 @@ function WorkerDashboardInner() {
     if (clockStatus?.isClockedIn) {
       clockMutation.mutate("out");
       return;
+    }
+    // Wave 14.5: Fetch shift brief before clocking in
+    const siteId = clockStatus?.currentSiteId?.toString() || todayShift?.siteId?.toString();
+    if (siteId && !shiftBriefData) {
+      try {
+        const briefRes = await fetch(\`/api/rms/shift-brief?siteId=\${siteId}\`, { credentials: "include" });
+        if (briefRes.ok) {
+          const brief = await briefRes.json();
+          setShiftBriefData({ ...brief, pendingClockInAction: () => clockMutation.mutate("in") });
+          setBriefAcknowledged(false);
+          return; // Brief modal will show — user must acknowledge then clock in
+        }
+      } catch { /* non-fatal — proceed with clock-in if brief fetch fails */ }
     }
     const eligibility = clockStatus?.shiftEligibility;
     if (eligibility && !eligibility.canClockIn) {
@@ -1493,5 +1515,112 @@ export default function WorkerDashboard() {
     <ErrorBoundary componentName="WorkerDashboard">
       <WorkerDashboardInner />
     </ErrorBoundary>
+
+      {/* Wave 14.5: Shift Brief Modal */}
+      {shiftBriefData && (
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md bg-card border border-border rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[85vh] overflow-y-auto">
+            {/* Header */}
+            <div className={[
+              "px-5 py-4 flex items-start justify-between rounded-t-2xl",
+              shiftBriefData.hasCritical ? "bg-red-950/40 border-b border-red-800/50" : "bg-primary/10 border-b border-border"
+            ].join(" ")}>
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  {shiftBriefData.hasCritical && <span className="text-red-400 text-xs font-bold uppercase tracking-wider">⚠ Critical</span>}
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Shift Brief</span>
+                </div>
+                <h2 className="text-lg font-bold text-foreground">{shiftBriefData.siteName}</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Review before clocking in</p>
+              </div>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* Active BOLOs */}
+              {shiftBriefData.activeBolos.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-2">🚨 Active BOLOs ({shiftBriefData.activeBolos.length})</p>
+                  {shiftBriefData.activeBolos.map(b => (
+                    <div key={b.id} className="bg-red-950/30 border border-red-800/40 rounded-lg p-3 mb-2">
+                      <p className="text-sm font-medium text-red-300">{b.subjectName || b.licensePlate || "Unknown Subject"}</p>
+                      <p className="text-xs text-red-400/80 mt-0.5">{b.banType.toUpperCase()} — {b.reason}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Pass-Down Notes */}
+              {shiftBriefData.passDownNotes.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">📋 Pass-Down Notes</p>
+                  {shiftBriefData.passDownNotes.map(n => (
+                    <div key={n.id} className={[
+                      "rounded-lg p-3 mb-2 border",
+                      n.priority === "critical" ? "bg-red-950/20 border-red-800/40" :
+                      n.priority === "high" ? "bg-amber-950/20 border-amber-800/40" : "bg-muted/30 border-border"
+                    ].join(" ")}>
+                      <p className="text-sm text-foreground">{n.content}</p>
+                      {n.authorName && <p className="text-xs text-muted-foreground mt-1">— {n.authorName}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Recent Incidents */}
+              {shiftBriefData.recentIncidents.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">📁 Recent Incidents (24h)</p>
+                  {shiftBriefData.recentIncidents.map((inc, i) => (
+                    <div key={i} className="text-sm text-muted-foreground border-b border-border/50 pb-1 mb-1 last:border-0">
+                      {inc.title} <span className="text-xs opacity-60">· {inc.category}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Nothing critical */}
+              {!shiftBriefData.hasCritical && shiftBriefData.activeBolos.length === 0 && shiftBriefData.passDownNotes.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">✓ No critical items. Have a safe shift.</p>
+              )}
+
+              {/* Acknowledgment + Clock In */}
+              {shiftBriefData.requiresAcknowledgment && (
+                <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg bg-amber-950/20 border border-amber-800/30">
+                  <input type="checkbox" className="mt-0.5 accent-amber-500"
+                    checked={briefAcknowledged}
+                    onChange={e => setBriefAcknowledged(e.target.checked)} />
+                  <span className="text-sm text-amber-300">I have reviewed the shift brief and understand the active BOLOs and hazards</span>
+                </label>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div className="px-5 pb-5 flex gap-3">
+              <button
+                className="flex-1 py-3 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted/50 transition-colors"
+                onClick={() => { setShiftBriefData(null); setBriefAcknowledged(false); }}
+              >Dismiss</button>
+              <button
+                className={[
+                  "flex-2 flex-1 py-3 rounded-xl text-sm font-semibold transition-colors",
+                  (shiftBriefData.requiresAcknowledgment && !briefAcknowledged)
+                    ? "bg-primary/30 text-primary/50 cursor-not-allowed"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                ].join(" ")}
+                disabled={shiftBriefData.requiresAcknowledgment && !briefAcknowledged}
+                onClick={() => {
+                  if (shiftBriefData.pendingClockInAction) {
+                    shiftBriefData.pendingClockInAction();
+                  }
+                  setShiftBriefData(null);
+                  setBriefAcknowledged(false);
+                }}
+              >
+                {shiftBriefData.requiresAcknowledgment && !briefAcknowledged ? "Acknowledge to Clock In" : "✓ Clock In"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
   );
 }
