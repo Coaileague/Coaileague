@@ -16,6 +16,7 @@ import armoryRouter from "../armoryRoutes";
 import vehicleRouter from "../vehicleRoutes";
 import guardTourRouter from "../guardTourRoutes";
 import { migrationRouter } from "../migration";
+import { pttRouter } from "../pttRoutes";
 import maintenanceRoutes from "../maintenanceRoutes";
 import postOrderVersionRouter from "../postOrderVersionRoutes";
 import incidentPatternRouter from "../incidentPatternRoutes";
@@ -52,6 +53,7 @@ export function mountOpsRoutes(app: Express): void {
   app.use("/api/vehicles", requireAuth, ensureWorkspaceAccess, vehicleRouter);
   app.use("/api/guard-tours", requireAuth, ensureWorkspaceAccess, guardTourRouter);
   app.use("/api/migration", requireAuth, ensureWorkspaceAccess, migrationRouter);
+  app.use("/api/ptt", requireAuth, ensureWorkspaceAccess, pttRouter);
   // Expansion Sprint modules
   app.use("/api/post-order-versions", requireAuth, ensureWorkspaceAccess, postOrderVersionRouter);
   app.use("/api/incident-patterns", requireAuth, ensureWorkspaceAccess, incidentPatternRouter);

@@ -314,6 +314,7 @@ async function signObjectURL({
  * ─────────────────────────────────────────────────────────────────────────
  */
 export const StorageDirectory = {
+  VOICE_MESSAGES:   'voice_messages',     // PTT radio transmissions
   INCIDENTS:        'incidents',          // Incident report photos + evidence
   CONTRACTS:        'contracts',          // Signed client service agreements
   CHAT:             'chat',               // Chat attachments (routed via chat-uploads.ts)

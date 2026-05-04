@@ -37,7 +37,7 @@ SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
 const sheetVariants = cva(
   [
     // Solid elevated surface — NO transparency, NO backdrop-blur
-    "fixed z-[2001] bg-[hsl(var(--modal-bg))] border-[hsl(var(--modal-border))]",
+    "fixed z-[2001] bg-white dark:bg-[#111827] border border-gray-200 dark:border-gray-800",
     "shadow-2xl shadow-black/25 dark:shadow-black/60",
     "ring-1 ring-inset ring-white/[0.06]",
     "transition ease-in-out",

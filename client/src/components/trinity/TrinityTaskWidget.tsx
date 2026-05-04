@@ -476,6 +476,7 @@ export function TrinityTaskWidget() {
       size="default"
       side="bottom"
       data-testid="trinity-task-widget"
+      className="bg-white dark:bg-gray-900 backdrop-blur-none"
     >
       <UniversalModalHeader className="border-b pb-3">
         <div className="flex items-center gap-2">

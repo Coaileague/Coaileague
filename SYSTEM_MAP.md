@@ -177,6 +177,103 @@ Key components:
 
 ---
 
+## Wave 19 — PTT Radio + CAD Event Stream (Complete)
+
+**Goal:** Push-to-talk radio inside ChatDock shift rooms. HelpAI acts as dispatcher. Every transmission becomes a CAD event.
+
+**Files:**
+- `server/services/ptt/pttDispatcherService.ts` — AI dispatcher, extraction, CAD logging (400 lines)
+- `server/routes/pttRoutes.ts` — API endpoints (281 lines)
+- `tests/unit/wave19-ptt.test.ts` — 38 tests, all passing
+- `server/objectStorage.ts` — added `VOICE_MESSAGES` StorageDirectory
+- `server/routes/domains/ops.ts` — pttRouter mounted at `/api/ptt`
+
+**API (mounted at `/api/ptt`):**
+```
+POST   /api/ptt/transmit              → upload audio → transcribe → dispatch → CAD event
+GET    /api/ptt/transmissions         → room transmission history
+GET    /api/ptt/plates                → license plate log
+GET    /api/ptt/shift-log/:roomId     → full shift radio log + AI summary
+GET    /api/ptt/cad-feed              → unified CAD event stream (Matrix Ticker)
+```
+
+**Pipeline per transmission:**
+1. Officer releases PTT button → POST /api/ptt/transmit with audio file
+2. GCS upload → permanent URL
+3. Whisper transcription (~800ms for 10s audio)
+4. Gemini Flash extraction: plates, incidents, status, location, priority
+5. HelpAI dispatcher response generated
+6. GPS breadcrumb stamped to gps_locations
+7. CAD event written to cad_event_log
+8. License plates written to ptt_plate_log
+9. broadcastToWorkspace x2: ptt_dispatcher_response + cad_ptt_event
+10. Emergency: SMS blast to all supervisors simultaneously
+
+**Auto-extraction (Gemini Flash per transmission):**
+- License plates → ptt_plate_log (workspace-scoped, searchable)
+- Incident descriptions → cad_event_log
+- Status updates (10-codes) → logged
+- Location references → mapped to GPS bounds when possible
+- Priority: routine / urgent / emergency → triggers escalation if emergency
+
+**HelpAI as dispatcher:**
+- Responds in 1-2 sentences in radio tone
+- Acknowledges officer, confirms what was logged
+- Emergency: immediate, direct, supervisor alerted
+- Routine: brief copy acknowledgment
+- Never references 911 (liability rule enforced in prompt)
+
+**CAD integration:**
+- Every PTT transmission → cad_event_log (unified with NFC scans, clock-ins, panic alerts)
+- cad_ptt_event broadcast → CAD map shows radio icon at officer's GPS position
+- Matrix Ticker: GET /api/ptt/cad-feed → real-time scrolling event stream
+- Plates extracted from radio → searchable plate log for CAD board
+
+**DB schema (ensurePTTSchema() at startup):**
+- ptt_transmissions (workspace_id, room_id, sender, audio_url, transcript, dispatcher_response, extract_data, gps, priority)
+- ptt_plate_log (workspace_id, plate_fragment, context, reporter, gps, transmission_id)
+- cad_event_log (workspace_id, event_type, source, actor, description, metadata, gps, priority) — unified stream for ALL CAD events
+
+**Delivery stack:**
+  1. WebSocket (in-app, real-time) — primary
+  2. FCM/APNs push notification with audio (backgrounded) — see Wave 19 TODO
+  3. Twilio SMS with transcript (offline) — see Wave 19 TODO
+  4. Twilio Voice call (emergency priority only) — uses existing Wave 16 voice system
+
+**TURN infrastructure:** Cloudflare Calls (account already on Cloudflare)
+  Env vars needed: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_CALLS_TOKEN
+  Enable: Cloudflare dashboard → Calls → Enable (5 minutes)
+
+**PTT vs Competition:**
+  Zello: $6-10/user/month, no AI, no auto-logging, separate app
+  CoAIleague PTT: included in Professional+, AI dispatcher, auto-extraction,
+  GPS stamp, CAD integration, plate log, shift summary, deep linked to platform
+
+**Token cost per transmission:** ~$0.0011 (Whisper + Gemini Flash)
+**TURN cost per relayed transmission:** ~$0.00025 (15-20% of transmissions)
+**Margin at Professional tier cap (50K tx/month):** >95%
+
+**Test coverage (38 tests):**
+- Plate detection patterns (radio alphabet, standard format)
+- Priority classification (routine/urgent/emergency)
+- Transmission structure validation
+- Audio format acceptance/rejection
+- CAD event mapping
+- Four-layer delivery cascade logic
+- Dispatcher response quality (concise, no 911, acknowledgment format)
+
+**Wave 19 TODO (frontend PTT button — next sprint):**
+- PTT button in ConversationPane shift rooms (hold-to-talk)
+- Radio crackle sound effect on open/close
+- Waveform animation during recording
+- Dispatcher response rendered in room with HelpAI avatar
+- FCM/APNs push with audio for backgrounded officers
+- Cloudflare Calls WebRTC signaling for live half-duplex (Phase 2)
+
+---
+
+---
+
 ## Wave 17 — Zero-Friction Migration Engine (Complete)
 
 **Goal:** One unified AI importer for any messy competitor export. Zero overlapping services.

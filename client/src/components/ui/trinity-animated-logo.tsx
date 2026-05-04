@@ -224,9 +224,10 @@ export function TrinityOrbitalAvatar({ size = 36, state: stateProp, className }:
   const c  = COLORS[state];
   const sp = SPEEDS[state];
 
-  // Inner trifecta (TrinityAnimatedLogo) already spins via its own animateTransform.
-  // Outer orbital rings spin via their own animateTransform (opposite directions, different speeds).
-  // Both driven by state — speed changes instantly when Trinity state changes.
+  // IDLE: one soft comet arc sweeps ~180° and fades — Gemini-style. No constant spin.
+  // ACTIVE states (thinking/speaking/loading/listening/focused): arcs animate to show activity.
+  // SUCCESS/WARNING/ERROR: brief burst.
+  const isActive = state !== "idle";
 
   return (
     <div
@@ -234,49 +235,51 @@ export function TrinityOrbitalAvatar({ size = 36, state: stateProp, className }:
       style={{ width: size, height: size }}
       aria-hidden="true"
     >
-      {/* ── Orbital rings SVG — absolute, fills container ── */}
+      {/* ── Halo SVG — absolute, fills container ── */}
       <svg className="absolute inset-0 pointer-events-none" width={size} height={size} viewBox="0 0 100 100" fill="none">
         <defs>
           <filter id={`av-glow-${uid}`} x="-80%" y="-80%" width="260%" height="260%">
-            <feGaussianBlur stdDeviation="3.5" result="b"/>
+            <feGaussianBlur stdDeviation="3" result="b"/>
             <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
         </defs>
 
-        {/* Pulsing ambient halo */}
-        <circle cx="50" cy="50" r="48" fill="none" stroke={c.glow} strokeWidth="1.2" opacity="0.15">
-          <animate attributeName="opacity" values="0.06;0.25;0.06" dur={sp.core} repeatCount="indefinite"/>
-          <animate attributeName="r"       values="44;49;44"        dur={sp.core} repeatCount="indefinite"/>
-        </circle>
+        {/* IDLE: single comet arc — sweeps around once and fades. Barely perceptible. */}
+        {!isActive && (
+          <g>
+            <animateTransform attributeName="transform" type="rotate"
+              from="0 50 50" to="360 50 50" dur="6s" repeatCount="indefinite"/>
+            <circle cx="50" cy="50" r="44" fill="none" stroke={c.arm1}
+              strokeWidth="2" strokeDasharray="30 90" strokeLinecap="round"
+              opacity="0">
+              <animate attributeName="opacity" values="0;0.55;0.55;0" dur="6s" repeatCount="indefinite"/>
+            </circle>
+          </g>
+        )}
 
-        {/* Arc 1 — primary CW spin, bright */}
-        <g>
-          <animateTransform attributeName="transform" type="rotate"
-            from="0 50 50" to="360 50 50" dur={sp.ring1} repeatCount="indefinite"/>
-          <circle cx="50" cy="50" r="44" fill="none" stroke={c.arm1}
-            strokeWidth="2.2" strokeDasharray="24 56" strokeLinecap="round"
-            opacity="0.85" filter={`url(#av-glow-${uid})`}/>
-        </g>
+        {/* ACTIVE: arc 1 — primary CW spin */}
+        {isActive && (
+          <g>
+            <animateTransform attributeName="transform" type="rotate"
+              from="0 50 50" to="360 50 50" dur={sp.ring1} repeatCount="indefinite"/>
+            <circle cx="50" cy="50" r="44" fill="none" stroke={c.arm1}
+              strokeWidth="2.2" strokeDasharray="24 56" strokeLinecap="round"
+              opacity="0.85" filter={`url(#av-glow-${uid})`}/>
+          </g>
+        )}
 
-        {/* Arc 2 — CCW counter-spin, secondary color */}
-        <g>
-          <animateTransform attributeName="transform" type="rotate"
-            from="360 50 50" to="0 50 50" dur={sp.ring2} repeatCount="indefinite"/>
-          <circle cx="50" cy="50" r="44" fill="none" stroke={c.arm2}
-            strokeWidth="1.4" strokeDasharray="10 70" strokeLinecap="round" opacity="0.55"/>
-        </g>
-
-        {/* Arc 3 — slower CW, third color, fragments */}
-        <g>
-          <animateTransform attributeName="transform" type="rotate"
-            from="120 50 50" to="480 50 50"
-            dur={`${(parseFloat(sp.ring1) * 1.8).toFixed(1)}s`} repeatCount="indefinite"/>
-          <circle cx="50" cy="50" r="44" fill="none" stroke={c.arm3}
-            strokeWidth="0.9" strokeDasharray="5 75" strokeLinecap="round" opacity="0.35"/>
-        </g>
+        {/* ACTIVE: arc 2 — CCW counter-spin */}
+        {isActive && (
+          <g>
+            <animateTransform attributeName="transform" type="rotate"
+              from="360 50 50" to="0 50 50" dur={sp.ring2} repeatCount="indefinite"/>
+            <circle cx="50" cy="50" r="44" fill="none" stroke={c.arm2}
+              strokeWidth="1.4" strokeDasharray="10 70" strokeLinecap="round" opacity="0.55"/>
+          </g>
+        )}
       </svg>
 
-      {/* ── Glass avatar circle — contains spinning trifecta ── */}
+      {/* ── Avatar circle — no glass box border, just the inner glow ── */}
       <div
         className="relative z-10 flex items-center justify-center rounded-full overflow-hidden"
         style={{
@@ -284,14 +287,14 @@ export function TrinityOrbitalAvatar({ size = 36, state: stateProp, className }:
           height: Math.round(size * 0.76),
           background: `radial-gradient(circle at 33% 33%, ${c.core}55, ${c.glow}dd)`,
           boxShadow: `0 0 ${Math.round(size * 0.4)}px ${c.glow}50, inset 0 1px 1px rgba(255,255,255,0.2)`,
-          border: `1px solid ${c.arm1}45`,
+          // No explicit box border — the radial gradient provides visual boundary
         }}
       >
         {/* TrinityAnimatedLogo spins its trifecta independently */}
         <TrinityAnimatedLogo
           size={Math.round(size * 0.52)}
           state={state}
-          alwaysAnimate={true}
+          alwaysAnimate={isActive}
         />
       </div>
     </div>
