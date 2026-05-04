@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Building2, CheckCircle, Loader2, ShieldCheck, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { getRoleHomeRoute } from "@/lib/rbacRoutes";
 
 interface InviteDetails {
   code: string;
@@ -120,21 +121,36 @@ function AcceptInvitePage() {
       if (!res.ok) throw new Error(data.message || "Registration failed.");
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       const isWorkspaceInvite = code.length < 20;
       if (isWorkspaceInvite) {
         setOrgName(data.workspaceName);
-        setRoleName(data.roleName);
+        setRoleName(data.roleName || '');
         setSuccess(true);
+
+        // Hydrate AuthContext immediately — server already set the session cookie
+        // on registration. Call /api/auth/me so useAuth resolves before redirect.
+        try {
+          await queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+          const meRes = await fetch('/api/auth/me', { credentials: 'include' });
+          if (meRes.ok) {
+            const meData = await meRes.json();
+            await queryClient.setQueryData(['/api/auth/me'], meData);
+            setTimeout(() => {
+              // Role-based destination — same logic as login page
+              const dest = getRoleHomeRoute(meData.user) + '?firstLogin=1&org=' +
+                encodeURIComponent(data.workspaceName || '') +
+                '&role=' + encodeURIComponent(data.roleName || '');
+              window.location.href = dest;
+            }, 2000);
+            return;
+          }
+        } catch { /* fallback to server-provided landingPage */ }
+
+        // Fallback: use server's landingPage
         setTimeout(() => {
-          const params = new URLSearchParams({
-            firstLogin: '1',
-            org: data.workspaceName || '',
-            role: data.roleName || '',
-            name: data.firstName || '',
-          });
-          window.location.href = `${data.landingPage || '/leaders-hub'}?${params.toString()}`;
-        }, 2200);
+          window.location.href = `${data.landingPage || '/dashboard'}?firstLogin=1`;
+        }, 2000);
       } else {
         // Employee onboarding - redirect to wizard
         setLocation(`/employee-onboarding-wizard?token=${code}&applicationId=${data.id}&workspaceId=${data.workspaceId}`);

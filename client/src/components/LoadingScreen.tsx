@@ -1,139 +1,107 @@
 /**
- * CoAIleague Loading Screen — Trinity Gemini Orbital
+ * CoAIleague Loading Screen — Trinity Halo
  * ─────────────────────────────────────────────────────────────────────────────
- * Inspired by the Gemini AI loading animation:
- *   - Trinity diamond (4-pointed star) at center
- *   - Smooth colored light arcs sweeping in orbit around it
- *   - Each arc is a conic-gradient "comet tail" on its own orbit layer
- *   - Colors shift through Trinity's palette: violet → blue → amber → cyan
- *   - Three arcs at different speeds, radii, and phase offsets
- *   - Subtle inner glow pulses in sync with the sweep
+ * IDENTITY LOCK: Uses the existing TrinityOrbitalAvatar asset unchanged.
+ * This component ONLY adds external halo sweep arcs around the existing icon.
  *
- * Nothing is particle-based. All motion is smooth CSS arc animation.
+ * Visual design:
+ *   Center: TrinityOrbitalAvatar (existing component, state="loading")
+ *           — 3-arm trifecta + spinning orbital rings, unchanged
+ *   Halo:   4 colored sweep arcs orbiting OUTSIDE the avatar
+ *           Purple (#7C3AED) → Teal (#0D9488) → Gold (#F59E0B)
+ *           Each arc is an SVG path segment, not a particle system.
+ *           Smooth conic-gradient "comet tail" — same Gemini-style energy.
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
+import { TrinityOrbitalAvatar } from "@/components/ui/trinity-animated-logo";
 
 const LOADING_MESSAGES = [
+  "Connecting to Trinity...",
   "Preparing your workspace...",
   "Syncing intelligence...",
-  "Connecting to Trinity...",
   "Almost there...",
 ];
 
 const PLATFORM_NAME = "CoAIleague";
 
-/** Trinity 4-pointed diamond — pure SVG, no external dependency */
-function TrinityDiamond({ size = 72, glow = true }: { size?: number; glow?: boolean }) {
-  const s = size;
-  const h = s / 2;
-  return (
-    <svg width={s} height={s} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {glow && (
-        <defs>
-          <filter id="tdGlow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="6" result="blur" />
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-          <radialGradient id="tdGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#a78bfa" />
-            <stop offset="60%" stopColor="#60a5fa" />
-            <stop offset="100%" stopColor="#3730a3" />
-          </radialGradient>
-        </defs>
-      )}
-      {/* 4-pointed star / Gemini diamond shape */}
-      <path
-        d="M50 5 C50 5 56 38 95 50 C56 62 50 95 50 95 C50 95 44 62 5 50 C44 38 50 5 50 5Z"
-        fill={glow ? "url(#tdGrad)" : "#a78bfa"}
-        filter={glow ? "url(#tdGlow)" : undefined}
-      />
-    </svg>
-  );
-}
-
-/** One sweeping arc — a gradient conic ring segment */
-function SweepArc({
+/** Single branded halo arc orbiting outside TrinityOrbitalAvatar */
+function HaloArc({
   radius,
   duration,
   delay,
-  color1,
-  color2,
+  colorFrom,
+  colorTo,
   thickness = 3,
-  arcDegrees = 110,
-  direction = 1,
+  arcDeg = 110,
+  ccw = false,
 }: {
   radius: number;
   duration: number;
   delay: number;
-  color1: string;
-  color2: string;
+  colorFrom: string;
+  colorTo: string;
   thickness?: number;
-  arcDegrees?: number;
-  direction?: 1 | -1;
+  arcDeg?: number;
+  ccw?: boolean;
 }) {
-  const size = (radius + thickness + 4) * 2;
-  const cx = size / 2;
-  const cy = size / 2;
-  const r = radius;
-
-  // Build arc path using SVG arc command
-  const startAngle = -arcDegrees / 2;
-  const endAngle   =  arcDegrees / 2;
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-
-  const x1 = cx + r * Math.cos(toRad(startAngle));
-  const y1 = cy + r * Math.sin(toRad(startAngle));
-  const x2 = cx + r * Math.cos(toRad(endAngle));
-  const y2 = cy + r * Math.sin(toRad(endAngle));
-
-  const animName = `sweep-${radius}-${direction > 0 ? 'cw' : 'ccw'}`;
+  const box   = (radius + thickness + 6) * 2;
+  const cx    = box / 2;
+  const cy    = box / 2;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const half  = arcDeg / 2;
+  const x1 = cx + radius * Math.cos(toRad(-half));
+  const y1 = cy + radius * Math.sin(toRad(-half));
+  const x2 = cx + radius * Math.cos(toRad(half));
+  const y2 = cy + radius * Math.sin(toRad(half));
+  const gid = `halo-${radius}-${colorFrom.slice(1, 5)}`;
+  const animName = `haloSpin-${radius}-${ccw ? 'ccw' : 'cw'}`;
 
   return (
     <div style={{
       position: "absolute",
-      width: size,
-      height: size,
+      width: box,
+      height: box,
       top: "50%",
       left: "50%",
-      transform: "translate(-50%, -50%)",
+      transform: "translate(-50%,-50%)",
       animation: `${animName} ${duration}s linear ${delay}s infinite`,
+      willChange: "transform",
+      pointerEvents: "none",
     }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} overflow="visible">
+      <svg width={box} height={box} viewBox={`0 0 ${box} ${box}`} overflow="visible">
         <defs>
-          <linearGradient id={`arc-grad-${radius}-${color1.replace('#','')}`}
-            gradientUnits="userSpaceOnUse"
+          <linearGradient id={gid} gradientUnits="userSpaceOnUse"
             x1={x1} y1={y1} x2={x2} y2={y2}>
-            <stop offset="0%" stopColor={color1} stopOpacity="0" />
-            <stop offset="40%" stopColor={color1} stopOpacity="0.9" />
-            <stop offset="70%" stopColor={color2} stopOpacity="1" />
-            <stop offset="100%" stopColor={color2} stopOpacity="0.2" />
+            <stop offset="0%"   stopColor={colorFrom} stopOpacity="0"   />
+            <stop offset="35%"  stopColor={colorFrom} stopOpacity="0.8" />
+            <stop offset="80%"  stopColor={colorTo}   stopOpacity="1"   />
+            <stop offset="100%" stopColor={colorTo}   stopOpacity="0.2" />
           </linearGradient>
-          <filter id={`arc-glow-${radius}`} x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="2.5" result="blur" />
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          <filter id={`${gid}-glow`} x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="2" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
         </defs>
+
+        {/* Arc path */}
         <path
-          d={`M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`}
+          d={`M ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2}`}
           fill="none"
-          stroke={`url(#arc-grad-${radius}-${color1.replace('#','')})`}
+          stroke={`url(#${gid})`}
           strokeWidth={thickness}
           strokeLinecap="round"
-          filter={`url(#arc-glow-${radius})`}
+          filter={`url(#${gid}-glow)`}
         />
         {/* Bright leading tip */}
-        <circle
-          cx={x2} cy={y2} r={thickness * 0.9}
-          fill={color2}
-          filter={`url(#arc-glow-${radius})`}
-          opacity={0.95}
-        />
+        <circle cx={x2} cy={y2} r={thickness * 0.85}
+          fill={colorTo} filter={`url(#${gid}-glow)`} opacity={0.9} />
       </svg>
+
       <style>{`
         @keyframes ${animName} {
-          from { transform: translate(-50%,-50%) rotate(${direction > 0 ? '0' : '360'}deg); }
-          to   { transform: translate(-50%,-50%) rotate(${direction > 0 ? '360' : '0'}deg); }
+          from { transform: translate(-50%,-50%) rotate(${ccw ? '360deg' : '0deg'}); }
+          to   { transform: translate(-50%,-50%) rotate(${ccw ? '0deg'   : '360deg'}); }
         }
       `}</style>
     </div>
@@ -143,20 +111,23 @@ function SweepArc({
 export function LoadingScreen() {
   const [msgIdx, setMsgIdx] = useState(0);
 
+  /* Force-ready fallback — never leave user stuck on splash */
   useEffect(() => {
     const t = setTimeout(() => {
       window.dispatchEvent(new Event("coaileague:force-ready"));
-    }, 10000);
+    }, 10_000);
     return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
     const iv = setInterval(
-      () => setMsgIdx((p) => (p + 1) % LOADING_MESSAGES.length),
+      () => setMsgIdx(p => (p + 1) % LOADING_MESSAGES.length),
       1800
     );
     return () => clearInterval(iv);
   }, []);
+
+  const letters = PLATFORM_NAME.split("");
 
   return (
     <div
@@ -167,172 +138,141 @@ export function LoadingScreen() {
       aria-label="Loading CoAIleague"
       data-testid="loading-screen"
     >
-      {/* ── Ambient background glow ── */}
+      {/* ── Ambient radial glow behind everything ── */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div style={{
-          width: 320, height: 320, borderRadius: "50%",
-          background: "radial-gradient(ellipse, rgba(139,92,246,0.08) 0%, transparent 70%)",
-          animation: "ambientPulse 4s ease-in-out infinite",
+          width: 360, height: 360, borderRadius: "50%",
+          background: "radial-gradient(ellipse, rgba(109,40,217,0.10) 0%, rgba(13,148,136,0.05) 45%, transparent 70%)",
+          animation: "ambientPulse 5s ease-in-out infinite",
         }} />
       </div>
 
-      {/* ── Orbital system ── */}
+      {/* ── TrinityOrbitalAvatar + external halo arcs ── */}
       <div style={{
         position: "relative",
-        width: 200,
-        height: 200,
+        width: 220,
+        height: 220,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        marginBottom: 32,
+        marginBottom: 28,
       }}>
 
-        {/* Arc 1 — Outer — Violet to Blue — slow CW */}
-        <SweepArc
-          radius={84}
-          duration={3.2}
-          delay={0}
-          color1="#7c3aed"
-          color2="#60a5fa"
-          thickness={3.5}
-          arcDegrees={120}
-          direction={1}
+        {/* Halo Arc 1 — Outer — Purple → Teal — slow CW */}
+        <HaloArc
+          radius={96}  duration={3.6}  delay={0}
+          colorFrom="#7C3AED" colorTo="#0D9488"
+          thickness={3.5} arcDeg={120}
         />
 
-        {/* Arc 2 — Mid — Amber to Violet — medium CCW */}
-        <SweepArc
-          radius={65}
-          duration={2.4}
-          delay={0.6}
-          color1="#f59e0b"
-          color2="#a78bfa"
-          thickness={3}
-          arcDegrees={100}
-          direction={-1}
+        {/* Halo Arc 2 — Mid — Teal → Gold — medium CCW */}
+        <HaloArc
+          radius={76}  duration={2.6}  delay={0.7}
+          colorFrom="#0D9488" colorTo="#F59E0B"
+          thickness={3} arcDeg={105} ccw
         />
 
-        {/* Arc 3 — Inner — Cyan to Amber — fast CW */}
-        <SweepArc
-          radius={48}
-          duration={1.8}
-          delay={0.3}
-          color1="#22d3ee"
-          color2="#fbbf24"
-          thickness={2.5}
-          arcDegrees={90}
-          direction={1}
+        {/* Halo Arc 3 — Inner — Gold → Purple — fast CW */}
+        <HaloArc
+          radius={58}  duration={1.9}  delay={0.3}
+          colorFrom="#F59E0B" colorTo="#7C3AED"
+          thickness={2.5} arcDeg={90}
         />
 
-        {/* Arc 4 — Outermost — subtle blue ghost ring — very slow */}
-        <SweepArc
-          radius={98}
-          duration={5}
-          delay={1.2}
-          color1="rgba(96,165,250,0.3)"
-          color2="rgba(139,92,246,0.4)"
-          thickness={2}
-          arcDegrees={80}
-          direction={-1}
+        {/* Halo Arc 4 — Ghost outer — very faint purple ring */}
+        <HaloArc
+          radius={110} duration={5.5} delay={1.4}
+          colorFrom="rgba(124,58,237,0.25)" colorTo="rgba(13,148,136,0.35)"
+          thickness={1.8} arcDeg={75} ccw
         />
 
-        {/* ── Trinity diamond center ── */}
-        <div style={{
-          position: "relative",
-          zIndex: 20,
-          animation: "diamondPulse 3s ease-in-out infinite",
-          willChange: "transform",
-        }}>
-          {/* Inner halo behind diamond */}
+        {/* ── EXISTING TrinityOrbitalAvatar — UNCHANGED ── */}
+        <div style={{ position: "relative", zIndex: 20 }}>
+          {/* Inner pulse ring — glows with the avatar */}
           <div style={{
             position: "absolute",
-            inset: -16,
+            inset: -14,
             borderRadius: "50%",
-            background: "radial-gradient(ellipse, rgba(139,92,246,0.22) 0%, transparent 70%)",
-            animation: "haloPulse 2s ease-in-out infinite",
+            background: "radial-gradient(ellipse, rgba(109,40,217,0.20) 0%, transparent 70%)",
+            animation: "corePulse 2.4s ease-in-out infinite",
           }} />
-          <TrinityDiamond size={68} glow={true} />
+          <TrinityOrbitalAvatar size={100} state="loading" />
         </div>
       </div>
 
-      {/* ── Trinity™ label ── */}
+      {/* ── Trinity™ wordmark ── */}
       <div className="text-center mb-4" style={{ animation: "fadeUp 0.5s ease both" }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 2 }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 3 }}>
           <span style={{
-            fontSize: 26,
+            fontSize: 24,
             fontWeight: 700,
-            letterSpacing: "-0.5px",
-            background: "linear-gradient(135deg, #a78bfa 0%, #60a5fa 50%, #f59e0b 100%)",
+            background: "linear-gradient(135deg, #7C3AED 0%, #0D9488 50%, #F59E0B 100%)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",
-            animation: "gradientShift 4s ease-in-out infinite",
             backgroundSize: "200% 100%",
+            animation: "gradShift 4s ease-in-out infinite",
           }}>Trinity</span>
-          <sup style={{ fontSize: 10, color: "#94a3b8", marginBottom: 8 }}>™</sup>
+          <sup style={{ fontSize: 10, color: "#64748b", marginBottom: 6 }}>™</sup>
         </div>
         <span style={{
           display: "block",
-          fontSize: 9,
-          color: "#64748b",
+          fontSize: 8.5,
+          color: "#475569",
           letterSpacing: "3px",
           textTransform: "uppercase",
           marginTop: 2,
         }}>AI Co-Pilot</span>
       </div>
 
-      {/* ── CoAIleague wordmark ── */}
-      <div style={{
-        fontSize: 22,
-        fontWeight: 800,
-        letterSpacing: "-0.5px",
-        marginBottom: 6,
-        background: "linear-gradient(90deg, #a78bfa, #60a5fa, #f59e0b, #a78bfa)",
-        WebkitBackgroundClip: "text",
-        WebkitTextFillColor: "transparent",
-        backgroundClip: "text",
-        backgroundSize: "300% 100%",
-        animation: "gradientShift 4s ease-in-out infinite",
-      }}>
-        CoAIleague<sup style={{ fontSize: 11, WebkitTextFillColor: "#a78bfa" }}>®</sup>
+      {/* ── CoAIleague letter-by-letter ── */}
+      <div aria-label={PLATFORM_NAME} style={{ display: "flex", alignItems: "flex-end", gap: 0, marginBottom: 6 }}>
+        {letters.map((letter, i) => (
+          <span key={i}
+            style={{
+              display: "inline-block",
+              fontSize: 26,
+              fontWeight: 800,
+              letterSpacing: "-0.5px",
+              lineHeight: 1.1,
+              color: i % 2 === 0 ? "#a78bfa" : "#e2e8f0",
+              animation: `letterBob 2.4s ease-in-out ${i * 0.05}s infinite`,
+              transformOrigin: "50% 80%",
+            }}>{letter}</span>
+        ))}
+        <sup style={{ fontSize: 11, color: "#7c3aed", alignSelf: "flex-start", marginTop: 4, marginLeft: 1 }}>®</sup>
       </div>
 
       <p style={{
         fontSize: 9,
-        color: "#475569",
+        color: "#334155",
         letterSpacing: "2.5px",
         textTransform: "uppercase",
-        marginBottom: 24,
+        marginBottom: 22,
       }}>
         AI-Powered Workforce Platform
       </p>
 
-      {/* ── Loading message ── */}
-      <p
-        key={msgIdx}
-        style={{
-          color: "#94a3b8",
-          fontSize: 13,
-          marginBottom: 20,
-          animation: "msgFade 0.4s ease both",
-          minHeight: 20,
-          textAlign: "center",
-        }}
-      >
+      {/* ── Rotating loading message ── */}
+      <p key={msgIdx} style={{
+        color: "#94a3b8",
+        fontSize: 13,
+        marginBottom: 20,
+        minHeight: 20,
+        animation: "msgFade 0.4s ease both",
+        textAlign: "center",
+      }}>
         {LOADING_MESSAGES[msgIdx]}
       </p>
 
-      {/* ── Slim progress bar ── */}
+      {/* ── Slim shimmer bar ── */}
       <div style={{
-        width: 180,
-        height: 2,
-        borderRadius: 2,
-        background: "rgba(255,255,255,0.06)",
-        overflow: "hidden",
+        width: 180, height: 2, borderRadius: 2,
+        background: "rgba(255,255,255,0.06)", overflow: "hidden",
       }}>
         <div style={{
-          height: "100%",
-          borderRadius: 2,
-          background: "linear-gradient(90deg, #7c3aed, #60a5fa, #f59e0b)",
+          height: "100%", borderRadius: 2,
+          background: "linear-gradient(90deg, #7C3AED, #0D9488, #F59E0B, #7C3AED)",
           backgroundSize: "300% 100%",
           animation: "barShimmer 2s linear infinite",
         }} />
@@ -340,27 +280,24 @@ export function LoadingScreen() {
 
       {/* ── Footer ── */}
       <div style={{
-        position: "absolute",
-        bottom: 20,
-        left: 0,
-        right: 0,
+        position: "absolute", bottom: 18, left: 0, right: 0,
         textAlign: "center",
         animation: "fadeUp 0.8s ease both 0.3s",
         animationFillMode: "both",
       }}>
-        <p style={{ fontSize: 10, color: "#334155", letterSpacing: "0.5px" }}>
+        <p style={{ fontSize: 10, color: "#1e293b" }}>
           © {new Date().getFullYear()} CoAIleague® · Trinity™ is a trademark of CoAIleague
         </p>
       </div>
 
       <style>{`
-        @keyframes ambientPulse   { 0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.08)} }
-        @keyframes diamondPulse   { 0%,100%{transform:scale(1) rotate(-2deg)}50%{transform:scale(1.06) rotate(2deg)} }
-        @keyframes haloPulse      { 0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.3)} }
-        @keyframes gradientShift  { 0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%} }
-        @keyframes barShimmer     { 0%{background-position:100% 50%}100%{background-position:-200% 50%} }
-        @keyframes fadeUp         { from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)} }
-        @keyframes msgFade        { from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)} }
+        @keyframes ambientPulse { 0%,100%{opacity:.6;transform:scale(1)}  50%{opacity:1;transform:scale(1.1)} }
+        @keyframes corePulse    { 0%,100%{opacity:.4;transform:scale(1)}  50%{opacity:1;transform:scale(1.4)} }
+        @keyframes gradShift    { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+        @keyframes barShimmer   { 0%{background-position:100% 50%} 100%{background-position:-200% 50%} }
+        @keyframes fadeUp       { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes msgFade      { from{opacity:0;transform:translateY(5px)}  to{opacity:1;transform:translateY(0)} }
+        @keyframes letterBob    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
       `}</style>
     </div>
   );

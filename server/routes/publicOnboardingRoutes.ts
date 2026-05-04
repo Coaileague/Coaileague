@@ -614,16 +614,20 @@ const ROLE_DISPLAY_NAMES: Record<string, string> = {
   supervisor: 'Supervisor',
 };
 
+// RBAC landing pages — must match client/src/lib/rbacRoutes.ts getRoleHomeRoute()
 const ROLE_LANDING_PAGES: Record<string, string> = {
-  manager: '/leaders-hub',
-  co_owner: '/dashboard',
-  org_owner: '/dashboard',
-  org_admin: '/dashboard',
-  org_manager: '/dashboard',
-  admin: '/dashboard',
-  employee: '/schedule',
-  staff: '/schedule',
-  supervisor: '/leaders-hub',
+  org_owner:          '/dashboard',
+  co_owner:           '/dashboard',
+  org_admin:          '/dashboard',
+  org_manager:        '/dashboard',
+  admin:              '/dashboard',
+  department_manager: '/manager-dashboard',
+  manager:            '/manager-dashboard',
+  supervisor:         '/manager-dashboard',
+  staff:              '/worker',
+  employee:           '/worker',
+  contractor:         '/worker',
+  auditor:            '/co-auditor/dashboard',
 };
 
 router.get('/workspace-invite/:code', async (req, res) => {

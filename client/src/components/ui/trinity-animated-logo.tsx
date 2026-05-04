@@ -29,7 +29,7 @@ const COLORS: Record<TrinityState, { arm1: string; arm2: string; arm3: string; c
   success:   { arm1: "#86EFAC", arm2: "#4ADE80", arm3: "#FCD34D", core: "#4ADE80", glow: "#16A34A" },
   warning:   { arm1: "#FCD34D", arm2: "#FB923C", arm3: "#FBBF24", core: "#FBBF24", glow: "#D97706" },
   error:     { arm1: "#FCA5A5", arm2: "#F87171", arm3: "#FB923C", core: "#F87171", glow: "#DC2626" },
-  loading:   { arm1: "#60A5FA", arm2: "#A78BFA", arm3: "#FB923C", core: "#818CF8", glow: "#4F46E5" },
+  loading:   { arm1: "#7C3AED", arm2: "#0D9488", arm3: "#F59E0B", core: "#A78BFA", glow: "#6D28D9" }, // Purple | Teal | Gold
   focused:   { arm1: "#C084FC", arm2: "#818CF8", arm3: "#60A5FA", core: "#E879F9", glow: "#A21CAF" },
 };
 

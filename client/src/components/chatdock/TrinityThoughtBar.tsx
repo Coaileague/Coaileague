@@ -584,7 +584,31 @@ function TrinityIcon({
   const trinityState = critical ? "error" : active ? "thinking" : "idle";
   return (
     <span style={{ display: "inline-flex", flexShrink: 0 }} aria-hidden="true">
-      <TrinityOrbitalAvatar size={36} state={trinityState} />
+      {/* Brand halo — external glow rings in Purple/Teal/Gold */}
+      <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+        {/* Halo ring — visible when thinking/speaking */}
+        <span
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: -6,
+            borderRadius: "50%",
+            background: "conic-gradient(from 0deg, rgba(124,58,237,0.6), rgba(13,148,136,0.5), rgba(245,158,11,0.5), rgba(124,58,237,0.6))",
+            animation: trinityState === "idle" ? "none" : "haloSpin 2.4s linear infinite",
+            opacity: trinityState === "idle" ? 0 : 0.9,
+            transition: "opacity 0.6s ease",
+            mask: "radial-gradient(farthest-side, transparent calc(100% - 2px), white 100%)",
+            WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 2px), white 100%)",
+          }}
+        />
+        <TrinityOrbitalAvatar size={36} state={trinityState} />
+        <style>{`
+          @keyframes haloSpin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+          }
+        `}</style>
+      </span>
     </span>
   );
 }
