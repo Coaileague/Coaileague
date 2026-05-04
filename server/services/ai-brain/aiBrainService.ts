@@ -614,9 +614,31 @@ export class AIBrainService {
     // STEP 4: BUILD INTELLIGENT SYSTEM PROMPT
     const systemPrompt = this.buildIntelligentPrompt(message, relevantFaqs, sentiment, complexity);
     // Append regulatory context if applicable
-    const enrichedSystemPrompt = regulatoryContextBlock
-      ? systemPrompt + "\n\n" + regulatoryContextBlock
-      : systemPrompt;
+    const enrichedSystemPrompt = [
+      systemPrompt,
+      regulatoryContextBlock,
+      webSearchContext,
+    ].filter(Boolean).join("\n\n");
+
+    // ── Web Search — live knowledge when Trinity is uncertain ────────────────
+    // If the message asks about something potentially outdated or not in DB,
+    // fetch fresh information before generating. Pure HTTP — no browser.
+    let webSearchContext = "";
+    try {
+      const { shouldSearchWeb, trinitySearch } = await import("./trinityWebSearch");
+      if (shouldSearchWeb(message)) {
+        const searchResult = await trinitySearch(message);
+        if (searchResult.results.length > 0) {
+          webSearchContext = "\n\n=== LIVE WEB SEARCH RESULTS ===\n" +
+            searchResult.results.slice(0, 3).map(r =>
+              `Source: ${r.url}\nTitle: ${r.title}\n${r.snippet}`
+            ).join("\n\n") +
+            "\n=== END SEARCH RESULTS ===\n" +
+            "Use these results to supplement your knowledge. Cite sources when relevant.";
+          log.info(`[Trinity] Web search: "${message.slice(0,60)}" → ${searchResult.results.length} results (${searchResult.tier})`);
+        }
+      }
+    } catch { /* non-blocking */ }
 
     // ── Regulatory Context Injection (Wave 20 RKE) ─────────────────────────
     // If query touches compliance/payroll/UoF/licensing, inject state-specific
