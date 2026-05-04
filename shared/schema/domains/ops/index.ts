@@ -1212,6 +1212,20 @@ export const dailyActivityReports = pgTable("daily_activity_reports", {
   supervisorId: varchar("supervisor_id"),
   supervisorReviewAt: timestamp("supervisor_review_at", { withTimezone: true }),
   trinityArticulated: boolean("trinity_articulated").default(false),
+
+  // Wave 14: Auto-DAR aggregation
+  autoAggregated: boolean("auto_aggregated").default(false),      // generated from shift events
+  eventTimeline: jsonb("event_timeline").default('[]'),           // [{time, type, description}]
+  nfcTapCount: integer("nfc_tap_count").default(0),
+  guardReviewedAt: timestamp("guard_reviewed_at", { withTimezone: true }),
+
+  // Wave 14: Client pipeline
+  clientApprovedNarrative: text("client_approved_narrative"),     // sanitized version
+  internalNotes: text("internal_notes"),                          // NEVER in client copy
+  isClientApproved: boolean("is_client_approved").default(false),
+  clientApprovedAt: timestamp("client_approved_at", { withTimezone: true }),
+  clientApprovedBy: varchar("client_approved_by"),
+  clientPortalSynced: boolean("client_portal_synced").default(false),
 });
 
 export const slaBreachLog = pgTable("sla_breach_log", {
@@ -1480,3 +1494,109 @@ export const platformConfigValues = pgTable("platform_config_values", {
 export type PlatformConfigValue = typeof platformConfigValues.$inferSelect;
 
 export * from './extended';
+
+
+// ─── Wave 14: Site Pass-Down Log ─────────────────────────────────────────────
+// Shift handoff notes that trigger a "Shift Brief" modal when a guard clocks in.
+// Supervisor writes pass-downs; guard sees them at shift start — no more verbal handoffs.
+export const sitePassDownLog = pgTable("site_pass_down_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  siteId: varchar("site_id").notNull(),
+  shiftId: varchar("shift_id"),
+
+  // Who wrote it
+  authorId: varchar("author_id").notNull(),
+  authorName: varchar("author_name"),
+
+  // Content
+  content: text("content").notNull(),
+  priority: varchar("priority").notNull().default("normal"), // 'critical' | 'high' | 'normal' | 'info'
+  category: varchar("category").notNull().default("general"), // 'general' | 'hazard' | 'unsecured_door' | 'bolo_active' | 'equipment' | 'client_instruction'
+  attachments: jsonb("attachments").default('[]'),
+
+  // Lifecycle
+  expiresAt: timestamp("expires_at", { withTimezone: true }), // auto-expires after 24h by default
+  acknowledgedBy: jsonb("acknowledged_by").default('[]'),     // [{employeeId, at}]
+  isActive: boolean("is_active").default(true),
+  trinityGenerated: boolean("trinity_generated").default(false), // Trinity auto-wrote this pass-down
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// ─── Wave 14: Banned Entities Registry ───────────────────────────────────────
+// Unified table for trespass orders and BOLO subjects (persons + vehicles).
+// Surfaces in Shift Brief when guard clocks into the site.
+export const bannedEntities = pgTable("banned_entities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  siteId: varchar("site_id"),            // null = all sites
+  entityType: varchar("entity_type").notNull(), // 'person' | 'vehicle'
+
+  // Person fields
+  fullName: varchar("full_name"),
+  dob: varchar("dob"),
+  description: text("description"),
+  photoUrl: varchar("photo_url"),
+
+  // Vehicle fields
+  licensePlate: varchar("license_plate"),
+  vehicleColor: varchar("vehicle_color"),
+  vehicleMake: varchar("vehicle_make"),
+  vehicleModel: varchar("vehicle_model"),
+
+  // Ban details
+  banType: varchar("ban_type").notNull().default("trespass"), // 'trespass' | 'bolo' | 'watch'
+  reason: text("reason").notNull(),
+  issuedAt: timestamp("issued_at").defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  isActive: boolean("is_active").default(true),
+
+  // Linked to existing records
+  trespassNoticeId: varchar("trespass_notice_id"),
+  boloAlertId: varchar("bolo_alert_id"),
+
+  // Metadata
+  createdById: varchar("created_by_id"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// ─── Wave 14: Incident Report Client Copy ────────────────────────────────────
+// Extends the existing incident_reports workflow with sanitized client output.
+export const incidentReportClientCopies = pgTable("incident_report_client_copies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  incidentReportId: varchar("incident_report_id").notNull(),
+  clientId: varchar("client_id"),
+
+  // Sanitized content (no SSNs, internal notes, or guard mistakes)
+  clientNarrative: text("client_narrative").notNull(),
+  clientTitle: varchar("client_title"),
+  incidentType: varchar("incident_type"),
+  occurredAt: timestamp("occurred_at", { withTimezone: true }),
+  locationDescription: text("location_description"),
+  actionsToken: text("actions_taken"),     // sanitized version of actions
+  recommendedActions: text("recommended_actions"),
+
+  // Approval workflow
+  status: varchar("status").notNull().default("draft"), // 'draft' | 'supervisor_approved' | 'sent' | 'acknowledged'
+  supervisorApprovedBy: varchar("supervisor_approved_by"),
+  supervisorApprovedAt: timestamp("supervisor_approved_at", { withTimezone: true }),
+  supervisorNotes: text("supervisor_notes"), // internal only, not in client copy
+
+  // Delivery
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  sentTo: varchar("sent_to"),
+  clientPortalId: varchar("client_portal_id"),
+  clientAcknowledgedAt: timestamp("client_acknowledged_at", { withTimezone: true }),
+
+  // AI assistance
+  aiDraftedAt: timestamp("ai_drafted_at", { withTimezone: true }),
+  humanEditedAt: timestamp("human_edited_at", { withTimezone: true }),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});

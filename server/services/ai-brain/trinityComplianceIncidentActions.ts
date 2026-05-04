@@ -562,5 +562,47 @@ export function registerComplianceIncidentActions() {
     };
   }));
 
-  log.info('[Trinity Compliance+Incident] Registered 28 compliance, incident, client, employee, multi-state actions');
+  // ── Wave 14: Smart RMS Actions ──────────────────────────────────────────────
+
+  helpaiOrchestrator.registerAction(mkAction('rms.translate_narrative', async (params) => {
+    const { workspaceId, employeeId, rawInput, incidentId, site } = params;
+    if (!workspaceId || !rawInput) return { error: 'workspaceId and rawInput required' };
+    const { translateNarrative } = await import('../rms/smartRmsService');
+    return translateNarrative({ workspaceId, employeeId: employeeId || 'system', rawInput, incidentId, context: { site } });
+  }));
+
+  helpaiOrchestrator.registerAction(mkAction('rms.approve_narrative', async (params) => {
+    const { workspaceId, draftId, incidentId, guardApprovedNarrative } = params;
+    if (!workspaceId || !draftId || !incidentId) return { error: 'workspaceId, draftId, incidentId required' };
+    const { approveNarrativeDraft } = await import('../rms/smartRmsService');
+    const ok = await approveNarrativeDraft({ workspaceId, draftId, incidentId, guardApprovedNarrative: guardApprovedNarrative || '' });
+    return { success: ok, message: ok ? 'Narrative approved and saved to incident report.' : 'Approval failed.' };
+  }));
+
+  helpaiOrchestrator.registerAction(mkAction('rms.generate_dar', async (params) => {
+    const { workspaceId, shiftId, employeeId } = params;
+    if (!workspaceId || !shiftId) return { error: 'workspaceId and shiftId required' };
+    const { generateAutoDar } = await import('../rms/smartRmsService');
+    const dar = await generateAutoDar({ workspaceId, shiftId, employeeId: employeeId || 'system' });
+    if (!dar) return { error: 'No shift data found — ensure shift is active.' };
+    return { ...dar, message: `Auto-DAR generated: ${dar.timeline.length} events, ${dar.nfcTapCount} NFC taps, ${dar.incidentCount} incidents. Guard review required before submission.` };
+  }));
+
+  helpaiOrchestrator.registerAction(mkAction('rms.shift_brief', async (params) => {
+    const { workspaceId, siteId, employeeId } = params;
+    if (!workspaceId || !siteId) return { error: 'workspaceId and siteId required' };
+    const { generateShiftBrief } = await import('../rms/smartRmsService');
+    const brief = await generateShiftBrief({ workspaceId, siteId, employeeId: employeeId || 'system' });
+    return { ...brief, message: brief.hasCritical ? `⚠️ CRITICAL items in shift brief — ${brief.activeBolos.length} active BOLOs, ${brief.passDownNotes.length} pass-downs.` : `Shift brief loaded. ${brief.passDownNotes.length} pass-down note(s), no critical items.` };
+  }));
+
+  helpaiOrchestrator.registerAction(mkAction('rms.create_client_copy', async (params) => {
+    const { workspaceId, incidentId, supervisorId, clientId } = params;
+    if (!workspaceId || !incidentId || !supervisorId) return { error: 'workspaceId, incidentId, supervisorId required' };
+    const { createClientCopy } = await import('../rms/smartRmsService');
+    const result = await createClientCopy({ workspaceId, incidentId, supervisorId, clientId });
+    return { ...result, message: 'Sanitized client copy created and ready for delivery via Client Portal.' };
+  }));
+
+  log.info('[Trinity Compliance+Incident] Registered 28 compliance + 5 Wave14 RMS actions (narrative translate, approve, auto-DAR, shift brief, client copy)');
 }

@@ -43,6 +43,12 @@ import { generateRFPLibrary } from "./services/sales/rfpLibraryService";
 import { generateROIPopup, recordPopupShown, wasPopupShown } from "./services/sales/roiConciergeService";
 import { checkOutboundCompliance, recordOptIn, recordOptOut } from "./services/sales/sb140ComplianceGate";
 import { sendMorningBrief } from "./services/reporting/morningBriefService";
+import {
+  generateAutoDar, saveAutoDAR,
+  translateNarrative, approveNarrativeDraft,
+  generateShiftBrief,
+  createClientCopy,
+} from "./services/rms/smartRmsService";
 import Stripe from "stripe";
 import { getStripe, isStripeConfigured } from "./services/billing/stripeClient";
 
@@ -273,6 +279,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await recordLoneWorkerCheckin({ workspaceId: req.workspaceId!, employeeId: req.user!.id, ...req.body });
       return res.json(result);
     } catch (err: unknown) { return res.status(500).json({ error: err instanceof Error ? err.message : 'Check-in failed' }); }
+  });
+
+  // ── Wave 14: Smart RMS Enhancements ─────────────────────────────────────
+
+  // Task 1: Auto-DAR — generate from shift events
+  app.get("/api/rms/dars/auto-generate", requireAuth, ensureWorkspaceAccess, async (req: AuthenticatedRequest, res) => {
+    const { shiftId } = req.query as { shiftId?: string };
+    if (!shiftId) return res.status(400).json({ error: "shiftId required" });
+    try {
+      const payload = await generateAutoDar({ workspaceId: req.workspaceId!, shiftId, employeeId: req.user!.id });
+      return payload ? res.json(payload) : res.status(404).json({ error: "Shift not found or no events" });
+    } catch (err: unknown) { return res.status(500).json({ error: err instanceof Error ? err.message : "Auto-DAR failed" }); }
+  });
+
+  app.post("/api/rms/dars/auto-submit", requireAuth, ensureWorkspaceAccess, async (req: AuthenticatedRequest, res) => {
+    try {
+      const darId = await saveAutoDAR({ workspaceId: req.workspaceId!, payload: req.body });
+      return res.json({ success: true, darId });
+    } catch (err: unknown) { return res.status(500).json({ error: err instanceof Error ? err.message : "DAR save failed" }); }
+  });
+
+  // Task 2: Narrative Translator (HelpAI + Trinity connected)
+  app.post("/api/rms/narrative/translate", requireAuth, ensureWorkspaceAccess, async (req: AuthenticatedRequest, res) => {
+    const { rawInput, incidentId, context } = req.body as { rawInput: string; incidentId?: string; context?: object };
+    if (!rawInput) return res.status(400).json({ error: "rawInput required" });
+    try {
+      const result = await translateNarrative({ workspaceId: req.workspaceId!, employeeId: req.user!.id, rawInput, incidentId, context });
+      return res.json(result);
+    } catch (err: unknown) { return res.status(500).json({ error: err instanceof Error ? err.message : "Translation failed" }); }
+  });
+
+  app.post("/api/rms/narrative/approve", requireAuth, ensureWorkspaceAccess, async (req: AuthenticatedRequest, res) => {
+    const { draftId, incidentId, guardApprovedNarrative } = req.body as { draftId: string; incidentId: string; guardApprovedNarrative: string };
+    if (!draftId || !incidentId) return res.status(400).json({ error: "draftId and incidentId required" });
+    try {
+      const ok = await approveNarrativeDraft({ workspaceId: req.workspaceId!, draftId, incidentId, guardApprovedNarrative });
+      return res.json({ success: ok });
+    } catch (err: unknown) { return res.status(500).json({ error: err instanceof Error ? err.message : "Approval failed" }); }
+  });
+
+  // Task 3: Shift Brief — surfaces at clock-in
+  app.get("/api/rms/shift-brief", requireAuth, ensureWorkspaceAccess, async (req: AuthenticatedRequest, res) => {
+    const { siteId } = req.query as { siteId?: string };
+    if (!siteId) return res.status(400).json({ error: "siteId required" });
+    try {
+      const brief = await generateShiftBrief({ workspaceId: req.workspaceId!, siteId, employeeId: req.user!.id });
+      return res.json(brief);
+    } catch (err: unknown) { return res.status(500).json({ error: err instanceof Error ? err.message : "Brief failed" }); }
+  });
+
+  // Task 3: Pass-down log management
+  app.post("/api/rms/pass-down", requireAuth, ensureWorkspaceAccess, async (req: AuthenticatedRequest, res) => {
+    const { siteId, content, priority = "normal", category = "general" } = req.body as { siteId: string; content: string; priority?: string; category?: string };
+    if (!siteId || !content) return res.status(400).json({ error: "siteId and content required" });
+    try {
+      const { pool: p } = await import("./db");
+      const { rows } = await p.query(
+        `INSERT INTO site_pass_down_log (workspace_id, site_id, author_id, content, priority, category, expires_at, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6, NOW() + INTERVAL '24 hours', NOW(), NOW()) RETURNING id`,
+        [req.workspaceId!, siteId, req.user!.id, content, priority, category]
+      );
+      return res.json({ success: true, passDownId: rows[0]?.id });
+    } catch (err: unknown) { return res.status(500).json({ error: err instanceof Error ? err.message : "Pass-down failed" }); }
+  });
+
+  // Task 4: Client Copy sanitizer + portal sync
+  app.post("/api/rms/incidents/:id/client-copy", requireAuth, ensureWorkspaceAccess, async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await createClientCopy({
+        workspaceId: req.workspaceId!,
+        incidentId: req.params.id,
+        supervisorId: req.user!.id,
+        clientId: req.body.clientId,
+        overrideNarrative: req.body.overrideNarrative,
+      });
+      return res.json(result);
+    } catch (err: unknown) { return res.status(500).json({ error: err instanceof Error ? err.message : "Client copy failed" }); }
+  });
+
+  app.get("/api/rms/incidents/:id/client-copy", requireAuth, ensureWorkspaceAccess, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { pool: p } = await import("./db");
+      const { rows } = await p.query(
+        `SELECT * FROM incident_report_client_copies WHERE incident_report_id = $1 AND workspace_id = $2 ORDER BY created_at DESC LIMIT 1`,
+        [req.params.id, req.workspaceId!]
+      );
+      return res.json(rows[0] || null);
+    } catch (err: unknown) { return res.status(500).json({ error: err instanceof Error ? err.message : "Fetch failed" }); }
   });
 
   // ── Wave 13: Revenue & Stability Suite ──────────────────────────────────
