@@ -139,6 +139,7 @@ const GoLivePage = lazy(() => import("@/pages/go-live"));
 const ShiftAcceptPage = lazy(() => import("@/pages/shift-accept"));
 const ComplianceScenariosPage = lazy(() => import("@/pages/compliance-scenarios"));
 const NotFound = lazy(() => import("@/pages/not-found"));
+const DPSAuditorPortal = lazy(() => import("@/pages/compliance/dps-auditor-portal"));
 const OwnerAnalytics = lazy(() => import("@/pages/owner-analytics"));
 const RootAdminDashboard = lazy(() => import("@/pages/root-admin-dashboard"));
 const SystemHealth = lazy(() => import("@/pages/system-health"));
@@ -1333,7 +1334,8 @@ function AppContent() {
                 {/* Legacy URL redirects */}
                 {LegacyRedirectRoutes()}
                 {HelpdeskRoomRedirect()}
-                <Route component={NotFound} />
+                <Route path="/dps-portal/:token" component={DPSAuditorPortal} />
+        <Route component={NotFound} />
                 </Switch>
                 </Suspense>
                 </PageTransition>
@@ -1934,7 +1936,8 @@ function AppContent() {
                 {/* Legacy URL redirects */}
                 {LegacyRedirectRoutes()}
                 {HelpdeskRoomRedirect()}
-                <Route component={NotFound} />
+                <Route path="/dps-portal/:token" component={DPSAuditorPortal} />
+        <Route component={NotFound} />
               </Switch>
               </Suspense>
               </ErrorBoundary>

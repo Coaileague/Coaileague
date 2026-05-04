@@ -1,4 +1,37 @@
 import { clients, shifts, sites, timeEntries } from '@shared/schema';
+
+// ── Wave 20 Data Redaction (Task 4) ──────────────────────────────────────────
+// Strips fields that regulators must NOT see: billing rates, internal notes,
+// supervisor comments, PII beyond what DPS requires.
+// Applied to every response from the /dashboard/:workspaceId/* endpoints.
+const REDACTED_FIELDS = new Set([
+  'internalNotes', 'internal_notes', 'supervisorComments', 'supervisor_comments',
+  'billingRate', 'billing_rate', 'clientBillingRate', 'client_billing_rate',
+  'hourlyRate', 'hourly_rate', 'payRate', 'pay_rate',
+  'salaryBand', 'salary_band', 'compensationNotes', 'compensation_notes',
+  'stripeCustomerId', 'stripe_customer_id', 'stripeSubscriptionId',
+  'bankAccountNumber', 'bank_account', 'routingNumber', 'routing_number',
+  'directDepositInfo', 'direct_deposit_info', 'ssn', 'taxId', 'tax_id',
+  'privateNotes', 'private_notes', 'managerOnlyNotes', 'manager_only_notes',
+]);
+
+function redactForAuditor<T extends Record<string, unknown>>(obj: T): T {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (REDACTED_FIELDS.has(k)) continue;
+    if (v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date)) {
+      out[k] = redactForAuditor(v as Record<string, unknown>);
+    } else {
+      out[k] = v;
+    }
+  }
+  return out as T;
+}
+
+function redactArray<T extends Record<string, unknown>>(arr: T[]): T[] {
+  return arr.map(redactForAuditor);
+}
+
 import { AuthenticatedRequest } from '../../rbac';
 /**
  * Regulatory Auditor Portal Routes
@@ -803,7 +836,7 @@ router.get('/dashboard/:workspaceId/incidents', requireAuditorPortalAuth, async 
       .where(eq(incidentReports.workspaceId, workspaceId))
       .orderBy(desc(incidentReports.reportedBy));
 
-    return res.json({ success: true, data: { incidents, total: incidents.length } });
+    return res.json({ success: true, data: { incidents: redactArray(incidents as unknown as Record<string,unknown>[]), total: incidents.length } });
   } catch (err: unknown) {
     return res.status(500).json({ success: false, error: 'Failed to load incident reports' });
   }

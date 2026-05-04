@@ -1941,6 +1941,60 @@ export const assetRegistry = pgTable("asset_registry", {
 });
 
 // ─── Wave 12: Equipment Check-In/Out Log ───────────────────────────────────
+
+// ── Regulatory Knowledge Engine — Wave 20 ────────────────────────────────────
+// Stores all state-specific regulatory knowledge Trinity and HelpAI draw from.
+// Fully data-driven — new state = new rows, never new code.
+// Types: statute | case_law | occupation_code | uof_guideline | form_template
+//        | payroll_tax_rule | license_tier | renewal_requirement | audit_checklist
+export const regulatoryKnowledgeBase = pgTable("regulatory_knowledge_base", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  stateCode: varchar("state_code", { length: 5 }).notNull(), // TX, CA, FL, FEDERAL
+  knowledgeType: varchar("knowledge_type", { length: 80 }).notNull(),
+  // statute | case_law | occupation_code | uof_guideline | form_template
+  // payroll_tax_rule | license_tier | required_armed_certifications
+  // uof_reportable_incident_types | audit_checklist | penal_code
+  title: varchar("title", { length: 300 }).notNull(),
+  summary: text("summary").notNull(),          // Human-readable. Trinity reads this.
+  contentJson: jsonb("content_json"),           // Machine-readable structured data
+  citation: varchar("citation", { length: 500 }), // "Texas Occ. Code §1702.208"
+  sourceUrl: text("source_url"),               // Official source URL
+  effectiveDate: date("effective_date"),
+  expiresDate: date("expires_date"),           // null = permanent
+  applicableLicenseTypes: text("applicable_license_types").array()
+    .default(sql`ARRAY[]::text[]`),
+  tags: text("tags").array().default(sql`ARRAY[]::text[]`),
+  confidenceScore: integer("confidence_score").default(100), // 0-100
+  lastVerifiedAt: timestamp("last_verified_at").defaultNow(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => [
+  index("rkb_state_type_idx").on(t.stateCode, t.knowledgeType),
+  index("rkb_active_idx").on(t.isActive, t.stateCode),
+]);
+
+// Wave 20 — DPS Auditor Portal: shareable token links for external regulators
+export const auditorLinks = pgTable("auditor_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull(),
+  token: varchar("token", { length: 128 }).notNull().unique(),
+  label: varchar("label", { length: 200 }),          // "DPS Audit March 2026"
+  createdBy: varchar("created_by").notNull(),
+  stateCode: varchar("state_code", { length: 10 }).default("TX"),
+  expiresAt: timestamp("expires_at").notNull(),
+  lastAccessedAt: timestamp("last_accessed_at"),
+  accessCount: integer("access_count").default(0),
+  isRevoked: boolean("is_revoked").default(false),
+  allowedExhibits: text("allowed_exhibits").array().default(sql`ARRAY['A','B','C']::text[]`),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const auditorLinksIndexes = {
+  tokenIdx: index("auditor_links_token_idx").on(auditorLinks.token),
+  workspaceIdx: index("auditor_links_workspace_idx").on(auditorLinks.workspaceId),
+};
+
 export const equipmentCheckinLog = pgTable("equipment_checkin_log", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar("workspace_id").notNull(),

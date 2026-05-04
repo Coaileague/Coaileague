@@ -613,8 +613,34 @@ export class AIBrainService {
 
     // STEP 4: BUILD INTELLIGENT SYSTEM PROMPT
     const systemPrompt = this.buildIntelligentPrompt(message, relevantFaqs, sentiment, complexity);
+    // Append regulatory context if applicable
+    const enrichedSystemPrompt = regulatoryContextBlock
+      ? systemPrompt + "\n\n" + regulatoryContextBlock
+      : systemPrompt;
 
-    // METACOGNITION STEP 3: DECIDE — commit to approach
+    // ── Regulatory Context Injection (Wave 20 RKE) ─────────────────────────
+    // If query touches compliance/payroll/UoF/licensing, inject state-specific
+    // regulatory knowledge from the DB before generating. Trinity reads this.
+    let regulatoryContextBlock = "";
+    try {
+      const msgLower = (message || "").toLowerCase();
+      const isRegulatoryTopic = /payroll|tax|withholding|license|guard card|uof|use of force|chapter 1702|bsis|occupation code|sui|audit|dps|psr|tcole|workers comp|compliance/i.test(msgLower);
+      if (isRegulatoryTopic && workspaceId) {
+        const wsStateRow = await import("../../db").then(m => m.pool.query(
+          "SELECT state FROM workspaces WHERE id = $1 LIMIT 1", [workspaceId]
+        ));
+        const stateCode = wsStateRow.rows[0]?.state || "TX";
+        const topic = /payroll|tax|withholding|sui|workers comp/i.test(msgLower) ? "payroll"
+          : /uof|use of force|force report|deadly force/i.test(msgLower) ? "uof"
+          : /license|guard card|level ii|level iii|armed/i.test(msgLower) ? "licensing"
+          : /audit|dps|psr|inspection/i.test(msgLower) ? "audit"
+          : "all";
+        const { buildRegulatoryContextPrompt } = await import("../regulatoryKnowledgeService");
+        regulatoryContextBlock = await buildRegulatoryContextPrompt(stateCode, topic as "payroll"|"uof"|"licensing"|"audit"|"all");
+      }
+    } catch { /* non-blocking */ }
+
+        // METACOGNITION STEP 3: DECIDE — commit to approach
     try {
       await trinityThoughtEngine.decide(
         `Proceeding with ${enableTools ? 'tool-augmented' : 'direct'} response generation via ${selectedProvider}`,

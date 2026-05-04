@@ -5,6 +5,8 @@
 //   /api/audit-trail, /api/audit-logs, /api/safety-checks, /api/dar,
 //   /api/compliance, /api/compliance/*, /api/training-compliance
 import type { Express } from "express";
+import { preAuditRouter } from "../preAuditRoutes";
+import { regulatoryPublicRouter } from "../regulatoryPublicRoutes";
 import { requireAuth } from "../../auth";
 import { ensureWorkspaceAccess } from "../../middleware/workspaceScope";
 import { portalLimiter } from "../../middleware/rateLimiter";
@@ -95,4 +97,8 @@ export function mountComplianceRoutes(app: Express): void {
   // Insurance — certificates, bonding, coverage management (Phase 35R)
   app.use("/api/insurance", requireAuth, ensureWorkspaceAccess, insuranceRouter);
   app.use('/api/sps/forms', requireAuth, spsFormsRouter);
+
+  app.use("/api/compliance", requireAuth, ensureWorkspaceAccess, preAuditRouter);
+
+  app.use("/api/regulatory", regulatoryPublicRouter);
 }

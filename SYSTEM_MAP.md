@@ -322,6 +322,144 @@ Wave 18 CAD work included in the wave19 commits:
 
 ---
 
+## Wave 20 — Texas DPS Auditor Portal & Regulatory Knowledge Engine (Complete)
+
+**Philosophy:** Dynamic by design. Any state = config rows, not code changes.
+
+### Task 1 — Zero-Trust Sandbox
+
+**Schema:** `auditor_links` table
+  - token (128-char, unique), workspaceId, label, expiresAt, accessCount, isRevoked, allowedExhibits
+  - Every access logs lastAccessedAt + increments accessCount
+  - Revocation: flip isRevoked=true, immediately blocks token
+
+**Route:** `/dps-portal/:token` (fully isolated React page, no nav/sidebar)
+  - LazyLoaded component: `client/src/pages/compliance/dps-auditor-portal.tsx`
+  - `credentials: "omit"` — no CoAIleague session cookies on any request
+  - Invalid/expired token → clean error screen, no app leak
+
+**API:** `GET /api/regulatory/auditor-portal/:token/*` (no CoAIleague auth — token-gated)
+  - `/meta` → workspace name + full state config from `state_regulatory_config`
+  - `/officers` → guard card status, license type, expiry (redacted)
+  - `/use-of-force` → UoF incidents with filed status
+  - `/armed-shifts` → armed post shift logs with GPS and guard card at time
+  - `POST /auditor-portal/create-link` → owner generates shareable token
+
+**File:** `server/routes/regulatoryPublicRoutes.ts` (225 lines)
+
+### Task 2 — Pre-Audit Red Team Engine
+
+**API:** `GET /api/compliance/pre-audit` (requireAuth + requireManager)
+**File:** `server/routes/preAuditRoutes.ts` (289 lines)
+
+Fully dynamic — reads from `state_regulatory_config` + `regulatory_knowledge_base`:
+  - Armed shifts × expired/missing guard card → CRITICAL
+  - License type insufficient for armed post (reads armedAllowed from state config) → CRITICAL
+  - License expiring within 30 days → WARNING
+  - UoF incidents without polished formal report → CRITICAL
+  - Armed officers missing required training certs (reads from DB, not hardcoded) → CRITICAL
+  - Missing liability insurance → CRITICAL
+
+Returns `PreAuditReport`: overallRisk, auditReadinessScore (0-100), flags[].
+Score: 100 - (critical × 15) - (warning × 5), floored at 0.
+
+### Task 3 — Dynamic State Compliance Dashboard
+
+**Frontend:** `client/src/pages/compliance/dps-auditor-portal.tsx` (472 lines)
+  - All state-specific text comes from meta endpoint, not hardcoded
+  - Portal label, regulatory body name, governing law citation → from `state_regulatory_config`
+  - License tier names → resolved from `licenseTypes` JSONB array
+  - Exhibit A: Active Roster & License Status
+  - Exhibit B: Use of Force & Firearm Discharge Reports
+  - Exhibit C: Armed Post Shift Logs (Proof of Presence)
+
+### Task 4 — Data Redaction Middleware
+
+**Applied to:** `/api/regulatory/auditor-portal/:token/*` (all endpoints)
+**Stripped fields:** internalNotes, supervisorComments, billingRate, hourlyRate, payRate,
+  ssn, taxId, bankAccountNumber, routingNumber, directDepositInfo, privateNotes,
+  managerOnlyNotes, stripeCustomerId, compensationNotes
+
+Nested objects recursively redacted. Guard card number, expiry, license type all preserved.
+
+---
+
+## Regulatory Knowledge Engine (RKE) — Wave 20
+
+**Mission:** Trinity, HelpAI, and all spawned agents know all applicable security law,
+payroll tax rules, occupation codes, UoF standards, and audit requirements for every
+state CoAIleague operates in. No knowledge is hardcoded — new state = new data rows.
+
+### Architecture
+
+**Layer 1 — Knowledge Base Table**
+`regulatory_knowledge_base` — structured rows per state per topic.
+  Types: statute | case_law | occupation_code | uof_guideline | form_template
+         payroll_tax_rule | license_tier | renewal_requirement | audit_checklist
+         penal_code | uof_reportable_incident_types | required_armed_certifications
+
+**Layer 2 — Retrieval Service**
+`server/services/regulatoryKnowledgeService.ts` (238 lines)
+  - `retrieveRegulatoryContext(stateCode, types?)` → full typed context object
+  - `buildRegulatoryContextPrompt(stateCode, topic?)` → formatted string for Trinity's window
+  - `ensureRegulatoryKnowledgeSchema()` → idempotent boot
+
+**Layer 3 — Trinity Integration**
+`server/services/ai-brain/aiBrainService.ts` — `handleMessage()` now:
+  1. Detects regulatory topic in message (payroll/UoF/licensing/audit keywords)
+  2. Reads workspace state from workspaces table
+  3. Calls `buildRegulatoryContextPrompt(stateCode, topic)` — retrieves from DB
+  4. Appends as `enrichedSystemPrompt` — Trinity answers with real law, not hallucination
+
+### Seed Coverage (server/scripts/seedRegulatoryKnowledge.ts — 427 lines)
+
+**FEDERAL (applies all states):**
+  - Graham v. Connor (1989) — Objective Reasonableness 3-factor test
+  - Tennessee v. Garner (1985) — Deadly force against fleeing suspects
+  - UoF Report required elements (9 fields, including de-escalation documentation)
+  - SOC 33-9032 (Security Guards), SOC 33-9021 (Investigators)
+  - FICA rates, FLSA overtime, 1099 misclassification warning
+
+**Texas (TX):**
+  - Chapter 1702 Occupations Code — Level II/III/IV license tiers
+  - Texas Penal Code §9.31 (self-defense) + §9.32 (deadly force)
+  - No state income tax
+  - SUI: 2.7% new employer on $9,000 wage base (TWC Form C-3)
+  - Workers comp NCCI 7720 (unarmed) / 7723 (armed)
+  - DPS PSB audit checklist (10 items)
+  - UoF reportable incident types
+  - Required armed certifications
+
+**California (CA):**
+  - BSIS Business & Professions Code §7580-7582
+  - G-card (unarmed) + EFP (armed) license structure
+  - SDI 1.1% employee, no wage ceiling
+  - SUI 3.4% new employer on $7,000
+  - EDD filing requirements
+
+**Florida (FL):**
+  - Chapter 493 FS, Class D/G licensing
+  - No state income tax
+  - Reemployment Tax 2.7% new employer
+
+**New York (NY):**
+  - General Business Law Article 7-A
+  - Income tax 4%-10.9%, NYC tax 3.078%-3.876%
+  - NYPFL 0.373% employee
+  - SUI $12,300 wage base
+
+### Tests: 24/24 passing (tests/unit/wave20-dps-portal.test.ts)
+- Pre-audit flag logic (expired license, insufficient tier, expiring warning)
+- Score calculation (0 critical = 100, 3 critical = 55, floors at 0)
+- Data redaction (strips billing/SSN/notes, preserves audit fields)
+- RKE data model (Graham factors, TX no income tax, FICA rates, FLSA threshold)
+- State-agnostic portal (same URL/code for all 50 states)
+- Token security (expired/revoked/valid)
+
+---
+
+---
+
 ## Wave 19 — PTT Radio + CAD Event Stream (Complete)
 
 **Goal:** Push-to-talk radio inside ChatDock shift rooms. HelpAI acts as dispatcher. Every transmission becomes a CAD event.
