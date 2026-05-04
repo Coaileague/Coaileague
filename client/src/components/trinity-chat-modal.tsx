@@ -63,7 +63,7 @@ import { TrinityLogo } from '@/components/ui/coaileague-logo-mark';
 // Adapter: makes TrinityLogo compatible with Lucide icon props
 const TrinityIcon = ({ className }: { className?: string }) => <TrinityLogo size={14} />;
 
-import { TrinityAnimatedLogo } from '@/components/ui/trinity-animated-logo';
+import { TrinityAnimatedLogo, TrinityOrbitalAvatar } from '@/components/ui/trinity-animated-logo';
 import { Suspense } from 'react';
 import { TrinityActionHistoryPanel } from '@/components/trinity/TrinityActionHistoryPanel';
 import { useTrinityState } from '@/hooks/use-trinity-state';
@@ -1334,7 +1334,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
             {/* Header - Fortune 500 clean design */}
             <div className="flex items-center justify-between gap-2 px-4 pb-2 shrink-0" style={{ touchAction: 'manipulation' }}>
               <div className="flex items-center gap-3">
-                <TrinityLogo size={28} />
+                <TrinityOrbitalAvatar size={32} state="idle" />
                 <div>
                   <h1 className="font-semibold text-base">{TRINITY_BRANDING.displayName}</h1>
                   <p className="text-xs text-muted-foreground">AI Assistant</p>

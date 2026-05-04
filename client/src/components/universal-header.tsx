@@ -11,7 +11,9 @@ import { useLocation } from "wouter";
 import { UniversalModal, UniversalModalTrigger } from '@/components/ui/universal-modal';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Menu, LogOut, LayoutDashboard, Mail, Bug, ChevronDown, Settings, Search, Home, X } from "lucide-react";
-import { useState, useEffect, useMemo, useId } from "react";
+import { useState, useEffect, useMemo, useId, useCallback } from "react";
+import { NavigationOverlay } from '@/components/navigation/NavigationOverlay';
+import { useNavigationOverlay } from '@/hooks/useNavigationOverlay';
 import { HeaderLogo } from "@/components/unified-brand-logo";
 import { performLogout, setLogoutTransitionLoader } from "@/lib/logoutHandler";
 import { useTransitionLoaderIfMounted } from "@/components/canvas-hub";
@@ -138,6 +140,21 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
   const [location, setLocation] = useLocation();
   const { activeSessionId } = useTrinitySession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Desktop navigation overlay (slides in from the side — Google-style mega menu)
+  const {
+    isOpen: isNavOpen,
+    animationState: navAnimState,
+    activeCategory,
+    setActiveCategory,
+    handleMouseEnter: handleNavMouseEnter,
+    handleMouseLeave: handleNavMouseLeave,
+    handleOverlayMouseEnter,
+    handleOverlayMouseLeave,
+    toggleOverlay: toggleNavOverlay,
+    closeOverlay: closeNavOverlay,
+  } = useNavigationOverlay();
+  // Close nav overlay when Trinity modal opens
+  const handleTrinityOpen = () => { if (isNavOpen) closeNavOverlay(); openTrinityModal(); };
   const [isChristmas, setIsChristmas] = useState(false);
   const isMobile = useIsMobile();
   const { openModal: openTrinityModal } = useTrinityModal();
@@ -377,10 +394,27 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                   </Button>
                 )}
                 {/* Hamburger menu contains all other actions */}
+                {/* Desktop nav trigger — hidden on mobile (mobile uses Sheet) */}
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={HEADER_HEIGHTS.iconButton}
+                  className={`${HEADER_HEIGHTS.iconButton} hidden sm:flex`}
+                  onClick={() => toggleNavOverlay('click')}
+                  onMouseEnter={handleNavMouseEnter}
+                  onMouseLeave={handleNavMouseLeave}
+                  data-testid="nav-trigger"
+                  aria-label="Open navigation menu"
+                  aria-expanded={isNavOpen}
+                >
+                  {isNavOpen
+                    ? <X className="h-5 w-5" />
+                    : <LayoutGrid className="h-5 w-5" />}
+                </Button>
+                {/* Mobile hamburger — visible only on mobile */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`${HEADER_HEIGHTS.iconButton} sm:hidden`}
                   onClick={() => setMobileMenuOpen(true)}
                   data-testid="button-mobile-menu"
                 >
