@@ -614,10 +614,18 @@ export class AIBrainService {
     // STEP 4: BUILD INTELLIGENT SYSTEM PROMPT
     const systemPrompt = this.buildIntelligentPrompt(message, relevantFaqs, sentiment, complexity);
     // Append regulatory context if applicable
+    // Platform capabilities — always present so Trinity knows what she can do
+    let platformCapabilitiesContext = "";
+    try {
+      const { buildPlatformCapabilitiesContext } = await import("./platformCapabilitiesService");
+      platformCapabilitiesContext = buildPlatformCapabilitiesContext();
+    } catch { /* non-blocking */ }
+
     const enrichedSystemPrompt = [
       systemPrompt,
       regulatoryContextBlock,
       webSearchContext,
+      platformCapabilitiesContext,
     ].filter(Boolean).join("\n\n");
 
     // ── Web Search — live knowledge when Trinity is uncertain ────────────────
