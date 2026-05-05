@@ -116,6 +116,68 @@ All Trinity responses now build `enrichedSystemPrompt` from:
 
 ---
 
+## Wave 22C — RBAC Matrix, Unhappy Paths & Holistic Documentation (Complete)
+
+### New Files
+
+**RBAC_MATRIX.md** (321 lines) — root directory
+  Single source of truth for all role permissions.
+  Sourced from: `shared/lib/rbac/roleDefinitions.ts`
+
+  Documents:
+  - 12 workspace roles with numeric hierarchy (client 0.5 → org_owner 7)
+  - 12 platform roles with hierarchy (none 0 → root_admin 7)
+  - 8 role guard middleware functions and exactly which roles each allows
+  - Permission matrix: Field Officer → Supervisor → Manager → Admin → Owner
+  - AI Agent RBAC: Trinity's 8 absolute restrictions + what she CAN do
+  - SARGE's 7 restrictions + operational permissions
+  - Auditor portal token scope (no login, read-only, financial data stripped)
+  - Cross-cutting security rules (workspace_id scope, transaction wrapping, constraints)
+
+### WORKFLOW_MAP.md Additions (now 1,138 lines)
+
+**Error States & Unhappy Paths section added:**
+  Standard error response envelope documented (all routes)
+  HTTP status code dictionary: 400-503 with exact `code` values
+  Pipeline-specific error states (E1.x through E4.x):
+    E1: Onboarding (Stripe decline, partial provisioning, setup bypass)
+    E2: Schedule approval (no drafts, already published, insufficient role)
+    E3: Client shift request (low confidence, unknown client, no officers, Resend failure)
+    E4: SARGE calloff (shift not found, no replacements, SLA breach, wrong officer, WS failure)
+  General unhappy paths (G1-G4):
+    G1: Offline guard DAR sync (local store → reconnect → conflict resolution)
+    G2: Stripe webhook out of order (idempotency guarantee)
+    G3: AI metering DB write failure (non-blocking, reconciliation sweep)
+    G4: Guard card expired mid-shift (human decision required — not auto-removed)
+
+**Pipeline 5 — Payroll & Time-Tracking:**
+  4 time entry sources: NFC scan, manual app, manager entry, Trinity auto-clock
+  7-step payroll pipeline: collect → validate → approve → close → pay stub → ACH
+  Anomaly detection gate: period close blocked until flags resolved
+  4 payroll unhappy paths (reversed time, cancelled shift, failed ACH, anomaly block)
+
+**Pipeline 6 — Invoicing & Billing:**
+  7-step invoice lifecycle: time approval → draft → send → paid
+  Stripe metering + spend cap mechanics (80% alert, 100% block, hard cap tiers)
+  Overage reset on invoice.paid webhook
+  3 invoice unhappy paths (email bounce, declined payment, missing bill rate)
+
+**Pipeline 7 — Reporting & Compliance:**
+  3 PDF document types with exact function names
+  All PDF requirements: header, footer, doc ID, generated_documents logging
+  DAR signing pipeline: auto-generate → acknowledge → client view → manager export
+  DPS auditor portal: 4-step token flow, all GET endpoints, redaction list
+  3 compliance unhappy paths (token expired/revoked/not found)
+
+**Task 4 — AI Read/Write Documentation Protocol:**
+  Gemini function call schema for `update_system_map`
+  Safety constraints Trinity must enforce before auto-updating
+  Implementation requirements flagged for Wave 24
+
+---
+
+---
+
 ## DEPLOYMENT CRASH LAW — Missing Middleware Imports (added 2026-05-04)
 
 **ROOT CAUSE OF requireAuth CRASH LOOP:**
