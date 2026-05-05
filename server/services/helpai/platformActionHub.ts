@@ -230,7 +230,7 @@ class PlatformActionHub {
    */
   private subscribeToEventBus(): void {
     platformEventBus.subscribe('ai_brain_action', {
-      name: 'HelpAI Orchestrator',
+      name: 'SARGE Orchestrator',
       handler: async (event) => {
         log.info(`[Platform Action Hub] Received event: ${event.type}`);
         // Process AI brain events
@@ -241,7 +241,7 @@ class PlatformActionHub {
     });
 
     platformEventBus.subscribe('ai_error', {
-      name: 'HelpAI Orchestrator Error Handler',
+      name: 'SARGE Orchestrator Error Handler',
       handler: async (event) => {
         await this.handleServiceError(event);
       }

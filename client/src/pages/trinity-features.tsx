@@ -465,7 +465,7 @@ function VoiceMock() {
     <div className="w-full max-w-sm rounded-md bg-card border border-border p-4 space-y-3 shadow-sm">
       <div className="flex items-center gap-2 mb-2">
         <Mic className="w-4 h-4 text-primary" />
-        <span className="text-xs font-semibold text-foreground">HelpAI Voice — Officer Mode</span>
+        <span className="text-xs font-semibold text-foreground">SARGE Voice — Officer Mode</span>
       </div>
       <div className="space-y-2 text-xs">
         <div className="flex justify-end">

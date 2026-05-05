@@ -16,7 +16,7 @@ export default function HelpAIOrchestration() {
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Module Not Available</CardTitle>
-            <CardDescription>HelpAI Orchestration is not enabled for your subscription tier</CardDescription>
+            <CardDescription>SARGE Orchestration is not enabled for your subscription tier</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -29,7 +29,7 @@ export default function HelpAIOrchestration() {
       <div className="border-b p-4 space-y-2">
         <div className="flex items-center gap-2">
           <Zap className="w-6 h-6" />
-          <h1 className="text-2xl font-bold">HelpAI Orchestration</h1>
+          <h1 className="text-2xl font-bold">SARGE Orchestration</h1>
         </div>
         <p className="text-sm text-muted-foreground">
           Connect and manage business system integrations for intelligent orchestration

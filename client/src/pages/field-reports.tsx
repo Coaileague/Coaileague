@@ -642,7 +642,7 @@ export default function FieldReports() {
                 ) : (
                   <Bot className="w-4 h-4 mr-2" />
                 )}
-                {analyzeIncidentMutation.isPending ? 'Analyzing...' : 'Analyze with HelpAI'}
+                {analyzeIncidentMutation.isPending ? 'Analyzing...' : 'Analyze with SARGE'}
               </Button>
               
               {aiAnalysis && (
@@ -650,7 +650,7 @@ export default function FieldReports() {
                   <CardContent className="p-3 space-y-3">
                     <div className="flex items-center gap-2">
                       <Bot className="w-4 h-4 text-blue-500" />
-                      <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">HelpAI Analysis</span>
+                      <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">SARGE Analysis</span>
                       <Badge className={cn("ml-auto text-xs", 
                         aiAnalysis.riskLevel === 'critical' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
                         aiAnalysis.riskLevel === 'high' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
